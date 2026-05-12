@@ -1,0 +1,6 @@
+path	tokens	reads	description
+src/generated/prisma/browser.ts	301	0	TypeScript source
+src/generated/prisma/client.ts	544	0	TypeScript source
+src/generated/prisma/commonInputTypes.ts	5405	0	TypeScript source
+src/generated/prisma/enums.ts	84	0	TypeScript source
+src/generated/prisma/models.ts	147	0	TypeScript source

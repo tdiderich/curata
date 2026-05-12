@@ -1,0 +1,439 @@
+title: "Hiring Plan — H2 2026"
+subtitle: Open roles, pipeline status, process, and comp bands for July–December 2026.
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Company
+        value: Vantara
+      - key: Period
+        value: H2 2026 (Jul – Dec)
+      - key: Current Headcount
+        value: "25"
+      - key: Target Headcount
+        value: "40"
+      - key: Owner
+        value: Rosa Kim, People & Ops
+      - key: Last Updated
+        value: "2026-07-07"
+
+  - type: stat_grid
+    columns: 4
+    stats:
+      - label: Open Roles
+        value: "15"
+        detail: 7 active searches, 8 planned
+        color: green
+      - label: Pipeline Candidates
+        value: "94"
+        detail: Across all active searches
+        color: teal
+      - label: Avg Time to Fill
+        value: 52 days
+        detail: "Target: 45 days"
+        color: yellow
+      - label: Offer Acceptance Rate
+        value: "78%"
+        detail: "Target: 85%. 3 declines YTD."
+        color: yellow
+
+  - type: section
+    eyebrow: Roles
+    heading: Open Positions
+    components:
+      - type: table
+        filterable: true
+        columns:
+          - key: role
+            label: Role
+          - key: team
+            label: Team
+          - key: level
+            label: Level
+          - key: priority
+            label: Priority
+          - key: status
+            label: Status
+          - key: target_start
+            label: Target Start
+        rows:
+          - role: Enterprise Account Executive
+            team: Sales
+            level: Senior IC
+            priority: P0
+            status: "Offer accepted"
+            target_start: "Aug 1"
+          - role: Solutions Engineer
+            team: Sales
+            level: Senior IC
+            priority: P0
+            status: "2 finalists — final rounds"
+            target_start: "Aug 15"
+          - role: Senior Full-Stack Engineer
+            team: Engineering
+            level: Senior IC
+            priority: P0
+            status: "Offer out — decision Aug 5"
+            target_start: "Sep 1"
+          - role: Customer Success Manager
+            team: CS
+            level: Mid-level IC
+            priority: P1
+            status: "Phone screens in progress"
+            target_start: "Sep 15"
+          - role: Full-Stack Engineer
+            team: Engineering
+            level: Mid-level IC
+            priority: P1
+            status: "Sourcing — 12 in pipeline"
+            target_start: "Oct 1"
+          - role: Head of Marketing
+            team: Marketing
+            level: Manager/Director
+            priority: P1
+            status: "JD drafted, posting Jul 14"
+            target_start: "Oct 15"
+          - role: SDR
+            team: Sales
+            level: Entry-level IC
+            priority: P1
+            status: "Sourcing — 8 in pipeline"
+            target_start: "Oct 1"
+          - role: Backend Engineer
+            team: Engineering
+            level: Mid-level IC
+            priority: P2
+            status: "Planned — Q4"
+            target_start: "Nov 1"
+          - role: Customer Success Manager (2nd)
+            team: CS
+            level: Mid-level IC
+            priority: P2
+            status: "Planned — Q4"
+            target_start: "Nov 15"
+          - role: Product Marketing Manager
+            team: Marketing
+            level: Mid-level IC
+            priority: P2
+            status: "Planned — Q4, gated on Mktg hire"
+            target_start: "Dec 1"
+
+  - type: section
+    eyebrow: Pipeline
+    heading: Recruiting Pipeline by Role
+    components:
+      - type: markdown
+        body: "Candidate counts at each stage for active searches. Click a role name to see candidate details in Ashby."
+
+      - type: progress_bar
+        value: 100
+        label: "Enterprise AE — Sourced: 28"
+        color: default
+        detail: "28 sourced → 14 screened → 6 interviewed → 1 offer accepted"
+      - type: progress_bar
+        value: 86
+        label: "Enterprise AE — Screened: 14 of 28 (50%)"
+        color: teal
+        detail: "Screen-to-interview rate: 43%. Above average for AE searches."
+      - type: progress_bar
+        value: 43
+        label: "Enterprise AE — Interviews: 6 of 14 (43%)"
+        color: green
+        detail: ""
+      - type: progress_bar
+        value: 14
+        label: "Enterprise AE — Offer: 1 of 6 — ACCEPTED"
+        color: green
+        detail: "Hired. Starts Aug 1."
+
+      - type: divider
+        label: Solutions Engineer
+
+      - type: progress_bar
+        value: 100
+        label: "Solutions Engineer — Sourced: 41"
+        color: default
+        detail: "41 sourced → 18 screened → 7 interviewed → 2 finalists"
+      - type: progress_bar
+        value: 44
+        label: "Solutions Engineer — Screened: 18 of 41 (44%)"
+        color: teal
+        detail: "Technical screen pass rate: 39%. SE bar is high."
+      - type: progress_bar
+        value: 39
+        label: "Solutions Engineer — Interviews: 7 of 18 (39%)"
+        color: green
+        detail: ""
+      - type: progress_bar
+        value: 29
+        label: "Solutions Engineer — Finalists: 2 of 7 — FINAL ROUNDS"
+        color: yellow
+        detail: "Final presentations scheduled Jul 14–15. Offer expected Jul 17."
+
+      - type: divider
+        label: Senior Full-Stack Engineer
+
+      - type: progress_bar
+        value: 100
+        label: "Sr. Full-Stack Eng — Sourced: 19"
+        color: default
+        detail: "19 sourced → 11 screened → 5 interviewed → 1 offer out"
+      - type: progress_bar
+        value: 58
+        label: "Sr. Full-Stack Eng — Screened: 11 of 19 (58%)"
+        color: teal
+        detail: ""
+      - type: progress_bar
+        value: 45
+        label: "Sr. Full-Stack Eng — Interviews: 5 of 11 (45%)"
+        color: green
+        detail: "Take-home completed by all 5. Loop done for top 2 candidates."
+      - type: progress_bar
+        value: 20
+        label: "Sr. Full-Stack Eng — Offer: 1 of 5 — PENDING"
+        color: yellow
+        detail: "Offer out to top candidate. Decision expected Aug 5."
+
+      - type: divider
+        label: Customer Success Manager
+
+      - type: progress_bar
+        value: 100
+        label: "CS Manager — Sourced: 23"
+        color: default
+        detail: "23 sourced → 9 screened → 2 interviewed → 0 offers"
+      - type: progress_bar
+        value: 39
+        label: "CS Manager — Screened: 9 of 23 (39%)"
+        color: teal
+        detail: "Phone screens in progress this week."
+      - type: progress_bar
+        value: 22
+        label: "CS Manager — Interviews: 2 of 9 (22%)"
+        color: green
+        detail: "Two loop invites sent. Scheduling underway."
+      - type: progress_bar
+        value: 0
+        label: "CS Manager — Offer: none yet"
+        color: default
+        detail: "Target: offer extended by Aug 22."
+
+  - type: section
+    eyebrow: Criteria
+    heading: Hiring Criteria by Role
+    components:
+      - type: accordion
+        items:
+          - title: "Enterprise Account Executive"
+            components:
+              - type: markdown
+                body: |
+                  **Must-haves**
+                  - 4+ years in a quota-carrying AE role at a B2B SaaS company
+                  - Proven experience closing deals $25K–$150K ACV with 60–120 day cycles
+                  - Comfortable selling to technical buyers (VP Eng, CTO, VP Ops)
+                  - Strong written communication — our sales process is async-heavy
+
+                  **Nice-to-haves**
+                  - Sold workflow automation, integration, or developer tooling
+                  - Experience in a startup (< 50 people) environment
+                  - Existing relationships in mid-market tech or professional services
+
+                  **Red flags**
+                  - Only PLG or product-qualified-lead experience (needs to hunt)
+                  - No examples of multi-threaded deals (single-champion close is a risk at enterprise)
+                  - Compensation expectations above band with no negotiation flexibility
+          - title: "Solutions Engineer"
+            components:
+              - type: markdown
+                body: |
+                  **Must-haves**
+                  - 3+ years in a pre-sales or solutions engineering role
+                  - Can write code (Python or JavaScript) and speak credibly to a technical audience
+                  - Experience running technical POCs with structured success criteria
+                  - Excellent verbal communication — will be on customer calls daily
+
+                  **Nice-to-haves**
+                  - Background in software engineering before moving to pre-sales
+                  - Experience with workflow automation or API-first products
+                  - Can demo independently without needing an AE in the room
+
+                  **Red flags**
+                  - No actual coding ability — "I used to code but it's been years" is a risk
+                  - Defensive or flustered when customers ask unexpected technical questions
+                  - Has never worked in a startup; only large-company SE motion
+          - title: "Senior Full-Stack Engineer"
+            components:
+              - type: markdown
+                body: |
+                  **Must-haves**
+                  - 4+ years building production web applications
+                  - Deep TypeScript and React experience (our stack)
+                  - Comfortable owning features end-to-end: schema design, API, UI, deployment
+                  - Writes tests without being asked
+
+                  **Nice-to-haves**
+                  - PostgreSQL experience at meaningful scale
+                  - Has built multi-tenant SaaS infrastructure before
+                  - Experience with Prisma, Postgres, and a Node.js API layer
+                  - OSS contributions or public work samples
+
+                  **Red flags**
+                  - Cannot explain their past technical decisions (coasted vs. drove)
+                  - Take-home submission shows no test coverage
+                  - Expects heavyweight process (lengthy planning, many approvals) — we move fast
+          - title: "Customer Success Manager"
+            components:
+              - type: markdown
+                body: |
+                  **Must-haves**
+                  - 2+ years in a B2B SaaS customer success or account management role
+                  - Comfortable owning a book of business of 30–60 SMB/mid-market accounts
+                  - Data-driven: tracks health scores, usage, and engagement proactively
+                  - Collaborative with Product — brings customer feedback with evidence, not just anecdotes
+
+                  **Nice-to-haves**
+                  - Experience at a PLG company (usage-led expansion motions)
+                  - Has built or improved an onboarding program before
+                  - Comfortable doing light technical troubleshooting (no coding required)
+
+                  **Red flags**
+                  - Defines success entirely as "customers are happy" without metrics
+                  - Has never done an upsell or expansion conversation
+                  - Reactive-only — waits for customers to reach out vs. monitoring proactively
+          - title: "Head of Marketing"
+            components:
+              - type: markdown
+                body: |
+                  **Must-haves**
+                  - 5+ years in B2B SaaS marketing, with at least 2 years in a leadership role
+                  - Has built demand gen and content programs from scratch (not just maintained them)
+                  - Analytical: can connect marketing activity to pipeline and revenue
+                  - Good writer — will be shaping our voice and putting pen to paper early
+
+                  **Nice-to-haves**
+                  - Experience marketing to technical buyers or a developer-adjacent audience
+                  - Has owned a product marketing function alongside demand gen
+                  - Comfortable being the first marketing hire (no big team to inherit)
+
+                  **Red flags**
+                  - Expects a large budget and team immediately — we are early
+                  - Portfolio shows only top-of-funnel awareness work, no pipeline attribution
+                  - Has not directly written content (delegates everything to writers/agencies)
+
+  - type: section
+    eyebrow: Process
+    heading: Interview Process
+    components:
+      - type: timeline
+        items:
+          - name: "Recruiter screen (30 min) — Rosa or Ashby Sourcing"
+            status: completed
+          - name: "Hiring manager screen (45 min) — video call"
+            status: completed
+          - name: "Take-home or async exercise (2–4 hours, paid for eng roles)"
+            status: active
+          - name: "Panel loop (3 hours) — 3–4 interviewers, structured rubric"
+            status: active
+          - name: "Final interview with Elena (30 min) — values and fit"
+            status: upcoming
+          - name: "Reference checks (2–3 references, Rosa conducts)"
+            status: upcoming
+          - name: "Offer extended within 48 hours of final interview"
+            status: upcoming
+
+  - type: section
+    eyebrow: Compensation
+    heading: Compensation Bands
+    components:
+      - type: markdown
+        body: >
+          Bands reflect our Series A stage and San Francisco / remote mix. We pay at the
+          50th–65th percentile of market based on Radford data (updated Q1 2026). Equity
+          ranges assume 4-year vest with 1-year cliff.
+      - type: table
+        columns:
+          - key: level
+            label: Level
+          - key: base_range
+            label: Base Range
+          - key: equity_range
+            label: Equity Range (4yr)
+          - key: examples
+            label: Example Roles
+        rows:
+          - level: Entry-level IC (L1)
+            base_range: "$75K – $95K"
+            equity_range: "0.05% – 0.10%"
+            examples: "SDR, Support"
+          - level: Mid-level IC (L2)
+            base_range: "$110K – $140K"
+            equity_range: "0.10% – 0.20%"
+            examples: "SWE, CSM, PM"
+          - level: Senior IC (L3)
+            base_range: "$150K – $185K"
+            equity_range: "0.20% – 0.40%"
+            examples: "Sr. SWE, Enterprise AE, Solutions Eng"
+          - level: Staff IC (L4)
+            base_range: "$185K – $220K"
+            equity_range: "0.35% – 0.60%"
+            examples: "Staff Eng, Principal PM"
+          - level: Manager / Director (M1)
+            base_range: "$160K – $200K"
+            equity_range: "0.30% – 0.55%"
+            examples: "Head of Marketing, Eng Manager"
+          - level: Senior Director / VP (M2)
+            base_range: "$200K – $250K"
+            equity_range: "0.50% – 0.90%"
+            examples: "VP Eng, VP Sales, VP Marketing"
+
+  - type: section
+    eyebrow: Priorities
+    heading: Hiring Priorities at a Glance
+    components:
+      - type: card_grid
+        min_width: 260
+        cards:
+          - title: Enterprise AE + Solutions Engineer
+            badge:
+              label: "P0 — Close Now"
+              color: green
+            description: >
+              The Series A bet. Every week these seats are empty is a week of enterprise pipeline
+              not being worked. AE offer accepted; SE offer expected Jul 17. Do not slow-walk these.
+          - title: Senior Full-Stack Engineer
+            badge:
+              label: "P0 — Close Now"
+              color: green
+            description: >
+              Marcus is the bottleneck on SAML, audit logs, and the multi-tenant migration.
+              This hire directly removes a Q3 roadmap risk. Offer out — follow up Aug 5.
+          - title: Head of Marketing
+            badge:
+              label: "P1 — Q3 Target"
+              color: teal
+            description: >
+              We have $8M in the bank and no marketing. Word-of-mouth has carried us to $412K ARR
+              but we need a repeatable inbound motion before Series B conversations. First marketing
+              hire is high-leverage.
+          - title: Customer Success Manager
+            badge:
+              label: "P1 — Q3 Target"
+              color: teal
+            description: >
+              James is running 45 accounts solo. Above 50 accounts we will start to see quality
+              drop. This hire protects our NRR, which is the most important metric heading into
+              enterprise expansion.
+          - title: Backend Engineer + SDR
+            badge:
+              label: "P2 — Q4 Planned"
+              color: yellow
+            description: >
+              Infrastructure needs more capacity as we onboard enterprise customers. SDR pipeline
+              gen will matter once the enterprise AE is ramped and needs top-of-funnel volume.
+              Both are Q4 hires gated on Q3 performance.
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: Clone it to your workspace and your agents will use this structure when building hiring plan pages. Replace the placeholder roles, pipeline counts, and comp bands with your actual data. Your ATS (Ashby, Greenhouse, Lever) can update pipeline stages and candidate counts automatically via a curata integration.

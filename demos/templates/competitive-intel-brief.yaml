@@ -1,0 +1,278 @@
+title: "Competitive Intelligence Brief"
+subtitle: Positioning, pricing, and talk tracks for the four competitors we see most in deals.
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Persona
+        value: Sales
+      - key: Last Updated
+        value: "2026-05-11"
+      - key: Owner
+        value: Mara Kessler, Product Marketing
+      - key: Competitors Covered
+        value: "4"
+
+  - type: stat_grid
+    columns: 4
+    stats:
+      - label: Win Rate vs. Competitors
+        value: "58%"
+        detail: Across 94 competitive deals this quarter
+        color: green
+      - label: Most Common Competitor
+        value: Siftly
+        detail: Appeared in 41% of competitive deals
+        color: teal
+      - label: Avg Deal Size When Competing
+        value: "$94K"
+        detail: vs. $71K for uncontested deals
+        color: yellow
+      - label: Deals Lost to Competition
+        value: "39"
+        detail: 22 to Siftly, 9 to Cortex, 5 to Lumio, 3 to Vantage
+        color: red
+
+  - type: divider
+
+  - type: section
+    eyebrow: Competitor Snapshot
+    heading: Head-to-Head Overview
+    components:
+      - type: markdown
+        body: "How we stack up against each competitor on the dimensions that matter most in deals."
+      - type: split_compare
+        left:
+          eyebrow: Their Positioning
+          title: Siftly
+          stats:
+            - label: Founded
+              value: "2019"
+              color: default
+            - label: Last Funding
+              value: Series C ($62M)
+              color: default
+            - label: Primary Buyer
+              value: VP Data / Analytics
+              color: default
+            - label: Core Pitch
+              value: "Self-serve BI, no SQL required"
+              color: default
+            - label: Pricing Model
+              value: Per-seat, $45–$90/mo
+              color: default
+            - label: Weaknesses
+              value: "No agent integrations, brittle pipelines"
+              color: red
+        right:
+          eyebrow: Our Advantages vs. Siftly
+          title: Us
+          stats:
+            - label: Agent-native workflows
+              value: "Yes"
+              color: green
+            - label: Real-time pipeline sync
+              value: "Yes"
+              color: green
+            - label: Custom data models
+              value: "Yes"
+              color: green
+            - label: RBAC + audit logs
+              value: "Yes"
+              color: green
+            - label: Self-serve BI layer
+              value: Roadmap Q3
+              color: yellow
+            - label: Pricing vs. Siftly
+              value: "15–20% premium"
+              color: yellow
+
+  - type: divider
+
+  - type: section
+    eyebrow: Pricing Comparison
+    heading: Pricing at a Glance
+    components:
+      - type: markdown
+        body: "Estimated pricing based on public information, customer conversations, and recent deal data. Use ranges — do not quote exact competitor prices in writing to prospects."
+      - type: table
+        filterable: false
+        columns:
+          - key: vendor
+            label: Vendor
+          - key: model
+            label: Pricing Model
+          - key: entry
+            label: Entry (20 seats)
+          - key: mid
+            label: Mid-market (75 seats)
+          - key: enterprise
+            label: Enterprise (250+)
+          - key: notes
+            label: Notes
+        rows:
+          - vendor: Us
+            model: Per seat + platform fee
+            entry: "$32K/yr"
+            mid: "$89K/yr"
+            enterprise: "Custom"
+            notes: Volume discounts at 50+ seats; annual commit required
+          - vendor: Siftly
+            model: Per seat only
+            entry: "$18K/yr"
+            mid: "$58K/yr"
+            enterprise: "$120–160K/yr"
+            notes: No platform fee but add-ons (SSO, audit) cost extra
+          - vendor: Cortex Analytics
+            model: Consumption-based
+            entry: "$24K/yr est."
+            mid: "$70–90K/yr"
+            enterprise: "Negotiated"
+            notes: Unpredictable at scale; customers often overage by 30–40%
+          - vendor: Lumio
+            model: Flat-rate tiers
+            entry: "$15K/yr"
+            mid: "$45K/yr"
+            enterprise: "$95K/yr"
+            notes: Cheapest in market; limited enterprise features
+          - vendor: Vantage BI
+            model: Per seat + modules
+            entry: "$28K/yr"
+            mid: "$84K/yr"
+            enterprise: "Custom"
+            notes: Module pricing adds up quickly; strong legacy install base
+
+  - type: divider
+
+  - type: section
+    eyebrow: Win / Loss
+    heading: Win / Loss This Quarter
+    components:
+      - type: stat_grid
+        columns: 4
+        stats:
+          - label: vs. Siftly
+            value: "61% W"
+            detail: "Won 25 of 41 — strongest record"
+            color: green
+          - label: vs. Cortex Analytics
+            value: "54% W"
+            detail: "Won 13 of 24 — improving"
+            color: green
+          - label: vs. Lumio
+            value: "67% W"
+            detail: "Won 14 of 21 — tends to be price-sensitive deals"
+            color: green
+          - label: vs. Vantage BI
+            value: "44% W"
+            detail: "Won 7 of 16 — hardest matchup; entrenched accounts"
+            color: yellow
+      - type: markdown
+        body: |
+          **Top reasons we win:**
+          - Agent integration story is differentiated — competitors have nothing comparable
+          - Security and compliance (SOC 2 Type II, RBAC, DLP) closes enterprise deals Lumio and Siftly can't touch
+          - Customer success team rated 4.8/5 — references convert skeptics reliably
+
+          **Top reasons we lose:**
+          - Price: Lumio undercuts us by 30–40% and wins cost-driven buyers
+          - Self-serve BI layer: Siftly wins when the primary buyer is a data analyst, not an ops leader
+          - Entrenched Vantage installs: switching cost conversation is hard without a clear incident or champion change
+
+  - type: divider
+
+  - type: section
+    eyebrow: Talk Tracks
+    heading: Competitor-Specific Talk Tracks
+    components:
+      - type: accordion
+        items:
+          - title: "Siftly — When they lead with 'no SQL required'"
+            components:
+              - type: markdown
+                body: |
+                  **Their angle:** Siftly sells simplicity. Their demo is slick, self-serve, and targets analysts who are frustrated waiting on data teams.
+
+                  **Your response:**
+                  - Agree that self-serve matters, then pivot: "The question isn't whether your analysts can query data — it's whether your systems can keep up with how your team actually works today. Do your analysts mostly pull reports, or are they also working alongside AI agents that generate and synthesize outputs?"
+                  - Siftly has no agent integration. If they are using Claude, Cursor, or any AI tooling, the outputs live nowhere. Ask: "Where does that work go today?"
+                  - **Proof point:** Meridian Health chose us over Siftly because their ops team had 4 active AI agents producing outputs weekly — Siftly couldn't ingest any of it.
+
+                  **Landmine to plant:** "Ask Siftly how they handle agent-generated content. It will come up — better to get ahead of it."
+          - title: "Cortex Analytics — When they lead with 'pay only for what you use'"
+            components:
+              - type: markdown
+                body: |
+                  **Their angle:** Consumption pricing sounds attractive early in the process. Cortex reps frame it as "you're not paying for seats that aren't being used."
+
+                  **Your response:**
+                  - Surface the unpredictability risk early: "Consumption pricing is great in theory. In practice, every customer I talk to who migrated off Cortex told me the same thing — their bills at scale were 30–40% higher than the initial estimate. Is your finance team comfortable with variable software spend?"
+                  - Pull up our pricing calculator with a realistic usage scenario. Show the predictable number vs. the Cortex estimate.
+                  - **Proof point:** Stackline Commerce moved off Cortex after 14 months specifically because of budget overruns. They're a referenceable customer — ask your AE.
+
+                  **Ask the champion:** "When you present options to finance, do they prefer predictable SaaS line items or variable usage-based costs?"
+          - title: "Lumio — When it's a price objection"
+            components:
+              - type: markdown
+                body: |
+                  **Their angle:** Lumio is the low-cost alternative. Reps will be told "Lumio does the same thing for half the price."
+
+                  **Your response:**
+                  - Don't fight on price. Reframe on TCO and risk: "Lumio is a great fit for teams that need basic dashboards and have an IT team that can manage the integrations. Can I ask — how much of your ops team's time goes into maintaining data pipelines today?"
+                  - Lumio has no SSO (added cost), no audit logging (compliance risk), and no dedicated CSM under $50K ARR. Build out the real cost: "Once you add SSO, audit, and factor in self-managed integrations, the delta tends to be much smaller than it looks."
+                  - **Proof point:** Forgepoint Capital received an InfoSec rejection of Lumio during vendor review because it lacked SOC 2. We were the only qualified option.
+
+                  **Qualification signal:** If the buyer is truly price-constrained, ask about their security and compliance requirements. Lumio usually fails the infosec checklist.
+          - title: "Vantage BI — Displacing an entrenched install"
+            components:
+              - type: markdown
+                body: |
+                  **Their angle:** Vantage is an entrenched platform. They will compete on switching costs, installed base familiarity, and relationship leverage.
+
+                  **Your response:**
+                  - Find the fracture point. Nobody evaluates alternatives unless something is broken. Ask: "What's prompting you to look at this now? Something must have changed."
+                  - Common fracture points: Vantage's legacy architecture doesn't support real-time data, their roadmap hasn't shipped meaningful features in 2+ years, or a new VP came in and questioned the existing stack.
+                  - Frame the switch cost differently: "Yes, migration takes time. The question is whether the cost of staying on Vantage for 3 more years is higher than the cost of switching now. Let's build that math together."
+                  - **Proof point:** DataPipe ran a 60-day parallel evaluation. We won because our agent integration saved their ops team an estimated 12 hours/week — Vantage couldn't come close.
+
+                  **Deal strategy:** Always get to the economic buyer early. Vantage will mobilize their account exec to call the VP. You need a sponsor above the Vantage relationship.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Market Intelligence
+    heading: Recent Competitive Moves
+    components:
+      - type: event_timeline
+        show_filter_toggle: false
+        events:
+          - date: "2026-05-02"
+            title: Siftly launched "Agent Connect" beta
+            summary: Announced integration with OpenAI API. Currently read-only; no write-back support. Marketing heavy, but feature is limited. Monitor for Q3 roadmap announcements.
+            severity: major
+            source: Mara K. (from LinkedIn + press release)
+          - date: "2026-04-18"
+            title: Cortex raised $28M Series B extension
+            summary: Stated use of funds includes enterprise GTM hiring and a new compliance module. Expect more aggressive enterprise deals in Q3. Their ACV is moving up-market.
+            severity: major
+            source: TechCrunch
+          - date: "2026-04-09"
+            title: Lumio dropped entry price to $12K/yr
+            summary: Confirmed in a lost deal debrief (Apex Robotics). Lumio is likely discounting to accelerate SMB volume. Does not change our ICP strategy but expect more price pressure in sub-50-seat deals.
+            severity: minor
+            source: Lost deal debrief — Sam H.
+          - date: "2026-03-27"
+            title: Vantage BI lost VP Engineering at two marquee accounts
+            summary: Two known Vantage enterprise accounts (TerraScale, Ovation Media) posted VP Eng roles. Champion churn is our best window into Vantage displaces. Both accounts added to BDR outreach list.
+            severity: minor
+            source: LinkedIn signals — Jordan V.
+          - date: "2026-03-15"
+            title: Cortex Analytics hired ex-Salesforce enterprise AE team (8 reps)
+            summary: Cortex is building an enterprise field sales motion. Their current AEs are primarily PLG/inbound. This signals a strategic shift toward direct enterprise selling. Expect competitive pressure in deals above $100K.
+            severity: major
+            source: LinkedIn
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: Clone this to your workspace and your agents will keep it current with competitive signals, win/loss data from your CRM, and updated talk tracks from deal debriefs. Replace the competitor names and data with your actual competitive landscape.

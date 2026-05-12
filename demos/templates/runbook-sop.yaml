@@ -1,0 +1,250 @@
+title: "Runbook — Production Database Failover"
+subtitle: RDS Multi-AZ Failover · Severity P1 · Last updated 2026-04-18
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Severity
+        value: P1 — Critical
+      - key: Est. Duration
+        value: 20–35 min
+      - key: Owner
+        value: Platform Engineering
+      - key: Last Tested
+        value: 2026-03-14
+
+  - type: callout
+    variant: danger
+    title: When to use this runbook
+    body: |
+      Use this procedure when the primary RDS instance (prod-postgres-primary) becomes unavailable, shows sustained high error rates (>5% for 3+ minutes), or when PagerDuty fires the "RDS Primary Unreachable" alert. Do NOT use for read-replica issues — see runbook-read-replica.yaml instead.
+
+      Estimated resolution time: 20–35 minutes. Customer-facing impact begins at T+2 minutes if automatic failover does not trigger.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Step 0
+    heading: Prerequisites
+    components:
+      - type: markdown
+        body: Verify you have the following access before proceeding. Do not start the failover procedure without all items checked.
+      - type: markdown
+        body: |
+          - [ ] AWS Console access with `PowerUserAccess` on the `prod` account
+          - [ ] VPN connected to `prod-vpc` (Tailscale or AWS Client VPN)
+          - [ ] Datadog dashboard open — "Production DB Overview"
+          - [ ] Incident channel created in Slack — `#inc-YYYYMMDD-db-failover`
+          - [ ] Pagerduty incident acknowledged and you are incident commander
+          - [ ] `prod` kubeconfig context active (`kubectl config use-context prod`)
+
+  - type: divider
+
+  - type: section
+    eyebrow: Procedure
+    heading: Step-by-Step Failover
+    components:
+      - type: markdown
+        body: Execute these steps in order. Do not skip steps. Mark each complete in the incident channel as you go.
+      - type: steps
+        numbered: true
+        items:
+          - title: Confirm the primary is actually down
+            detail: |
+              Check RDS console — the instance `prod-postgres-primary` should show status `Failing over` or `Unavailable`. Also check the app error rate in Datadog:
+          - title: Check automatic failover status
+            detail: |
+              RDS Multi-AZ will attempt automatic failover within 60–120 seconds. Check the Events tab in the RDS console. If you see "Multi-AZ instance failover started", wait and monitor — do NOT force a manual failover while automatic is in progress.
+          - title: If automatic failover has NOT started after 3 minutes, initiate manual failover
+            detail: |
+              Run the following AWS CLI command from your terminal:
+          - title: Update the application connection string
+            detail: |
+              If the CNAME `prod-db.internal.acme.io` did not update automatically (verify with `dig`), update the `DATABASE_URL` secret in AWS Secrets Manager and restart the app pods:
+          - title: Verify application connectivity
+            detail: |
+              Hit the health endpoint and check for DB connection errors:
+          - title: Warm up connection pool
+            detail: |
+              After pods restart, the connection pool needs ~2 minutes to warm. Watch for connection timeout errors to drop to zero in Datadog before declaring recovery.
+
+      - type: code
+        language: bash
+        code: |
+          # Step 1 — Check error rate
+          aws cloudwatch get-metric-statistics \
+            --namespace AWS/RDS \
+            --metric-name DatabaseConnections \
+            --dimensions Name=DBInstanceIdentifier,Value=prod-postgres-primary \
+            --start-time $(date -u -v-5M +%FT%TZ) \
+            --end-time $(date -u +%FT%TZ) \
+            --period 60 \
+            --statistics Average
+
+      - type: code
+        language: bash
+        code: |
+          # Step 3 — Force manual failover (only if automatic has not started)
+          aws rds reboot-db-instance \
+            --db-instance-identifier prod-postgres-primary \
+            --force-failover \
+            --region us-east-1
+
+          # Wait for the instance to show status "available" on the new AZ
+          watch -n 5 "aws rds describe-db-instances \
+            --db-instance-identifier prod-postgres-primary \
+            --query 'DBInstances[0].{Status:DBInstanceStatus,AZ:AvailabilityZone}' \
+            --output table"
+
+      - type: code
+        language: bash
+        code: |
+          # Step 4 — Verify CNAME resolved to new endpoint
+          dig prod-db.internal.acme.io
+
+          # If CNAME is stale, update and restart pods
+          kubectl rollout restart deployment/api-server -n production
+          kubectl rollout restart deployment/worker -n production
+          kubectl rollout status deployment/api-server -n production
+
+      - type: code
+        language: bash
+        code: |
+          # Step 5 — Health check
+          curl -sf https://api.acmecorp.io/health | jq '.database'
+          # Expected: {"status":"ok","latency_ms":4}
+
+  - type: divider
+
+  - type: section
+    eyebrow: Verification
+    heading: Post-Failover Checks
+    components:
+      - type: markdown
+        body: Complete all checks before closing the incident. Do not declare recovery until every item passes.
+      - type: markdown
+        body: |
+          - [ ] RDS console shows new primary in `us-east-1b` (or `us-east-1c`) with status `Available`
+          - [ ] `/health` endpoint returns `{"database":{"status":"ok"}}` for 3 consecutive checks
+          - [ ] Datadog DB error rate has returned to <0.1% for at least 5 minutes
+          - [ ] P99 query latency is below 50ms (normal baseline)
+          - [ ] Background job queue depth is draining (not growing)
+          - [ ] No open transactions older than 5 minutes (`pg_stat_activity` check)
+          - [ ] Incident channel update posted — "Recovery confirmed at HH:MM UTC"
+
+  - type: divider
+
+  - type: section
+    eyebrow: Recovery Options
+    heading: Rollback Procedure
+    components:
+      - type: markdown
+        body: If the failover made things worse (e.g., the new primary is also degraded), use these options in order of preference.
+      - type: accordion
+        items:
+          - title: Option A — Fail back to original primary
+            components:
+              - type: markdown
+                body: |
+                  Once the original primary has recovered (status `Available`), you can fail back by repeating the manual failover command. RDS will promote the original instance back to primary.
+
+                  Wait at least 15 minutes after the original failover before failing back — the standby needs time to catch up via replication.
+              - type: code
+                language: bash
+                code: |
+                  aws rds reboot-db-instance \
+                    --db-instance-identifier prod-postgres-primary \
+                    --force-failover \
+                    --region us-east-1
+          - title: Option B — Restore from snapshot
+            components:
+              - type: markdown
+                body: |
+                  Use only if both AZs are degraded and you cannot achieve connectivity. Automated snapshots run every 6 hours — you will lose up to 6 hours of data. Requires P0 declaration and VP Engineering approval.
+              - type: code
+                language: bash
+                code: |
+                  # List recent snapshots
+                  aws rds describe-db-snapshots \
+                    --db-instance-identifier prod-postgres-primary \
+                    --query 'sort_by(DBSnapshots, &SnapshotCreateTime)[-5:].[SnapshotIdentifier,SnapshotCreateTime,Status]' \
+                    --output table
+
+                  # Restore to new instance (fill in SNAPSHOT_ID)
+                  aws rds restore-db-instance-from-db-snapshot \
+                    --db-instance-identifier prod-postgres-restored \
+                    --db-snapshot-identifier <SNAPSHOT_ID> \
+                    --db-instance-class db.r6g.2xlarge \
+                    --multi-az \
+                    --region us-east-1
+          - title: Option C — Promote read replica
+            components:
+              - type: markdown
+                body: |
+                  `prod-postgres-replica-west` (us-west-2) is a cross-region replica with ~30s replication lag. Promoting it makes it an independent writable instance — it will no longer sync with the primary. Only use if us-east-1 is completely unavailable.
+              - type: code
+                language: bash
+                code: |
+                  aws rds promote-read-replica \
+                    --db-instance-identifier prod-postgres-replica-west \
+                    --region us-west-2
+                  # Then update DATABASE_URL to point at the us-west-2 endpoint
+
+  - type: divider
+
+  - type: section
+    eyebrow: Escalation
+    heading: Escalation Contacts
+    components:
+      - type: markdown
+        body: If you cannot resolve within 30 minutes, escalate in this order. Do not wait until SLA breach to escalate.
+      - type: card_grid
+        min_width: 220
+        cards:
+          - title: Marcus Chen
+            badge:
+              label: Platform Lead
+              color: green
+            description: "Primary on-call. PagerDuty escalation L1. Slack: @marcus.chen"
+          - title: Priya Nair
+            badge:
+              label: Senior DBA
+              color: teal
+            description: "Database specialist. RDS restore authority. Slack: @priya.nair"
+          - title: AWS Premium Support
+            badge:
+              label: External
+              color: yellow
+            description: "Case via console. Support PIN: see 1Password 'AWS Support PIN'. Avg response: 15 min for P1."
+          - title: Derek Walsh
+            badge:
+              label: VP Engineering
+              color: default
+            description: "Required approval for snapshot restore or >2hr SLA breach. Slack: @derek.walsh"
+
+  - type: divider
+
+  - type: section
+    eyebrow: Wrap-up
+    heading: Post-Incident Actions
+    components:
+      - type: markdown
+        body: |
+          Complete these within 48 hours of incident resolution.
+
+          **Immediate (same day):**
+          - [ ] Post timeline to `#incidents` channel using the incident template
+          - [ ] Update status page (statuspage.acmecorp.io) — mark resolved
+          - [ ] Notify customer success if any enterprise customers were affected (>5 min impact)
+
+          **Within 48 hours:**
+          - [ ] Schedule post-mortem with platform team (30 min, blameless format)
+          - [ ] File RCA document in Notion → Engineering → Incidents
+          - [ ] Create Jira tickets for any action items with P2 priority or higher
+          - [ ] Update this runbook if any steps were incorrect or missing
+
+          **Metrics to capture for the RCA:**
+          - Time to detect (alert fired → human acknowledged)
+          - Time to diagnose (acknowledged → root cause identified)
+          - Time to recover (root cause → customer impact resolved)
+          - Total customer-facing impact duration

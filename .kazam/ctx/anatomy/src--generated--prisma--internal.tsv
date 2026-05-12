@@ -1,0 +1,4 @@
+path	tokens	reads	description
+src/generated/prisma/internal/class.ts	12988	0	TypeScript source
+src/generated/prisma/internal/prismaNamespace.ts	10463	0	TypeScript source
+src/generated/prisma/internal/prismaNamespaceBrowser.ts	1481	0	TypeScript source

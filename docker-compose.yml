@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: curata
+      POSTGRES_PASSWORD: curata
+      POSTGRES_DB: curata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U curata"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://curata:curata@postgres:5432/curata
+      AUTH_MODE: ${AUTH_MODE:-none}
+      SITES_ROOT: /data/sites
+    volumes:
+      - sites:/data/sites
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  sites:

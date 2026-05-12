@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  domain    String?  @unique
+  theme     String   @default("dark")
+  mode      String   @default("dark")
+  texture   String   @default("none")
+  glow      String   @default("none")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  apiKeys   ApiKey[]
+  folders   Folder[]
+  pages     Page[]
+  members   OrgMember[]
+  auditLogs AuditLog[]
+
+  @@map("organizations")
+}
+
+model OrgMember {
+  id     String @id @default(cuid())
+  orgId  String @map("org_id")
+  userId String @map("user_id")
+  role   String @default("member")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+  @@map("org_members")
+}
+
+model Folder {
+  id         String   @id @default(cuid())
+  orgId      String   @map("org_id")
+  parentId   String?  @map("parent_id")
+  name       String
+  visibility String   @default("shared")
+  createdBy  String   @map("created_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent   Folder?      @relation("FolderTree", fields: [parentId], references: [id])
+  children Folder[]     @relation("FolderTree")
+  pages    Page[]
+
+  @@index([orgId])
+  @@map("folders")
+}
+
+model Page {
+  id         String    @id @default(cuid())
+  orgId      String    @map("org_id")
+  folderId   String?   @map("folder_id")
+  slug       String
+  title      String
+  visibility String    @default("shared")
+  createdBy  String    @map("created_by")
+  viewCount  Int       @default(0) @map("view_count")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  org         Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  folder      Folder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  versions    PageVersion[]
+  annotations Annotation[]
+
+  @@unique([orgId, slug])
+  @@index([orgId, visibility])
+  @@map("pages")
+}
+
+model PageVersion {
+  id          String   @id @default(cuid())
+  pageId      String   @map("page_id")
+  yamlContent String   @map("yaml_content")
+  jsonContent Json?    @map("json_content")
+  contentHash String   @map("content_hash")
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@map("page_versions")
+}
+
+model Annotation {
+  id          String   @id @default(cuid())
+  pageId      String   @map("page_id")
+  text        String
+  author      String
+  section     String?
+  target      String?
+  kind        String   @default("note")
+  replacement String?
+  status      String   @default("pending")
+  source      String   @default("web")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([pageId, status])
+  @@map("annotations")
+}
+
+model ApiKey {
+  id        String    @id @default(cuid())
+  orgId     String    @map("org_id")
+  name      String
+  keyHash   String    @unique @map("key_hash")
+  prefix    String
+  scopes    String[]  @default(["read", "write"])
+  createdBy String    @default("system") @map("created_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+  expiresAt DateTime? @map("expires_at")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@map("api_keys")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  orgId        String   @map("org_id")
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+  actorType    String   @default("user") @map("actor_type")
+  actorId      String   @map("actor_id")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([resourceType, resourceId])
+  @@map("audit_logs")
+}

@@ -1,0 +1,61 @@
+events:
+- date: 2026-05-12T10:38:54.042265-05:00
+  title: 'closed kz-f010: OSS: copy files from curata-app to curata repo'
+  detail: Files copied, Clerk routes deleted, package.json cleaned
+  severity: major
+  source: claude
+  task_id: kz-f010
+- date: 2026-05-12T10:38:54.056258-05:00
+  title: 'closed kz-f020: OSS: schema — remove clerkOrgId, drop billing tables, add AuditLog'
+  detail: 'Schema: removed clerkOrgId, added AuditLog, prisma generate passes'
+  severity: major
+  source: claude
+  task_id: kz-f020
+- date: 2026-05-12T10:38:54.066268-05:00
+  title: 'closed kz-f025: OSS: extract seedOrg() from Clerk webhook handler'
+  detail: Extracted seedOrg() into src/lib/seed.ts
+  severity: major
+  source: claude
+  task_id: kz-f025
+- date: 2026-05-12T10:38:54.075530-05:00
+  title: 'closed kz-f030: OSS: auth adapter — rewrite resolveOrg() for none/oauth modes'
+  detail: 'Auth adapter: resolveOrg() with AUTH_MODE switch, next-auth v5'
+  severity: major
+  source: claude
+  task_id: kz-f030
+- date: 2026-05-12T10:38:54.084622-05:00
+  title: 'closed kz-f040: OSS: middleware — standard Next.js with AUTH_MODE switch'
+  detail: Standard Next.js middleware, rate limiting preserved, Clerk CSP stripped
+  severity: major
+  source: claude
+  task_id: kz-f040
+- date: 2026-05-12T10:38:54.093643-05:00
+  title: 'closed kz-f050: OSS: strip Clerk from 14 UI files + rewire routes'
+  detail: Stripped Clerk from all 14 files, zero @clerk imports remain
+  severity: major
+  source: claude
+  task_id: kz-f050
+- date: 2026-05-12T10:38:54.102516-05:00
+  title: 'closed kz-f060: OSS: CLI package — curata init/up/api-key'
+  detail: CLI package at packages/cli/ with init, up, api-key commands
+  severity: major
+  source: claude
+  task_id: kz-f060
+- date: 2026-05-12T10:38:54.111040-05:00
+  title: 'closed kz-f070: OSS: Docker Compose + Dockerfile for two-container deploy'
+  detail: docker-compose.yml + Dockerfile updated for OSS
+  severity: major
+  source: claude
+  task_id: kz-f070
+- date: 2026-05-12T10:38:54.120165-05:00
+  title: 'closed kz-f100: OSS: GitHub Actions — CI + tag-based Docker Hub + npm publish'
+  detail: GitHub Actions ci.yml + release.yml
+  severity: major
+  source: claude
+  task_id: kz-f100
+- date: 2026-05-12T10:38:54.129027-05:00
+  title: 'closed kz-f110: OSS: README — quickstart, architecture, security guidance'
+  detail: README with quickstart, features, security, MIT license
+  severity: major
+  source: claude
+  task_id: kz-f110

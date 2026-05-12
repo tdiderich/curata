@@ -1,0 +1,293 @@
+title: "Feature Launch Checklist — API v2 Migration"
+subtitle: "Acme Corp · Target GA: May 22, 2026 · Owner: Marcus Chen"
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Launch Date
+        value: May 22, 2026
+      - key: Owner
+        value: Marcus Chen
+      - key: Status
+        value: In Progress
+      - key: API v1 Sunset
+        value: Aug 22, 2026
+
+  - type: section
+    eyebrow: Status
+    heading: Launch Readiness
+    components:
+      - type: stat_grid
+        columns: 3
+        stats:
+          - label: Days to Launch
+            value: "11"
+            detail: Target May 22, 2026
+            color: yellow
+          - label: Checklist Complete
+            value: "73%"
+            detail: 47 of 64 items done
+            color: teal
+          - label: Open Blockers
+            value: "2"
+            detail: Auth migration + load test
+            color: red
+
+  - type: divider
+
+  - type: section
+    eyebrow: Pre-Launch
+    heading: Launch Checklist
+    components:
+      - type: markdown
+        body: Nested by team. Green = done, red = not started, yellow = in progress. All items must be green before GA.
+      - type: tree
+        show_filter_toggle: true
+        nodes:
+          - label: Engineering
+            status: active
+            children:
+              - label: API v2 endpoints implemented (all 14 routes)
+                status: completed
+                note: Code reviewed and merged
+              - label: Backwards-compat shim for v1 clients
+                status: completed
+                note: v1 requests forwarded to v2, returns v1 response shape
+              - label: OAuth 2.0 migration (v1 used API keys only)
+                status: active
+                note: 80% done — refresh token flow still being tested
+              - label: Rate limiting updated (v2 limits differ from v1)
+                status: completed
+              - label: Load test — 5,000 req/min sustained for 10 min
+                status: upcoming
+                note: Scheduled May 16 — need staging data seeded first
+              - label: Error codes standardized (RFC 7807 problem+json)
+                status: completed
+              - label: Changelog endpoint (/api/v2/changelog)
+                status: completed
+              - label: Deprecation headers on all v1 responses
+                status: completed
+                note: Sunset date Aug 22 in header
+          - label: QA
+            status: active
+            children:
+              - label: Happy path E2E tests — all 14 v2 routes
+                status: completed
+              - label: Auth failure test cases (invalid token, expired, wrong scope)
+                status: completed
+              - label: Rate limit enforcement tests
+                status: completed
+              - label: Backwards compat regression suite (v1 client calls)
+                status: active
+                note: 11 of 14 scenarios passing
+              - label: Penetration test (scheduled with external vendor)
+                status: active
+                note: SecureStack running May 14–15, report by May 17
+          - label: Documentation
+            status: active
+            children:
+              - label: API v2 reference (openapi.acmecorp.io/v2)
+                status: completed
+              - label: Migration guide — v1 to v2
+                status: completed
+                note: Published in dev docs
+              - label: Code examples updated (Python, Node, curl)
+                status: active
+                note: Python and curl done, Node in progress
+              - label: Changelog entry
+                status: upcoming
+              - label: v1 deprecation notice added to v1 docs
+                status: completed
+          - label: Marketing
+            status: upcoming
+            children:
+              - label: Launch blog post drafted
+                status: active
+                note: First draft in Notion, review May 15
+              - label: Email to developer segment (1,200 contacts)
+                status: upcoming
+                note: Scheduled for May 21 (day before GA)
+              - label: In-app banner for v1 API key users
+                status: upcoming
+              - label: Social post (Twitter/LinkedIn)
+                status: upcoming
+          - label: Support
+            status: active
+            children:
+              - label: Support team briefed on v2 changes
+                status: completed
+              - label: FAQ article published (Intercom)
+                status: completed
+              - label: Migration support macro created
+                status: active
+                note: Draft written, needs review from Marcus
+              - label: Escalation path defined for migration failures
+                status: upcoming
+
+  - type: divider
+
+  - type: section
+    eyebrow: Rollout Strategy
+    heading: Rollout Plan
+    components:
+      - type: timeline
+        items:
+          - name: Internal dogfood
+            status: completed
+          - name: Canary (1%)
+            status: completed
+          - name: Early access (10 customers)
+            status: active
+          - name: Staged rollout (10% → 50%)
+            status: upcoming
+          - name: GA (100%)
+            status: upcoming
+          - name: v1 sunset (Aug 22)
+            status: upcoming
+
+      - type: markdown
+        body: |
+          **Rollout gates:**
+          - Canary to 10%: requires load test passing + pentest report reviewed
+          - 10% to 50%: requires error rate <0.1% on canary for 48hr
+          - 50% to 100% (GA): requires zero P1 bugs + Lena's approval
+          - Each gate requires Marcus's sign-off. Derek to be notified at GA.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Risk Management
+    heading: Risk Assessment
+    components:
+      - type: table
+        filterable: false
+        columns:
+          - key: risk
+            label: Risk
+          - key: likelihood
+            label: Likelihood
+          - key: impact
+            label: Impact
+          - key: mitigation
+            label: Mitigation
+        rows:
+          - risk: v1 clients break after shim is removed
+            likelihood: Medium
+            impact: High
+            mitigation: 90-day deprecation window. Sunset headers on all v1 responses. Proactive outreach to top v1 API consumers.
+          - risk: OAuth migration breaks existing integrations
+            likelihood: Medium
+            impact: High
+            mitigation: v1 API keys continue to work until Aug 22. OAuth is additive for v2. Migration guide published.
+          - risk: Load test reveals capacity issues
+            likelihood: Low
+            impact: High
+            mitigation: Load test May 16 — 6 days before GA. If issues found, GA postponed by 1 week. Auto-scaling enabled on API tier.
+          - risk: Third-party integrators not migrated by sunset
+            likelihood: High
+            impact: Medium
+            mitigation: Email campaign May 21. In-app warning at 60 days, 30 days, 7 days before sunset. Self-serve migration guide.
+          - risk: Pentest finds critical vulnerability
+            likelihood: Low
+            impact: Critical
+            mitigation: Pentest runs May 14–15. If critical finding, GA postponed until patched. No exceptions.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Comms Plan
+    heading: Communication Plan
+    components:
+      - type: accordion
+        items:
+          - title: Internal announcement
+            components:
+              - type: markdown
+                body: |
+                  **Audience:** All Acme employees
+
+                  **When:** May 22 (GA day)
+
+                  **Channel:** #product-launches Slack channel
+
+                  **Content:** Short summary of what API v2 is, why it matters, key changes from v1, and who to contact with questions.
+
+                  **Owner:** Lena Park
+          - title: Customer developer email
+            components:
+              - type: markdown
+                body: |
+                  **Audience:** All customers with at least one API key (1,200 contacts)
+
+                  **When:** May 21 (day before GA)
+
+                  **Channel:** Product email, sent via Customer.io
+
+                  **Subject:** "API v2 is here — migrate before August 22"
+
+                  **Content:** What changed, why it's better, link to migration guide, link to changelog. Clear sunset date prominently displayed.
+
+                  **Owner:** Marcus Chen + marketing
+          - title: Developer documentation
+            components:
+              - type: markdown
+                body: |
+                  **When:** May 22 at 9am ET (simultaneous with GA)
+
+                  **Changes:**
+                  - openapi.acmecorp.io/v2 goes live
+                  - v1 docs gain deprecation banner with link to migration guide
+                  - Changelog entry published
+                  - Code examples in v2 format
+
+                  **Owner:** Rahul Singh
+          - title: Social and blog
+            components:
+              - type: markdown
+                body: |
+                  **Blog post:** "Introducing Acme API v2 — built for scale"
+
+                  Highlights: new auth model, richer error responses, 3x throughput increase, new endpoints for bulk operations. Publish May 22 at 10am ET.
+
+                  **Social:** 1 post on LinkedIn, 1 on X. Emphasize developer experience improvements. Include benchmark numbers from load test.
+
+                  **Owner:** Jamie Torres (content) — Marcus to review technical accuracy
+
+  - type: divider
+
+  - type: section
+    eyebrow: Contingency
+    heading: Rollback Plan
+    components:
+      - type: callout
+        variant: warn
+        title: If we need to roll back after GA
+        body: |
+          v2 is additive — v1 continues to work throughout the deprecation period. Rolling back means:
+
+          1. Disable the v2 route group via feature flag (`ENABLE_API_V2=false`)
+          2. All traffic automatically falls through to v1 endpoints
+          3. Update status page within 5 minutes of rollback
+          4. Send customer email within 30 minutes explaining the delay
+          5. Reschedule GA — minimum 1-week delay for investigation
+
+          Decision authority: Marcus Chen (engineering) or Lena Park (product). Do not need VP approval for rollback — do not wait.
+
+  - type: divider
+
+  - type: section
+    eyebrow: After Launch
+    heading: Post-Launch Monitoring
+    components:
+      - type: definition_list
+        items:
+          - term: Error rate (target <0.1%)
+            definition: Monitor via Datadog dashboard "API v2 Health". Alert threshold set at 0.5% for 3-minute window. PagerDuty fires to Marcus on-call.
+          - term: p99 latency (target <200ms)
+            definition: Baseline established in load test. Datadog SLO configured with 99.9% uptime target. Weekly report to Derek.
+          - term: v1-to-v2 migration rate
+            definition: Track weekly. Target 50% of active API keys migrated within 60 days. Measured in Amplitude via API version header. If below 30% at day 30, trigger additional outreach.
+          - term: Support ticket volume
+            definition: Expected spike in first 2 weeks. Baseline from v1 launch is 18 tickets/week. Threshold for escalation is >40 tickets/week. Review with support lead at day 7 and day 14.
+          - term: v1 deprecation warnings sent
+            definition: Automated emails at T-60d, T-30d, T-7d. Track open rates and migration activity after each send. Customers with zero migration activity at T-30d get a manual outreach from their CSM.

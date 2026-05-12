@@ -1,0 +1,15 @@
+path	tokens	reads	description
+src/lib/agent-prompt.ts	1512	0	agent-prompt library module
+src/lib/api-key.ts	113	0	api-key library module
+src/lib/auth.ts	824	0	auth library module
+src/lib/db.ts	135	0	db library module
+src/lib/kazam.ts	537	0	kazam library module
+src/lib/pages.ts	2685	0	pages library module
+src/lib/permissions.ts	170	0	permissions library module
+src/lib/personal-domains.ts	196	0	personal-domains library module
+src/lib/seed-page.ts	1996	0	seed-page library module
+src/lib/slug-words.ts	755	0	slug-words library module
+src/lib/sync.ts	874	0	sync library module
+src/lib/templates-server.ts	71	0	templates-server library module
+src/lib/templates.ts	1314	0	templates library module
+src/lib/theme.ts	201	0	theme library module

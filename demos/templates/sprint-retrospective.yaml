@@ -1,0 +1,217 @@
+title: "Sprint Retrospective — Sprint 14"
+subtitle: Two-week sprint ending May 9. Velocity review, honest feedback, and action items.
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Persona
+        value: Engineering
+      - key: Sprint
+        value: Sprint 14 (Apr 28 – May 9)
+      - key: Team
+        value: Platform Team (6 engineers)
+      - key: Facilitator
+        value: Ben Morales (EM)
+      - key: Date
+        value: "2026-05-11"
+
+  - type: stat_grid
+    columns: 4
+    stats:
+      - label: Velocity
+        value: 43 pts
+        detail: vs. 38 pts target — 113% of plan
+        color: green
+      - label: Completion Rate
+        value: "87%"
+        detail: 13 of 15 stories shipped; 2 carried to Sprint 15
+        color: green
+      - label: Bugs Shipped
+        value: "2"
+        detail: Both P3 — no P1/P2 regressions introduced
+        color: yellow
+      - label: Unplanned Work
+        value: "11 pts"
+        detail: INC-2026-0091 postmortem + action items consumed sprint capacity
+        color: yellow
+
+  - type: divider
+
+  - type: section
+    eyebrow: Sprint Health
+    heading: Burndown
+    components:
+      - type: progress_bar
+        value: 87
+        label: "Stories completed — 13 of 15"
+        color: green
+        detail: 2 stories carried over (SQS consumer shadow mode + DLQ alert tuning)
+      - type: progress_bar
+        value: 100
+        label: "P1/P2 bugs — 0 introduced"
+        color: green
+        detail: Zero customer-impacting regressions shipped
+      - type: progress_bar
+        value: 60
+        label: "Incident action items — 6 of 10 started"
+        color: teal
+        detail: 4 items not yet started; all have owners and deadlines by May 28
+      - type: progress_bar
+        value: 35
+        label: "Tech debt backlog — 35% reduction"
+        color: yellow
+        detail: Targeted 50% reduction; deprioritized during INC-0091 response week
+
+  - type: divider
+
+  - type: section
+    eyebrow: Team Reflection
+    heading: What Went Well vs. What Didn't
+    components:
+      - type: split_compare
+        left:
+          eyebrow: What Went Well
+          title: Keep doing these
+          stats:
+            - label: Incident response time
+              value: "2 min to detect"
+              color: green
+            - label: On-call handoffs
+              value: "No gaps this sprint"
+              color: green
+            - label: PR review turnaround
+              value: "Avg 3.2 hrs"
+              color: green
+            - label: Sprint planning quality
+              value: "Stories well-scoped"
+              color: green
+            - label: Async communication
+              value: "Fewer unnecessary meetings"
+              color: green
+        right:
+          eyebrow: What Didn't Go Well
+          title: Address these next sprint
+          stats:
+            - label: Deployment checklist gap
+              value: Caused P1 incident
+              color: red
+            - label: Unplanned work absorption
+              value: "11 pts / 29% of sprint"
+              color: red
+            - label: Tech debt progress
+              value: "Below target"
+              color: yellow
+            - label: Approval delays during incident
+              value: "9 min lost to process"
+              color: yellow
+            - label: Monitoring dashboard gaps
+              value: "Deployments not visible"
+              color: yellow
+
+  - type: divider
+
+  - type: section
+    eyebrow: Team Feedback
+    heading: Anonymous Sprint Feedback
+    components:
+      - type: markdown
+        body: "Collected via anonymous form before the retro. Shared verbatim."
+      - type: blockquote
+        body: "The incident response on Thursday was actually impressive — we were aligned fast and Chris found the root cause quickly. But the 9-minute wait for a second approval to apply a one-line fix was maddening. We need an emergency bypass path. The process was designed for normal times, not when 1,800 customers are down."
+        attribution: Anonymous — Engineer
+      - type: blockquote
+        body: "Sprint planning this time was noticeably better. Stories were smaller and the acceptance criteria were actually clear. I didn't spend the first day of the sprint figuring out what 'done' meant. Whatever Ben changed, keep doing it."
+        attribution: Anonymous — Engineer
+      - type: blockquote
+        body: "Unplanned work is killing our tech debt progress. We committed to 50% backlog reduction this sprint. We hit 35% because four days got eaten by incident follow-up. I'm not saying the incident work wasn't important — it was. But we need to protect a block of time each sprint that is genuinely off-limits to interruptions, or we'll never make progress on the things we know are slowing us down."
+        attribution: Anonymous — Engineer
+      - type: blockquote
+        body: "PR reviews are fast and the culture of leaving thoughtful comments has really improved. I learned something from a review comment three times this sprint. That's the kind of team I want to work on."
+        attribution: Anonymous — Engineer
+
+  - type: divider
+
+  - type: section
+    eyebrow: Last Sprint
+    heading: Action Items from Sprint 13 Retro
+    components:
+      - type: markdown
+        body: "These were committed at the Sprint 13 retrospective. Checking in on progress."
+      - type: markdown
+        body: |
+          - [x] Write clearer acceptance criteria in sprint planning (owner: Ben) — DONE, positive feedback received
+          - [x] Reduce average PR cycle time from 8 hrs to 4 hrs (owner: Team) — DONE, avg is now 3.2 hrs
+          - [x] Schedule dedicated on-call rotation training (owner: Layla) — DONE, held May 5
+          - [ ] Reduce tech debt backlog by 50% this sprint (owner: Chris) — MISSED, 35% achieved due to incident
+          - [x] Document SQS consumer design in architecture repo before coding begins (owner: Priya) — DONE
+          - [ ] Add deployment date annotations to CloudWatch dashboards (owner: Layla) — NOT STARTED
+
+  - type: divider
+
+  - type: section
+    eyebrow: Next Sprint
+    heading: Action Items for Sprint 15
+    components:
+      - type: card_grid
+        min_width: 260
+        cards:
+          - title: Add deployment events to incident dashboard
+            badge:
+              label: Layla Osei
+              color: teal
+            description: Recent deploys should appear on the same timeline as error rate metrics. First thing on-call should see during triage. Due May 21.
+          - title: Implement emergency Terraform approval path
+            badge:
+              label: Priya Sundaram
+              color: yellow
+            description: Single-approver with post-incident review for P1/P2 incidents. Policy doc + Slack workflow. Due May 16.
+          - title: Update deployment checklist
+            badge:
+              label: Ben Morales
+              color: green
+            description: Add infra impact check — "Does this release change any paths or ports referenced in ALB or Terraform?" Due May 14.
+          - title: Carry over — SQS shadow mode
+            badge:
+              label: Chris Park
+              color: default
+            description: Slipped from Sprint 14. Shadow mode (both sync and SQS paths running) needs to be in place before load testing can begin. P1 for Sprint 15.
+          - title: Protected focus block
+            badge:
+              label: Team
+              color: teal
+            description: Reserve Tue/Wed afternoons as interruption-free focus time. No incident follow-up meetings, no ad-hoc requests during this block. Trial for Sprint 15.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Recognition
+    heading: Shoutouts
+    components:
+      - type: card_grid
+        min_width: 220
+        cards:
+          - title: Layla Osei
+            badge:
+              label: Incident Commander
+              color: green
+            description: Ran a clean incident bridge on May 8 under real pressure. Had root cause in 16 minutes and kept the team calm and coordinated throughout.
+          - title: Chris Park
+            badge:
+              label: Root Cause MVP
+              color: green
+            description: Identified the health check path mismatch in the middle of a high-stress incident when the first instinct was to look at the database. Methodical and fast.
+          - title: Priya Sundaram
+            badge:
+              label: Clutch Approval
+              color: teal
+            description: Was in a different meeting but dropped everything when Layla pinged for the emergency Terraform approval. Small thing that shaved 5+ minutes off the incident.
+          - title: Ben Morales
+            badge:
+              label: Sprint Planning
+              color: teal
+            description: Sprint 14 planning was noticeably sharper. Clearer stories, better AC, and the team actually felt ready on day one. Feedback was unanimous.
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: Clone this retrospective template to your workspace and your agents will generate sprint retro pages automatically from Jira velocity data, PagerDuty incident logs, and anonymous survey responses. Replace placeholder metrics, quotes, and names with your team's actual sprint data.

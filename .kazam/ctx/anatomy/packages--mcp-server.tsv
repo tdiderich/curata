@@ -1,0 +1,5 @@
+path	tokens	reads	description
+packages/mcp-server/README.md	628	0	Project readme
+packages/mcp-server/package.json	213	0	Node.js package manifest
+packages/mcp-server/tsconfig.json	89	0	TypeScript configuration
+packages/mcp-server/vitest.config.ts	32	0	TypeScript source

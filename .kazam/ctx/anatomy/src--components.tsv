@@ -1,0 +1,23 @@
+path	tokens	reads	description
+src/components/agent-connect-button.tsx	153	0	agent-connect-button component
+src/components/agent-connect-flow.tsx	602	0	agent-connect-flow component
+src/components/agent-connect-modal.tsx	173	0	agent-connect-modal component
+src/components/api-key-manager.tsx	1440	0	api-key-manager component
+src/components/dashboard-client.tsx	3777	0	dashboard-client component
+src/components/dashboard-feed.tsx	740	0	dashboard-feed component
+src/components/delete-page-button.tsx	157	0	delete-page-button component
+src/components/folder-actions.tsx	1608	0	folder-actions component
+src/components/member-list.tsx	1158	0	member-list component
+src/components/new-page-button.tsx	1526	0	new-page-button component
+src/components/org-settings.tsx	989	0	org-settings component
+src/components/page-detail-client.tsx	4841	0	page-detail-client component
+src/components/page-editor.tsx	4592	0	page-editor component
+src/components/page-folder-select.tsx	773	0	page-folder-select component
+src/components/page-viewer.tsx	802	0	page-viewer component
+src/components/public-annotation-client.tsx	2553	0	public-annotation-client component
+src/components/public-toggle.tsx	400	0	public-toggle component
+src/components/search-bar.tsx	893	0	search-bar component
+src/components/theme-script.tsx	189	0	theme-script component
+src/components/theme-settings.tsx	1341	0	theme-settings component
+src/components/version-history.tsx	1088	0	version-history component
+src/components/view-toggle.tsx	325	0	view-toggle component

@@ -1,0 +1,22 @@
+# scanned: 2026-05-12T10:29:01.116763-05:00
+# root_files
+path	tokens	reads	description
+Dockerfile	306	0	Docker container definition
+README.md	362	0	Project readme
+docker-compose.test.yml	85	0	YAML configuration/data
+entrypoint.sh	97	0	Shell script
+eslint.config.mjs	108	0	
+next-env.d.ts	61	0	TypeScript source
+next.config.ts	39	0	TypeScript source
+package.json	224	0	Node.js package manifest
+pnpm-workspace.yaml	33	0	YAML configuration/data
+prisma.config.ts	93	0	TypeScript source
+tsconfig.json	169	0	TypeScript configuration
+vitest.config.ts	113	0	TypeScript source
+
+# directories
+path	files	tokens	description
+packages	13	10859	
+prisma	1	1147	
+src	88	252779	
+tests	8	6202	tests

@@ -1,0 +1,366 @@
+title: "Vendor & Tool Inventory"
+subtitle: Full catalog of software tools, spend by category, upcoming renewals, and risk flags.
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Persona
+        value: Ops
+      - key: Last Updated
+        value: "2026-05-11"
+      - key: Owner
+        value: Dana Reyes, Head of Ops
+      - key: Total Tools
+        value: "34"
+      - key: Review Cycle
+        value: Quarterly
+
+  - type: stat_grid
+    columns: 4
+    stats:
+      - label: Total Annual Spend
+        value: "$487K"
+        detail: Across 34 active tools and vendors
+        color: default
+      - label: Tools Tracked
+        value: "34"
+        detail: 3 tools pending review for consolidation
+        color: teal
+      - label: Avg Cost per Seat
+        value: "$142/yr"
+        detail: Based on 124 licensed seats across all tools
+        color: default
+      - label: Renewals Next 90 Days
+        value: "6 tools"
+        detail: "$118K at renewal — review before auto-renewing"
+        color: yellow
+
+  - type: divider
+
+  - type: section
+    eyebrow: Full Catalog
+    heading: Tool Catalog
+    components:
+      - type: markdown
+        body: "All active tools. Filter by category, owner, or renewal status. Tools marked 'Review' have been flagged for evaluation before renewal."
+      - type: table
+        filterable: true
+        columns:
+          - key: tool
+            label: Tool
+          - key: category
+            label: Category
+          - key: owner
+            label: Owner
+          - key: annual_cost
+            label: Annual Cost
+            align: right
+          - key: seats
+            label: Seats
+            align: center
+          - key: renewal
+            label: Renewal
+          - key: status
+            label: Status
+        rows:
+          - tool: GitHub Enterprise
+            category: Engineering
+            owner: Priya Sundaram
+            annual_cost: "$24,000"
+            seats: "24"
+            renewal: "2026-11-01"
+            status: Active
+          - tool: Datadog
+            category: Engineering
+            owner: Layla Osei
+            annual_cost: "$38,400"
+            seats: "—"
+            renewal: "2026-08-15"
+            status: Active
+          - tool: PagerDuty
+            category: Engineering
+            owner: Layla Osei
+            annual_cost: "$9,600"
+            seats: "12"
+            renewal: "2026-08-01"
+            status: Active
+          - tool: Vercel
+            category: Engineering
+            owner: Chris Park
+            annual_cost: "$3,600"
+            seats: "—"
+            renewal: "2026-06-01"
+            status: Review
+          - tool: Retool
+            category: Engineering
+            owner: Ben Morales
+            annual_cost: "$12,000"
+            seats: "8"
+            renewal: "2026-09-15"
+            status: Active
+          - tool: Sentry
+            category: Engineering
+            owner: Chris Park
+            annual_cost: "$4,800"
+            seats: "—"
+            renewal: "2026-11-15"
+            status: Active
+          - tool: Salesforce CRM
+            category: Sales
+            owner: Morgan Ellis
+            annual_cost: "$54,000"
+            seats: "18"
+            renewal: "2026-06-30"
+            status: Active
+          - tool: Outreach.io
+            category: Sales
+            owner: Jordan Vance
+            annual_cost: "$21,600"
+            seats: "12"
+            renewal: "2026-07-01"
+            status: Review
+          - tool: Gong
+            category: Sales
+            owner: Morgan Ellis
+            annual_cost: "$28,800"
+            seats: "12"
+            renewal: "2026-06-15"
+            status: Active
+          - tool: ZoomInfo
+            category: Sales
+            owner: Jordan Vance
+            annual_cost: "$18,000"
+            seats: "6"
+            renewal: "2026-05-31"
+            status: Active
+          - tool: Chili Piper
+            category: Sales
+            owner: Sam Holbrook
+            annual_cost: "$4,200"
+            seats: "6"
+            renewal: "2026-10-01"
+            status: Active
+          - tool: Loom
+            category: Sales
+            owner: Sam Holbrook
+            annual_cost: "$1,440"
+            seats: "8"
+            renewal: "2026-09-01"
+            status: Active
+          - tool: HubSpot Marketing Hub
+            category: Marketing
+            owner: Tara Webb
+            annual_cost: "$22,800"
+            seats: "4"
+            renewal: "2026-07-15"
+            status: Active
+          - tool: Webflow
+            category: Marketing
+            owner: Tara Webb
+            annual_cost: "$3,600"
+            seats: "3"
+            renewal: "2026-08-01"
+            status: Active
+          - tool: Clearbit Enrichment
+            category: Marketing
+            owner: Tara Webb
+            annual_cost: "$14,400"
+            seats: "—"
+            renewal: "2026-06-01"
+            status: Review
+          - tool: Canva for Teams
+            category: Marketing
+            owner: Tara Webb
+            annual_cost: "$1,800"
+            seats: "6"
+            renewal: "2026-11-01"
+            status: Active
+          - tool: Notion
+            category: Ops
+            owner: Dana Reyes
+            annual_cost: "$6,000"
+            seats: "30"
+            renewal: "2026-09-01"
+            status: Active
+          - tool: Slack
+            category: Ops
+            owner: Dana Reyes
+            annual_cost: "$28,800"
+            seats: "40"
+            renewal: "2026-06-30"
+            status: Active
+          - tool: Zoom
+            category: Ops
+            owner: Dana Reyes
+            annual_cost: "$9,600"
+            seats: "40"
+            renewal: "2026-10-15"
+            status: Active
+          - tool: Google Workspace
+            category: Ops
+            owner: Dana Reyes
+            annual_cost: "$24,000"
+            seats: "40"
+            renewal: "2026-09-15"
+            status: Active
+          - tool: 1Password Teams
+            category: Ops
+            owner: Layla Osei
+            annual_cost: "$2,400"
+            seats: "40"
+            renewal: "2026-11-01"
+            status: Active
+          - tool: Rippling
+            category: Ops
+            owner: Dana Reyes
+            annual_cost: "$14,400"
+            seats: "40"
+            renewal: "2026-08-15"
+            status: Active
+          - tool: Expensify
+            category: Ops
+            owner: Dana Reyes
+            annual_cost: "$2,880"
+            seats: "20"
+            renewal: "2026-10-01"
+            status: Active
+
+  - type: divider
+
+  - type: section
+    eyebrow: By Department
+    heading: Category Breakdown
+    components:
+      - type: accordion
+        items:
+          - title: "Engineering — $92,400/yr across 6 tools"
+            components:
+              - type: markdown
+                body: |
+                  | Tool | Cost | Owner | Notes |
+                  |---|---|---|---|
+                  | Datadog | $38,400 | Layla Osei | Largest eng spend; APM + logs + dashboards. Review annually for usage vs. plan tier. |
+                  | GitHub Enterprise | $24,000 | Priya Sundaram | Core dev platform. Auto-renew unless we move off GHE. |
+                  | Retool | $12,000 | Ben Morales | Internal tooling. 8 seats; 5 active. Consider seat reduction at renewal. |
+                  | PagerDuty | $9,600 | Layla Osei | On-call routing. Renewal Aug 1 — check if advanced tier features are used. |
+                  | Sentry | $4,800 | Chris Park | Error tracking. Usage within plan; no action needed. |
+                  | Vercel | $3,600 | Chris Park | **Flagged for review** — infrastructure migrated to Railway in Q1. Assess whether Vercel is still needed. |
+          - title: "Sales — $128,040/yr across 6 tools"
+            components:
+              - type: markdown
+                body: |
+                  | Tool | Cost | Owner | Notes |
+                  |---|---|---|---|
+                  | Salesforce CRM | $54,000 | Morgan Ellis | Core CRM. Renewal Jun 30. Negotiate multi-year discount — currently on 1-year terms. |
+                  | Gong | $28,800 | Morgan Ellis | Call recording + coaching. High usage, strong rep NPS. Auto-renew. |
+                  | Outreach.io | $21,600 | Jordan Vance | **Flagged for review** — team reports 40% of sequences unused. Assess seat count before Jul 1 renewal. |
+                  | ZoomInfo | $18,000 | Jordan Vance | Data enrichment. Renewal May 31 — imminent. Morgan to confirm ongoing need vs. Clearbit overlap. |
+                  | Chili Piper | $4,200 | Sam Holbrook | Meeting scheduling / routing. Renewal Oct 1; no action needed now. |
+                  | Loom | $1,440 | Sam Holbrook | Async video. Low cost; renew. |
+          - title: "Marketing — $42,600/yr across 4 tools"
+            components:
+              - type: markdown
+                body: |
+                  | Tool | Cost | Owner | Notes |
+                  |---|---|---|---|
+                  | HubSpot Marketing Hub | $22,800 | Tara Webb | Email, landing pages, forms. Renewal Jul 15. Tara to confirm Pro vs. Enterprise tier need. |
+                  | Clearbit Enrichment | $14,400 | Tara Webb | **Flagged for review** — overlap with ZoomInfo. One of these may be redundant. Assess before Jun 1. |
+                  | Webflow | $3,600 | Tara Webb | Marketing site CMS. Low cost; renew. |
+                  | Canva for Teams | $1,800 | Tara Webb | Design assets. Low cost; renew. |
+          - title: "Ops & Infrastructure — $88,080/yr across 7 tools"
+            components:
+              - type: markdown
+                body: |
+                  | Tool | Cost | Owner | Notes |
+                  |---|---|---|---|
+                  | Slack | $28,800 | Dana Reyes | Company comms. Renewal Jun 30. Negotiate Pro terms — currently per-seat. |
+                  | Google Workspace | $24,000 | Dana Reyes | Email + docs + Drive. Renewal Sep 15. Locked-in; auto-renew. |
+                  | Rippling | $14,400 | Dana Reyes | HR + payroll + device mgmt. Renewal Aug 15; no action needed. |
+                  | Zoom | $9,600 | Dana Reyes | Video calls. Renewal Oct 15. Assess overlap with Google Meet. |
+                  | Notion | $6,000 | Dana Reyes | Internal wiki + projects. 30 seats; usage is high. |
+                  | Expensify | $2,880 | Dana Reyes | Expense reporting. Low cost; renew. |
+                  | 1Password Teams | $2,400 | Layla Osei | Secrets management. All 40 seats active. Critical security tool; auto-renew. |
+
+  - type: divider
+
+  - type: section
+    eyebrow: Renewals
+    heading: Upcoming Renewals (Next 90 Days)
+    components:
+      - type: event_timeline
+        show_filter_toggle: false
+        events:
+          - date: "2026-05-31"
+            title: "ZoomInfo — $18,000 renewal"
+            summary: "Assigned to Jordan Vance and Morgan Ellis. Potential overlap with Clearbit. Confirm whether both data enrichment tools are needed before auto-renewing. Decision needed by May 27."
+            severity: major
+            source: Dana Reyes
+          - date: "2026-06-01"
+            title: "Clearbit Enrichment — $14,400 renewal"
+            summary: "Assigned to Tara Webb. Overlaps with ZoomInfo. Tara and Jordan to assess consolidation — we should not renew both without a clear use case separation. Decision needed by May 28."
+            severity: major
+            source: Dana Reyes
+          - date: "2026-06-01"
+            title: "Vercel — $3,600 renewal"
+            summary: "Assigned to Chris Park. Infrastructure migrated to Railway in Q1. Assess whether any production workloads still depend on Vercel. If not, cancel before renewal date."
+            severity: minor
+            source: Dana Reyes
+          - date: "2026-06-15"
+            title: "Gong — $28,800 renewal"
+            summary: "High-usage tool with strong rep NPS. Morgan Ellis to negotiate annual terms. Target 10% discount given 12-seat volume."
+            severity: minor
+            source: Dana Reyes
+          - date: "2026-06-30"
+            title: "Salesforce CRM — $54,000 renewal"
+            summary: "Largest single renewal this quarter. Morgan to explore multi-year contract for 15–20% discount. Renewal call with Salesforce AE scheduled for June 12."
+            severity: major
+            source: Morgan Ellis
+          - date: "2026-06-30"
+            title: "Slack — $28,800 renewal"
+            summary: "Consider migrating from per-seat to flat-rate Business+ plan if headcount grows above 45. Dana to model both scenarios before renewal call."
+            severity: minor
+            source: Dana Reyes
+
+  - type: divider
+
+  - type: section
+    eyebrow: Evaluation Criteria
+    heading: How We Evaluate Tools
+    components:
+      - type: definition_list
+        items:
+          - term: Business justification
+            definition: Every tool must have a named owner and a clear use case. "Nice to have" and "we might use it someday" are not justifications. If a tool has no active champion, it goes on the cancellation list.
+          - term: Seat utilization
+            definition: Tools with less than 70% seat utilization are candidates for seat reduction at renewal. Tools below 40% utilization are flagged for evaluation or cancellation.
+          - term: Overlap review
+            definition: Before renewing any tool, check whether another tool in the inventory already covers the use case. Current overlap suspects — ZoomInfo vs. Clearbit, Zoom vs. Google Meet, Vercel vs. Railway.
+          - term: Security posture
+            definition: All tools with access to customer data or production systems must support SSO (SAML/OIDC) and have completed a security review. Tools without SSO are flagged — see risk section below.
+          - term: Spend efficiency
+            definition: Compare cost per active user, not cost per licensed seat. A tool at $45/seat/month with 90% utilization is more efficient than one at $30/seat/month with 40% utilization.
+          - term: Renewal negotiation
+            definition: Renewals above $10K should always be negotiated. Standard asks — multi-year discount (10–20%), seat-count flexibility, and annual invoice instead of monthly. Never auto-renew a contract above $10K without a negotiation call.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Risk
+    heading: Risk Flags
+    components:
+      - type: callout
+        variant: danger
+        title: Single-owner tools — 4 tools have one named owner with no documented backup
+        body: "Gong (Morgan Ellis), Retool (Ben Morales), Chili Piper (Sam Holbrook), and Clearbit (Tara Webb) each have a single owner with no documented secondary contact or runbook. If the owner departs or is unavailable, access and renewal decisions may be delayed. Action: Dana to assign secondary owners and document admin credentials in 1Password before June 1."
+      - type: callout
+        variant: warn
+        title: No SSO on 3 tools — Expensify, Loom, and Canva
+        body: "Expensify, Loom, and Canva do not support SAML-based SSO on their current plan tiers. Employees log in with individual passwords, which bypasses our MFA enforcement. These tools do not have access to customer data, but they do hold financial data (Expensify) and company brand assets (Canva). Action: Layla to assess whether plan upgrades to enable SSO are cost-justified. If not, document and accept the risk."
+      - type: callout
+        variant: warn
+        title: Potential overlap — ZoomInfo + Clearbit renewing within 48 hours of each other
+        body: "ZoomInfo renews May 31 and Clearbit renews June 1. Both provide B2B contact and firmographic data enrichment. Renewing both without a consolidation decision is a $32,400/yr commitment we may not need in full. Jordan Vance and Tara Webb to meet before May 27 and recommend one tool for consolidation."
+      - type: callout
+        variant: info
+        title: This is a curata template.
+        body: Clone this inventory template to your workspace and your agents will keep it current by syncing with your finance system, flagging upcoming renewals, and surfacing utilization data from vendor dashboards. Replace the placeholder tools, costs, and owners with your actual vendor inventory.

@@ -1,0 +1,263 @@
+title: "Incident Postmortem — API Gateway Outage (2026-05-08)"
+subtitle: P1 incident. API gateway returned 503s for 47 minutes. 1,840 customers affected.
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Persona
+        value: Engineering
+      - key: Incident ID
+        value: INC-2026-0091
+      - key: Severity
+        value: P1
+      - key: Date
+        value: "2026-05-08"
+      - key: Incident Commander
+        value: Layla Osei (SRE)
+      - key: Postmortem Owner
+        value: Chris Park
+      - key: Review Date
+        value: "2026-05-11"
+
+  - type: stat_grid
+    columns: 4
+    stats:
+      - label: Duration
+        value: 47 min
+        detail: "Detected: 14:03 UTC — Resolved: 14:50 UTC"
+        color: red
+      - label: Customers Affected
+        value: "1,840"
+        detail: All customers in us-east-1 region
+        color: red
+      - label: Severity
+        value: P1
+        detail: Complete API unavailability — all endpoints returning 503
+        color: red
+      - label: MTTR
+        value: 47 min
+        detail: Detection to full recovery. Target is 30 min.
+        color: yellow
+
+  - type: divider
+
+  - type: section
+    eyebrow: What Happened
+    heading: Incident Summary
+    components:
+      - type: markdown
+        body: |
+          On May 8, 2026 at 14:03 UTC, our API gateway in us-east-1 began returning HTTP 503 errors across all endpoints. The outage lasted 47 minutes and affected all 1,840 customers whose traffic routes through us-east-1.
+
+          The root cause was a misconfigured health check in the deployment of **api-gateway v2.14.1**, released at 13:58 UTC. The new version changed the health check endpoint from `/health` to `/api/v1/health` but the ALB target group health check was not updated before traffic was cut over. The gateway nodes appeared unhealthy to the load balancer and were deregistered, causing all traffic to hit no healthy targets and return 503.
+
+          The fix was a one-line change to the ALB health check path, rolled out at 14:48 UTC. Traffic recovered fully within 2 minutes.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Timeline
+    heading: Detailed Timeline of Events
+    components:
+      - type: event_timeline
+        show_filter_toggle: false
+        events:
+          - date: "2026-05-08"
+            title: "13:58 UTC — api-gateway v2.14.1 deployed to production"
+            summary: "Deployment completed successfully per CI/CD pipeline. All smoke tests passed. Health check path change in v2.14.1 was not flagged in the deployment checklist."
+            severity: minor
+            source: CI/CD (GitHub Actions)
+          - date: "2026-05-08"
+            title: "14:01 UTC — ALB begins marking gateway nodes unhealthy"
+            summary: "ALB health checks start failing because the check target is /health (old path) but the gateway now serves /api/v1/health. Nodes begin draining. No immediate alert — ALB health check failure requires 3 consecutive failures before deregistration."
+            severity: minor
+            source: ALB access logs
+          - date: "2026-05-08"
+            title: "14:03 UTC — All gateway nodes deregistered; 503s begin"
+            summary: "ALB has no healthy targets. All incoming API requests return 503 Service Unavailable. Customer-facing error rate hits 100%. PagerDuty alert fires."
+            severity: major
+            source: PagerDuty + CloudWatch
+          - date: "2026-05-08"
+            title: "14:05 UTC — Layla Osei acknowledges PagerDuty; incident bridge opened"
+            summary: "Layla pages Chris Park and Ben Morales. War room opened in #incident-2026-0091. Initial hypothesis: upstream database connectivity issue."
+            severity: major
+            source: Layla Osei
+          - date: "2026-05-08"
+            title: "14:12 UTC — Database ruled out; focus shifts to deployment"
+            summary: "RDS and Redis metrics are nominal. Chris notices the 13:58 deployment and pulls the diff. Health check path change identified in the changelog."
+            severity: major
+            source: Chris Park
+          - date: "2026-05-08"
+            title: "14:19 UTC — Root cause confirmed; fix staged"
+            summary: "ALB health check path change confirmed as root cause. Fix is one line in Terraform. Layla begins change review process — requires two SRE approvals per runbook."
+            severity: major
+            source: Layla Osei
+          - date: "2026-05-08"
+            title: "14:28 UTC — Second SRE approval delayed; Ben Morales not reachable"
+            summary: "Ben is in a customer call and does not see Slack. Layla escalates to Priya Sundaram for second approval. Priya approves at 14:31 UTC."
+            severity: minor
+            source: Layla Osei
+          - date: "2026-05-08"
+            title: "14:31 UTC — Terraform apply begins"
+            summary: "ALB target group health check path updated from /health to /api/v1/health. Apply completes in 90 seconds."
+            severity: minor
+            source: Layla Osei
+          - date: "2026-05-08"
+            title: "14:48 UTC — ALB registers healthy targets; traffic resumes"
+            summary: "Gateway nodes pass health checks and are re-registered with the ALB. API traffic resumes. Error rate drops to 0% within 2 minutes."
+            severity: major
+            source: CloudWatch
+          - date: "2026-05-08"
+            title: "14:50 UTC — All clear declared; incident bridge closed"
+            summary: "Layla declares incident resolved. Status page updated. Customer communication drafted by support team."
+            severity: minor
+            source: Layla Osei
+
+  - type: divider
+
+  - type: section
+    eyebrow: Root Cause
+    heading: Root Cause Analysis
+    components:
+      - type: callout
+        variant: danger
+        title: Root cause — Health check path mismatch between deployment and load balancer config
+        body: "api-gateway v2.14.1 changed the health check endpoint from /health to /api/v1/health as part of a path standardization effort. The deployment pipeline and PR review process did not surface this as an infra-impacting change. The ALB target group was not updated before the cutover. This is a deployment process gap, not a code bug."
+      - type: markdown
+        body: |
+          **Five whys:**
+
+          1. **Why did the API return 503s?** The ALB had no healthy targets registered.
+          2. **Why were there no healthy targets?** ALB health checks were failing because the health endpoint path changed.
+          3. **Why did the health endpoint path change?** v2.14.1 standardized all API paths to `/api/v1/*` — this was intentional and correct.
+          4. **Why wasn't the ALB updated first?** The deployment checklist does not require engineers to check whether infra config depends on any path that changed in the release.
+          5. **Why does the checklist not cover this?** We have never had an incident caused by a health check path change before. The checklist was last updated in 2025 and predates our path standardization initiative.
+
+          **5th why answer is the root cause:** Our deployment process has no mechanism to detect when application changes require corresponding infra changes before cutover.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Contributing Factors
+    heading: Contributing Factors
+    components:
+      - type: accordion
+        items:
+          - title: No automated infra/app change dependency detection
+            components:
+              - type: markdown
+                body: |
+                  The CI/CD pipeline validates the application build, runs unit and integration tests, and checks smoke tests. It does not compare application-level config (health check paths, port bindings, environment variables) against the corresponding infrastructure config.
+
+                  A static analysis step or a deployment pre-check that flags "this release changes a path that appears in Terraform" would have caught this before it reached production.
+          - title: Deployment checklist did not prompt for infra review
+            components:
+              - type: markdown
+                body: |
+                  The release checklist has 14 items, none of which ask "does this release change any paths, ports, or endpoints that are referenced in ALB, security groups, or Terraform?" The checklist was written before the API path standardization project.
+
+                  The v2.14.1 PR had a clear mention of `/health` → `/api/v1/health` in the description. A checklist item would have prompted the deployer to check the Terraform config.
+          - title: ALB health check configuration not in the same repo as application config
+            components:
+              - type: markdown
+                body: |
+                  The application code lives in `api-gateway/` and the Terraform config lives in `infrastructure/`. When Chris made the path change in the application, there was no natural moment to check the Terraform file.
+
+                  If the ALB health check path was co-located with the application config (e.g., a `service.yaml` that Terraform reads), this drift would have been impossible.
+          - title: Two-engineer approval process delayed the fix by ~9 minutes
+            components:
+              - type: markdown
+                body: |
+                  Our change management policy requires two SRE approvals for any production Terraform apply during an incident. Ben Morales was unavailable. Getting Priya's approval took 12 minutes from the time Layla staged the fix.
+
+                  During a P1 with 1,840 customers down, 12 minutes is a meaningful delay. The policy needs an exception path for single-approver emergency changes with after-the-fact review.
+          - title: Initial triage focused on database before deployment
+            components:
+              - type: markdown
+                body: |
+                  First response instinct was "database issue" because that is the most common cause of 503s in our system. The 13:58 deployment was not surfaced in the incident timeline view until Chris looked manually.
+
+                  A better dashboard would show recent deployments on the same timeline as the error rate spike, making the correlation immediate.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Action Items
+    heading: Action Items
+    components:
+      - type: table
+        filterable: false
+        columns:
+          - key: action
+            label: Action
+          - key: owner
+            label: Owner
+          - key: priority
+            label: Priority
+            align: center
+          - key: status
+            label: Status
+          - key: deadline
+            label: Deadline
+        rows:
+          - action: "Add deployment checklist item: 'Does this release change any paths, ports, or endpoints referenced in ALB/Terraform? If yes, update infra config before cutover.'"
+            owner: Ben Morales
+            priority: P1
+            status: In Progress
+            deadline: "2026-05-14"
+          - action: Build CI step that diffs app-level endpoint paths against Terraform references and fails the build if a mismatch is detected
+            owner: Layla Osei
+            priority: P1
+            status: Not Started
+            deadline: "2026-05-28"
+          - action: "Add 'Recent Deployments' overlay to the SRE incident dashboard so deploys are visible on the same timeline as error rates"
+            owner: Chris Park
+            priority: P2
+            status: Not Started
+            deadline: "2026-05-21"
+          - action: "Update change management policy to allow single-approver emergency Terraform applies during P1/P2 incidents, with mandatory post-incident review"
+            owner: Priya Sundaram
+            priority: P2
+            status: Not Started
+            deadline: "2026-05-16"
+          - action: "Evaluate co-locating ALB health check path config in service.yaml alongside application config to eliminate Terraform drift"
+            owner: Layla Osei
+            priority: P2
+            status: Not Started
+            deadline: "2026-05-28"
+          - action: "Send customer communication for INC-2026-0091 — apology, root cause summary, preventive actions"
+            owner: Support Team
+            priority: P1
+            status: Done
+            deadline: "2026-05-09"
+          - action: Update incident runbook to include deployment check in first 5-minute triage steps
+            owner: Ben Morales
+            priority: P2
+            status: Not Started
+            deadline: "2026-05-14"
+
+  - type: divider
+
+  - type: section
+    eyebrow: Retrospective
+    heading: Lessons Learned
+    components:
+      - type: definition_list
+        items:
+          - term: Config co-location beats docs
+            definition: Keeping the ALB health check path in a file that the application team owns would have made this drift impossible. Documentation and checklists are second-best; making the wrong thing hard to do is better.
+          - term: Deployment checklists must be maintained like code
+            definition: A checklist written in 2025 does not cover architectural patterns introduced in 2026. Checklists should be reviewed after every incident and after every major architectural change. Assign an owner.
+          - term: Recent deployments belong on every incident dashboard
+            definition: The first thing an on-call engineer should see alongside a 503 spike is "was there a deploy in the last 15 minutes?" That correlation should be automatic, not manual.
+          - term: Approval policies need P1 exception paths
+            definition: A two-engineer approval policy designed for normal change management adds meaningful delay during a P1. Emergency approval paths with mandatory post-incident review are standard practice — we should adopt them.
+          - term: MTTR is the metric that matters
+            definition: We detected the incident in 2 minutes (fast). We identified root cause in 16 minutes (good). We took 29 minutes to apply a one-line fix (too slow). Improving MTTR means streamlining the fix path, not just detection.
+          - term: Smoke tests are not a substitute for infra validation
+            definition: All smoke tests passed in CI because they tested the application, not the interaction between the application and the load balancer. End-to-end infra validation is a gap we need to address.
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: Clone this postmortem template to your workspace and your agents will use this structure to draft postmortems automatically after incidents — pulling from PagerDuty timelines, CloudWatch data, and Slack incident channels. Replace the placeholder incident with your own data.

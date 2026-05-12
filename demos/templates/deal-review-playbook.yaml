@@ -1,0 +1,288 @@
+title: "Deal Review Playbook"
+subtitle: Qualification, stakeholder mapping, and objection handling for active enterprise deals.
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Persona
+        value: Sales
+      - key: Deal
+        value: Meridian Health Systems
+      - key: ARR
+        value: "$148K"
+      - key: Stage
+        value: Negotiation
+      - key: Close Date
+        value: "2026-05-30"
+      - key: AE
+        value: Jordan Vance
+
+  - type: stat_grid
+    columns: 4
+    stats:
+      - label: Deal Value
+        value: "$148K ARR"
+        detail: 3-year contract; $444K TCV
+        color: green
+      - label: Days in Stage
+        value: "18"
+        detail: Target is 15 — slightly over
+        color: yellow
+      - label: MEDDPICC Score
+        value: "6 / 8"
+        detail: "Missing: Paper process, Identify pain confirmed at exec"
+        color: teal
+      - label: Competitor
+        value: Siftly
+        detail: Active eval — Siftly still in play
+        color: yellow
+
+  - type: divider
+
+  - type: section
+    eyebrow: Qualification
+    heading: Deal Qualification Checklist
+    components:
+      - type: markdown
+        body: "Run through this checklist before every deal review. Unchecked items are action items for the AE."
+      - type: markdown
+        body: |
+          - [x] Executive sponsor identified and engaged
+          - [x] Economic buyer confirmed (can sign without further approval)
+          - [x] Technical buyer / champion identified
+          - [x] Defined business problem with quantified impact
+          - [x] Decision criteria documented and shared back to prospect
+          - [x] Decision timeline confirmed with hard date
+          - [ ] Budget confirmed — in-period, approved, or in cycle
+          - [ ] Paper process mapped (legal, procurement, InfoSec, IT)
+          - [x] Competitive landscape confirmed — all vendors in eval identified
+          - [ ] Reference check scheduled or completed
+          - [ ] Multi-threaded — at least 3 contacts engaged
+          - [x] Champion coached on internal selling process
+
+  - type: divider
+
+  - type: section
+    eyebrow: Qualification Framework
+    heading: MEDDPICC Scoring
+    components:
+      - type: markdown
+        body: "Score each dimension 1–3. Deals scoring below 16 total should be reviewed for disqualification or recalibration. Current total: **20 / 24**."
+      - type: table
+        filterable: false
+        columns:
+          - key: dimension
+            label: Dimension
+          - key: score
+            label: Score
+            align: center
+          - key: evidence
+            label: Evidence / Notes
+          - key: action
+            label: Next Action
+        rows:
+          - dimension: "M — Metrics"
+            score: "3"
+            evidence: "Ops team loses ~14 hrs/week to manual reconciliation. $180K annual labor cost quantified."
+            action: Include in proposal summary and exec deck
+          - dimension: "E — Economic Buyer"
+            score: "3"
+            evidence: "CFO (Sandra Osei) attended demo. Confirmed budget authority and Q2 fiscal close window."
+            action: Keep warm — send CFO-specific ROI one-pager
+          - dimension: "D — Decision Criteria"
+            score: "2"
+            evidence: "Security, integration depth, and pricing documented. Weighting not confirmed."
+            action: Ask champion to rank criteria before next call
+          - dimension: "D — Decision Process"
+            score: "2"
+            evidence: "Internal demo to steering committee May 19. Procurement involved but process unclear."
+            action: Map procurement steps; ask champion for paper process doc
+          - dimension: "P — Identify Pain"
+            score: "2"
+            evidence: "VP Ops has pain confirmed. CFO has not verbalized pain — ROI framing needed."
+            action: Send ROI model to CFO before steering committee demo
+          - dimension: "I — Implicate the Pain"
+            score: "3"
+            evidence: "Quantified impact presented and accepted by VP Ops. Urgency tied to Q2 fiscal deadline."
+            action: Reinforce urgency in next touchpoint
+          - dimension: "C — Champion"
+            score: "3"
+            evidence: "Derek Park (VP Ops) is strong champion. Has presented internally and requested exec access for us."
+            action: Coach Derek on how to handle Siftly comparison internally
+          - dimension: "C — Competition"
+            score: "2"
+            evidence: "Siftly confirmed in eval. No other vendors identified but intel is incomplete."
+            action: Ask champion directly if any other vendors are being considered
+
+  - type: divider
+
+  - type: section
+    eyebrow: People
+    heading: Stakeholder Map
+    components:
+      - type: markdown
+        body: "Everyone we know about inside Meridian Health. Color indicates relationship warmth."
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: Derek Park
+            badge:
+              label: Champion
+              color: green
+            description: |
+              Title: VP Operations
+              Relationship: Strong — has advocated internally, requested exec intro
+              Motivation: Eliminate manual reconciliation; wants a win for his team
+              Risk: Mid-level — cannot sign without CFO approval
+          - title: Sandra Osei
+            badge:
+              label: Economic Buyer
+              color: green
+            description: |
+              Title: CFO
+              Relationship: Warm — attended demo, engaged on ROI
+              Motivation: Operational efficiency; under pressure to cut labor costs 8% in FY27
+              Risk: Has not vocalized pain directly — needs ROI one-pager before steering committee
+          - title: Ray Nakamura
+            badge:
+              label: Technical Buyer
+              color: teal
+            description: |
+              Title: Director of Data Engineering
+              Relationship: Neutral — skeptical of vendor claims, wants to see integration docs
+              Motivation: Reduce pipeline maintenance burden
+              Risk: Currently evaluating Siftly's "Agent Connect" beta — key to win here
+          - title: Lisa Drummond
+            badge:
+              label: Procurement
+              color: yellow
+            description: |
+              Title: Sr. Manager, Vendor Management
+              Relationship: New contact — introduced via Derek last week
+              Motivation: Process compliance; wants standard MSA
+              Risk: Unknown paper process timeline; could push close to Q3 if not managed
+          - title: Tom Welk
+            badge:
+              label: InfoSec
+              color: yellow
+            description: |
+              Title: CISO
+              Relationship: Not yet engaged
+              Motivation: SOC 2, DLP, data residency compliance
+              Risk: InfoSec review not started — Derek said Tom will send security questionnaire this week
+
+  - type: divider
+
+  - type: section
+    eyebrow: Objection Handling
+    heading: Common Objections and Responses
+    components:
+      - type: accordion
+        items:
+          - title: "'Siftly does the same thing for less money.'"
+            components:
+              - type: markdown
+                body: |
+                  **Why they say it:** Siftly is in the eval and pricing came up. Someone — probably a technical buyer — is anchoring on headline price.
+
+                  **Response:**
+                  Acknowledge, then reframe on total value: "We hear that a lot in the first pass. The teams that do a side-by-side on feature parity and TCO usually find the gap is much smaller than it looks — and sometimes inverted once you add Siftly's SSO add-on, self-managed integrations, and the fact that they have no agent integration story.
+
+                  "Can I ask — how many AI agents does your team currently run? That's usually the deciding factor. Siftly's new Agent Connect feature is read-only and in beta. If Derek's team is using Claude, Cursor, or any AI tooling, where do those outputs go today?"
+
+                  **Proof point to share:** Stackline Commerce short-listed Siftly. After a 3-week parallel eval, they chose us because Siftly could not ingest agent-generated outputs. Ask the AE for the case study.
+          - title: "'We need to involve procurement and this is going to take 90 days.'"
+            components:
+              - type: markdown
+                body: |
+                  **Why they say it:** Procurement was pulled in late and they don't have a clear deadline. The champion may not have socialized urgency internally.
+
+                  **Response:**
+                  Don't fight the timeline — work it: "That makes sense, and we want to make procurement easy. Can you help me understand what typically drives a fast versus slow procurement cycle here? The reason I ask is that Sandra mentioned Q2 fiscal close. Is that a hard deadline for new contracts, or flexible?"
+
+                  Surface the urgency math: "If this slips to Q3, Derek's team is looking at another quarter of manual reconciliation — that's roughly $45K in avoidable labor cost and another quarter without the integration parity your data team needs. Is there a way to start procurement in parallel with the steering committee review so we can compress the timeline?"
+
+                  **Action:** Ask champion to intro you to Lisa Drummond (procurement) now. Get the paper process doc this week.
+          - title: "'We're not sure the ROI justifies the price premium over what we have today.'"
+            components:
+              - type: markdown
+                body: |
+                  **Why they say it:** The economic buyer hasn't connected the dots between the operational pain and the cost. This is a signal that the ROI model hasn't reached the right person.
+
+                  **Response:**
+                  "I want to make sure we're giving you something concrete to work with. We built a model based on what Derek shared — 14 hours/week of manual reconciliation across 3 ops analysts at Meridian's fully-loaded labor rate. That's approximately $180K/year in direct cost, before we account for error rates and the reporting delay.
+
+                  "At $148K ARR, you're looking at breakeven inside 12 months, with compounding savings after that. Can I send Sandra a one-page version of that model directly? I want her to have the numbers before the steering committee review."
+
+                  **Proof point:** Use the ROI calculator template. Send it to the economic buyer, not just the champion.
+          - title: "'Can you match Siftly's price?'"
+            components:
+              - type: markdown
+                body: |
+                  **Why they say it:** Procurement or the economic buyer is testing for flexibility. Siftly may have sharpened their pencil.
+
+                  **Response:**
+                  Don't immediately discount. Hold on value: "I appreciate the directness. Before I go back to look at what we can do, I want to make sure I understand what we'd be trading. Are you asking because the value case isn't clear, or because you have a budget ceiling that we're bumping up against?
+
+                  "If it's a value question, let's spend 15 minutes on the ROI model. If it's a budget ceiling, I can take that to our team — but I'll need to understand what a yes looks like so I'm not going back empty-handed."
+
+                  **Escalation path:** AEs can offer 10% for annual prepay or a phase-in on seat count. Anything beyond that needs VP Sales approval. Do not give away margin without documented budget constraint.
+          - title: "'Your security questionnaire is going to take forever to complete.'"
+            components:
+              - type: markdown
+                body: |
+                  **Why they say it:** InfoSec is a gating step and IT teams know security reviews delay software purchases. Tom Welk (CISO) hasn't started.
+
+                  **Response:**
+                  Get ahead of it proactively: "We've done this a lot — security reviews are one of the most predictable things we can help you accelerate. We have a pre-completed CAIQ questionnaire, our SOC 2 Type II report, and a standard security FAQ that answers about 80% of what we get from InfoSec teams.
+
+                  "Would it help if I sent those directly to Tom before he sends us a questionnaire? In our experience, it cuts review time from 3–4 weeks to 1–2 weeks because most of the common questions are already answered."
+
+                  **Action:** Send security packet to Jordan today. Jordan to ask Derek for Tom Welk's direct email.
+          - title: "'We want to pilot before we commit to full deployment.'"
+            components:
+              - type: markdown
+                body: |
+                  **Why they say it:** Risk aversion, or the champion needs internal proof before the steering committee will approve.
+
+                  **Response:**
+                  "A pilot makes sense, and we do them in a specific way to make sure they're conclusive rather than open-ended. We'd want to define: a specific use case (the reconciliation workflow), a 30-day timeline, success criteria you'd actually use to make a decision, and the key stakeholders who need to see the results.
+
+                  "If Derek's team can commit 3 hours total over 30 days and we can agree on what a win looks like, I'm confident we can run a tight POC. The risk is an open-ended eval that takes 90 days and doesn't produce a decision. Can we get on a call with Derek and Ray to define the scope?"
+
+                  **Deal note:** Pilot requests often signal low champion strength. Confirm Derek can actually mobilize the team for 3 hours before agreeing to a pilot scope.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Path to Close
+    heading: Next Steps to Close
+    components:
+      - type: timeline
+        items:
+          - name: "May 12 — Send security packet to Jordan for Tom Welk"
+            status: active
+          - name: "May 13 — Send ROI one-pager to Sandra Osei (CFO)"
+            status: upcoming
+          - name: "May 14 — Intro call with Lisa Drummond (procurement)"
+            status: upcoming
+          - name: "May 15 — Coach Derek on Siftly comparison for steering committee"
+            status: upcoming
+          - name: "May 19 — Steering committee demo (Derek + Sandra + 3 others)"
+            status: upcoming
+          - name: "May 21 — Debrief with Derek post-steering committee"
+            status: upcoming
+          - name: "May 24 — Redline MSA returned to procurement"
+            status: upcoming
+          - name: "May 30 — Target close (signed MSA + PO)"
+            status: upcoming
+
+  - type: callout
+    variant: warn
+    title: Risk flag — budget not confirmed.
+    body: Sandra Osei has not verbally confirmed that budget is approved for this purchase. This is the most significant open item. Do not advance to contracting without confirming in-period budget. If budget is not confirmed by May 15, escalate to VP Sales.
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: Clone this to your workspace and populate with your own deal data. Your agents can update this page automatically after each CRM sync, call recording, or deal review meeting. Replace all placeholder names, amounts, and stages with your actual deal details.

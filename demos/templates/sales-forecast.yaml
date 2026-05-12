@@ -1,0 +1,272 @@
+title: "Sales Forecast — Q3 2026"
+subtitle: Pipeline health, rep performance, and deal velocity for the quarter.
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Quarter
+        value: Q3 2026 (Jul – Sep)
+      - key: Last Updated
+        value: "2026-07-14"
+      - key: Owner
+        value: Morgan Ellis, VP Sales
+      - key: Pipeline Total
+        value: "$4.2M"
+
+  - type: stat_grid
+    columns: 4
+    stats:
+      - label: Pipeline Value
+        value: "$4.2M"
+        detail: 3.1x coverage on $1.35M target
+        color: green
+      - label: Weighted Forecast
+        value: "$1.18M"
+        detail: 87% of quarterly target
+        color: teal
+      - label: Win Rate
+        value: "24%"
+        detail: Up from 19% last quarter
+        color: green
+      - label: Avg Deal Cycle
+        value: 47 days
+        detail: Down 8 days QoQ
+        color: yellow
+
+  - type: section
+    eyebrow: Pipeline Health
+    heading: Pipeline by Stage
+    components:
+      - type: markdown
+        body: "Deals in each stage as of this week. Conversion rates shown relative to top-of-funnel volume."
+      - type: progress_bar
+        value: 100
+        label: "Prospecting — 142 deals"
+        color: default
+        detail: Top of funnel. SDR-sourced and inbound combined.
+      - type: progress_bar
+        value: 63
+        label: "Discovery — 89 deals"
+        color: teal
+        detail: 63% converted from Prospecting. Avg 8 days in stage.
+      - type: progress_bar
+        value: 33
+        label: "Proposal — 47 deals"
+        color: green
+        detail: 53% converted from Discovery. Avg 12 days in stage.
+      - type: progress_bar
+        value: 16
+        label: "Negotiation — 23 deals"
+        color: yellow
+        detail: 49% converted from Proposal. Legal and pricing in play.
+      - type: progress_bar
+        value: 8
+        label: "Closed Won — 12 deals"
+        color: green
+        detail: 52% close rate from Negotiation. $487K ARR booked this quarter.
+
+  - type: section
+    eyebrow: Rep Performance
+    heading: Rep Performance
+    components:
+      - type: table
+        filterable: true
+        columns:
+          - key: rep
+            label: Rep
+          - key: quota
+            label: Quota
+          - key: pipeline
+            label: Pipeline
+          - key: weighted
+            label: Weighted
+          - key: deals_won
+            label: Deals Won
+          - key: win_rate
+            label: Win Rate
+        rows:
+          - rep: Jordan Vance
+            quota: "$280K"
+            pipeline: "$920K"
+            weighted: "$248K"
+            deals_won: "4"
+            win_rate: "31%"
+          - rep: Priya Nair
+            quota: "$280K"
+            pipeline: "$810K"
+            weighted: "$214K"
+            deals_won: "3"
+            win_rate: "27%"
+          - rep: Marcus Chen
+            quota: "$240K"
+            pipeline: "$640K"
+            weighted: "$172K"
+            deals_won: "2"
+            win_rate: "22%"
+          - rep: Aisha Okafor
+            quota: "$240K"
+            pipeline: "$580K"
+            weighted: "$156K"
+            deals_won: "2"
+            win_rate: "19%"
+          - rep: Sam Holbrook
+            quota: "$180K"
+            pipeline: "$390K"
+            weighted: "$94K"
+            deals_won: "1"
+            win_rate: "17%"
+          - rep: Dana Reyes
+            quota: "$130K"
+            pipeline: "$220K"
+            weighted: "$59K"
+            deals_won: "0"
+            win_rate: "—"
+
+  - type: section
+    eyebrow: Velocity
+    heading: Deal Velocity by Stage
+    components:
+      - type: markdown
+        body: "Average days deals spend in each stage before moving forward or going dark. Targets based on last quarter's top-quartile reps."
+      - type: table
+        columns:
+          - key: stage
+            label: Stage
+          - key: avg_days
+            label: Avg Days
+            align: right
+          - key: target
+            label: Target
+            align: right
+          - key: status
+            label: Status
+        rows:
+          - stage: Prospecting
+            avg_days: "6"
+            target: "7"
+            status: "✓ On track"
+          - stage: Discovery
+            avg_days: "11"
+            target: "10"
+            status: "⚠ Slightly over"
+          - stage: Proposal
+            avg_days: "14"
+            target: "12"
+            status: "⚠ Over target"
+          - stage: Negotiation
+            avg_days: "18"
+            target: "15"
+            status: "⚠ Over target"
+          - stage: Legal / Security
+            avg_days: "22"
+            target: "14"
+            status: "✕ Needs attention"
+
+  - type: section
+    eyebrow: Watch List
+    heading: Top Deals to Watch
+    components:
+      - type: card_grid
+        min_width: 260
+        cards:
+          - title: Meridian Health Systems
+            badge:
+              label: "$180K ARR"
+              color: green
+            description: |
+              Stage: Negotiation
+              Next step: Legal review call scheduled Jul 17. Procurement wants MSA signed before Aug 1 fiscal close.
+            href: https://app.hubspot.com
+          - title: Stackline Commerce
+            badge:
+              label: "$145K ARR"
+              color: green
+            description: |
+              Stage: Proposal sent
+              Next step: Champion (VP Eng) presenting internally Jul 19. Follow up with exec sponsor if no response by Jul 21.
+            href: https://app.hubspot.com
+          - title: Forgepoint Capital
+            badge:
+              label: "$96K ARR"
+              color: teal
+            description: |
+              Stage: Discovery
+              Next step: Technical deep-dive with their platform team Jul 22. Security questionnaire pending.
+            href: https://app.hubspot.com
+          - title: Veridian Logistics
+            badge:
+              label: "$78K ARR"
+              color: teal
+            description: |
+              Stage: Proposal
+              Next step: Competing against Vendor B. Decision expected by Jul 28. Reference call with Priya's existing customer arranged.
+            href: https://app.hubspot.com
+
+  - type: section
+    eyebrow: Risk
+    heading: Risks & Blockers
+    components:
+      - type: accordion
+        items:
+          - title: "Champion left Acme Corp — $112K deal at risk"
+            components:
+              - type: markdown
+                body: |
+                  **What happened:** Sarah Tran (Director of Ops, our main champion) departed Jul 8. Deal was in Proposal stage.
+
+                  **Current status:** Marcus re-engaged her manager, but no response yet. Deal marked "at risk" in CRM.
+
+                  **Action:** Marcus to call VP Ops directly this week. If no traction by Jul 18, flag for disqualification.
+          - title: "Budget freeze at TechFlow Inc — $88K opportunity stalled"
+            components:
+              - type: markdown
+                body: |
+                  **What happened:** TechFlow announced a hiring freeze Jun 30. All new software purchases paused for 60 days.
+
+                  **Current status:** Deal pushed to Q4 pipeline. Champion confirmed interest is still there.
+
+                  **Action:** Quarterly check-in scheduled for Sep 2. Keep warm with relevant content in the interim.
+          - title: "Legal review stalled at DataPipe — $67K deal delayed"
+            components:
+              - type: markdown
+                body: |
+                  **What happened:** DataPipe's legal team flagged our DPA language around subprocessors. Back-and-forth has added 3 weeks.
+
+                  **Current status:** Our counsel responded Jul 11. Waiting on their legal to review updated language.
+
+                  **Action:** Jordan to escalate to DataPipe's CFO (our exec sponsor) if not resolved by Jul 16. This deal needs to close before Aug 1 to count in Q3.
+          - title: "Single-threaded deal at Apex Robotics — $55K"
+            components:
+              - type: markdown
+                body: |
+                  **What happened:** Only one contact engaged at Apex — a mid-level engineer. No exec sponsorship identified.
+
+                  **Current status:** In Discovery. Engineer is enthusiastic but can not approve spend.
+
+                  **Action:** Sam to request intro to VP Engineering or CTO before advancing to Proposal. If champion cannot facilitate, consider pausing.
+
+  - type: section
+    eyebrow: Weekly Updates
+    heading: Weekly Forecast Notes
+    components:
+      - type: timeline
+        items:
+          - name: "Jul 14 — Week 2: Pipeline review"
+            status: active
+          - name: "Jul 7 — Week 1: Quarter kickoff"
+            status: completed
+          - name: "Jun 30 — EOQ: Q2 closed at $1.04M (77% attainment)"
+            status: completed
+          - name: "Jun 23 — Forecast call: Pushed three deals to Q3, added two new late-stage opps"
+            status: completed
+
+      - type: markdown
+        body: |
+          **Jul 14 (current):** Weighted forecast sits at $1.18M against a $1.35M target — 87% coverage with 11 weeks to go. Meridian Health and Stackline are the two most likely Q3 closers. Champion loss at Acme is the biggest near-term risk. SDR pipeline gen is on track; 31 new opps sourced in the first two weeks of the quarter.
+
+          **Jul 7:** Quarter opened with $3.4M in carryover pipeline from Q2 slippage. Two deals that were expected to close in June (DataPipe, Veridian) slipped due to legal delays. Both are now priority Q3 targets. New business motion looks healthy — inbound is up 18% WoW off the product launch announcement.
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: Clone it to your workspace and your agents will use this structure when building forecast pages. Replace the placeholder data with your own pipeline, reps, and deal names. Your agents can update this page automatically after each CRM sync or weekly pipeline review.

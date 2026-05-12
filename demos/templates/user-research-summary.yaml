@@ -1,0 +1,244 @@
+title: "User Research Summary — Q2 2026 Discovery Sprint"
+subtitle: "Acme Corp · Product & Design · Lead researcher: Sofia Reyes"
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Sprint
+        value: Q2 2026 Discovery
+      - key: Dates
+        value: Apr 14 – May 2, 2026
+      - key: Researcher
+        value: Sofia Reyes
+      - key: Reviewed By
+        value: Lena Park (PM), Jamie Torres (Design)
+
+  - type: section
+    eyebrow: Research Overview
+    heading: By the Numbers
+    components:
+      - type: stat_grid
+        columns: 4
+        stats:
+          - label: 1:1 Interviews
+            value: "14"
+            detail: 9 customers, 5 churned
+            color: green
+          - label: Survey Responses
+            value: "203"
+            detail: Sent to 410 active users, 49% response rate
+            color: teal
+          - label: Personas Updated
+            value: "3"
+            detail: Ops Manager, IT Admin, Data Analyst
+            color: teal
+          - label: Distinct Insights
+            value: "31"
+            detail: 8 critical, 14 moderate, 9 minor
+            color: yellow
+
+  - type: divider
+
+  - type: section
+    eyebrow: What We Learned
+    heading: Key Findings
+    components:
+      - type: card_grid
+        min_width: 260
+        cards:
+          - title: Import is the #1 activation blocker
+            badge:
+              label: Critical
+              color: red
+            description: 11 of 14 interviewees cited data import as their primary reason for slow or failed activation. The 500-row CSV limit is widely known and frequently complained about in support tickets.
+          - title: Users don't trust the validation errors
+            badge:
+              label: Critical
+              color: red
+            description: "Current error messages say \"invalid value\" with no row reference. 7 of 9 customer interviewees had abandoned an import at least once without resolving the error. Common quote: \"I just gave up and typed it in manually.\""
+          - title: API users are a larger segment than assumed
+            badge:
+              label: High Impact
+              color: yellow
+            description: 38% of survey respondents said they would use an import API if available. We had estimated 15%. This changes the priority of the API endpoint — it is now P1, not P2.
+          - title: Email notifications are expected, not a nice-to-have
+            badge:
+              label: High Impact
+              color: yellow
+            description: Every churned customer interviewed expected an email when an async import finished. When it didn't arrive, they assumed it had failed and submitted support tickets. 3 of 5 churned accounts cited this specifically.
+          - title: Column mapping is a major friction point
+            badge:
+              label: Moderate
+              color: teal
+            description: 60% of survey respondents have non-standard column headers in their export files. They currently rename columns manually before every upload. A mapping UI would save the median user 25 minutes per import.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Who We're Building For
+    heading: Persona Summaries
+    components:
+      - type: accordion
+        items:
+          - title: "Ops Manager — \"Get my data in, get out of my way\""
+            components:
+              - type: markdown
+                body: |
+                  **Profile:** Mid-level ops or revenue ops manager. 5–12 years experience. Not technical — does not write code. Manages Acme adoption for their team of 10–50.
+
+                  **Goals:**
+                  - Get the team fully onboarded within a week of signing
+                  - Avoid involving IT for basic setup tasks
+                  - Show quick ROI to justify the subscription to their VP
+
+                  **Frustrations:**
+                  - Hitting the 500-row CSV limit with a 40K-row contact list
+                  - No progress visibility — no idea if the import is still running or has silently failed
+                  - Validation errors with no context — can't fix what she can't find
+
+                  **Representative quote:** *"I have the data. I just need it in the tool. This should not be a two-week project."*
+          - title: "IT Admin — \"Just give me an API\""
+            components:
+              - type: markdown
+                body: |
+                  **Profile:** IT admin or systems integrator. Technical. Manages 3–10 SaaS tools. Acme is one of many. Will automate anything automatable.
+
+                  **Goals:**
+                  - Automate nightly sync from the internal CRM to Acme
+                  - Zero manual steps in steady state
+                  - Clear error logs he can monitor without logging into the UI
+
+                  **Frustrations:**
+                  - No API — forces him to stay involved in what should be automated
+                  - No webhook support — he has to poll the UI to check import status
+                  - Files rejected with no machine-readable error codes
+
+                  **Representative quote:** *"I need this to be a cron job, not a thing someone has to remember to do every Monday morning."*
+          - title: "Data Analyst — \"I need to know exactly what broke\""
+            components:
+              - type: markdown
+                body: |
+                  **Profile:** Data or business analyst. Intermediate technical skills (SQL, Excel, Python basics). Owns data quality for Acme. Prepares import files from exports of other systems.
+
+                  **Goals:**
+                  - Upload clean data without having to manually fix every row
+                  - Understand validation errors precisely enough to fix them in bulk (e.g., in Excel before re-upload)
+                  - Track import history to audit what was imported when
+
+                  **Frustrations:**
+                  - Error messages like "invalid value in row" with no row number or field name
+                  - Having to re-upload the entire file when 3 rows out of 50,000 failed
+                  - No import history — cannot answer the question "when was this data last refreshed?"
+
+                  **Representative quote:** *"If you're going to reject my data, at least tell me which rows and which columns. Give me something I can actually act on."*
+
+  - type: divider
+
+  - type: section
+    eyebrow: Experience Map
+    heading: User Journey — Import Workflow Today
+    components:
+      - type: markdown
+        body: Key touchpoints in the current import experience, with friction highlighted at each step.
+      - type: event_timeline
+        show_filter_toggle: false
+        events:
+          - date: 2026-05-01
+            title: Export data from source system
+            summary: User exports from Salesforce, HubSpot, or a spreadsheet. Column names rarely match expected format.
+            severity: minor
+            source: User
+          - date: 2026-05-01
+            title: Rename columns manually
+            summary: User spends 10-25 minutes renaming columns in Excel to match required headers. Done every time, for every import.
+            severity: major
+            source: User friction
+          - date: 2026-05-01
+            title: Discover the 500-row limit
+            summary: If file exceeds 500 rows, user hits the limit error. 40% of users split the file into chunks.
+            severity: major
+            source: System blocker
+          - date: 2026-05-01
+            title: Upload and wait
+            summary: For files near the limit, the upload takes 30-90 seconds with no progress indicator. Users often refresh, canceling the upload.
+            severity: major
+            source: System friction
+          - date: 2026-05-01
+            title: Get a generic error
+            summary: Half of first-time importers get at least one validation error. The message says "import failed" with no actionable detail.
+            severity: major
+            source: System blocker
+          - date: 2026-05-01
+            title: Contact support or give up
+            summary: Users either open a support ticket (avg 4hr response) or abandon the import entirely and enter data manually.
+            severity: major
+            source: Churn risk
+
+  - type: divider
+
+  - type: section
+    eyebrow: Recommendations
+    heading: What We Should Do
+    components:
+      - type: table
+        filterable: true
+        columns:
+          - key: finding
+            label: Finding
+          - key: recommendation
+            label: Recommendation
+          - key: effort
+            label: Effort
+          - key: impact
+            label: Impact
+        rows:
+          - finding: 500-row limit blocks enterprise activation
+            recommendation: Raise limit to 1M rows with async processing
+            effort: High
+            impact: Critical
+          - finding: Validation errors have no context
+            recommendation: Return row index + column name + human-readable message in error report
+            effort: Medium
+            impact: Critical
+          - finding: No progress visibility during async import
+            recommendation: Polling status endpoint + in-app progress bar + email notification
+            effort: Medium
+            impact: High
+          - finding: Column names don't match across systems
+            recommendation: Column mapping UI with auto-match on exact names
+            effort: Medium
+            impact: High
+          - finding: API users underserved
+            recommendation: POST /imports API endpoint with same capabilities as UI
+            effort: Medium
+            impact: High
+          - finding: No import history
+            recommendation: Import log table with status, row counts, and downloadable error report
+            effort: Low
+            impact: Moderate
+          - finding: Partial imports confuse users
+            recommendation: "Explicit partial success state: N rows imported, M rows skipped — with downloadable list of skipped rows"
+            effort: Low
+            impact: Moderate
+
+  - type: divider
+
+  - type: section
+    eyebrow: In Their Own Words
+    heading: Verbatim Quotes
+    components:
+      - type: blockquote
+        body: "I have the data. I just need it in the tool. This should not be a two-week project. I'm paying for a product, not a data entry exercise."
+        attribution: Sarah K., Revenue Ops Manager, Thornwood Capital
+      - type: blockquote
+        body: "Every Monday morning someone on my team has to manually upload last week's data because there's no way to automate it. We've asked for an API for eight months. It's a dealbreaker for us long-term."
+        attribution: David P., IT Director, Kestrel Foods
+      - type: blockquote
+        body: "The error message says 'invalid value' and that's it. No row number, no column name, nothing. My file has 30,000 rows. What do you expect me to do with that?"
+        attribution: Aiko T., Data Analyst, Axiom Health
+      - type: blockquote
+        body: "We ended up just not using the import feature at all. Our ops team typed 3,000 records in by hand over two days. That's how bad the experience was."
+        attribution: Churned customer (exit interview, April 2026)
+      - type: blockquote
+        body: "Once we knew about the 500-row limit we started splitting our files, but that means someone has to babysit the uploads for two hours. We have better things to do."
+        attribution: Marcus B., Operations Lead, Meridian Logistics

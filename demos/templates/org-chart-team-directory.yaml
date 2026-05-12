@@ -1,0 +1,313 @@
+title: "Team Directory & Org Chart"
+subtitle: Who we are, how we are organized, and how to reach us. Updated monthly.
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Company
+        value: Vantara
+      - key: Headcount
+        value: "25"
+      - key: Last Updated
+        value: "2026-05-15"
+      - key: Owner
+        value: Rosa Kim, People Ops
+
+  - type: stat_grid
+    columns: 4
+    stats:
+      - label: Total Headcount
+        value: "25"
+        detail: Full-time employees
+        color: green
+      - label: Teams
+        value: "5"
+        detail: Engineering, Product, Sales, CS, G&A
+        color: teal
+      - label: Open Roles
+        value: "4"
+        detail: 2 Eng, 1 CS, 1 Sales
+        color: yellow
+      - label: Avg Tenure
+        value: 11 months
+        detail: "Median: 9 months"
+        color: default
+
+  - type: section
+    eyebrow: Structure
+    heading: Org Chart
+    components:
+      - type: markdown
+        body: "Company structure as of May 2026. Status indicators reflect current employment state."
+      - type: tree
+        show_filter_toggle: false
+        nodes:
+          - label: "Elena Rourke — CEO & Co-founder"
+            status: active
+            children:
+              - label: "Marcus Webb — CTO & Co-founder"
+                status: active
+                children:
+                  - label: "Dev Patel — Sr. Full-Stack Engineer"
+                    status: active
+                    note: "Joined May 2026"
+                  - label: "Soo-Yeon Park — Full-Stack Engineer"
+                    status: active
+                  - label: "Brennan Torres — Backend Engineer"
+                    status: active
+                  - label: "Open — Full-Stack Engineer (Senior)"
+                    status: upcoming
+                    note: "Offer out"
+                  - label: "Open — Full-Stack Engineer"
+                    status: upcoming
+                    note: "Q3 hire"
+              - label: "Priya Kapoor — Head of Product"
+                status: active
+                children:
+                  - label: "Jonah Mercer — Product Designer"
+                    status: active
+                  - label: "Lena Ashworth — Product Manager"
+                    status: active
+                    note: "Joined March 2026"
+              - label: "Aisha Okafor — Head of Sales"
+                status: active
+                children:
+                  - label: "Ryan Liu — Account Executive"
+                    status: active
+                  - label: "Taylor Hobbs — Account Executive"
+                    status: active
+                  - label: "Neha Deshpande — SDR"
+                    status: active
+                  - label: "Open — Account Executive"
+                    status: upcoming
+                    note: "Q3 hire"
+              - label: "James Okonkwo — Head of Customer Success"
+                status: active
+                children:
+                  - label: "Camille Fournier — Customer Success Manager"
+                    status: active
+                  - label: "Arjun Singh — Customer Success Manager"
+                    status: active
+                  - label: "Open — CS Manager"
+                    status: upcoming
+                    note: "Q3 hire"
+              - label: "Rosa Kim — People & Operations"
+                status: active
+                children:
+                  - label: "Diego Varela — Finance & Accounting"
+                    status: active
+
+  - type: section
+    eyebrow: Roster
+    heading: Team Roster
+    components:
+      - type: table
+        filterable: true
+        columns:
+          - key: name
+            label: Name
+          - key: role
+            label: Role
+          - key: team
+            label: Team
+          - key: location
+            label: Location
+          - key: start_date
+            label: Start Date
+          - key: reports_to
+            label: Reports To
+        rows:
+          - name: Elena Rourke
+            role: CEO & Co-founder
+            team: Leadership
+            location: San Francisco, CA
+            start_date: "Jan 2024"
+            reports_to: Board
+          - name: Marcus Webb
+            role: CTO & Co-founder
+            team: Engineering
+            location: San Francisco, CA
+            start_date: "Jan 2024"
+            reports_to: Elena Rourke
+          - name: Dev Patel
+            role: Sr. Full-Stack Engineer
+            team: Engineering
+            location: Brooklyn, NY
+            start_date: "May 2026"
+            reports_to: Marcus Webb
+          - name: Soo-Yeon Park
+            role: Full-Stack Engineer
+            team: Engineering
+            location: Austin, TX
+            start_date: "Sep 2025"
+            reports_to: Marcus Webb
+          - name: Brennan Torres
+            role: Backend Engineer
+            team: Engineering
+            location: Denver, CO
+            start_date: "Nov 2025"
+            reports_to: Marcus Webb
+          - name: Priya Kapoor
+            role: Head of Product
+            team: Product
+            location: San Francisco, CA
+            start_date: "Mar 2025"
+            reports_to: Elena Rourke
+          - name: Jonah Mercer
+            role: Product Designer
+            team: Product
+            location: Portland, OR
+            start_date: "Jun 2025"
+            reports_to: Priya Kapoor
+          - name: Lena Ashworth
+            role: Product Manager
+            team: Product
+            location: Chicago, IL
+            start_date: "Mar 2026"
+            reports_to: Priya Kapoor
+          - name: Aisha Okafor
+            role: Head of Sales
+            team: Sales
+            location: New York, NY
+            start_date: "Feb 2025"
+            reports_to: Elena Rourke
+          - name: Ryan Liu
+            role: Account Executive
+            team: Sales
+            location: Remote
+            start_date: "Jul 2025"
+            reports_to: Aisha Okafor
+          - name: Taylor Hobbs
+            role: Account Executive
+            team: Sales
+            location: Atlanta, GA
+            start_date: "Oct 2025"
+            reports_to: Aisha Okafor
+          - name: Neha Deshpande
+            role: SDR
+            team: Sales
+            location: Remote
+            start_date: "Jan 2026"
+            reports_to: Aisha Okafor
+          - name: James Okonkwo
+            role: Head of Customer Success
+            team: CS
+            location: San Francisco, CA
+            start_date: "Apr 2025"
+            reports_to: Elena Rourke
+          - name: Camille Fournier
+            role: Customer Success Manager
+            team: CS
+            location: Remote
+            start_date: "Aug 2025"
+            reports_to: James Okonkwo
+          - name: Arjun Singh
+            role: Customer Success Manager
+            team: CS
+            location: Seattle, WA
+            start_date: "Dec 2025"
+            reports_to: James Okonkwo
+          - name: Rosa Kim
+            role: People & Operations
+            team: G&A
+            location: San Francisco, CA
+            start_date: "Jun 2025"
+            reports_to: Elena Rourke
+          - name: Diego Varela
+            role: Finance & Accounting
+            team: G&A
+            location: Remote
+            start_date: "Sep 2025"
+            reports_to: Rosa Kim
+
+  - type: section
+    eyebrow: Hiring
+    heading: Open Roles
+    components:
+      - type: card_grid
+        min_width: 260
+        cards:
+          - title: Senior Full-Stack Engineer
+            badge:
+              label: Engineering
+              color: green
+            description: >
+              Offer out to lead candidate. Expected decision June 4.
+              React, TypeScript, Node.js, PostgreSQL. 4+ years experience.
+              Competitive with FAANG mid-level. Remote-friendly.
+          - title: Full-Stack Engineer
+            badge:
+              label: Engineering
+              color: green
+            description: >
+              Q3 hire gated on Series A closing. Will join the core platform team.
+              Same stack as above. 2+ years experience. Actively sourcing now to
+              build a pipeline ahead of the funding close.
+          - title: Account Executive
+            badge:
+              label: Sales
+              color: teal
+            description: >
+              Q3 hire to support Aisha as we move upmarket. SMB/mid-market SaaS closing
+              experience required. Ideally has sold to ops or RevOps buyers.
+              OTE $180K ($100K base + $80K variable).
+          - title: Customer Success Manager
+            badge:
+              label: Customer Success
+              color: yellow
+            description: >
+              Active search. James needs support as the book of business grows past 50 accounts.
+              PLG or product-led CS experience preferred. 2+ years managing SMB accounts.
+              $90–110K base. JD posted on LinkedIn and Wellfound.
+
+  - type: section
+    eyebrow: Norms
+    heading: How We Work
+    components:
+      - type: definition_list
+        items:
+          - term: All-hands
+            definition: "Every other Monday at 9am PT. 45 minutes: metrics review, product demo, one team spotlight, open Q&A. Recording posted in Notion same day."
+          - term: 1:1 cadence
+            definition: "Weekly 1:1s for all direct reports. Managers own the calendar invite. Agenda is employee-led — managers come prepared but follow the employee's priorities."
+          - term: Decision-making
+            definition: "We default to the person closest to the work. Decisions under $5K and reversible are made by the DRI (Directly Responsible Individual) without approval. Irreversible or cross-functional decisions get a brief async writeup in Notion first."
+          - term: Default communication channel
+            definition: "Slack for async. Linear for product/eng work. Notion for documents and decisions. Email is reserved for external parties. If something is urgent and time-sensitive, call or text — Slack is not guaranteed to be monitored in real time."
+          - term: Remote policy
+            definition: "Remote-first with a San Francisco hub. In-person weeks twice per year (all-hands offsite). SF team works from the office Tuesdays and Thursdays. All meetings have a Zoom link regardless of who is in person."
+          - term: Feedback culture
+            definition: "We use the SBI model (Situation, Behavior, Impact) for feedback. Direct is kind. Anonymous feedback forms are available quarterly but direct conversation is always preferred."
+
+  - type: section
+    eyebrow: Onboarding
+    heading: Your Onboarding Contacts
+    components:
+      - type: card_grid
+        min_width: 220
+        cards:
+          - title: Rosa Kim
+            badge:
+              label: People & Ops
+              color: default
+            description: "Your first call. HR paperwork, benefits enrollment, equipment setup, access provisioning. Slack: @rosa"
+          - title: Marcus Webb
+            badge:
+              label: Engineering
+              color: green
+            description: "Engineering onboarding, dev environment setup, codebase walkthrough. Schedule a 90-minute session in your first week. Slack: @marcus"
+          - title: Priya Kapoor
+            badge:
+              label: Product
+              color: teal
+            description: "Product orientation: current roadmap, open specs, how to give feedback. Ask for access to the Product wiki in Notion. Slack: @priya"
+          - title: James Okonkwo
+            badge:
+              label: Customer Success
+              color: yellow
+            description: "Shadow a customer call in your first two weeks regardless of role. James coordinates shadowing. Slack: @james"
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: Clone it to your workspace and your agents will use this structure when building team directory pages. Replace the placeholder names, roles, and norms with your actual team. This page works well as a living document — your HR or ops tooling can update it automatically when people join or leave.

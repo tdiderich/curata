@@ -1,0 +1,7 @@
+path	tokens	reads	description
+packages/mcp-server/dist/index.d.ts	7	0	TypeScript source
+packages/mcp-server/dist/index.js	1486	0	JavaScript source
+packages/mcp-server/dist/index.js.map	1509	0	
+packages/mcp-server/dist/lib.d.ts	155	0	TypeScript source
+packages/mcp-server/dist/lib.js	1104	0	JavaScript source
+packages/mcp-server/dist/lib.js.map	1264	0	

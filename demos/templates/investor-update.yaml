@@ -1,0 +1,187 @@
+title: "Investor Update — May 2026"
+subtitle: Monthly update from the team at Vantara. Seed round, B2B SaaS, workflow automation.
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Company
+        value: Vantara
+      - key: Month
+        value: May 2026
+      - key: Author
+        value: Elena Rourke, CEO
+      - key: Stage
+        value: Seed
+      - key: Last Updated
+        value: "2026-05-31"
+
+  - type: callout
+    variant: success
+    title: May headline — best month yet
+    body: >
+      We crossed $30K MRR for the first time, added 8 net-new customers (best month ever),
+      and closed our first enterprise pilot at $2,400/mo. The team executed well against
+      every goal we set in April. Burn stayed flat despite headcount growth.
+
+  - type: stat_grid
+    columns: 5
+    stats:
+      - label: MRR
+        value: "$30,200"
+        detail: Up from $24,800 in April
+        color: green
+      - label: MoM Growth
+        value: "21.8%"
+        detail: 3rd consecutive month above 20%
+        color: green
+      - label: Net Burn
+        value: "$41,500"
+        detail: Flat MoM despite 1 new hire
+        color: teal
+      - label: Runway
+        value: 18 months
+        detail: Based on current burn + $748K cash
+        color: yellow
+      - label: Active Customers
+        value: "47"
+        detail: Up from 39 in April
+        color: green
+
+  - type: section
+    eyebrow: Execution
+    heading: Progress vs. Goals
+    components:
+      - type: table
+        columns:
+          - key: goal
+            label: Goal
+          - key: target
+            label: Target
+          - key: actual
+            label: Actual
+          - key: status
+            label: Status
+        rows:
+          - goal: MRR
+            target: "$28,000"
+            actual: "$30,200"
+            status: "✓ Exceeded"
+          - goal: New customers
+            target: "6"
+            actual: "8"
+            status: "✓ Exceeded"
+          - goal: Churn
+            target: "< 2 customers"
+            actual: "1 customer ($800 MRR)"
+            status: "✓ On track"
+          - goal: Enterprise pilot signed
+            target: "1"
+            actual: "1 (Fieldstone Group)"
+            status: "✓ Hit"
+          - goal: Design partner interviews
+            target: "10"
+            actual: "7"
+            status: "⚠ Missed — rescheduled to June"
+          - goal: Hire full-stack engineer
+            target: "Offer accepted"
+            actual: "Offer out, decision Jun 4"
+            status: "⚠ In progress"
+
+  - type: section
+    eyebrow: Product
+    heading: Product Updates
+    components:
+      - type: accordion
+        items:
+          - title: "Shipped in May"
+            components:
+              - type: markdown
+                body: |
+                  - **Workflow templates library** — 12 pre-built templates customers can clone in one click. Activation rate for new signups jumped from 34% to 61%.
+                  - **Slack notifications** — real-time alerts when automations complete, fail, or need attention. Most-requested feature since January.
+                  - **CSV export** — run history and audit logs now exportable. Unlocked the Fieldstone pilot (compliance requirement).
+                  - **Mobile-responsive dashboard** — long overdue. Now passes Google mobile usability checks.
+          - title: "In Progress (targeting June)"
+            components:
+              - type: markdown
+                body: |
+                  - **API webhooks** — outbound webhooks so Vantara can trigger downstream systems. ETA: June 14.
+                  - **Role-based access control** — required for our two largest pipeline deals. ETA: June 21.
+                  - **Native HubSpot integration** — high-demand from sales team personas. ETA: June 28.
+          - title: "Planned (Q3)"
+            components:
+              - type: markdown
+                body: |
+                  - **AI-assisted workflow builder** — natural language to automation. Still scoping; will validate with 5 design partners before building.
+                  - **Audit trail & compliance exports** — needed for enterprise tier. Requirement surfaced in 4 of last 6 enterprise conversations.
+                  - **White-label/embed option** — one strategic partner inquiry. Low priority unless more signal.
+
+  - type: section
+    eyebrow: Team
+    heading: Team Updates
+    components:
+      - type: markdown
+        body: |
+          **New hires**
+          - **Dev Patel** joined May 12 as Senior Full-Stack Engineer. Previously at Retool. Off to a fast start — shipped Slack notifications in his first two weeks.
+
+          **Open roles**
+          - **Full-Stack Engineer (second)** — offer out to top candidate, decision expected June 4. Backup candidate ready if needed.
+          - **Head of Customer Success** — JD posted. Targeting a July start. If you know anyone with PLG + SMB CS experience, please reach out.
+
+          **Team size:** 7 (Elena CEO, Marcus CTO, Dev SWE, Priya Product, Jonah Design, Aisha BizDev, Rosa Ops/Finance)
+
+  - type: section
+    eyebrow: Asks
+    heading: How You Can Help
+    components:
+      - type: card_grid
+        min_width: 260
+        cards:
+          - title: Intros to mid-market ops teams
+            badge:
+              label: GTM
+              color: green
+            description: >
+              Our sweet spot is 50–300-person companies with an ops or RevOps owner.
+              We convert warm intros at 3x the rate of cold outbound. If you have a portco
+              that fits, a quick email intro is the highest-leverage thing you can do this month.
+          - title: Head of Customer Success referrals
+            badge:
+              label: Hiring
+              color: teal
+            description: >
+              Looking for someone who has done CS at a PLG SaaS company in the $2M–$10M ARR
+              range. Must be comfortable being the first CS hire and building the function.
+              Comp band is $120–140K base + meaningful equity.
+          - title: Enterprise procurement advice
+            badge:
+              label: Advice
+              color: yellow
+            description: >
+              Fieldstone Group is our first true enterprise customer. Their procurement process
+              is more involved than we anticipated (security review, MSA negotiation, SOC 2 Q).
+              Would love 30 minutes with anyone who has navigated this at the seed stage.
+
+  - type: section
+    eyebrow: Outlook
+    heading: Looking Ahead — June Goals
+    components:
+      - type: markdown
+        body: |
+          June is about continuing the growth trend while shoring up the infrastructure to support
+          larger customers. Our targets:
+
+          - **MRR:** $36,000 (20% growth from May)
+          - **New customers:** 7 net-new
+          - **Enterprise:** Convert Fieldstone pilot to annual contract; start second enterprise pilot
+          - **Hiring:** Close full-stack engineer offer; begin CS recruiting
+          - **Product:** Ship RBAC, webhooks, and HubSpot integration
+          - **Design partner interviews:** Complete the 3 remaining from May's missed goal
+
+          The biggest risk in June is bandwidth — the team is stretched across product, sales, and hiring simultaneously. Marcus and I are spending significant time on the Fieldstone security review, which creates pressure on the engineering roadmap. We are watching this closely.
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: Clone it to your workspace and your agents will use this structure when building monthly investor updates. Replace the placeholder data with your actual metrics, team names, and goals. Your agents can update this page automatically after each board meeting or monthly metrics review.

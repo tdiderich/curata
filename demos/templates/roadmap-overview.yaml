@@ -1,0 +1,355 @@
+title: "Product Roadmap — H2 2026"
+subtitle: "Acme Corp · Jul–Dec 2026 · Owner: Lena Park, VP Product"
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Period
+        value: H2 2026 (Jul–Dec)
+      - key: Owner
+        value: Lena Park
+      - key: Last Updated
+        value: 2026-05-09
+      - key: Status
+        value: Approved by leadership
+
+  - type: section
+    eyebrow: Strategy
+    heading: Strategic Themes
+    components:
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: Enterprise Scale
+            badge:
+              label: Theme 1
+              color: green
+            description: Remove every bottleneck that prevents customers from deploying Acme across their entire organization. SSO, bulk operations, admin controls, audit logs. Target segment — 500+ seat accounts.
+          - title: Integrations Platform
+            badge:
+              label: Theme 2
+              color: teal
+            description: Build a first-class integration layer so customers can connect Acme to the rest of their stack without engineering involvement. Native connectors for Salesforce, HubSpot, and Slack in H2. REST webhooks GA.
+          - title: Intelligent Automation
+            badge:
+              label: Theme 3
+              color: yellow
+            description: Surface AI-powered suggestions and automations that reduce manual work for ops users. Smart deduplication, auto-tagging, workflow triggers. Foundation for our AI positioning in 2027.
+          - title: Developer Experience
+            badge:
+              label: Theme 4
+              color: default
+            description: Make Acme the most developer-friendly tool in the category. API v2 GA, Terraform provider, expanded webhooks, public Postman collection. Reduces time-to-integration from days to hours.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Quarterly View
+    heading: Q3 / Q4 Feature Breakdown
+    components:
+      - type: columns
+        equal_heights: false
+        columns:
+          - - type: header
+              eyebrow: Q3 2026
+              title: Jul – Sep
+            - type: tree
+              show_filter_toggle: false
+              nodes:
+                - label: Enterprise Scale
+                  status: active
+                  children:
+                    - label: SSO (SAML 2.0 + OIDC)
+                      status: active
+                      note: Beta May, GA Jul 1
+                    - label: Organization-level roles (4 tiers)
+                      status: upcoming
+                    - label: Bulk Import v2 (SFTP source)
+                      status: upcoming
+                    - label: Audit log (90-day retention)
+                      status: upcoming
+                - label: Integrations Platform
+                  status: upcoming
+                  children:
+                    - label: Webhook v2 (GA)
+                      status: active
+                      note: Currently in beta
+                    - label: Salesforce native connector (read)
+                      status: upcoming
+                    - label: HubSpot native connector (read)
+                      status: upcoming
+                    - label: Zapier app (certified)
+                      status: upcoming
+                - label: Developer Experience
+                  status: upcoming
+                  children:
+                    - label: API v2 GA
+                      status: active
+                      note: Launching May 22 — Q3 hardening
+                    - label: Terraform provider (v1)
+                      status: upcoming
+                    - label: Public Postman collection
+                      status: upcoming
+          - - type: header
+              eyebrow: Q4 2026
+              title: Oct – Dec
+            - type: tree
+              show_filter_toggle: false
+              nodes:
+                - label: Enterprise Scale
+                  status: upcoming
+                  children:
+                    - label: Data residency (EU region)
+                      status: upcoming
+                      note: Required for 3 prospects
+                    - label: Custom data retention policies
+                      status: upcoming
+                    - label: IP allowlist for API access
+                      status: upcoming
+                    - label: SCIM provisioning
+                      status: upcoming
+                - label: Integrations Platform
+                  status: upcoming
+                  children:
+                    - label: Salesforce bi-directional sync
+                      status: upcoming
+                    - label: HubSpot bi-directional sync
+                      status: upcoming
+                    - label: Slack app (notifications + search)
+                      status: upcoming
+                    - label: Integration marketplace (public)
+                      status: upcoming
+                - label: Intelligent Automation
+                  status: upcoming
+                  children:
+                    - label: Smart deduplication (ML-based)
+                      status: upcoming
+                      note: Requires Q3 data pipeline work
+                    - label: Auto-tagging suggestions
+                      status: upcoming
+                    - label: Workflow trigger builder
+                      status: upcoming
+                    - label: Weekly digest email (AI-generated)
+                      status: upcoming
+
+  - type: divider
+
+  - type: section
+    eyebrow: Prioritization
+    heading: Feature Priority Matrix
+    components:
+      - type: table
+        filterable: true
+        columns:
+          - key: feature
+            label: Feature
+          - key: theme
+            label: Theme
+          - key: effort
+            label: Effort
+          - key: impact
+            label: Impact
+          - key: quarter
+            label: Quarter
+          - key: status
+            label: Status
+        rows:
+          - feature: SSO (SAML + OIDC)
+            theme: Enterprise Scale
+            effort: High
+            impact: Critical
+            quarter: Q3
+            status: In progress
+          - feature: Webhook v2 GA
+            theme: Integrations
+            effort: Low
+            impact: High
+            quarter: Q3
+            status: Beta
+          - feature: Salesforce connector (read)
+            theme: Integrations
+            effort: Medium
+            impact: High
+            quarter: Q3
+            status: Planned
+          - feature: Bulk Import v2 (SFTP)
+            theme: Enterprise Scale
+            effort: Medium
+            impact: High
+            quarter: Q3
+            status: Planned
+          - feature: Audit log
+            theme: Enterprise Scale
+            effort: Medium
+            impact: High
+            quarter: Q3
+            status: Planned
+          - feature: Terraform provider
+            theme: Developer Experience
+            effort: Medium
+            impact: Medium
+            quarter: Q3
+            status: Planned
+          - feature: EU data residency
+            theme: Enterprise Scale
+            effort: High
+            impact: Critical
+            quarter: Q4
+            status: Scoping
+          - feature: Salesforce bi-di sync
+            theme: Integrations
+            effort: High
+            impact: High
+            quarter: Q4
+            status: Planned
+          - feature: Smart deduplication
+            theme: Automation
+            effort: High
+            impact: High
+            quarter: Q4
+            status: Planned
+          - feature: Slack app
+            theme: Integrations
+            effort: Medium
+            impact: Medium
+            quarter: Q4
+            status: Planned
+          - feature: SCIM provisioning
+            theme: Enterprise Scale
+            effort: Medium
+            impact: Medium
+            quarter: Q4
+            status: Planned
+          - feature: Workflow trigger builder
+            theme: Automation
+            effort: High
+            impact: Medium
+            quarter: Q4
+            status: Planned
+
+  - type: divider
+
+  - type: section
+    eyebrow: Resources
+    heading: Team Allocation H2 2026
+    components:
+      - type: stat_grid
+        columns: 4
+        stats:
+          - label: Engineers (total)
+            value: "18"
+            detail: 14 FTE, 4 contractors
+            color: green
+          - label: On Enterprise Scale
+            value: "8"
+            detail: 44% of eng capacity
+            color: teal
+          - label: On Integrations
+            value: "6"
+            detail: 33% of eng capacity
+            color: teal
+          - label: On Automation / DX
+            value: "4"
+            detail: 22% of eng capacity
+            color: yellow
+
+  - type: divider
+
+  - type: section
+    eyebrow: Dependencies
+    heading: Key Dependencies and Milestones
+    components:
+      - type: event_timeline
+        show_filter_toggle: false
+        events:
+          - date: "2026-05-22"
+            title: API v2 GA
+            summary: Unblocks Terraform provider work and external integration partners who are waiting on stable v2 contracts.
+            severity: major
+            source: Engineering
+          - date: "2026-06-30"
+            title: Data pipeline v2 complete
+            summary: Required for smart deduplication ML feature in Q4. Rahul leading. Any slip here delays Automation theme by one quarter.
+            severity: major
+            source: Engineering
+          - date: "2026-07-01"
+            title: SSO GA
+            summary: Required by Thornwood Capital contract ($78K ARR). Delays beyond Jul 1 trigger contract penalty clause. Hard deadline.
+            severity: major
+            source: Enterprise Sales
+          - date: "2026-07-15"
+            title: Salesforce partnership agreement signed
+            summary: Legal is reviewing. If agreement slips past Jul 15, Q3 connector launch moves to Q4. Lena tracking with partnerships team.
+            severity: minor
+            source: Partnerships
+          - date: "2026-09-01"
+            title: EU infrastructure provisioned
+            summary: Must be live by Sep 1 to give Engineering 90 days to migrate and certify data residency feature before Q4 target.
+            severity: major
+            source: Infrastructure
+          - date: "2026-09-30"
+            title: Q3 retrospective and H2 checkpoint
+            summary: Review actuals vs plan. Adjust Q4 scope based on Q3 velocity and customer feedback. Leadership review.
+            severity: minor
+            source: Leadership
+
+  - type: divider
+
+  - type: section
+    eyebrow: Still Deciding
+    heading: Open Questions
+    components:
+      - type: accordion
+        items:
+          - title: Should we build a native Slack app or use Zapier for Slack?
+            components:
+              - type: markdown
+                body: |
+                  **Context:** Building a native Slack app (OAuth, slash commands, event subscriptions) is 6–8 weeks of eng work. A Zapier integration could cover 80% of use cases in 2 weeks.
+
+                  **Arguments for native:** Richer experience, better for positioning, customers prefer not needing Zapier.
+
+                  **Arguments for Zapier first:** Faster, lower risk, lets us validate demand before investing in native.
+
+                  **Decision needed by:** June 15 (before Q3 sprint planning)
+
+                  **Owner:** Lena to decide with Marcus and Jordan (Sales).
+          - title: What is the right pricing model for AI features?
+            components:
+              - type: markdown
+                body: |
+                  **Context:** The Automation theme introduces AI-powered features (deduplication, auto-tagging). These have marginal inference costs. Options: (a) include in existing tiers, (b) usage-based add-on, (c) higher tier only.
+
+                  **Risk of gating:** Reduces adoption, harder to build the data flywheel that makes the models better.
+
+                  **Risk of including:** Margin impact if usage is higher than modeled. Need cost estimates from Marcus first.
+
+                  **Decision needed by:** August 1 (before Q4 planning)
+
+                  **Owner:** Derek Walsh to make final call after Lena's recommendation.
+          - title: Do we need SOC 2 Type II before the EU data residency launch?
+            components:
+              - type: markdown
+                body: |
+                  **Context:** EU customers and prospects are asking for SOC 2 Type II. Our current Type I was completed in March. Type II requires a 6-month observation window — earliest completion is September.
+
+                  **Risk:** Launching EU data residency without Type II may not satisfy enterprise legal/security review, making the feature unusable for the customers who need it most.
+
+                  **Options:** (a) delay EU launch to Q1 2027 until Type II is complete, (b) launch EU in Q4 with Type I + GDPR DPA, let customers decide.
+
+                  **Decision needed by:** June 1
+
+                  **Owner:** Derek Walsh + Legal.
+          - title: Should we open-source the integration SDK?
+            components:
+              - type: markdown
+                body: |
+                  **Context:** We are building a JavaScript/Python SDK for API v2. Open-sourcing it could accelerate adoption, surface bugs faster, and improve developer trust.
+
+                  **Risk:** Competitors can study our API design. Support burden for community contributions.
+
+                  **Precedent:** Segment, Mixpanel, and Amplitude all open-source their SDKs. No evidence it hurt them.
+
+                  **Decision needed by:** July 1 (before SDK v1 ships)
+
+                  **Owner:** Marcus Chen (engineering) + Derek Walsh.

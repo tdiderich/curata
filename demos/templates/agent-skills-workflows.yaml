@@ -1,0 +1,440 @@
+title: Agent Skills & Workflows
+subtitle: What our agents do, how they're triggered, and what they produce.
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Active Agents
+        value: "8"
+      - key: Total Runs (30d)
+        value: "1,247"
+      - key: Avg Output Quality
+        value: 8.4/10
+      - key: Last Updated
+        value: 2026-05-11
+
+  - type: stat_grid
+    columns: 4
+    stats:
+      - label: Active Agents
+        value: "8"
+        detail: Across all trigger types
+        color: green
+      - label: Runs (30d)
+        value: "1,247"
+        detail: Up 18% from last month
+        color: teal
+      - label: Pages Published
+        value: "342"
+        detail: 27% required human revision
+        color: green
+      - label: Avg Quality Score
+        value: 8.4/10
+        detail: Rated by reviewing engineers
+        color: yellow
+
+  - type: section
+    heading: Agent Registry
+    components:
+      - type: markdown
+        body: "The agents our team runs regularly. Click through to see an example output or pull the config to deploy your own."
+      - type: card_grid
+        min_width: 260
+        cards:
+          - title: Deal Brief Agent
+            badge:
+              label: API Webhook
+              color: teal
+            description: "Pulls CRM data, LinkedIn profile, and recent news for an account. Produces a 1-page brief: company snapshot, likely pain points, relevant references from past deals, and suggested talking points. Fires when a deal moves to Qualified in Salesforce."
+            links:
+              - label: Example output
+                href: https://your-workspace.curata.ai/pages/deal-brief-acme-corp
+              - label: Config
+                href: https://github.com/your-org/agents/blob/main/deal-brief/agent.yaml
+          - title: Postmortem Writer
+            badge:
+              label: Slack Command
+              color: green
+            description: "Run /postmortem #incident-channel after an incident. The agent reads the thread, pulls the timeline from PagerDuty, and drafts a structured postmortem: timeline, root cause, impact, and action items. Engineers review and sign off before it publishes."
+            links:
+              - label: Example output
+                href: https://your-workspace.curata.ai/pages/postmortem-db-outage-may
+              - label: Config
+                href: https://github.com/your-org/agents/blob/main/postmortem/agent.yaml
+          - title: Code Review Summarizer
+            badge:
+              label: Git Push Hook
+              color: yellow
+            description: "Fires on every PR opened against main. Uses Claude to summarize the diff, flag risky changes, and surface relevant past decisions from the architecture archive. Comment appears on the PR within 90 seconds. Does not block merge."
+            links:
+              - label: Example output
+                href: https://your-workspace.curata.ai/pages/pr-review-1847
+              - label: Config
+                href: https://github.com/your-org/agents/blob/main/pr-summarizer/hook.sh
+          - title: Customer Health Scorer
+            badge:
+              label: Scheduled (Cron)
+              color: default
+            description: "Runs nightly. Pulls product usage metrics, support ticket volume, NPS responses, and contract renewal date for every active account. Produces a health score and a one-paragraph narrative. CS team reviews the bottom quartile each Monday morning."
+            links:
+              - label: Example output
+                href: https://your-workspace.curata.ai/pages/health-score-globex-may
+              - label: Config
+                href: https://github.com/your-org/agents/blob/main/health-scorer/cron.yaml
+
+  - type: section
+    heading: Workflow Map
+    components:
+      - type: markdown
+        body: "How a typical agent run flows from trigger to published page. The feedback loop is the part that compounds — agent revisions get better as reviewers annotate."
+      - type: card_grid
+        min_width: 160
+        connector: arrow
+        cards:
+          - title: Trigger fires
+            badge:
+              label: Step 1
+              color: default
+            description: "Slack command, webhook, cron job, or git hook sends a request to the agent runner."
+          - title: Agent runs
+            badge:
+              label: Step 2
+              color: teal
+            description: "Claude (or custom script) processes inputs and produces a YAML draft page."
+          - title: Draft created
+            badge:
+              label: Step 3
+              color: teal
+            description: "Draft page is published to curata with status: draft. Relevant team members are notified in Slack."
+          - title: Human review
+            badge:
+              label: Step 4
+              color: yellow
+            description: "Reviewer reads the page, annotates anything wrong or missing, and approves or requests changes."
+          - title: Published
+            badge:
+              label: Step 5
+              color: green
+            description: "Approved pages go live. Rejected pages route back to the agent with annotations as feedback for a revision run."
+
+  - type: section
+    heading: Agent Performance
+    components:
+      - type: markdown
+        body: "30-day snapshot. Human Edits % is the share of published pages where a human made at least one revision before or after publish. Quality Score is self-reported by the reviewer on a 1–10 scale."
+      - type: table
+        filterable: true
+        columns:
+          - key: agent
+            label: Agent
+          - key: runs
+            label: Runs (30d)
+          - key: avg_duration
+            label: Avg Duration
+          - key: pages_published
+            label: Pages Published
+          - key: human_edits_pct
+            label: Human Edits %
+          - key: quality_score
+            label: Quality Score
+        rows:
+          - agent: Deal Brief Agent
+            runs: "312"
+            avg_duration: 45s
+            pages_published: "89"
+            human_edits_pct: "22%"
+            quality_score: 8.7/10
+          - agent: Postmortem Writer
+            runs: "18"
+            avg_duration: 2m 10s
+            pages_published: "16"
+            human_edits_pct: "81%"
+            quality_score: 7.9/10
+          - agent: Code Review Summarizer
+            runs: "634"
+            avg_duration: 28s
+            pages_published: "608"
+            human_edits_pct: "4%"
+            quality_score: 8.1/10
+          - agent: Customer Health Scorer
+            runs: "30"
+            avg_duration: 3m 42s
+            pages_published: "30"
+            human_edits_pct: "11%"
+            quality_score: 9.1/10
+          - agent: Architecture Decision Writer
+            runs: "47"
+            avg_duration: 1m 55s
+            pages_published: "44"
+            human_edits_pct: "38%"
+            quality_score: 8.3/10
+          - agent: Sprint Retro Summarizer
+            runs: "12"
+            avg_duration: 1m 20s
+            pages_published: "12"
+            human_edits_pct: "17%"
+            quality_score: 8.9/10
+
+  - type: section
+    heading: Trigger Configuration
+    components:
+      - type: markdown
+        body: "How to wire up each trigger type. Copy the relevant snippet and drop it in your repo or Slack app configuration."
+      - type: accordion
+        items:
+          - title: Slack Command
+            components:
+              - type: markdown
+                body: |
+                  **When it fires:** A team member types a slash command like `/deal-brief @acme-corp` or `/postmortem #incident-123` in any Slack channel.
+
+                  **How to set it up:**
+                  1. Create a Slack app in your workspace and add a slash command.
+                  2. Point the request URL at your agent runner endpoint (e.g. `https://agents.your-org.internal/slack`).
+                  3. The runner parses the command, runs the agent, and posts a Slack notification with the curata page link when done.
+
+                  **Best for:** On-demand tasks where a human decides when to run the agent. Low noise — only fires when someone asks.
+              - type: code
+                language: yaml
+                code: |
+                  # agent-runner/config.yaml
+                  triggers:
+                    - type: slack_command
+                      command: /deal-brief
+                      agent: deal-brief-agent
+                      notify_channel: "#sales-ops"
+          - title: API Webhook
+            components:
+              - type: markdown
+                body: |
+                  **When it fires:** An external system (Salesforce, HubSpot, Jira, etc.) sends a POST request to your agent runner when a record changes.
+
+                  **How to set it up:**
+                  1. In your CRM or ticketing tool, add a webhook that fires on the event you care about (e.g. deal stage change, ticket closed).
+                  2. Point it at your runner endpoint with a shared secret for auth.
+                  3. The runner maps the payload fields to agent inputs and kicks off the run.
+
+                  **Best for:** Automating output from process steps that already happen in your tooling. Zero extra human effort once wired up.
+              - type: code
+                language: yaml
+                code: |
+                  # agent-runner/config.yaml
+                  triggers:
+                    - type: webhook
+                      path: /hooks/salesforce
+                      secret_env: SALESFORCE_WEBHOOK_SECRET
+                      agent: deal-brief-agent
+                      field_map:
+                        account_name: "$.record.Name"
+                        account_id: "$.record.Id"
+                        stage: "$.record.StageName"
+                      condition: "stage == 'Qualified'"
+          - title: Scheduled (Cron)
+            components:
+              - type: markdown
+                body: |
+                  **When it fires:** On a fixed schedule — nightly, weekly, or on any cron expression you define.
+
+                  **How to set it up:**
+                  1. Add a cron entry to your agent runner or use a managed scheduler (Railway cron, GitHub Actions schedule, etc.).
+                  2. Define the agent, its inputs, and any data sources it should pull at run time.
+
+                  **Best for:** Regular reporting, health checks, and anything that should always be fresh but doesn't need to be real-time. The nightly health scorer is a good pattern to copy.
+              - type: code
+                language: yaml
+                code: |
+                  # agent-runner/config.yaml
+                  triggers:
+                    - type: cron
+                      schedule: "0 7 * * 1-5"  # weekdays at 7am UTC
+                      agent: customer-health-scorer
+                      notify_channel: "#cs-team"
+          - title: Git Push Hook
+            components:
+              - type: markdown
+                body: |
+                  **When it fires:** On a git event — PR opened, PR merged, commit pushed to main, tag created.
+
+                  **How to set it up:**
+                  1. Add a GitHub Actions workflow (or equivalent) that fires on the event you care about.
+                  2. The workflow calls your agent runner with the relevant git context (diff, PR title, changed files).
+
+                  **Best for:** Code review summaries, ADR drafts on infra changes, automated changelog entries. Runs in your CI pipeline with no extra human step.
+              - type: code
+                language: yaml
+                code: |
+                  # .github/workflows/pr-summary.yml
+                  name: PR Summary
+                  on:
+                    pull_request:
+                      types: [opened, synchronize]
+                  jobs:
+                    summarize:
+                      runs-on: ubuntu-latest
+                      steps:
+                        - uses: actions/checkout@v4
+                          with:
+                            fetch-depth: 0
+                        - name: Run PR summarizer agent
+                          env:
+                            CURATA_API_KEY: ${{ secrets.CURATA_API_KEY }}
+                          run: |
+                            bash scripts/pr-summary-agent.sh \
+                              --pr "${{ github.event.number }}" \
+                              --base "${{ github.base_ref }}"
+
+  - type: section
+    heading: Recent Agent Activity
+    components:
+      - type: markdown
+        body: "The last 24 hours of agent runs. Approved = published to curata. Pending = waiting on reviewer. Revised = agent did a second pass after feedback."
+      - type: event_timeline
+        show_filter_toggle: true
+        events:
+          - date: "2026-05-11"
+            title: "Deal Brief: Initech Corp"
+            summary: "Triggered by Salesforce stage change to Qualified. 3-page brief published. Reviewer approved with 1 minor edit (updated headcount figure)."
+            severity: minor
+            source: Deal Brief Agent
+          - date: "2026-05-11"
+            title: "PR #2041 — auth middleware refactor"
+            summary: "Code review summary published in 31 seconds. Flagged 2 risky patterns in token refresh logic. Engineer confirmed both were intentional and left notes."
+            severity: minor
+            source: Code Review Summarizer
+          - date: "2026-05-11"
+            title: "PR #2039 — remove legacy feature flags"
+            summary: "Clean diff, no flags raised. Published automatically without review (policy: low-risk cleanup PRs auto-approve)."
+            severity: info
+            source: Code Review Summarizer
+          - date: "2026-05-10"
+            title: "Postmortem: elevated error rate on /api/export"
+            summary: "Draft published from #incident-2024-05-10. Reviewer requested more detail on the timeline between 14:22 and 14:41 UTC. Agent revision in progress."
+            severity: major
+            source: Postmortem Writer
+          - date: "2026-05-10"
+            title: Customer health scores — nightly run
+            summary: "30 accounts scored. 4 flagged as at-risk (score < 6.0). Slack digest sent to #cs-team. No human edits required."
+            severity: minor
+            source: Customer Health Scorer
+          - date: "2026-05-10"
+            title: "Deal Brief: Umbrella Corp"
+            summary: "First run returned thin data — LinkedIn enrichment failed due to rate limit. Agent retried 10 min later with cached data. Reviewer approved revised output."
+            severity: minor
+            source: Deal Brief Agent
+          - date: "2026-05-09"
+            title: Sprint 34 retro summary
+            summary: "Retro notes from Notion compiled into structured page. Team voted it accurate. Published to the eng wiki."
+            severity: minor
+            source: Sprint Retro Summarizer
+          - date: "2026-05-09"
+            title: "ADR: migrate background jobs to BullMQ"
+            summary: "Architecture Decision Record drafted from Claude Code session transcript. Eng lead reviewed and added a risk section before publishing."
+            severity: major
+            source: Architecture Decision Writer
+
+  - type: section
+    heading: Known Limitations & Guardrails
+    components:
+      - type: markdown
+        body: "Be honest with your team about where agents are reliable and where they need a human in the loop. This table evolves as we learn."
+      - type: split_compare
+        left:
+          eyebrow: Agents handle well
+          title: High-confidence outputs
+          stats:
+            - label: Structured summarization
+              value: Reliable
+              color: green
+            - label: Data aggregation from APIs
+              value: Reliable
+              color: green
+            - label: Templated briefs (deal, health)
+              value: Reliable
+              color: green
+            - label: Low-risk PR summaries
+              value: Reliable
+              color: green
+            - label: Routine retros and changelogs
+              value: Reliable
+              color: green
+        right:
+          eyebrow: Humans must review
+          title: Requires judgment
+          stats:
+            - label: Root cause analysis
+              value: Always review
+              color: red
+            - label: Customer-facing content
+              value: Always review
+              color: red
+            - label: Headcount / financial figures
+              value: Verify sources
+              color: yellow
+            - label: Novel architecture decisions
+              value: Senior review
+              color: yellow
+            - label: Incident postmortems
+              value: Always review
+              color: red
+
+  - type: section
+    heading: Integration Points
+    components:
+      - type: markdown
+        body: "Where data comes from, how it's processed, and where it ends up. Agents sit in the middle — they don't own any of these systems, they just connect them."
+      - type: tree
+        show_filter_toggle: false
+        nodes:
+          - label: Inputs
+            status: active
+            children:
+              - label: Slack
+                status: active
+                note: Slash commands, thread content, channel history
+              - label: GitHub
+                status: active
+                note: PR diffs, commit messages, file contents
+              - label: Salesforce
+                status: active
+                note: Deal records, account data, stage change webhooks
+              - label: PagerDuty
+                status: active
+                note: Incident timelines, alert metadata
+              - label: Notion
+                status: active
+                note: Retro notes, meeting docs, wikis
+              - label: Product DB (read replica)
+                status: active
+                note: Usage metrics, feature adoption, last-seen timestamps
+          - label: Processing
+            status: active
+            children:
+              - label: Claude (claude-opus-4-5)
+                status: active
+                note: Primary LLM for all drafting, summarization, and analysis
+              - label: Custom enrichment scripts
+                status: active
+                note: LinkedIn lookup, news fetch, CRM field normalization
+              - label: Agent runner (internal)
+                status: active
+                note: Orchestrates trigger → agent → publish pipeline; hosted on Railway
+          - label: Outputs
+            status: active
+            children:
+              - label: Curata Pages
+                status: active
+                note: Primary output — every agent run produces a page
+              - label: Slack Notifications
+                status: active
+                note: Draft-ready and publish-complete notifications to relevant channels
+              - label: GitHub PR Comments
+                status: active
+                note: Code review summaries posted as PR comments via GitHub API
+              - label: Salesforce (write-back)
+                status: active
+                note: Health scores and deal brief links written back to account records
+
+  - type: callout
+    variant: info
+    title: This is a curata template
+    body: "Clone it to your workspace and your agents will use this structure when documenting their own capabilities. Replace the placeholder agents, metrics, and links with your own. The sections are designed to stay useful as your agent fleet grows."

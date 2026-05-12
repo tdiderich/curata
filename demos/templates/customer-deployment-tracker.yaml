@@ -1,0 +1,336 @@
+title: Customer Deployment Tracker
+subtitle: "Onboarding status, go-live timelines, and implementation health across all active deployments."
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Active Deployments
+        value: "14"
+      - key: On Track
+        value: "9"
+      - key: At Risk
+        value: "3"
+      - key: Last Updated
+        value: "2026-05-11"
+
+  - type: stat_grid
+    columns: 4
+    stats:
+      - label: Active Deployments
+        value: "14"
+        detail: Across 3 implementation cohorts
+        color: default
+      - label: On Track
+        value: "9"
+        detail: On or ahead of go-live schedule
+        color: green
+      - label: At Risk
+        value: "3"
+        detail: Behind schedule or missing activity
+        color: yellow
+      - label: Blocked
+        value: "2"
+        detail: Hard dependency not yet resolved
+        color: red
+
+  - type: section
+    heading: Deployment Pipeline
+    components:
+      - type: tree
+        show_filter_toggle: true
+        nodes:
+          - label: Kickoff
+            status: active
+            children:
+              - label: Northbridge Logistics — Kickoff call scheduled May 14
+                status: active
+                note: Day 3 in stage
+              - label: Apex Financial Group — Discovery questionnaire sent
+                status: active
+                note: Day 5 in stage
+              - label: Stratford Medical — Signed; kickoff pending scheduling
+                status: upcoming
+                note: Day 1 in stage
+
+          - label: Integration
+            status: active
+            children:
+              - label: Meridian Health — API credentials provisioned, webhook config in progress
+                status: active
+                note: Day 12 in stage
+              - label: Vantage Retail — SFTP setup complete, field mapping underway
+                status: active
+                note: Day 8 in stage
+              - label: Clearwater Analytics — SSO blocked on IdP config from customer IT
+                status: blocked
+                note: Day 18 in stage — see blockers section
+              - label: Pinnacle Workforce — Data export from legacy HR system pending
+                status: blocked
+                note: Day 22 in stage — see blockers section
+
+          - label: Testing
+            status: active
+            children:
+              - label: CloudFirst Technologies — UAT underway, 3 bugs logged
+                status: active
+                note: Day 7 in stage
+              - label: Summit Operations — Test data seeded, stakeholder sign-off scheduled
+                status: active
+                note: Day 4 in stage
+              - label: Harborview Partners — Performance test passed, UAT sign-off pending
+                status: active
+                note: Day 11 in stage
+
+          - label: Go-Live
+            status: active
+            children:
+              - label: Ridgemont Capital — Go-live checklist 90% complete, cutover May 16
+                status: active
+                note: Day 3 in stage
+              - label: Keystroke Media — Final data migration in review, go-live May 19
+                status: active
+                note: Day 6 in stage
+
+          - label: Live
+            status: completed
+            children:
+              - label: Driftwood Consulting — Live since Apr 28, CS handoff complete
+                status: completed
+                note: 13 days post-launch
+              - label: Ironclad Manufacturing — Live since Apr 14, monitoring nominal
+                status: completed
+                note: 27 days post-launch
+
+  - type: section
+    heading: At Risk Deployments
+    components:
+      - type: card_grid
+        min_width: 300
+        cards:
+          - title: Clearwater Analytics
+            badge:
+              label: SSO Blocked
+              color: red
+            description: |
+              Customer IT has not completed IdP configuration for SAML SSO. Integration stage is stalled until the certificate is provisioned. Escalation sent to VP of IT on May 9 — no response as of today.
+            links:
+              - label: Escalation Doc
+                href: "#blockers-dependencies"
+          - title: Pinnacle Workforce
+            badge:
+              label: Data Dependency
+              color: yellow
+            description: |
+              Legacy HR system export is gated on approval from their internal data governance team. Export has been waiting 22 days. Risk of missing the June 1 go-live commitment if not resolved by May 16.
+            links:
+              - label: Escalation Doc
+                href: "#blockers-dependencies"
+          - title: CloudFirst Technologies
+            badge:
+              label: UAT Bugs
+              color: yellow
+            description: |
+              Three open bugs from UAT — one high-severity related to bulk import edge case. Engineering estimate is 3–4 days. If not resolved by May 15, go-live slides to June.
+            links:
+              - label: Bug Tracker
+                href: "#blockers-dependencies"
+
+  - type: section
+    heading: Implementation Timeline
+    components:
+      - type: event_timeline
+        show_filter_toggle: true
+        events:
+          - date: "2026-05-11"
+            title: Ridgemont Capital — Go-live checklist started
+            summary: Cutover call scheduled for May 16 at 2 PM CT. Final data migration review in progress.
+            severity: major
+            source: Implementation Team
+          - date: "2026-05-10"
+            title: Harborview Partners — Performance test passed
+            summary: Load test results within SLA. UAT stakeholder sign-off call being scheduled for May 13.
+            severity: minor
+            source: Engineering
+          - date: "2026-05-09"
+            title: Clearwater Analytics — Escalation sent to customer VP of IT
+            summary: IdP configuration has been pending for 14 days. Formal escalation issued via email and Slack.
+            severity: major
+            source: CS Lead
+          - date: "2026-05-08"
+            title: Meridian Health — API integration complete
+            summary: All REST endpoints tested and confirmed. Webhook configuration in progress; expected complete by May 12.
+            severity: major
+            source: Engineering
+          - date: "2026-05-07"
+            title: Driftwood Consulting — CS handoff complete
+            summary: Implementation closed. Account transitioned to Customer Success. EBR scheduled for Q3.
+            severity: major
+            source: Implementation Team
+          - date: "2026-05-06"
+            title: CloudFirst Technologies — UAT kicked off
+            summary: Test credentials distributed to 4 stakeholders. Bug tracking doc shared. Initial session completed.
+            severity: minor
+            source: Implementation Team
+          - date: "2026-05-05"
+            title: Vantage Retail — SFTP setup confirmed
+            summary: File transfer endpoint validated. Field mapping workshop completed with their data team.
+            severity: minor
+            source: Engineering
+          - date: "2026-05-03"
+            title: Keystroke Media — SSO configured
+            summary: SAML SSO live with their Okta tenant. Admin provisioning workflow tested end-to-end.
+            severity: major
+            source: Engineering
+
+  - type: section
+    heading: Stakeholder Contacts
+    components:
+      - type: card_grid
+        min_width: 260
+        cards:
+          - title: Jordan Reyes
+            badge:
+              label: Champion
+              color: green
+            description: "VP of Operations — Meridian Health. Primary executive sponsor. Weekly sync Thursdays at 3 PM ET."
+          - title: Priya Nair
+            badge:
+              label: Technical Lead
+              color: teal
+            description: "Director of IT — Clearwater Analytics. Owner of IdP/SSO configuration. Currently blocked — see escalation."
+          - title: Marcus Webb
+            badge:
+              label: Project Owner
+              color: default
+            description: "Senior PM — CloudFirst Technologies. Manages UAT coordination and stakeholder sign-off. Responsive on Slack."
+          - title: Sasha Okonkwo
+            badge:
+              label: Champion
+              color: green
+            description: "Head of HR Technology — Pinnacle Workforce. Key decision-maker for data governance approval. Needs follow-up."
+          - title: Diana Lau
+            badge:
+              label: Technical Lead
+              color: teal
+            description: "Data Engineering Manager — Vantage Retail. Led SFTP and field mapping workshops. Strong internal advocate."
+          - title: Tom Harrington
+            badge:
+              label: Executive Sponsor
+              color: yellow
+            description: "CTO — Ridgemont Capital. Final sign-off authority for go-live cutover. Engaged and responsive."
+
+  - type: section
+    heading: Blockers & Dependencies
+    components:
+      - type: table
+        filterable: true
+        columns:
+          - key: customer
+            label: Customer
+          - key: blocker
+            label: Blocker
+          - key: owner
+            label: Owner
+          - key: status
+            label: Status
+          - key: days_open
+            label: Days Open
+        rows:
+          - customer: Clearwater Analytics
+            blocker: "SAML SSO IdP configuration — customer IT has not provisioned the certificate"
+            owner: Priya Nair (customer IT)
+            status: Escalated
+            days_open: "18"
+          - customer: Pinnacle Workforce
+            blocker: "Legacy HR system data export gated on internal data governance approval"
+            owner: Sasha Okonkwo (customer)
+            status: Escalated
+            days_open: "22"
+          - customer: CloudFirst Technologies
+            blocker: "High-severity bulk import bug from UAT — fix estimated 3–4 engineering days"
+            owner: Engineering
+            status: In Progress
+            days_open: "4"
+          - customer: Summit Operations
+            blocker: "UAT stakeholder not available until May 13 — sign-off delayed"
+            owner: CS Lead
+            status: Scheduling
+            days_open: "6"
+          - customer: Keystroke Media
+            blocker: "Final data migration file format mismatch — customer team reformatting source export"
+            owner: Customer Data Team
+            status: In Progress
+            days_open: "3"
+
+  - type: section
+    heading: Deployment Playbook
+    components:
+      - type: accordion
+        items:
+          - title: "Phase 1: Kickoff & Discovery"
+            components:
+              - type: markdown
+                body: |
+                  **Goal:** Align on scope, timeline, and success criteria before any technical work begins.
+
+                  - [ ] Send welcome email with kickoff agenda and pre-read materials
+                  - [ ] Schedule kickoff call with executive sponsor, project owner, and technical lead
+                  - [ ] Complete discovery questionnaire (use cases, integrations, user volume)
+                  - [ ] Confirm go-live target date and milestone dependencies
+                  - [ ] Identify all stakeholders and map to roles (champion, technical lead, exec sponsor)
+                  - [ ] Share implementation project plan and get sign-off
+                  - [ ] Provision sandbox environment and send credentials
+                  - [ ] Log kickoff notes and open items in tracker
+
+          - title: "Phase 2: Technical Integration"
+            components:
+              - type: markdown
+                body: |
+                  **Goal:** Complete all technical setup so the production environment is ready for testing.
+
+                  - [ ] Provision production environment and confirm access
+                  - [ ] Configure SSO / identity provider (SAML, OIDC, or SCIM as applicable)
+                  - [ ] Set up API credentials and validate endpoint connectivity
+                  - [ ] Complete data mapping and field configuration workshop
+                  - [ ] Configure webhooks or data pipeline (SFTP, API push, or native integration)
+                  - [ ] Import initial data set and validate record counts
+                  - [ ] Complete security review and penetration test if required by customer
+                  - [ ] Engineering sign-off: integration checklist complete
+
+          - title: "Phase 3: Testing & UAT"
+            components:
+              - type: markdown
+                body: |
+                  **Goal:** Customer validates the solution against their real workflows and signs off.
+
+                  - [ ] Distribute UAT credentials and test plan to customer stakeholders
+                  - [ ] Conduct UAT kickoff walkthrough session
+                  - [ ] Customer completes test scenarios across all primary workflows
+                  - [ ] Log bugs and issues; triage by severity (high / medium / low)
+                  - [ ] Resolve all high-severity bugs before proceeding
+                  - [ ] Re-test resolved issues and confirm customer acceptance
+                  - [ ] Collect UAT sign-off from project owner and executive sponsor
+                  - [ ] Run performance / load test if above threshold user volume
+                  - [ ] Document any open low-severity items for post-launch backlog
+
+          - title: "Phase 4: Go-Live & Handoff"
+            components:
+              - type: markdown
+                body: |
+                  **Goal:** Execute cutover to production and transition account to Customer Success.
+
+                  - [ ] Confirm go-live date and communicate to all stakeholders
+                  - [ ] Complete go-live readiness checklist (integrations, data, SSO, users)
+                  - [ ] Disable sandbox environment and revoke test credentials
+                  - [ ] Execute cutover — migrate final data snapshot to production
+                  - [ ] Validate post-cutover: spot-check key workflows with customer
+                  - [ ] Send go-live announcement to customer stakeholders
+                  - [ ] Schedule 7-day post-launch check-in call
+                  - [ ] Complete internal implementation retrospective
+                  - [ ] Hand off account to Customer Success with full context doc
+                  - [ ] Close implementation project in tracker
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: "Clone it to your workspace and your agents will use this structure when tracking deployments. Replace placeholder company names, dates, and contacts with your actual customer data. Agents can update stage progress, log timeline events, and flag new blockers automatically."

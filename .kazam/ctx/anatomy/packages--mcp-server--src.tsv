@@ -1,0 +1,4 @@
+path	tokens	reads	description
+packages/mcp-server/src/index.ts	1550	0	TypeScript source
+packages/mcp-server/src/lib.test.ts	1701	0	TypeScript source
+packages/mcp-server/src/lib.ts	1121	0	TypeScript source

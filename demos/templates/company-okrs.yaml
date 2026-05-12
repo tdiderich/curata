@@ -1,0 +1,324 @@
+title: "Company OKRs — Q3 2026"
+subtitle: Objectives and key results for July–September 2026. Owned by leadership, tracked weekly.
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Company
+        value: Vantara
+      - key: Quarter
+        value: Q3 2026 (Jul 1 – Sep 30)
+      - key: Owner
+        value: Elena Rourke, CEO
+      - key: Status
+        value: Active
+      - key: Last Updated
+        value: "2026-07-07"
+
+  - type: markdown
+    body: |
+      ## Q3 Theme: Earn the Enterprise
+
+      Q2 proved we can grow fast in our SMB base. Q3 is about proving we can sell upmarket.
+      We enter the quarter with 12 enterprise opportunities in pipeline and 2 pilots in progress.
+      Every team has a role in making enterprise work — it is not just a sales motion.
+
+  - type: callout
+    variant: info
+    title: Q3 north star
+    body: >
+      Close 3 enterprise deals (>$24K ACV each) while holding SMB NRR above 100%.
+      Prove the unit economics work at both ends of the market before Series B conversations begin.
+
+  - type: section
+    eyebrow: Company OKRs
+    heading: Company-Level Objectives
+    components:
+      - type: tree
+        show_filter_toggle: true
+        nodes:
+          - label: "O1 — Win the enterprise segment"
+            status: active
+            children:
+              - label: "KR1.1 — Close 3 enterprise deals (>$24K ACV each)"
+                status: active
+                note: "0 of 3 closed. 2 pilots in progress, 4 in late-stage."
+              - label: "KR1.2 — Ship RBAC and SAML/SSO (enterprise requirements)"
+                status: active
+                note: "RBAC shipped Jul 21. SAML ETA Aug 15."
+              - label: "KR1.3 — Pass security review for 2 enterprise prospects"
+                status: active
+                note: "1 of 2 complete (Fieldstone). Meridian review scheduled Aug 3."
+              - label: "KR1.4 — Achieve $50K ARR from enterprise segment by Sep 30"
+                status: active
+                note: "Currently $0 from enterprise ARR. On track if pilots convert."
+          - label: "O2 — Retain and expand the SMB base"
+            status: active
+            children:
+              - label: "KR2.1 — Maintain NRR >= 102% through Q3"
+                status: active
+                note: "Q2 exit NRR: 102%. July: 101%. On track."
+              - label: "KR2.2 — Reduce time-to-value for new customers from 14 days to 7 days"
+                status: active
+                note: "Currently 11 days. Onboarding flow redesign shipped Jul 14."
+              - label: "KR2.3 — Grow SMB ARR by 22% (from $412K to $503K)"
+                status: active
+                note: "On pace. Requires 4 net-new SMB customers per month."
+              - label: "KR2.4 — Launch in-app expansion playbook for accounts > $400/mo"
+                status: upcoming
+                note: "ETA: August. CS team leading."
+          - label: "O3 — Build the team to scale"
+            status: active
+            children:
+              - label: "KR3.1 — Hire Enterprise AE and Solutions Engineer by Aug 1"
+                status: active
+                note: "Enterprise AE offer accepted Jul 3. SE search in progress."
+              - label: "KR3.2 — Complete 30/60/90 onboarding framework for all new hires"
+                status: completed
+                note: "Shipped by Rosa Jun 30. In use for all Q3 hires."
+              - label: "KR3.3 — Achieve eNPS of 40+ in the August pulse survey"
+                status: upcoming
+                note: "Q2 eNPS was 34. Targeting improvement through manager 1:1 training."
+              - label: "KR3.4 — Document all core system architecture by Sep 15"
+                status: active
+                note: "Marcus owns. 40% complete. Reduces key-person risk."
+
+  - type: section
+    eyebrow: Team OKRs
+    heading: Team-Level Objectives
+    components:
+      - type: accordion
+        items:
+          - title: "Engineering — Q3 Objectives"
+            components:
+              - type: markdown
+                body: |
+                  **Owner:** Marcus Webb, CTO
+
+                  **O1 — Ship the enterprise feature set on schedule**
+                  - KR: RBAC in production by Jul 21 ✓
+                  - KR: SAML/SSO in production by Aug 15
+                  - KR: Audit log export (CSV + API) by Sep 1
+                  - KR: 99.9% uptime through Q3 (no enterprise-impacting incidents)
+
+                  **O2 — Reduce technical debt that blocks scale**
+                  - KR: Migrate from single-tenant to multi-tenant data model by Sep 30
+                  - KR: Reduce P95 API latency from 340ms to under 200ms
+                  - KR: Increase test coverage from 52% to 70%
+
+                  **O3 — Knowledge distribution**
+                  - KR: Architecture docs for all 5 core subsystems published in Notion
+                  - KR: At least 2 engineers can deploy and roll back without Marcus present
+          - title: "Product — Q3 Objectives"
+            components:
+              - type: markdown
+                body: |
+                  **Owner:** Priya Kapoor, Head of Product
+
+                  **O1 — Define and validate the enterprise product motion**
+                  - KR: Complete discovery interviews with all 12 enterprise pipeline accounts
+                  - KR: Publish enterprise product spec with 3 signed-off design partners
+                  - KR: Ship enterprise admin portal (billing, user management, SSO config) by Sep 15
+
+                  **O2 — Improve SMB activation and time-to-value**
+                  - KR: Redesign onboarding flow (target: 7-day time-to-value)
+                  - KR: Increase template library from 12 to 30 templates
+                  - KR: Raise 30-day activation rate from 61% to 75%
+
+                  **O3 — Establish a consistent research cadence**
+                  - KR: 20 customer interviews completed in Q3
+                  - KR: Monthly product newsletter to customers launched by Aug 1
+          - title: "Sales — Q3 Objectives"
+            components:
+              - type: markdown
+                body: |
+                  **Owner:** Aisha Okafor, Head of Sales
+
+                  **O1 — Close enterprise deals**
+                  - KR: 3 enterprise deals closed (target: $72K combined ACV)
+                  - KR: 8 enterprise deals in active stage (Discovery or later) at quarter-end
+                  - KR: Enterprise win rate of at least 25%
+
+                  **O2 — Sustain SMB new business**
+                  - KR: 14 net-new SMB customers per month (42 for the quarter)
+                  - KR: Maintain blended CAC below $2,800
+                  - KR: 80% of AEs at or above quota
+
+                  **O3 — Build the enterprise playbook**
+                  - KR: Document ICP, champion profile, and objection library for enterprise by Aug 15
+                  - KR: Run 2 enterprise proof-of-concept engagements with structured success criteria
+          - title: "Customer Success — Q3 Objectives"
+            components:
+              - type: markdown
+                body: |
+                  **Owner:** James Okonkwo, Head of Customer Success
+
+                  **O1 — Drive expansion and NRR**
+                  - KR: NRR >= 102% at quarter-end
+                  - KR: 8 expansion deals closed (upsells to higher tier or seat additions)
+                  - KR: Gross churn < 1.5% of ARR
+
+                  **O2 — Scale the CS model for enterprise**
+                  - KR: Create enterprise customer success playbook (QBR template, health scoring, escalation path)
+                  - KR: Conduct QBRs with all accounts > $500/mo by Sep 15
+                  - KR: Achieve CSAT > 4.5/5 on post-onboarding survey
+
+                  **O3 — Build early warning infrastructure**
+                  - KR: Define and instrument 5 leading indicators of churn in product analytics
+                  - KR: Weekly health score report for all accounts in place by Aug 1
+
+  - type: section
+    eyebrow: Tracking
+    heading: Key Result Progress
+    components:
+      - type: table
+        filterable: true
+        columns:
+          - key: objective
+            label: Objective
+          - key: key_result
+            label: Key Result
+          - key: target
+            label: Target
+          - key: current
+            label: Current
+          - key: pct
+            label: "% Complete"
+          - key: owner
+            label: Owner
+        rows:
+          - objective: O1 Enterprise
+            key_result: "Enterprise deals closed"
+            target: "3 deals"
+            current: "0 closed, 2 pilots"
+            pct: "20%"
+            owner: Aisha
+          - objective: O1 Enterprise
+            key_result: "Ship RBAC"
+            target: "Jul 21"
+            current: "Shipped Jul 21"
+            pct: "100%"
+            owner: Marcus
+          - objective: O1 Enterprise
+            key_result: "Ship SAML/SSO"
+            target: "Aug 15"
+            current: "In development"
+            pct: "45%"
+            owner: Marcus
+          - objective: O2 SMB Retention
+            key_result: "NRR >= 102%"
+            target: "102%"
+            current: "101%"
+            pct: "75%"
+            owner: James
+          - objective: O2 SMB Retention
+            key_result: "Time-to-value"
+            target: "7 days"
+            current: "11 days"
+            pct: "60%"
+            owner: Priya
+          - objective: O2 SMB Retention
+            key_result: "SMB ARR growth"
+            target: "$503K"
+            current: "$436K"
+            pct: "55%"
+            owner: Aisha
+          - objective: O3 Team
+            key_result: "Enterprise AE hired"
+            target: "Aug 1"
+            current: "Offer accepted Jul 3"
+            pct: "100%"
+            owner: Elena
+          - objective: O3 Team
+            key_result: "Solutions Engineer hired"
+            target: "Aug 1"
+            current: "2 finalists"
+            pct: "70%"
+            owner: Elena
+          - objective: O3 Team
+            key_result: "Architecture docs"
+            target: "Sep 15"
+            current: "40% complete"
+            pct: "40%"
+            owner: Marcus
+
+  - type: section
+    eyebrow: Cross-Team
+    heading: Key Dependencies
+    components:
+      - type: event_timeline
+        show_filter_toggle: false
+        events:
+          - date: "2026-07-21"
+            title: "Engineering → Sales: RBAC shipped"
+            summary: Unblocks enterprise deals that required multi-user admin controls. Ryan's Meridian deal was gated on this.
+            severity: major
+            source: Marcus Webb
+          - date: "2026-08-01"
+            title: "People → Sales: Enterprise AE starts"
+            summary: Aisha gets dedicated enterprise closing capacity. Existing AEs will continue owning current enterprise opps through handoff.
+            severity: major
+            source: Elena Rourke
+          - date: "2026-08-15"
+            title: "Engineering → Sales: SAML/SSO shipped"
+            summary: Required by 4 enterprise prospects. Slippage here directly impacts Q3 enterprise close targets.
+            severity: major
+            source: Marcus Webb
+          - date: "2026-08-15"
+            title: "Sales → Product: Enterprise playbook draft due"
+            summary: Product needs this to scope the enterprise admin portal. Aisha committed to delivery by Aug 15.
+            severity: minor
+            source: Aisha Okafor
+          - date: "2026-09-01"
+            title: "Engineering → CS: Audit log export shipped"
+            summary: CS needs this to complete the Fieldstone QBR and unblock contract renewal. High stakes — $2,400/mo account.
+            severity: major
+            source: Marcus Webb
+          - date: "2026-09-15"
+            title: "Product → CS: Enterprise admin portal shipped"
+            summary: CS can begin self-serve QBR workflows. Reduces James's manual reporting load by an estimated 4 hours/week.
+            severity: minor
+            source: Priya Kapoor
+
+  - type: section
+    eyebrow: Retrospective
+    heading: Q2 Retrospective — What We Hit vs. Missed
+    components:
+      - type: split_compare
+        left:
+          eyebrow: Q2 Misses
+          title: Where we fell short
+          stats:
+            - label: Enterprise deals closed
+              value: "0 of 2 target"
+              color: red
+            - label: Design partner interviews
+              value: "7 of 10 target"
+              color: yellow
+            - label: SAML/SSO shipped in Q2
+              value: Slipped to Q3
+              color: red
+            - label: CS hire
+              value: 6 weeks late
+              color: yellow
+        right:
+          eyebrow: Q2 Wins
+          title: Where we over-delivered
+          stats:
+            - label: Net new ARR
+              value: "$124K vs. $96K target"
+              color: green
+            - label: NRR
+              value: "102% (first time > 100%)"
+              color: green
+            - label: RBAC shipped
+              value: On time
+              color: green
+            - label: Series A closed
+              value: "$8M, ahead of plan"
+              color: green
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: Clone it to your workspace and your agents will use this structure when building OKR tracking pages. Replace the placeholder objectives, key results, and progress data with your actual Q3 goals. Your agents can update progress automatically from your project management tools or data sources on a weekly cadence.

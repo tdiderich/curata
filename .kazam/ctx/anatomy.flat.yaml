@@ -1,0 +1,608 @@
+scanned: 2026-05-12T10:29:01.116763-05:00
+files:
+- path: Dockerfile
+  description: Docker container definition
+  tokens: 306
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: README.md
+  description: Project readme
+  tokens: 362
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: docker-compose.test.yml
+  description: YAML configuration/data
+  tokens: 85
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: entrypoint.sh
+  description: Shell script
+  tokens: 97
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: eslint.config.mjs
+  tokens: 108
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: next-env.d.ts
+  description: TypeScript source
+  tokens: 61
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: next.config.ts
+  description: TypeScript source
+  tokens: 39
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: package.json
+  description: Node.js package manifest
+  tokens: 224
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: packages/mcp-server/README.md
+  description: Project readme
+  tokens: 628
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: packages/mcp-server/dist/index.d.ts
+  description: TypeScript source
+  tokens: 7
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: packages/mcp-server/dist/index.js
+  description: JavaScript source
+  tokens: 1486
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: packages/mcp-server/dist/index.js.map
+  tokens: 1509
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: packages/mcp-server/dist/lib.d.ts
+  description: TypeScript source
+  tokens: 155
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: packages/mcp-server/dist/lib.js
+  description: JavaScript source
+  tokens: 1104
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: packages/mcp-server/dist/lib.js.map
+  tokens: 1264
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: packages/mcp-server/package.json
+  description: Node.js package manifest
+  tokens: 213
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: packages/mcp-server/src/index.ts
+  description: TypeScript source
+  tokens: 1550
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: packages/mcp-server/src/lib.test.ts
+  description: TypeScript source
+  tokens: 1701
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: packages/mcp-server/src/lib.ts
+  description: TypeScript source
+  tokens: 1121
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: packages/mcp-server/tsconfig.json
+  description: TypeScript configuration
+  tokens: 89
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: packages/mcp-server/vitest.config.ts
+  description: TypeScript source
+  tokens: 32
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: pnpm-workspace.yaml
+  description: YAML configuration/data
+  tokens: 33
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: prisma.config.ts
+  description: TypeScript source
+  tokens: 93
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: prisma/schema.prisma
+  tokens: 1147
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/annotations/route.ts
+  description: TypeScript source
+  tokens: 680
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/edit/route.ts
+  description: TypeScript source
+  tokens: 487
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/folders/route.ts
+  description: TypeScript source
+  tokens: 1443
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/health/route.ts
+  description: TypeScript source
+  tokens: 82
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/kazam/route.ts
+  description: TypeScript source
+  tokens: 2724
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/keys/route.ts
+  description: TypeScript source
+  tokens: 946
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/members/route.ts
+  description: TypeScript source
+  tokens: 1093
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/og/route.tsx
+  description: TypeScript source
+  tokens: 518
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/org-settings/route.ts
+  description: TypeScript source
+  tokens: 1143
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/pages/bulk/route.ts
+  description: TypeScript source
+  tokens: 697
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/pages/content/route.ts
+  description: TypeScript source
+  tokens: 372
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/pages/route.ts
+  description: route view/page
+  tokens: 1208
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/public-annotations/route.ts
+  description: TypeScript source
+  tokens: 511
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/search/route.ts
+  description: TypeScript source
+  tokens: 183
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/api/versions/route.ts
+  description: TypeScript source
+  tokens: 818
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/dashboard/layout.tsx
+  description: TypeScript source
+  tokens: 284
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/dashboard/loading.tsx
+  description: TypeScript source
+  tokens: 424
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/dashboard/page.tsx
+  description: TypeScript source
+  tokens: 382
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/error.tsx
+  description: TypeScript source
+  tokens: 117
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/global-error.tsx
+  description: TypeScript source
+  tokens: 148
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/globals.css
+  description: Stylesheet
+  tokens: 17260
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/kazam.css
+  description: Stylesheet
+  tokens: 19368
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/layout.tsx
+  description: TypeScript source
+  tokens: 896
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/not-found.tsx
+  description: TypeScript source
+  tokens: 144
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/p/[orgSlug]/[pageSlug]/page.tsx
+  description: TypeScript source
+  tokens: 989
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/p/[orgSlug]/page.tsx
+  description: TypeScript source
+  tokens: 763
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/p/layout.tsx
+  description: TypeScript source
+  tokens: 87
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/page.tsx
+  description: TypeScript source
+  tokens: 3153
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/pages/[slug]/loading.tsx
+  description: TypeScript source
+  tokens: 255
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/pages/[slug]/page.tsx
+  description: TypeScript source
+  tokens: 791
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/pages/layout.tsx
+  description: layout view/page
+  tokens: 194
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/settings/loading.tsx
+  description: TypeScript source
+  tokens: 407
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/app/settings/page.tsx
+  description: TypeScript source
+  tokens: 781
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/agent-connect-button.tsx
+  description: agent-connect-button component
+  tokens: 153
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/agent-connect-flow.tsx
+  description: agent-connect-flow component
+  tokens: 602
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/agent-connect-modal.tsx
+  description: agent-connect-modal component
+  tokens: 173
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/api-key-manager.tsx
+  description: api-key-manager component
+  tokens: 1440
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/dashboard-client.tsx
+  description: dashboard-client component
+  tokens: 3777
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/dashboard-feed.tsx
+  description: dashboard-feed component
+  tokens: 740
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/delete-page-button.tsx
+  description: delete-page-button component
+  tokens: 157
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/folder-actions.tsx
+  description: folder-actions component
+  tokens: 1608
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/member-list.tsx
+  description: member-list component
+  tokens: 1158
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/new-page-button.tsx
+  description: new-page-button component
+  tokens: 1526
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/org-settings.tsx
+  description: org-settings component
+  tokens: 989
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/page-detail-client.tsx
+  description: page-detail-client component
+  tokens: 4841
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/page-editor.tsx
+  description: page-editor component
+  tokens: 4592
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/page-folder-select.tsx
+  description: page-folder-select component
+  tokens: 773
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/page-viewer.tsx
+  description: page-viewer component
+  tokens: 802
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/public-annotation-client.tsx
+  description: public-annotation-client component
+  tokens: 2553
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/public-toggle.tsx
+  description: public-toggle component
+  tokens: 400
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/search-bar.tsx
+  description: search-bar component
+  tokens: 893
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/theme-script.tsx
+  description: theme-script component
+  tokens: 189
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/theme-settings.tsx
+  description: theme-settings component
+  tokens: 1341
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/version-history.tsx
+  description: version-history component
+  tokens: 1088
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/components/view-toggle.tsx
+  description: view-toggle component
+  tokens: 325
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/kazam-renderer.tsx
+  description: TypeScript source
+  tokens: 6712
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/kazam.ts
+  description: TypeScript source
+  tokens: 2453
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/browser.ts
+  description: TypeScript source
+  tokens: 301
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/client.ts
+  description: TypeScript source
+  tokens: 544
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/commonInputTypes.ts
+  description: TypeScript source
+  tokens: 5405
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/enums.ts
+  description: TypeScript source
+  tokens: 84
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/internal/class.ts
+  description: TypeScript source
+  tokens: 12988
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/internal/prismaNamespace.ts
+  description: TypeScript source
+  tokens: 10463
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/internal/prismaNamespaceBrowser.ts
+  description: TypeScript source
+  tokens: 1481
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/models.ts
+  description: TypeScript source
+  tokens: 147
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/models/Annotation.ts
+  description: Annotation model
+  tokens: 14826
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/models/ApiKey.ts
+  description: ApiKey model
+  tokens: 13754
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/models/Folder.ts
+  description: Folder model
+  tokens: 17581
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/models/OrgMember.ts
+  description: OrgMember model
+  tokens: 11989
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/models/Organization.ts
+  description: Organization model
+  tokens: 18764
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/models/Page.ts
+  description: Page model
+  tokens: 20161
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/generated/prisma/models/PageVersion.ts
+  description: PageVersion model
+  tokens: 13432
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/instrumentation.ts
+  description: TypeScript source
+  tokens: 139
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/agent-prompt.ts
+  description: agent-prompt library module
+  tokens: 1512
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/api-key.ts
+  description: api-key library module
+  tokens: 113
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/auth.ts
+  description: auth library module
+  tokens: 824
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/db.ts
+  description: db library module
+  tokens: 135
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/kazam.ts
+  description: kazam library module
+  tokens: 537
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/pages.ts
+  description: pages library module
+  tokens: 2685
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/permissions.ts
+  description: permissions library module
+  tokens: 170
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/personal-domains.ts
+  description: personal-domains library module
+  tokens: 196
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/seed-page.ts
+  description: seed-page library module
+  tokens: 1996
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/slug-words.ts
+  description: slug-words library module
+  tokens: 755
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/sync.ts
+  description: sync library module
+  tokens: 874
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/templates-server.ts
+  description: templates-server library module
+  tokens: 71
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/templates.ts
+  description: templates library module
+  tokens: 1314
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/lib/theme.ts
+  description: theme library module
+  tokens: 201
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: src/middleware.ts
+  description: TypeScript source
+  tokens: 704
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: tests/api-key.test.ts
+  description: api-key.test tests
+  tokens: 240
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: tests/auth.test.ts
+  description: auth.test tests
+  tokens: 402
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: tests/global-setup.ts
+  description: global-setup tests
+  tokens: 300
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: tests/helpers.ts
+  description: helpers tests
+  tokens: 569
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: tests/pages.test.ts
+  description: pages.test tests
+  tokens: 1819
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: tests/setup.ts
+  description: setup tests
+  tokens: 188
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: tests/sync.test.ts
+  description: sync.test tests
+  tokens: 1073
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: tests/webhook.test.ts
+  description: webhook.test tests
+  tokens: 1611
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: tsconfig.json
+  description: TypeScript configuration
+  tokens: 169
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00
+- path: vitest.config.ts
+  description: TypeScript source
+  tokens: 113
+  reads: 0
+  last_scanned: 2026-05-12T10:29:01.116763-05:00

@@ -1,0 +1,264 @@
+title: "Architecture Decision Record — Event-Driven Ingestion"
+subtitle: Should we adopt Kafka, SQS, or stay with direct service calls for the ingestion pipeline?
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Persona
+        value: Engineering
+      - key: ADR Number
+        value: "ADR-047"
+      - key: Status
+        value: Accepted
+      - key: Decision Date
+        value: "2026-05-09"
+      - key: Decision Owner
+        value: Priya Sundaram, Staff Engineer
+      - key: Reviewers
+        value: "Ben Morales (EM), Layla Osei (SRE), Chris Park (Backend)"
+
+  - type: section
+    eyebrow: Context
+    heading: Problem Statement
+    components:
+      - type: markdown
+        body: |
+          Our current ingestion pipeline uses synchronous HTTP calls from the API layer to the processing service. This was acceptable at 500 events/second but we are now routinely hitting 8,000–12,000 events/second during business hours, with peaks above 20,000 during campaign sends.
+
+          The current architecture has three documented failure modes:
+
+          1. **Backpressure cascades.** When the processing service is slow (e.g., during enrichment lookups), the API layer holds open connections, exhausting the connection pool and causing HTTP 503s visible to customers.
+          2. **No durable retry.** Failed processing attempts are lost. We have no visibility into what percentage of events fail silently.
+          3. **Deployment coupling.** Deploying the processing service requires a coordinated API deploy or a maintenance window. This has caused two P2 incidents in the last 90 days.
+
+          We need to decouple ingestion from processing with a message queue. The question is which queue and what the migration path looks like.
+
+          **Constraints:**
+          - Must support at-least-once delivery with deduplication at the consumer
+          - Must handle 50,000 events/second peak (5x current peak, 2-year headroom)
+          - Operational cost must be manageable by the 4-person platform team
+          - Target migration: complete before the Q3 customer launch (August 1)
+          - We are 100% on AWS; multi-cloud portability is not a requirement
+
+  - type: divider
+
+  - type: section
+    eyebrow: Options
+    heading: Options Considered
+    components:
+      - type: markdown
+        body: "Three options were evaluated over two weeks of spike work and analysis."
+      - type: split_compare
+        left:
+          eyebrow: Option A
+          title: Apache Kafka (MSK)
+          stats:
+            - label: Throughput ceiling
+              value: "1M+ events/sec"
+              color: green
+            - label: Message retention
+              value: "Configurable — days to weeks"
+              color: green
+            - label: Consumer replay
+              value: "Yes — by offset"
+              color: green
+            - label: Ops complexity
+              value: High — cluster mgmt, tuning
+              color: red
+            - label: Cost at current scale
+              value: "~$1,800/mo (MSK r6g.large)"
+              color: yellow
+            - label: Team familiarity
+              value: "Low — 1 of 4 has Kafka exp"
+              color: red
+        right:
+          eyebrow: Option B (Selected)
+          title: Amazon SQS + SNS
+          stats:
+            - label: Throughput ceiling
+              value: "300K TPS (standard queue)"
+              color: green
+            - label: Message retention
+              value: "Up to 14 days"
+              color: green
+            - label: Consumer replay
+              value: "No native replay"
+              color: yellow
+            - label: Ops complexity
+              value: "Very low — fully managed"
+              color: green
+            - label: Cost at current scale
+              value: "~$180/mo at 8K events/sec"
+              color: green
+            - label: Team familiarity
+              value: "High — all 4 engineers have used SQS"
+              color: green
+
+      - type: markdown
+        body: "**Option C — Direct calls with circuit breaker (status quo+):** Evaluated adding Hystrix-style circuit breaking and a Redis retry queue to the current synchronous architecture. Rejected because it solves backpressure but not deployment coupling or durable replay. Estimated engineering cost was comparable to SQS migration with worse long-term properties."
+
+  - type: divider
+
+  - type: section
+    eyebrow: Evaluation
+    heading: Decision Matrix
+    components:
+      - type: markdown
+        body: "Scoring: 1 = poor, 2 = acceptable, 3 = strong. Weight reflects relative importance to our constraints."
+      - type: table
+        filterable: false
+        columns:
+          - key: criterion
+            label: Criterion
+          - key: weight
+            label: Weight
+            align: center
+          - key: kafka
+            label: Kafka (MSK)
+            align: center
+          - key: sqs
+            label: SQS + SNS
+            align: center
+          - key: status_quo
+            label: Status Quo+
+            align: center
+          - key: notes
+            label: Notes
+        rows:
+          - criterion: Throughput headroom (50K tps)
+            weight: "25%"
+            kafka: "3"
+            sqs: "3"
+            status_quo: "1"
+            notes: Both queue options meet the 2-year headroom requirement
+          - criterion: Operational complexity
+            weight: "20%"
+            kafka: "1"
+            sqs: "3"
+            status_quo: "2"
+            notes: MSK requires cluster management, partition tuning, and ZooKeeper oversight
+          - criterion: Team familiarity
+            weight: "15%"
+            kafka: "1"
+            sqs: "3"
+            status_quo: "3"
+            notes: SQS is in our existing runbooks; Kafka would require training + hiring risk
+          - criterion: Migration speed (before Aug 1)
+            weight: "20%"
+            kafka: "1"
+            sqs: "3"
+            status_quo: "2"
+            notes: Kafka migration estimated at 10–12 weeks; SQS at 4–5 weeks
+          - criterion: Cost at scale
+            weight: "10%"
+            kafka: "2"
+            sqs: "3"
+            status_quo: "3"
+            notes: SQS cost is negligible at our scale; Kafka MSK is $1.5–2K/mo minimum
+          - criterion: Consumer replay / reprocessing
+            weight: "10%"
+            kafka: "3"
+            sqs: "1"
+            status_quo: "1"
+            notes: Kafka wins on replay; SQS requires S3 archival pattern for historical reprocessing
+          - criterion: Weighted Total
+            weight: "100%"
+            kafka: "1.7"
+            sqs: "2.9"
+            status_quo: "1.9"
+            notes: SQS wins by a significant margin given our constraints
+
+  - type: divider
+
+  - type: section
+    eyebrow: Decision
+    heading: Decision and Rationale
+    components:
+      - type: callout
+        variant: success
+        title: "Decision: Adopt Amazon SQS + SNS for the ingestion pipeline."
+        body: SQS meets our throughput requirements with minimal operational overhead. The migration timeline fits within our Q3 window. The team has existing SQS expertise, which reduces delivery risk and eliminates training overhead. Kafka's superior replay capabilities are a real tradeoff — we will mitigate this with an S3 event archive for any reprocessing needs.
+      - type: markdown
+        body: |
+          **What we are not doing:**
+          - We are not adopting Kafka at this time. This decision should be revisited when/if our team grows beyond 8 engineers, we require sub-second replay for analytics, or we need multi-consumer fan-out beyond SNS's capabilities.
+          - We are not adding circuit breaking to the existing synchronous path. Engineering effort is better spent on the SQS migration.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Consequences
+    heading: Consequences
+    components:
+      - type: columns
+        equal_heights: true
+        columns:
+          - - type: callout
+              variant: success
+              title: Positive consequences
+              body: |
+                - API layer decoupled from processing service — deployments no longer require coordination or windows
+                - At-least-once delivery with DLQ for failed messages — no more silent event loss
+                - Throughput ceiling raised from ~15K to 300K events/sec with no infrastructure changes
+                - Ops burden reduced — no cluster management, no partition tuning
+                - Cost drops from estimated $1,800/mo (MSK) to ~$180/mo at current scale
+                - Dead-letter queue gives us visibility into failure rates for the first time
+          - - type: callout
+              variant: warn
+              title: Negative consequences / accepted tradeoffs
+              body: |
+                - No native consumer replay. Historical reprocessing requires reading from S3 archive (additional infra to build and maintain)
+                - SQS standard queue does not guarantee ordering. FIFO queues cap at 30K TPS — acceptable at current scale but will become a constraint above ~25K TPS sustained
+                - Message retention is max 14 days vs. Kafka's indefinite retention. Archive strategy required for compliance use cases
+                - If we need multi-region active-active in the future, SQS cross-region fanout adds latency and complexity
+
+  - type: divider
+
+  - type: section
+    eyebrow: Execution
+    heading: Implementation Plan
+    components:
+      - type: timeline
+        items:
+          - name: "Week 1 (May 12–16) — Provision SQS queues + SNS topics in staging"
+            status: active
+          - name: "Week 1 — Instrument publisher and consumer with CloudWatch metrics"
+            status: active
+          - name: "Week 2 (May 19–23) — Build SQS consumer in processing service; shadow mode (both paths run)"
+            status: upcoming
+          - name: "Week 3 (May 26–30) — Load test at 2x peak (40K events/sec); tune consumer concurrency"
+            status: upcoming
+          - name: "Week 4 (Jun 2–6) — Migrate 10% of production traffic to SQS path; monitor DLQ"
+            status: upcoming
+          - name: "Week 5 (Jun 9–13) — Full production cutover; deprecate synchronous path"
+            status: upcoming
+          - name: "Week 6 (Jun 16–20) — Build S3 archive for historical reprocessing"
+            status: upcoming
+          - name: "Week 7 (Jun 23–27) — Runbook updates, on-call documentation, team retrospective"
+            status: upcoming
+          - name: "Aug 1 — Q3 customer launch (migration complete with 6-week buffer)"
+            status: upcoming
+
+  - type: divider
+
+  - type: section
+    eyebrow: Open Questions
+    heading: Open Questions
+    components:
+      - type: definition_list
+        items:
+          - term: Consumer concurrency
+            definition: How many concurrent SQS consumers should we run per processing service instance? Default is 10; we need load testing data to calibrate. Owner — Chris Park, due May 23.
+          - term: DLQ alert thresholds
+            definition: What DLQ depth triggers a PagerDuty alert? Recommend 100 messages or 5-minute age, but this needs validation against expected failure rates. Owner — Layla Osei, due May 16.
+          - term: FIFO vs. Standard queue
+            definition: We chose Standard for throughput. If the event ordering bug (INGST-412) turns out to require strict ordering, we need to revisit. Priya to assess INGST-412 by May 16.
+          - term: Message size limits
+            definition: SQS has a 256KB message limit. Current payloads average 4KB but enriched events can reach 180KB. Need to confirm max payload size in production before cutover. Owner — Ben Morales.
+          - term: IAM policy scoping
+            definition: SQS producer and consumer roles need least-privilege IAM policies. Security review requested from Layla before production rollout.
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: Clone this ADR template to your workspace and your agents will use this structure to document architecture decisions automatically after design sessions, RFCs, or engineering discussions. Replace the placeholder content with your actual decision context, options, and implementation plan.

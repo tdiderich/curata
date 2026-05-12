@@ -1,0 +1,8 @@
+path	tokens	reads	description
+src/app/error.tsx	117	0	TypeScript source
+src/app/global-error.tsx	148	0	TypeScript source
+src/app/globals.css	17260	0	Stylesheet
+src/app/kazam.css	19368	0	Stylesheet
+src/app/layout.tsx	896	0	TypeScript source
+src/app/not-found.tsx	144	0	TypeScript source
+src/app/page.tsx	3153	0	TypeScript source

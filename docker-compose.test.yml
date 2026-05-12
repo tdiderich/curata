@@ -1,0 +1,16 @@
+services:
+  test-db:
+    image: postgres:16
+    ports:
+      - "5555:5432"
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: curata_test
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "test"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    tmpfs:
+      - /var/lib/postgresql/data

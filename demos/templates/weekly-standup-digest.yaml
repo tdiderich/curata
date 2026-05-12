@@ -1,0 +1,221 @@
+title: "Weekly Standup Digest — Week of May 5, 2026"
+subtitle: Acme Corp · All-hands sync · Generated Monday May 11, 2026
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Week
+        value: "2026-W19"
+      - key: Sprint
+        value: Sprint 34
+      - key: Generated
+        value: 2026-05-11
+      - key: Attendees
+        value: "38"
+
+  - type: section
+    eyebrow: Week at a Glance
+    heading: This Week in Numbers
+    components:
+      - type: stat_grid
+        columns: 4
+        stats:
+          - label: PRs Merged
+            value: "47"
+            detail: Up from 39 last week
+            color: green
+          - label: Tickets Closed
+            value: "61"
+            detail: 18 bugs, 31 features, 12 chores
+            color: teal
+          - label: Blockers Resolved
+            value: "5"
+            detail: 2 still open (see below)
+            color: yellow
+          - label: Deploys to Production
+            value: "9"
+            detail: 0 rollbacks
+            color: green
+
+  - type: divider
+
+  - type: section
+    eyebrow: Team Updates
+    heading: What Each Team Shipped
+    components:
+      - type: accordion
+        items:
+          - title: Engineering — 4 highlights
+            components:
+              - type: markdown
+                body: |
+                  **Shipped:**
+                  - Bulk import API (v1) — handles up to 10,000 rows via streaming upload. Marcus + Leila. Closes 14 tickets.
+                  - Database query optimizer pass — P99 latency down from 210ms to 68ms on the `/feed` endpoint.
+                  - Upgraded to Next.js 15.3 — zero regressions in CI, bundle size -8%.
+                  - Webhook retry logic with exponential backoff — reduces missed events from ~2% to <0.05%.
+
+                  **In progress:**
+                  - SSO (SAML) implementation — 60% done, targeting next Thursday
+                  - Background job queue migration from Sidekiq → BullMQ — schema migration drafted
+
+                  **Notes:** On-call rotation updated. New primary: Rahul Singh (May 11–18).
+          - title: Product — 3 highlights
+            components:
+              - type: markdown
+                body: |
+                  **Shipped:**
+                  - Finalized PRD for Bulk Import v2 (scheduled export + FTP/SFTP sources) — approved by Lena and Derek.
+                  - Completed Q2 discovery sprint interviews — 14 sessions, synthesis published in Notion.
+                  - Launched internal beta of the new dashboard redesign with 8 power users.
+
+                  **In progress:**
+                  - API v2 launch checklist — 73% complete, targeting May 22 GA
+                  - H2 roadmap draft — first pass complete, review scheduled Thursday
+
+                  **Notes:** User research report available in Notion → Product → Research → Q2 2026.
+          - title: Design — 2 highlights
+            components:
+              - type: markdown
+                body: |
+                  **Shipped:**
+                  - Dashboard redesign: all 6 screens handed off to Engineering. Figma link in Slack #design-handoffs.
+                  - Updated brand guidelines — new icon library (240 icons) published to Storybook.
+
+                  **In progress:**
+                  - Mobile onboarding flow — wireframes in review, needs PM sign-off
+                  - Bulk import UI — waiting on final API spec from Marcus
+
+                  **Notes:** Design review cadence moving to Tuesdays 3pm starting next week.
+          - title: Sales — 3 highlights
+            components:
+              - type: markdown
+                body: |
+                  **Highlights:**
+                  - 3 new enterprise trials started (Thornwood Capital, Kestrel Foods, Axiom Health)
+                  - Closed Meridian Logistics — $42K ARR, 12-month contract
+                  - Pipeline review: 8 deals in late stage, $310K combined ARR potential
+
+                  **Blockers:**
+                  - SOC 2 report requested by Thornwood and Axiom — waiting on Security team (see blockers below)
+                  - Demo environment was down Wednesday afternoon (2hr impact) — please fix escalation path
+
+                  **Next week:** QBR prep for Meridian, Kestrel proof-of-concept kickoff
+
+  - type: divider
+
+  - type: section
+    eyebrow: Coordination
+    heading: Cross-Team Dependencies
+    components:
+      - type: table
+        filterable: true
+        columns:
+          - key: dependency
+            label: Dependency
+          - key: from_team
+            label: From
+          - key: to_team
+            label: To
+          - key: status
+            label: Status
+          - key: due
+            label: Due
+        rows:
+          - dependency: Final API spec for Bulk Import v2
+            from_team: Engineering
+            to_team: Design
+            status: In progress
+            due: May 13
+          - dependency: SOC 2 Type II report (draft)
+            from_team: Security
+            to_team: Sales
+            status: Blocked
+            due: May 15
+          - dependency: Mobile onboarding PM sign-off
+            from_team: Product
+            to_team: Design
+            status: Pending review
+            due: May 14
+          - dependency: H2 roadmap approval
+            from_team: Leadership
+            to_team: Product
+            status: Scheduled May 15
+            due: May 15
+          - dependency: SSO spec review
+            from_team: Product
+            to_team: Engineering
+            status: Complete
+            due: May 9
+
+  - type: divider
+
+  - type: section
+    eyebrow: Issues
+    heading: Open Blockers
+    components:
+      - type: card_grid
+        min_width: 280
+        cards:
+          - title: SOC 2 report not ready
+            badge:
+              label: Sales Blocker
+              color: red
+            description: Thornwood Capital and Axiom Health both requested the SOC 2 Type II report before signing. Security team estimates 2 more weeks. Sales may lose both deals if delayed.
+          - title: Background job migration risk
+            badge:
+              label: Eng Blocker
+              color: red
+            description: BullMQ migration requires a 20-minute maintenance window. Cannot schedule until load testing is complete. Currently blocking the Q2 performance milestone.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Decisions
+    heading: Key Decisions Made This Week
+    components:
+      - type: definition_list
+        items:
+          - term: API v2 GA date set to May 22
+            definition: Accepted the timeline proposed by Marcus. Engineering committed to freeze the spec by May 13. Marketing will prepare launch comms by May 19. Decision owner — Derek Walsh.
+          - term: Deferred FTP source support to Bulk Import v3
+            definition: FTP/SFTP proved more complex than estimated (auth edge cases, firewall rules). Moving it to the next cycle. Lena confirmed customer priority is lower than SFTP — SFTP-only customers are <8% of requests.
+          - term: Adopted Playwright for E2E testing
+            definition: Replacing Cypress. Faster in CI, better TypeScript support. Migration plan drafted by Rahul — old Cypress tests remain until parallel coverage is confirmed.
+          - term: On-call rotation expanded to Product
+            definition: Starting June 1, product managers join on-call as "incident liaison" — no hands-on-keyboard, but reachable for priority triage during P1/P2 incidents.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Looking Ahead
+    heading: Next Week Priorities
+    components:
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: API spec freeze
+            badge:
+              label: Engineering
+              color: green
+            description: Bulk Import v2 and API v2 specs must be finalized by Wednesday May 13. No new scope after freeze.
+          - title: SSO beta launch
+            badge:
+              label: Engineering
+              color: green
+            description: Internal SAML SSO available for dogfooding by Friday May 15. Target 5 internal users for initial test.
+          - title: H2 roadmap review
+            badge:
+              label: Product
+              color: teal
+            description: Leadership review Thursday May 15 at 2pm. Lena to present 3 strategic themes with high-level feature breakdown.
+          - title: SOC 2 escalation
+            badge:
+              label: Security
+              color: red
+            description: Derek to meet with Security lead Monday to assess whether accelerated timeline is possible. Decision by EOD Tuesday.
+          - title: Kestrel POC kickoff
+            badge:
+              label: Sales
+              color: yellow
+            description: Jordan leading. Technical requirements call Wednesday, demo environment provisioned by Thursday. 30-day POC window.

@@ -1,0 +1,255 @@
+title: "Board Meeting Prep — Q2 2026"
+subtitle: Materials for the Vantara Board of Directors meeting. June 18, 2026. Confidential.
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Company
+        value: Vantara
+      - key: Meeting Date
+        value: "June 18, 2026"
+      - key: Location
+        value: "Andreessen Horowitz, San Francisco + Zoom"
+      - key: Prepared By
+        value: Elena Rourke, CEO
+      - key: Status
+        value: Final — distributed June 15
+
+  - type: callout
+    variant: info
+    title: Meeting objective
+    body: >
+      This is Vantara's first formal board meeting post-Series A close ($8M, led by a16z).
+      Primary goals: align on Q2 performance, approve the H2 operating plan and budget,
+      and get board input on the enterprise go-to-market motion before we commit resources.
+
+  - type: section
+    eyebrow: Logistics
+    heading: Agenda
+    components:
+      - type: timeline
+        items:
+          - name: "9:00 — Welcome, housekeeping, approval of Q1 minutes (10 min)"
+            status: upcoming
+          - name: "9:10 — Q2 financial review: revenue, burn, cash, guidance (25 min)"
+            status: upcoming
+          - name: "9:35 — Product & engineering update: Q2 shipped, H2 roadmap (20 min)"
+            status: upcoming
+          - name: "10:00 — Strategic decision: enterprise GTM investment (30 min)"
+            status: upcoming
+          - name: "10:30 — Risks, team update, and open board discussion (20 min)"
+            status: upcoming
+          - name: "10:50 — Board-only session (10 min)"
+            status: upcoming
+          - name: "11:00 — Adjourn"
+            status: upcoming
+
+  - type: section
+    eyebrow: Financials
+    heading: Financial Summary — Q2 2026
+    components:
+      - type: stat_grid
+        columns: 4
+        stats:
+          - label: Q2 ARR Exit
+            value: "$412K"
+            detail: Up from $288K entering Q2
+            color: green
+          - label: Q2 Net Burn
+            value: "$128K"
+            detail: $3K under budget
+            color: green
+          - label: Cash on Hand
+            value: "$7.4M"
+            detail: Post-Series A close, June 1
+            color: teal
+          - label: Runway
+            value: "4.8 years"
+            detail: At current burn rate
+            color: green
+
+  - type: section
+    eyebrow: Financials
+    heading: KPI Dashboard
+    components:
+      - type: table
+        filterable: false
+        columns:
+          - key: metric
+            label: Metric
+          - key: q1_actual
+            label: Q1 Actual
+          - key: q2_target
+            label: Q2 Target
+          - key: q2_actual
+            label: Q2 Actual
+          - key: trend
+            label: Trend
+        rows:
+          - metric: MRR
+            q1_actual: "$24,000"
+            q2_target: "$34,000"
+            q2_actual: "$34,380"
+            trend: "↑ Beat by 1%"
+          - metric: Net New ARR (quarter)
+            q1_actual: "$68K"
+            q2_target: "$96K"
+            q2_actual: "$124K"
+            trend: "↑ Beat by 29%"
+          - metric: Customers
+            q1_actual: "31"
+            q2_target: "48"
+            q2_actual: "52"
+            trend: "↑ Beat by 8%"
+          - metric: Net Revenue Retention
+            q1_actual: "94%"
+            q2_target: "100%"
+            q2_actual: "102%"
+            trend: "↑ First time NRR > 100%"
+          - metric: Gross Margin
+            q1_actual: "71%"
+            q2_target: "73%"
+            q2_actual: "72%"
+            trend: "→ Slightly below target"
+          - metric: CAC (blended)
+            q1_actual: "$3,200"
+            q2_target: "$2,800"
+            q2_actual: "$2,650"
+            trend: "↑ Improving"
+          - metric: CAC Payback Period
+            q1_actual: "16 months"
+            q2_target: "13 months"
+            q2_actual: "12 months"
+            trend: "↑ Beat target"
+          - metric: Headcount
+            q1_actual: "18"
+            q2_target: "22"
+            q2_actual: "25"
+            trend: "→ Ahead of plan"
+
+  - type: section
+    eyebrow: Decisions
+    heading: Strategic Decisions Needed
+    components:
+      - type: card_grid
+        min_width: 280
+        cards:
+          - title: Enterprise GTM investment
+            badge:
+              label: Decision Required
+              color: yellow
+            description: >
+              Do we hire an enterprise AE + solutions engineer now ($420K fully-loaded annual cost)
+              to pursue the 12 enterprise opportunities in our pipeline, or wait until we close
+              2 more enterprise deals to validate the motion before adding headcount?
+              Recommendation: hire now. Pipeline quality justifies the investment. Board vote requested.
+          - title: H2 operating plan approval
+            badge:
+              label: Decision Required
+              color: yellow
+            description: >
+              The H2 plan adds $890K in operating expense (5 hires: 2 Eng, 1 Sales, 1 CS, 1 Mktg).
+              Total H2 cash outflow projected at $1.6M. Requires board approval per our investor
+              rights agreement. Full budget deck in the appendix. Management recommends approval.
+          - title: SOC 2 Type II timeline
+            badge:
+              label: Input Requested
+              color: teal
+            description: >
+              Three enterprise prospects have asked for SOC 2 Type II. Audit will take 6–9 months
+              and cost approximately $80K (auditor + tooling). Do we start now, or defer until
+              we have committed enterprise revenue that justifies the cost? Seeking board guidance.
+
+  - type: section
+    eyebrow: Risks
+    heading: Key Risks
+    components:
+      - type: accordion
+        items:
+          - title: "Market risk — ICP concentration"
+            components:
+              - type: markdown
+                body: |
+                  **Risk:** 68% of revenue comes from companies in the 50–200 employee range in
+                  tech and professional services. An economic downturn affecting those segments
+                  would have an outsized impact on us.
+
+                  **Mitigation:** NRR above 100% suggests strong retention even in this cohort.
+                  Enterprise motion diversifies buyer segment. We are not yet dependent on any
+                  single customer (largest is 4% of ARR).
+
+                  **Rating:** Medium. Monitoring monthly.
+          - title: "Product risk — roadmap execution bandwidth"
+            components:
+              - type: markdown
+                body: |
+                  **Risk:** Three enterprise prospects require features we do not yet have:
+                  RBAC (due July), SSO/SAML (due August), and SOC 2 (due Q1 2027). The
+                  engineering team is stretched. Missing any of these deadlines could cause
+                  deal slippage or churn of our largest accounts.
+
+                  **Mitigation:** Marcus has re-prioritized the roadmap to front-load compliance
+                  features. We are evaluating a third-party SAML library to accelerate SSO.
+                  The second engineering hire is intended specifically to absorb this load.
+
+                  **Rating:** High. Active management required.
+          - title: "Team risk — key person dependency"
+            components:
+              - type: markdown
+                body: |
+                  **Risk:** Marcus (CTO) is the sole person with deep knowledge of our infrastructure
+                  and data pipeline. Dev Patel is ramping, but we are 6+ months away from meaningful
+                  coverage. A Marcus absence or departure would be severely disruptive.
+
+                  **Mitigation:** Marcus is actively documenting architecture decisions in our internal
+                  wiki. We have begun informal bus factor reviews. Key person insurance in place.
+                  Marcus is a co-founder with significant equity — retention risk is low.
+
+                  **Rating:** Medium. Improving with documentation investment.
+          - title: "Financial risk — enterprise sales cycle length"
+            components:
+              - type: markdown
+                body: |
+                  **Risk:** Our first enterprise deals are taking 90–120 days to close vs. the
+                  30-day SMB cycle we are used to. If the enterprise GTM motion does not produce
+                  revenue by Q4, we will need to revise the H2 plan.
+
+                  **Mitigation:** We have 4.8 years of runway at current burn — we have time to
+                  iterate. We are not betting H2 exclusively on enterprise; SMB motion continues
+                  in parallel. Go/no-go on the enterprise investment will be reviewed at the
+                  September board meeting.
+
+                  **Rating:** Low-medium given runway position.
+
+  - type: callout
+    variant: warn
+    title: Board ask — June 18
+    body: >
+      We need three resolutions: (1) approval of Q1 minutes, (2) approval of the H2 operating
+      plan and budget, and (3) approval of the enterprise AE + SE hire. We will also seek
+      non-binding guidance on the SOC 2 timing question. Pre-reads were distributed June 15 —
+      please come with questions focused on the strategic decisions, not the financials.
+
+  - type: section
+    eyebrow: Reference
+    heading: Appendix Index
+    components:
+      - type: definition_list
+        items:
+          - term: "Appendix A"
+            definition: "Q2 full P&L and cash flow statement (see shared Google Drive folder)"
+          - term: "Appendix B"
+            definition: "H2 operating plan with department-level headcount and expense breakdown"
+          - term: "Appendix C"
+            definition: "Enterprise pipeline report — 12 accounts, stage, ARR, and champion details"
+          - term: "Appendix D"
+            definition: "SOC 2 vendor comparison and cost analysis (Drata vs. Vanta vs. Secureframe)"
+          - term: "Appendix E"
+            definition: "Q2 product roadmap retrospective and H2 roadmap draft"
+          - term: "Appendix F"
+            definition: "Cap table and option pool summary post-Series A"
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: Clone it to your workspace and your agents will use this structure when building board meeting prep pages. Replace the placeholder financials, decisions, and risks with your company's actual data. Your agents can pull metrics directly from your data sources and update this page in the days leading up to each board meeting.

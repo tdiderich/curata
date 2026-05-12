@@ -1,0 +1,277 @@
+title: "Product Spec — Bulk Import Feature"
+subtitle: "Acme Corp · PRD v1.2 · Owner: Lena Park, PM"
+shell: standard
+components:
+  - type: meta
+    fields:
+      - key: Status
+        value: Approved
+      - key: Version
+        value: "1.2"
+      - key: PM
+        value: Lena Park
+      - key: Eng Lead
+        value: Marcus Chen
+      - key: Target GA
+        value: 2026-06-10
+
+  - type: section
+    eyebrow: Background
+    heading: Problem Statement
+    components:
+      - type: markdown
+        body: |
+          ## Why we are building this
+
+          Acme's core workflow requires customers to get their existing data into the platform before they can see value. Today, the only option is manual row-by-row entry or a self-serve CSV upload limited to 500 rows. Neither works for enterprise customers.
+
+          During Q1 discovery, **11 of 14 interviewed customers** cited data import as their #1 activation blocker. Our largest churned account (Meridian — $67K ARR) cited it explicitly in their exit survey. Sales is losing an estimated 2 deals per month where the prospect's data volume exceeds 500 rows.
+
+          The proposed Bulk Import feature allows customers to upload files up to 1M rows via a drag-and-drop UI or direct API. Files are processed asynchronously with progress tracking, validation error reporting, and partial success handling. This unblocks enterprise activation and removes the most-cited friction point in our onboarding funnel.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Outcomes
+    heading: Success Metrics
+    components:
+      - type: stat_grid
+        columns: 4
+        stats:
+          - label: Activation rate target
+            value: "+18 pp"
+            detail: From 41% → 59% (30-day window)
+            color: green
+          - label: Time-to-first-value
+            value: "<2 days"
+            detail: Down from 8.3 days median today
+            color: teal
+          - label: Import success rate
+            value: ">97%"
+            detail: Files with zero validation errors
+            color: green
+          - label: Max file size
+            value: 1M rows
+            detail: ~200MB CSV or XLSX
+            color: teal
+
+  - type: divider
+
+  - type: section
+    eyebrow: Users
+    heading: User Stories
+    components:
+      - type: card_grid
+        min_width: 260
+        cards:
+          - title: Operations Manager
+            badge:
+              label: Primary Persona
+              color: green
+            description: "As an ops manager, I want to upload my full customer list (50K rows) in one step, so that I can start using Acme without manually re-entering data I already have."
+          - title: IT Admin
+            badge:
+              label: Secondary Persona
+              color: teal
+            description: "As an IT admin, I want to trigger imports via API so that I can automate our nightly sync from our internal CRM without manual intervention."
+          - title: Data Analyst
+            badge:
+              label: Secondary Persona
+              color: teal
+            description: "As a data analyst, I want clear validation error reports with row numbers and field names, so that I can fix my data and re-upload without guessing what went wrong."
+          - title: Account Manager (Acme)
+            badge:
+              label: Internal
+              color: yellow
+            description: "As an Acme account manager, I want to see import history and status for my accounts, so that I can proactively help customers who are stuck in onboarding."
+
+  - type: divider
+
+  - type: section
+    eyebrow: Requirements
+    heading: Feature Requirements
+    components:
+      - type: table
+        filterable: true
+        columns:
+          - key: id
+            label: ID
+          - key: requirement
+            label: Requirement
+          - key: priority
+            label: Priority
+          - key: status
+            label: Status
+        rows:
+          - id: REQ-01
+            requirement: Accept CSV and XLSX files up to 200MB / 1M rows
+            priority: P0
+            status: Committed
+          - id: REQ-02
+            requirement: Drag-and-drop upload UI with progress bar
+            priority: P0
+            status: Committed
+          - id: REQ-03
+            requirement: Async processing — user does not wait on page for large files
+            priority: P0
+            status: Committed
+          - id: REQ-04
+            requirement: Email notification on import complete (success or failure)
+            priority: P0
+            status: Committed
+          - id: REQ-05
+            requirement: Validation error report with row index, column name, and error message
+            priority: P0
+            status: Committed
+          - id: REQ-06
+            requirement: Partial success — import valid rows, skip invalid rows, report both
+            priority: P1
+            status: Committed
+          - id: REQ-07
+            requirement: API endpoint for programmatic import trigger
+            priority: P1
+            status: Committed
+          - id: REQ-08
+            requirement: Column mapping UI for non-standard headers
+            priority: P1
+            status: Committed
+          - id: REQ-09
+            requirement: Import history table (last 30 imports, status, row count, errors)
+            priority: P1
+            status: Committed
+          - id: REQ-10
+            requirement: Duplicate detection and merge strategy (skip / overwrite / append)
+            priority: P2
+            status: Deferred to v2
+          - id: REQ-11
+            requirement: SFTP source support (scheduled pull)
+            priority: P2
+            status: Deferred to v2
+          - id: REQ-12
+            requirement: Google Sheets direct sync
+            priority: P3
+            status: Not committed
+
+  - type: divider
+
+  - type: section
+    eyebrow: Scope
+    heading: What Is and Is Not Included
+    components:
+      - type: split_compare
+        left:
+          eyebrow: In Scope — v1
+          title: We are building this
+          stats:
+            - label: CSV upload (up to 1M rows)
+              value: Yes
+              color: green
+            - label: XLSX upload
+              value: Yes
+              color: green
+            - label: Drag-and-drop UI
+              value: Yes
+              color: green
+            - label: Progress + status polling
+              value: Yes
+              color: green
+            - label: Validation error report
+              value: Yes
+              color: green
+            - label: API trigger endpoint
+              value: Yes
+              color: green
+            - label: Email notification
+              value: Yes
+              color: green
+        right:
+          eyebrow: Out of Scope — v1
+          title: Save for later
+          stats:
+            - label: SFTP / FTP source
+              value: v2
+              color: yellow
+            - label: Google Sheets sync
+              value: v3
+              color: yellow
+            - label: Scheduled / recurring imports
+              value: v2
+              color: yellow
+            - label: Duplicate merge strategies
+              value: v2
+              color: yellow
+            - label: Data transformation rules
+              value: Future
+              color: red
+            - label: Multi-file batch upload
+              value: Future
+              color: red
+
+  - type: divider
+
+  - type: section
+    eyebrow: Constraints
+    heading: Technical Constraints
+    components:
+      - type: callout
+        variant: warn
+        title: Infrastructure limits to be aware of
+        body: |
+          - **File size:** S3 multipart upload supports up to 5TB, but our Lambda processor has a 15-minute max runtime. Files over 500MB should be chunked client-side before upload.
+          - **Row validation:** The validation pass runs in-memory on a t3.large worker. Files over 500K rows will require worker auto-scaling — confirm with Marcus before commit.
+          - **Rate limiting:** The import API endpoint will be rate-limited to 10 concurrent imports per org. Customers with higher volume should contact support.
+          - **Data retention:** Raw uploaded files are deleted from S3 after 7 days. Import result summaries are retained for 90 days.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Design
+    heading: UI Description
+    components:
+      - type: columns
+        equal_heights: false
+        columns:
+          - - type: markdown
+              body: |
+                **Import wizard — 3 steps:**
+
+                **Step 1 — Upload**
+                Full-width dropzone with dashed border. Accepts drag-and-drop or click-to-browse. Shows file name, size, and estimated row count after selection. "Start import" CTA is disabled until a valid file is selected.
+
+                **Step 2 — Map columns**
+                Two-column table: left column shows headers detected in the file, right column shows a dropdown of Acme field names. Required fields are marked with a red asterisk. Auto-maps exact matches. User manually maps mismatches.
+
+                **Step 3 — Review and confirm**
+                Summary card: N rows detected, N fields mapped, N required fields satisfied. If validation pre-check finds issues, shows a warning with a count. "Import now" CTA proceeds to async processing. User is redirected to import history page.
+            - type: markdown
+              body: |
+                **Import history table:**
+
+                Shows last 30 imports in reverse chronological order. Columns: started at, filename, status (processing / success / partial / failed), total rows, imported rows, errors. Click any row to open the detail view.
+
+                **Import detail view:**
+
+                Shows full metadata plus a downloadable error report (CSV) listing each failed row with column name and error message. Status badge is color-coded: green = success, yellow = partial, red = failed.
+
+                **Email notification:**
+
+                Sent to the user who triggered the import. Subject: "Your import is complete — N rows imported". Body includes summary stats and a deep link to the import detail view.
+
+  - type: divider
+
+  - type: section
+    eyebrow: Launch Gate
+    heading: Launch Criteria
+    components:
+      - type: markdown
+        body: |
+          - [ ] All P0 requirements implemented and code-reviewed
+          - [ ] E2E tests pass for the happy path (CSV upload → email notification)
+          - [ ] E2E tests pass for the error path (invalid rows → error report downloaded)
+          - [ ] Load test completed — 10 concurrent 500K-row imports without errors
+          - [ ] API endpoint documented in developer docs
+          - [ ] Customer-facing help article published (Intercom)
+          - [ ] Account managers briefed — demo script and FAQ prepared
+          - [ ] Feature flag enabled for 5 beta customers (Kestrel, Thornwood, + 3 TBD)
+          - [ ] Beta feedback collected and no P0 bugs open
+          - [ ] General availability rollout approved by Lena and Derek

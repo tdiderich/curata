@@ -1,0 +1,21 @@
+{
+  "name": "@curata/cli",
+  "version": "0.1.0",
+  "description": "CLI for self-hosted curata setup",
+  "type": "module",
+  "bin": {
+    "curata": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/pg": "^8.20.0",
+    "typescript": "^5"
+  }
+}
