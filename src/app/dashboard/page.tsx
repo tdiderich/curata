@@ -2,12 +2,17 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { resolveOrg } from "@/lib/auth";
 import { seedOrg } from "@/lib/seed";
-
-export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Dashboard — curata" };
 import { listPages } from "@/lib/pages";
 import { db } from "@/lib/db";
 import { DashboardClient, SerializedPageMeta } from "@/components/dashboard-client";
+
+export const dynamic = "force-dynamic";
+export async function generateMetadata(): Promise<Metadata> {
+  const ctx = await resolveOrg();
+  if (!ctx) return { title: "Dashboard" };
+  const org = await db.organization.findUnique({ where: { id: ctx.orgId }, select: { name: true } });
+  return { title: `Dashboard — ${org?.name ?? "curata"}` };
+}
 
 interface FolderRow {
   id: string;
@@ -22,6 +27,9 @@ export default async function DashboardPage() {
     ctx = await resolveOrg();
   }
   if (!ctx) redirect("/sign-in");
+
+  const org = await db.organization.findUnique({ where: { id: ctx.orgId }, select: { name: true } });
+  const orgName = org?.name ?? "curata";
 
   const pages = await listPages(ctx.orgId, ctx.userId);
 
@@ -56,6 +64,7 @@ export default async function DashboardPage() {
       pages={serialized}
       folders={folders}
       pageCount={pages.length}
+      orgName={orgName}
     />
   );
 }

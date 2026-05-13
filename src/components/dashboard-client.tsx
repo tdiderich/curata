@@ -158,7 +158,7 @@ function DashActions({
 }
 
 
-function EmptyWelcome() {
+function EmptyWelcome({ orgName }: { orgName?: string }) {
   const router = useRouter();
   const [creating, setCreating] = useState<string | null>(null);
 
@@ -194,7 +194,7 @@ function EmptyWelcome() {
 
   return (
     <div className="empty-welcome">
-      <div className="empty-welcome-heading">Welcome to curata</div>
+      <div className="empty-welcome-heading">Welcome to {orgName ?? "curata"}</div>
       <div className="empty-welcome-sub">
         Pick a template to get started, or create a blank page.
       </div>
@@ -245,9 +245,10 @@ interface DashboardClientProps {
   pages: SerializedPageMeta[];
   folders: FolderRow[];
   pageCount: number;
+  orgName?: string;
 }
 
-export function DashboardClient({ pages, folders, pageCount }: DashboardClientProps) {
+export function DashboardClient({ pages, folders, pageCount, orgName }: DashboardClientProps) {
   const router = useRouter();
   const [view, setView] = useDashView();
   const [sortKey, setSortKey] = useSortKey();
@@ -259,7 +260,7 @@ export function DashboardClient({ pages, folders, pageCount }: DashboardClientPr
   if (pageCount === 0) {
     return (
       <div className="dash-root">
-        <EmptyWelcome />
+        <EmptyWelcome orgName={orgName} />
       </div>
     );
   }

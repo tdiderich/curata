@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-
-export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Settings — curata" };
 import { resolveOrg, resolveCurrentUser } from "@/lib/auth";
 import { seedOrg } from "@/lib/seed";
 import { can } from "@/lib/permissions";
@@ -13,6 +10,14 @@ import { MemberList } from "@/components/member-list";
 import { OrgSettings } from "@/components/org-settings";
 import { ThemeSettings } from "@/components/theme-settings";
 import { ApiKeyManager } from "@/components/api-key-manager";
+
+export const dynamic = "force-dynamic";
+export async function generateMetadata(): Promise<Metadata> {
+  const ctx = await resolveOrg();
+  if (!ctx) return { title: "Settings" };
+  const org = await db.organization.findUnique({ where: { id: ctx.orgId }, select: { name: true } });
+  return { title: `Settings — ${org?.name ?? "curata"}` };
+}
 
 export default async function SettingsPage() {
   let ctx = await resolveOrg();

@@ -14,14 +14,16 @@ export default async function DashboardLayout({
   let mode = "dark";
   let texture = "none";
   let glow = "none";
+  let siteName = "curata";
 
   const ctx = await resolveOrg();
   if (ctx) {
     const org = await db.organization.findUnique({
       where: { id: ctx.orgId },
-      select: { theme: true, mode: true, texture: true, glow: true },
+      select: { name: true, theme: true, mode: true, texture: true, glow: true },
     });
     if (org) {
+      siteName = org.name;
       theme = org.theme;
       mode = org.mode;
       texture = org.texture;
@@ -34,7 +36,7 @@ export default async function DashboardLayout({
       <ThemeScript theme={theme} mode={mode} texture={texture} glow={glow} />
       <div className="site-bar">
         <Link className="site-bar-name" href="/">
-          curata
+          {siteName}
         </Link>
         <div className="site-bar-right">
           {AUTH_MODE === "oauth" ? (
