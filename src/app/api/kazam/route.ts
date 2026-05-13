@@ -13,7 +13,7 @@ import {
   searchPages,
   getSiteConfig,
 } from "@/lib/pages";
-import { validateContent } from "@/lib/kazam";
+import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
 import fs from "fs";
 import path from "path";
 
@@ -197,7 +197,8 @@ async function dispatch(
       if (!args.slug) throw new Error("slug is required");
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       if (!args.content) throw new Error("content (YAML) is required");
-      const errors = await validateContent(orgSlug, args.slug, args.content);
+      const validateUnsupported = checkUnsupportedComponents(args.content);
+      const errors = [...validateUnsupported, ...await validateContent(orgSlug, args.slug, args.content)];
       return { valid: errors.length === 0, errors: errors.map((e) => e.message) };
     }
 
@@ -205,6 +206,10 @@ async function dispatch(
       if (!args.slug) throw new Error("slug is required");
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       if (!args.content) throw new Error("content (YAML) is required");
+      const unsupported = checkUnsupportedComponents(args.content);
+      if (unsupported.length > 0) {
+        throw new Error(unsupported.map((e) => e.message).join("; "));
+      }
       const existing = await db.page.findUnique({
         where: { orgId_slug: { orgId, slug: args.slug } },
       });
@@ -286,6 +291,10 @@ async function dispatch(
       if (!args.slug) throw new Error("slug is required");
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       if (!args.content) throw new Error("content (YAML) is required");
+      const writeUnsupported = checkUnsupportedComponents(args.content);
+      if (writeUnsupported.length > 0) {
+        throw new Error(writeUnsupported.map((e) => e.message).join("; "));
+      }
       const validationErrors = await validateContent(orgSlug, args.slug, args.content);
       if (validationErrors.length > 0) {
         const messages = validationErrors.map((e) => e.message).join("; ");
