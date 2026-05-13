@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { basePath } from "@/lib/api-fetch";
 
 export function DeletePageButton({
   slug,
@@ -14,7 +15,7 @@ export function DeletePageButton({
   async function handleDelete() {
     if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
 
-    const res = await fetch("/api/pages", {
+    const res = await fetch(`${basePath}/api/pages`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ slug }),

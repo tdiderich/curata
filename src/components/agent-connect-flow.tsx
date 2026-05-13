@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { buildAgentPrompt } from "@/lib/agent-prompt";
+import { basePath } from "@/lib/api-fetch";
 
 interface AgentConnectFlowProps {
   slug?: string;
@@ -19,7 +20,7 @@ export function AgentConnectFlow({ slug, temporary }: AgentConnectFlowProps) {
   const handleGenerate = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/keys", {
+      const res = await fetch(`${basePath}/api/keys`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

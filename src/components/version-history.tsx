@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { basePath } from "@/lib/api-fetch";
 
 interface PageVersion {
   id: string;
@@ -33,7 +34,7 @@ export default function VersionHistory({ slug, onOpen }: { slug: string; onOpen?
     if (versions) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/versions?slug=${encodeURIComponent(slug)}`);
+      const res = await fetch(`${basePath}/api/versions?slug=${encodeURIComponent(slug)}`);
       if (res.ok) {
         const data = (await res.json()) as PageVersion[];
         setVersions(data);
@@ -56,7 +57,7 @@ export default function VersionHistory({ slug, onOpen }: { slug: string; onOpen?
   async function restore(versionId: string) {
     setRestoring(true);
     try {
-      const res = await fetch("/api/versions", {
+      const res = await fetch(`${basePath}/api/versions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, versionId }),

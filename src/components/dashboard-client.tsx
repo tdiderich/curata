@@ -3,14 +3,14 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PageFolderSelect, VisibilityBadge } from "@/components/page-folder-select";
-import { DeletePageButton } from "@/components/delete-page-button";
-import { NewFolderButton, FolderMenu } from "@/components/folder-actions";
-import { SearchBar } from "@/components/search-bar";
+import { NewFolderButton, FolderMenu, PageMenu } from "@/components/folder-actions";
+
+
 import { NewPageButton } from "@/components/new-page-button";
 import { DashboardFeed } from "@/components/dashboard-feed";
 import { useDashView } from "@/components/view-toggle";
 import { TEMPLATES, PERSONAS } from "@/lib/templates";
+import { basePath } from "@/lib/api-fetch";
 
 export interface SerializedPageMeta {
   slug: string;
@@ -157,172 +157,6 @@ function DashActions({
   );
 }
 
-function BulkBar({
-  count,
-  folders,
-  onDelete,
-  onMove,
-  onVisibility,
-  onClear,
-}: {
-  count: number;
-  folders: FolderRow[];
-  onDelete: () => void;
-  onMove: (folderId: string | null) => void;
-  onVisibility: (v: string) => void;
-  onClear: () => void;
-}) {
-  const [moveVal, setMoveVal] = useState("");
-  const [visVal, setVisVal] = useState("");
-
-  return (
-    <div className="bulk-bar">
-      <span className="bulk-bar-count">
-        {count} selected
-      </span>
-      <div className="bulk-bar-actions">
-        <select
-          className="bulk-bar-select"
-          value={moveVal}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v) onMove(v === "__none" ? null : v);
-            setMoveVal("");
-          }}
-          aria-label="Move selected pages"
-        >
-          <option value="" disabled>Move to...</option>
-          <option value="__none">No folder</option>
-          {folders.map((f) => (
-            <option key={f.id} value={f.id}>{f.name}</option>
-          ))}
-        </select>
-        <select
-          className="bulk-bar-select"
-          value={visVal}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v) onVisibility(v);
-            setVisVal("");
-          }}
-          aria-label="Change visibility"
-        >
-          <option value="" disabled>Visibility...</option>
-          <option value="personal">Private</option>
-          <option value="shared">Shared</option>
-          <option value="public">Public</option>
-        </select>
-        <button className="bulk-bar-btn bulk-bar-btn--danger" onClick={onDelete}>
-          Delete
-        </button>
-      </div>
-      <button className="bulk-bar-clear" onClick={onClear}>
-        Clear
-      </button>
-    </div>
-  );
-}
-
-function PageTable({
-  pages,
-  folders,
-  selected,
-  onToggle,
-  onToggleAll,
-  sortKey,
-}: {
-  pages: SerializedPageMeta[];
-  folders: FolderRow[];
-  selected: Set<string>;
-  onToggle: (slug: string) => void;
-  onToggleAll: (slugs: string[]) => void;
-  sortKey: SortKey;
-}) {
-  if (pages.length === 0) {
-    return (
-      <div className="dash-empty">
-        <div className="dash-empty-icon">&#128196;</div>
-        <div className="dash-empty-title">No pages yet</div>
-        <div className="dash-empty-text">Create a page or connect an agent to get started.</div>
-      </div>
-    );
-  }
-
-  const allSelected = pages.length > 0 && pages.every((p) => selected.has(p.slug));
-  const someSlugs = pages.map((p) => p.slug);
-
-  const sortLabel = sortKey === "title" ? "Title" : sortKey === "views" ? "Views" : "Updated";
-
-  return (
-    <table className="dash-table">
-      <thead>
-        <tr>
-          <th className="dash-th dash-th-check">
-            <input
-              type="checkbox"
-              checked={allSelected}
-              onChange={() => onToggleAll(someSlugs)}
-              aria-label="Select all pages"
-            />
-          </th>
-          <th className="dash-th dash-th-title">Title</th>
-          <th className="dash-th">Visibility</th>
-          <th className="dash-th">Folder</th>
-          <th className="dash-th">{sortLabel}</th>
-          <th className="dash-th dash-th-right">Views</th>
-          <th className="dash-th dash-th-right">Annotations</th>
-          <th className="dash-th dash-th-right">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {pages.map((page) => (
-          <tr
-            key={page.slug}
-            className={`dash-row${selected.has(page.slug) ? " dash-row--selected" : ""}`}
-          >
-            <td className="dash-td dash-td-check">
-              <input
-                type="checkbox"
-                checked={selected.has(page.slug)}
-                onChange={() => onToggle(page.slug)}
-                aria-label={`Select ${page.title}`}
-              />
-            </td>
-            <td className="dash-td dash-td-title">
-              <Link href={`/pages/${page.slug}`} className="dash-page-link">
-                {page.title}
-              </Link>
-            </td>
-            <td className="dash-td">
-              <VisibilityBadge slug={page.slug} visibility={page.visibility} />
-            </td>
-            <td className="dash-td">
-              <PageFolderSelect
-                slug={page.slug}
-                folderId={page.folderId}
-                folders={folders}
-              />
-            </td>
-            <td className="dash-td dash-td-muted">{formatDate(page.lastActivity)}</td>
-            <td className="dash-td dash-td-right dash-td-muted">
-              {page.viewCount > 0 ? page.viewCount : <span className="dash-none">&mdash;</span>}
-            </td>
-            <td className="dash-td dash-td-right">
-              {page.annotationCount > 0 ? (
-                <span className="dash-ann-count">{page.annotationCount}</span>
-              ) : (
-                <span className="dash-none">&mdash;</span>
-              )}
-            </td>
-            <td className="dash-td dash-td-right">
-              <DeletePageButton slug={page.slug} title={page.title} />
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
 
 function EmptyWelcome() {
   const router = useRouter();
@@ -330,7 +164,7 @@ function EmptyWelcome() {
 
   async function createFromTemplate(slug: string, title: string) {
     setCreating(slug);
-    const res = await fetch("/api/pages", {
+    const res = await fetch(`${basePath}/api/pages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title, templateSlug: slug }),
@@ -345,7 +179,7 @@ function EmptyWelcome() {
 
   async function createBlank() {
     setCreating("__blank");
-    const res = await fetch("/api/pages", {
+    const res = await fetch(`${basePath}/api/pages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "Untitled", shell: "standard" }),
@@ -417,57 +251,10 @@ export function DashboardClient({ pages, folders, pageCount }: DashboardClientPr
   const router = useRouter();
   const [view, setView] = useDashView();
   const [sortKey, setSortKey] = useSortKey();
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
-
-  const sorted = useMemo(() => sortPages(pages, sortKey), [pages, sortKey]);
-
-  const unfiledPages = sorted.filter((p) => p.folderId === null);
-
-  const toggleSlug = useCallback((slug: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
-      return next;
-    });
-  }, []);
-
-  const toggleAll = useCallback((slugs: string[]) => {
-    setSelected((prev) => {
-      const allIn = slugs.every((s) => prev.has(s));
-      const next = new Set(prev);
-      if (allIn) {
-        slugs.forEach((s) => next.delete(s));
-      } else {
-        slugs.forEach((s) => next.add(s));
-      }
-      return next;
-    });
-  }, []);
-
-  async function bulkAction(action: string, extra?: Record<string, unknown>) {
-    if (selected.size === 0) return;
-    setBulkBusy(true);
-    try {
-      const res = await fetch("/api/pages/bulk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, slugs: [...selected], ...extra }),
-      });
-      if (res.ok) {
-        setSelected(new Set());
-        router.refresh();
-      }
-    } finally {
-      setBulkBusy(false);
-    }
-  }
-
-  function handleBulkDelete() {
-    if (!confirm(`Delete ${selected.size} page${selected.size !== 1 ? "s" : ""}? This cannot be undone.`)) return;
-    bulkAction("delete");
-  }
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(
+    () => new Set(["__unfiled", ...folders.map((f) => f.id)])
+  );
+  const [searchQuery, setSearchQuery] = useState("");
 
   if (pageCount === 0) {
     return (
@@ -477,21 +264,51 @@ export function DashboardClient({ pages, folders, pageCount }: DashboardClientPr
     );
   }
 
+  const sorted = useMemo(() => sortPages(pages, sortKey), [pages, sortKey]);
+
+  const filtered = useMemo(() => {
+    if (!searchQuery.trim()) return sorted;
+    const q = searchQuery.toLowerCase();
+    return sorted.filter((p) => p.title.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q));
+  }, [sorted, searchQuery]);
+
+  const unfiledPages = filtered.filter((p) => p.folderId === null);
+
+  const toggleFolderCollapse = useCallback((folderId: string) => {
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) next.delete(folderId);
+      else next.add(folderId);
+      return next;
+    });
+  }, []);
+
+  const sortLabel = sortKey === "title" ? "Title" : sortKey === "views" ? "Views" : "Updated";
+
   return (
     <div className="dash-root">
-      {selected.size > 0 && (
-        <BulkBar
-          count={selected.size}
-          folders={folders}
-          onDelete={handleBulkDelete}
-          onMove={(folderId) => bulkAction("move", { folderId })}
-          onVisibility={(visibility) => bulkAction("visibility", { visibility })}
-          onClear={() => setSelected(new Set())}
-        />
-      )}
-
       <div className="dash-toolbar">
-        <SearchBar />
+        <div className="search-bar">
+          <div className="search-bar-input-wrap">
+            <svg className="search-bar-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M10 10L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <input
+              className="search-bar-input"
+              type="text"
+              placeholder="Filter pages&hellip;"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Escape") setSearchQuery(""); }}
+              aria-label="Filter pages"
+              autoComplete="off"
+            />
+            {searchQuery && (
+              <button className="search-bar-clear" onClick={() => setSearchQuery("")} aria-label="Clear filter">&times;</button>
+            )}
+          </div>
+        </div>
         <DashActions
           sortKey={sortKey}
           onSort={setSortKey}
@@ -502,58 +319,125 @@ export function DashboardClient({ pages, folders, pageCount }: DashboardClientPr
 
       {view === "feed" ? (
         <div className="dash-workspace">
-          <DashboardFeed pages={sorted} />
+          <DashboardFeed pages={filtered} />
         </div>
       ) : (
-        <>
-          {unfiledPages.length > 0 && (
-            <div className="dash-workspace">
-              <div className="dash-workspace-header">
-                <span className="dash-workspace-label">Unfiled</span>
-                <span className="dash-workspace-count">
-                  {unfiledPages.length} page{unfiledPages.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-              <PageTable
-                pages={unfiledPages}
-                folders={folders}
-                selected={selected}
-                onToggle={toggleSlug}
-                onToggleAll={toggleAll}
-                sortKey={sortKey}
-              />
-            </div>
-          )}
-
-          {folders.map((folder) => {
-            const folderPages = sorted.filter((p) => p.folderId === folder.id);
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th className="dash-th dash-th-title">Title</th>
+              <th className="dash-th">{sortLabel}</th>
+              <th className="dash-th dash-th-right">Views</th>
+              <th className="dash-th dash-th-right">Annotations</th>
+              <th className="dash-th dash-th-actions"></th>
+            </tr>
+          </thead>
+          {unfiledPages.length > 0 && (() => {
+            const isCollapsed = collapsedFolders.has("__unfiled");
             return (
-              <div key={folder.id} className="dash-workspace">
-                <div className="dash-folder-header">
-                  <span className="dash-folder-toggle">&#9660;</span>
-                  <span className="dash-workspace-label">{folder.name}</span>
-                  <span className="dash-workspace-count">
-                    {folderPages.length} page{folderPages.length !== 1 ? "s" : ""}
-                  </span>
-                  <span
-                    className={`dash-visibility-badge dash-visibility-badge--${folder.visibility}`}
-                  >
-                    {folder.visibility}
-                  </span>
-                  <FolderMenu folder={folder} />
-                </div>
-                <PageTable
-                  pages={folderPages}
-                  folders={folders}
-                  selected={selected}
-                  onToggle={toggleSlug}
-                  onToggleAll={toggleAll}
-                  sortKey={sortKey}
-                />
-              </div>
+              <tbody>
+                <tr
+                  className={`dash-folder-row${isCollapsed ? " dash-folder-row--collapsed" : ""}`}
+                  onClick={() => toggleFolderCollapse("__unfiled")}
+                >
+                  <td colSpan={5} className="dash-folder-td">
+                    <div className="dash-folder-row-inner">
+                      <span className="dash-folder-chevron">&#9660;</span>
+                      <span className="dash-folder-name">No Folder</span>
+                      <span className="dash-folder-count">
+                        {unfiledPages.length} page{unfiledPages.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                {!isCollapsed && unfiledPages.map((page) => (
+                  <tr key={page.slug} className="dash-row dash-row--nested">
+                    <td className="dash-td dash-td-title">
+                      <Link href={`/pages/${page.slug}`} className="dash-page-link">
+                        {page.title}
+                      </Link>
+                    </td>
+                    <td className="dash-td dash-td-muted">{formatDate(page.lastActivity)}</td>
+                    <td className="dash-td dash-td-right dash-td-muted">
+                      {page.viewCount > 0 ? page.viewCount : <span className="dash-none">&mdash;</span>}
+                    </td>
+                    <td className="dash-td dash-td-right">
+                      {page.annotationCount > 0 ? (
+                        <span className="dash-ann-count">{page.annotationCount}</span>
+                      ) : (
+                        <span className="dash-none">&mdash;</span>
+                      )}
+                    </td>
+                    <td className="dash-td dash-td-actions">
+                      <PageMenu
+                        slug={page.slug}
+                        title={page.title}
+                        visibility={page.visibility}
+                        folderId={page.folderId}
+                        folders={folders}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            );
+          })()}
+          {folders.map((folder) => {
+            const folderPages = filtered.filter((p) => p.folderId === folder.id);
+            if (folderPages.length === 0 && searchQuery.trim()) return null;
+            const isCollapsed = collapsedFolders.has(folder.id);
+            return (
+              <tbody key={folder.id}>
+                <tr
+                  className={`dash-folder-row${isCollapsed ? " dash-folder-row--collapsed" : ""}`}
+                  onClick={() => toggleFolderCollapse(folder.id)}
+                >
+                  <td colSpan={5} className="dash-folder-td">
+                    <div className="dash-folder-row-inner">
+                      <span className="dash-folder-chevron">&#9660;</span>
+                      <span className="dash-folder-name">{folder.name}</span>
+                      <span className="dash-folder-count">
+                        {folderPages.length} page{folderPages.length !== 1 ? "s" : ""}
+                      </span>
+                      <span className="dash-folder-menu" onClick={(e) => e.stopPropagation()}>
+                        <FolderMenu folder={folder} />
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                {!isCollapsed && folderPages.map((page) => (
+                  <tr key={page.slug} className="dash-row dash-row--nested">
+                    <td className="dash-td dash-td-title">
+                      <Link href={`/pages/${page.slug}`} className="dash-page-link">
+                        {page.title}
+                      </Link>
+                    </td>
+                    <td className="dash-td dash-td-muted">{formatDate(page.lastActivity)}</td>
+                    <td className="dash-td dash-td-right dash-td-muted">
+                      {page.viewCount > 0 ? page.viewCount : <span className="dash-none">&mdash;</span>}
+                    </td>
+                    <td className="dash-td dash-td-right">
+                      {page.annotationCount > 0 ? (
+                        <span className="dash-ann-count">{page.annotationCount}</span>
+                      ) : (
+                        <span className="dash-none">&mdash;</span>
+                      )}
+                    </td>
+                    <td className="dash-td dash-td-actions">
+                      <PageMenu
+                        slug={page.slug}
+                        title={page.title}
+                        visibility={page.visibility}
+                        folderId={page.folderId}
+                        folders={folders}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
             );
           })}
-        </>
+        </table>
       )}
     </div>
   );

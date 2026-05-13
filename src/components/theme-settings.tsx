@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { normalizeLegacyTheme } from "@/lib/theme";
+import { basePath } from "@/lib/api-fetch";
 
 const COLORS = [
   { value: "red", label: "Red", color: "#BB7777" },
   { value: "orange", label: "Orange", color: "#BB8C66" },
   { value: "yellow", label: "Yellow", color: "#B8A866" },
   { value: "green", label: "Green", color: "#7A9878" },
+  { value: "teal", label: "Teal", color: "#3CCECE" },
   { value: "blue", label: "Blue", color: "#7897B8" },
   { value: "indigo", label: "Indigo", color: "#8A7FBB" },
   { value: "violet", label: "Violet", color: "#AB7FBB" },
@@ -66,7 +68,7 @@ export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
     setSaving(true);
     setSaved(false);
     try {
-      const res = await fetch("/api/org-settings", {
+      const res = await fetch(`${basePath}/api/org-settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ theme: color, mode, texture, glow }),

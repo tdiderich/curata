@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { basePath } from "@/lib/api-fetch";
 
 interface Member {
   id: string;
-  clerkUserId: string;
+  userId: string;
   email: string | null;
   role: string;
 }
@@ -26,7 +27,7 @@ export function MemberList({ canManage, currentUserId }: MemberListProps) {
 
   async function load() {
     try {
-      const res = await fetch("/api/members");
+      const res = await fetch(`${basePath}/api/members`);
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
         setError(data.error ?? "Failed to load members");
@@ -48,7 +49,7 @@ export function MemberList({ canManage, currentUserId }: MemberListProps) {
   async function changeRole(memberId: string, role: string) {
     setBusy(memberId);
     try {
-      const res = await fetch("/api/members", {
+      const res = await fetch(`${basePath}/api/members`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberId, role }),
@@ -70,7 +71,7 @@ export function MemberList({ canManage, currentUserId }: MemberListProps) {
   async function removeMember(memberId: string) {
     setBusy(memberId);
     try {
-      const res = await fetch("/api/members", {
+      const res = await fetch(`${basePath}/api/members`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberId }),
@@ -108,13 +109,13 @@ export function MemberList({ canManage, currentUserId }: MemberListProps) {
       </thead>
       <tbody>
         {members.map((m) => {
-          const isSelf = m.clerkUserId === currentUserId;
+          const isSelf = m.userId === currentUserId;
           const isBusy = busy === m.id;
           return (
             <tr key={m.id} className="dash-row">
               <td className="dash-td dash-td-title">
                 <span className="members-email">
-                  {m.email ?? m.clerkUserId.slice(0, 16) + "…"}
+                  {m.email ?? m.userId.slice(0, 16) + "…"}
                 </span>
                 {isSelf && <span className="members-self-badge">you</span>}
               </td>

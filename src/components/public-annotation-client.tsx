@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageContent } from "./page-viewer";
+import { basePath } from "@/lib/api-fetch";
 
 interface Annotation {
   id: string;
@@ -160,7 +161,7 @@ export default function PublicAnnotationClient({
     if (!formState || !formText.trim()) return;
     setSubmitting(true);
 
-    await fetch("/api/public-annotations", {
+    await fetch(`${basePath}/api/public-annotations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

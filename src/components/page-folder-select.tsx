@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { basePath } from "@/lib/api-fetch";
 
 interface FolderOption {
   id: string;
@@ -27,7 +28,7 @@ export function PageFolderSelect({
     const newFolderId = value === "" ? null : value;
     setBusy(true);
     try {
-      const res = await fetch("/api/pages", {
+      const res = await fetch(`${basePath}/api/pages`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, folderId: newFolderId }),
@@ -84,7 +85,7 @@ export function VisibilityBadge({ slug, visibility }: VisibilityBadgeProps) {
     const next = VISIBILITY_CYCLE[current] ?? "personal";
     setBusy(true);
     try {
-      const res = await fetch("/api/pages", {
+      const res = await fetch(`${basePath}/api/pages`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, visibility: next }),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { basePath } from "@/lib/api-fetch";
 
 interface ApiKeyRow {
   id: string;
@@ -42,7 +43,7 @@ export function ApiKeyManager() {
   const [keyCopied, setKeyCopied] = useState(false);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/keys");
+    const res = await fetch(`${basePath}/api/keys`);
     if (res.ok) {
       const data = (await res.json()) as ApiKeyRow[];
       setKeys(data);
@@ -58,7 +59,7 @@ export function ApiKeyManager() {
     if (!name.trim()) return;
     setCreating(true);
     try {
-      const res = await fetch("/api/keys", {
+      const res = await fetch(`${basePath}/api/keys`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), expiresIn }),
@@ -78,7 +79,7 @@ export function ApiKeyManager() {
   async function revoke(id: string) {
     setBusy(id);
     try {
-      await fetch("/api/keys", {
+      await fetch(`${basePath}/api/keys`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),

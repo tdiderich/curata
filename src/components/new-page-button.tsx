@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TEMPLATES, PERSONAS } from "@/lib/templates";
+import { basePath } from "@/lib/api-fetch";
 
 type Step = "template" | "details";
 
@@ -58,7 +59,7 @@ export function NewPageButton() {
       body.shell = shell;
     }
 
-    const res = await fetch("/api/pages", {
+    const res = await fetch(`${basePath}/api/pages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
+import { basePath } from "@/lib/api-fetch";
 
 let _nextId = 0;
 const nextId = () => "eid-" + _nextId++;
@@ -547,7 +548,7 @@ export default function PageEditor({
     };
 
     try {
-      const res = await fetch("/api/pages/content", {
+      const res = await fetch(`${basePath}/api/pages/content`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

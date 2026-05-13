@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { basePath } from "@/lib/api-fetch";
 
 interface OrgSettingsProps {
   canManage: boolean;
@@ -37,7 +38,7 @@ export function OrgSettings({ canManage, isPersonalDomain, initial }: OrgSetting
       if (!isPersonalDomain) {
         body.domain = domain.trim();
       }
-      const res = await fetch("/api/org-settings", {
+      const res = await fetch(`${basePath}/api/org-settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

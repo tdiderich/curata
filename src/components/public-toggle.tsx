@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { basePath } from "@/lib/api-fetch";
 
 export function PublicToggle({
   slug,
@@ -24,7 +25,7 @@ export function PublicToggle({
     const next = on ? "shared" : "public";
     setBusy(true);
     try {
-      const res = await fetch("/api/pages", {
+      const res = await fetch(`${basePath}/api/pages`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, visibility: next }),

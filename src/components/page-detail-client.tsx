@@ -8,6 +8,7 @@ import { PageContent } from "./page-viewer";
 import { PublicToggle } from "./public-toggle";
 import VersionHistory from "./version-history";
 import AgentConnectModal from "./agent-connect-modal";
+import { basePath } from "@/lib/api-fetch";
 
 interface Annotation {
   id: string;
@@ -217,7 +218,7 @@ export default function PageDetailClient({
 
   const updateStatus = useCallback(
     async (id: string, status: "approved" | "incorporated" | "ignored") => {
-      await fetch("/api/annotations", {
+      await fetch(`${basePath}/api/annotations`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, id, status }),
@@ -257,7 +258,7 @@ export default function PageDetailClient({
     setSubmitting(true);
 
     if (isEdit) {
-      await fetch("/api/edit", {
+      await fetch(`${basePath}/api/edit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -267,7 +268,7 @@ export default function PageDetailClient({
         }),
       });
     } else {
-      await fetch("/api/annotations", {
+      await fetch(`${basePath}/api/annotations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
