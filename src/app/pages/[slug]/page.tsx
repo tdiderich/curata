@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { resolveOrg } from "@/lib/auth";
+import { resolveOrg, AUTH_MODE } from "@/lib/auth";
 import { getAnnotations, getPageSections, readPage } from "@/lib/pages";
 import { PageRenderer } from "@/generated/kazam-renderer";
 import PageDetailClient from "@/components/page-detail-client";
@@ -95,6 +95,7 @@ export default async function PageDetailView({
         orgSlug={ctx.orgSlug}
         isPublic={pageData.visibility === "public"}
         autoConnect={slug === "getting-started"}
+        authMode={AUTH_MODE}
       >
         <div className="page-detail-content">
           {page.shell !== "deck" && (

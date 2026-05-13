@@ -100,6 +100,7 @@ export default function PageDetailClient({
   orgSlug,
   isPublic,
   autoConnect,
+  authMode = "none",
 }: {
   slug: string;
   children?: React.ReactNode;
@@ -109,6 +110,7 @@ export default function PageDetailClient({
   orgSlug: string;
   isPublic: boolean;
   autoConnect: boolean;
+  authMode?: string;
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -306,7 +308,7 @@ export default function PageDetailClient({
               {mode === "annotate" ? "Annotating" : "Editing"}
             </span>
           </button>
-          <PublicToggle slug={slug} orgSlug={orgSlug} isPublic={isPublic} />
+          {authMode !== "none" && <PublicToggle slug={slug} orgSlug={orgSlug} isPublic={isPublic} />}
           <div className="page-toolbar-divider" />
           <div className="page-actions-wrap" ref={actionsRef}>
             <button

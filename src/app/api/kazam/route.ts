@@ -38,6 +38,12 @@ async function resolveAuth(request: NextRequest) {
     return { orgId: "dev", orgSlug: "dev", scopes: ["read", "write"] };
   }
 
+  if ((process.env.AUTH_MODE ?? "none") === "none") {
+    const org = await db.organization.findFirst({ orderBy: { createdAt: "asc" } });
+    if (!org) return null;
+    return { orgId: org.id, orgSlug: org.slug, scopes: ["read", "write"], keyPrefix: "noauth" };
+  }
+
   const authHeader = request.headers.get("authorization") || "";
   if (!authHeader.startsWith("Bearer ")) return null;
 

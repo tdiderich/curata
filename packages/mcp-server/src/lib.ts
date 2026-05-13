@@ -25,12 +25,11 @@ export async function callApi(
 ): Promise<ApiResponse> {
   const url = `${baseUrl}/api/kazam`;
   try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
     const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
+      headers,
       body: JSON.stringify({ tool, args }),
       signal: AbortSignal.timeout(30_000),
     });

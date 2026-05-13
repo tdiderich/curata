@@ -22,7 +22,7 @@ export interface CurrentUser {
   name: string;
 }
 
-const AUTH_MODE = process.env.AUTH_MODE ?? "none";
+export const AUTH_MODE = process.env.AUTH_MODE ?? "none";
 
 // Static default user for no-auth mode
 const DEFAULT_USER: CurrentUser = {

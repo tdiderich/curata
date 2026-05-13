@@ -15,12 +15,12 @@ export function slugify(title) {
 export async function callApi(baseUrl, apiKey, tool, args) {
     const url = `${baseUrl}/api/kazam`;
     try {
+        const headers = { "Content-Type": "application/json" };
+        if (apiKey)
+            headers["Authorization"] = `Bearer ${apiKey}`;
         const res = await fetch(url, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`,
-            },
+            headers,
             body: JSON.stringify({ tool, args }),
             signal: AbortSignal.timeout(30_000),
         });

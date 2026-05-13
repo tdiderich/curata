@@ -3,10 +3,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { slugify, callApi, formatSearchResults, formatPageList, formatPageDetail } from "./lib.js";
-const CURATA_API_KEY = process.env.CURATA_API_KEY;
+const CURATA_API_KEY = process.env.CURATA_API_KEY || "";
 const CURATA_URL = (process.env.CURATA_URL || "https://curata.ai").replace(/\/$/, "");
-if (!CURATA_API_KEY) {
-    process.stderr.write("Error: CURATA_API_KEY environment variable is required.\n" +
+const NO_AUTH = !CURATA_API_KEY;
+if (!CURATA_API_KEY && !process.env.CURATA_URL) {
+    process.stderr.write("Error: CURATA_API_KEY is required (or set CURATA_URL for a no-auth instance).\n" +
         "Get your API key from your curata dashboard: Settings → API Keys\n");
     process.exit(1);
 }
