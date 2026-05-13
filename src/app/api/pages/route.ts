@@ -84,14 +84,19 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    const body = (await request.json()) as { slug?: string };
+    const url = new URL(request.url);
+    let slug = url.searchParams.get("slug");
+    if (!slug) {
+      const body = (await request.json().catch(() => ({}))) as { slug?: string };
+      slug = body.slug ?? null;
+    }
 
-    if (!body.slug) {
+    if (!slug) {
       return NextResponse.json({ error: "slug is required" }, { status: 400 });
     }
 
     const page = await db.page.findUnique({
-      where: { orgId_slug: { orgId: ctx.orgId, slug: body.slug } },
+      where: { orgId_slug: { orgId: ctx.orgId, slug } },
     });
 
     if (!page) {
