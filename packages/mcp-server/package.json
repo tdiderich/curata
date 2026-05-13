@@ -30,7 +30,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tdiderich/curata-app",
+    "url": "https://github.com/tdiderich/curata",
     "directory": "packages/mcp-server"
   },
   "keywords": [

@@ -38,7 +38,6 @@ export async function createTestPage(
       slug: "test-page",
       title: "Test Page",
       createdBy: "test-user",
-      syncStatus: "pending",
       versions: {
         create: {
           yamlContent: content,

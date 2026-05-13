@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const reconciled = globalThis.__reconciled ?? false;
+  const reconciled = (globalThis as Record<string, unknown>).__reconciled ?? false;
 
   if (!reconciled) {
     return NextResponse.json(

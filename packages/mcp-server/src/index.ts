@@ -6,7 +6,7 @@ import { z } from "zod";
 import { slugify, callApi, formatSearchResults, formatPageList, formatPageDetail } from "./lib.js";
 
 const CURATA_API_KEY = process.env.CURATA_API_KEY || "";
-const CURATA_URL = (process.env.CURATA_URL || "https://curata.ai").replace(/\/$/, "");
+const CURATA_URL = (process.env.CURATA_URL || "http://localhost:3000").replace(/\/$/, "");
 const NO_AUTH = !CURATA_API_KEY;
 
 if (!CURATA_API_KEY && !process.env.CURATA_URL) {

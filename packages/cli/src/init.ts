@@ -12,7 +12,7 @@ SITES_ROOT={SITES_ROOT}
 
 const DOCKER_COMPOSE = `services:
   app:
-    image: ghcr.io/tdiderich/curata-app:latest
+    image: ghcr.io/tdiderich/curata:latest
     ports:
       - "3000:3000"
     environment:
@@ -63,7 +63,7 @@ export async function runInit(): Promise<void> {
     try {
       const authModeInput = await prompt(
         rl,
-        "AUTH_MODE [none/clerk] (default: none): "
+        "AUTH_MODE [none/oauth] (default: none): "
       );
       if (authModeInput.trim()) authMode = authModeInput.trim();
 

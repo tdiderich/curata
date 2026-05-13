@@ -41,6 +41,11 @@ export default async function middleware(request: NextRequest) {
     const now = Date.now();
     const entry = agentHits.get(key);
     if (!entry || now > entry.reset) {
+      if (agentHits.size > 10_000) {
+        for (const [k, v] of agentHits) {
+          if (now > v.reset) agentHits.delete(k);
+        }
+      }
       agentHits.set(key, { count: 1, reset: now + RATE_LIMIT_WINDOW });
     } else {
       entry.count++;

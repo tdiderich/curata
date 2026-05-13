@@ -1,6 +1,6 @@
 #!/bin/sh
 echo "[entrypoint] running prisma db push..."
-npx prisma db push --accept-data-loss 2>&1
+npx prisma db push 2>&1
 PUSH_EXIT=$?
 if [ $PUSH_EXIT -ne 0 ]; then
   echo "[entrypoint] WARNING: prisma db push failed (exit $PUSH_EXIT)"

@@ -115,7 +115,7 @@ describe("pages", () => {
       expect(slugs).toContain("list-page-2");
       for (const p of pages) {
         expect(p).toHaveProperty("title");
-        expect(p).toHaveProperty("syncStatus");
+        expect(p).toHaveProperty("visibility");
         expect(p).toHaveProperty("annotationCount");
         expect(p).toHaveProperty("updatedAt");
       }
