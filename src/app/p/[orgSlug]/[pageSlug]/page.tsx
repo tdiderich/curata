@@ -97,12 +97,14 @@ export default async function PublicPageView({ params }: Props) {
           isSignedIn={isSignedIn}
         >
           <div className="page-detail-content">
-            <div className="c-header">
-              <h1 className="c-header-title">{pageTitle}</h1>
-              {typeof pageData.json.subtitle === "string" && (
-                <p className="c-header-subtitle">{pageData.json.subtitle}</p>
-              )}
-            </div>
+            {(pageData.json.shell as string) !== "deck" && (
+              <div className="c-header">
+                <h1 className="c-header-title">{pageTitle}</h1>
+                {typeof pageData.json.subtitle === "string" && (
+                  <p className="c-header-subtitle">{pageData.json.subtitle}</p>
+                )}
+              </div>
+            )}
             <PageRenderer
               page={{
                 title: pageTitle,
@@ -112,6 +114,13 @@ export default async function PublicPageView({ params }: Props) {
                   type: string;
                   [key: string]: unknown;
                 }>,
+                slides: (pageData.json.slides as Array<{
+                  label: string;
+                  hide_label?: boolean;
+                  cover?: boolean;
+                  components?: Array<{ type: string; [key: string]: unknown }>;
+                }>) || undefined,
+                freshness: pageData.json.freshness as { updated?: string; review_every?: string; owner?: string; expires?: string } | "never" | undefined,
               }}
             />
           </div>

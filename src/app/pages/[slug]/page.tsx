@@ -76,6 +76,13 @@ export default async function PageDetailView({
       type: string;
       [key: string]: unknown;
     }>,
+    slides: (pageData.json.slides as Array<{
+      label: string;
+      hide_label?: boolean;
+      cover?: boolean;
+      components?: Array<{ type: string; [key: string]: unknown }>;
+    }>) || undefined,
+    freshness: pageData.json.freshness as { updated?: string; review_every?: string; owner?: string; expires?: string } | "never" | undefined,
   };
 
   return (
@@ -90,12 +97,14 @@ export default async function PageDetailView({
         autoConnect={slug === "getting-started"}
       >
         <div className="page-detail-content">
-          <div className="c-header">
-            <h1 className="c-header-title">{page.title}</h1>
-            {page.subtitle && (
-              <p className="c-header-subtitle">{page.subtitle}</p>
-            )}
-          </div>
+          {page.shell !== "deck" && (
+            <div className="c-header">
+              <h1 className="c-header-title">{page.title}</h1>
+              {page.subtitle && (
+                <p className="c-header-subtitle">{page.subtitle}</p>
+              )}
+            </div>
+          )}
           <PageRenderer page={page} />
         </div>
       </PageDetailClient>
