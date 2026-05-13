@@ -117,6 +117,7 @@ export default function PageDetailClient({
   const [showResolved, setShowResolved] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [expandAll, setExpandAll] = useState(false);
   const [annPositions, setAnnPositions] = useState(
     new Map<string, number>(),
@@ -417,8 +418,8 @@ export default function PageDetailClient({
                 key={ann.id}
                 className="ann-marker"
                 style={{ top: y }}
-                onMouseEnter={() => setHoveredId(ann.id)}
-                onMouseLeave={() => setHoveredId(null)}
+                onMouseEnter={() => { if (hoverTimeout.current) clearTimeout(hoverTimeout.current); setHoveredId(ann.id); }}
+                onMouseLeave={() => { hoverTimeout.current = setTimeout(() => setHoveredId(null), 300); }}
               >
                 <button
                   className={`ann-bubble${done ? " ann-bubble--resolved" : ""}${ann.status === "approved" ? " ann-bubble--approved" : ""}${ann.source === "agent" ? " ann-bubble--agent" : ""}`}

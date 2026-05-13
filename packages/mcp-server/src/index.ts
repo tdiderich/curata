@@ -130,6 +130,54 @@ server.tool(
   }
 );
 
+server.tool(
+  "update_annotation",
+  "Update the status of a single annotation on a page. Use after reviewing an annotation to approve, ignore, or mark it as incorporated.",
+  {
+    slug: z.string().describe("Page slug containing the annotation"),
+    id: z.string().describe("Annotation ID (shown in read_page output)"),
+    status: z.enum(["approved", "ignored", "incorporated"]).describe("New status: 'approved' to accept, 'ignored' to dismiss, 'incorporated' when changes have been applied"),
+  },
+  async ({ slug, id, status }) => {
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "update_annotation", { slug, id, status });
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    return { content: [{ type: "text" as const, text: `Annotation ${id} on "${slug}" marked as ${status}` }] };
+  }
+);
+
+server.tool(
+  "resolve_annotations",
+  "Mark all pending annotations on a page as incorporated. Use after processing all feedback and updating the page content.",
+  {
+    slug: z.string().describe("Page slug to clear annotations for"),
+    status: z.enum(["approved", "ignored", "incorporated"]).optional().describe("Status to set (default: 'incorporated')"),
+  },
+  async ({ slug, status: targetStatus }) => {
+    const resolveAs = targetStatus || "incorporated";
+    const listResult = await callApi(CURATA_URL, CURATA_API_KEY, "list_annotations", { slug });
+    if (listResult.error) {
+      return { content: [{ type: "text" as const, text: `Error listing annotations: ${listResult.error}` }], isError: true };
+    }
+    const annotations = listResult.result as Array<{ id: string; status: string }>;
+    const pending = annotations.filter((a) => a.status === "pending" || a.status === "approved");
+    if (pending.length === 0) {
+      return { content: [{ type: "text" as const, text: `No pending annotations on "${slug}"` }] };
+    }
+    let resolved = 0;
+    let failed = 0;
+    for (const ann of pending) {
+      const r = await callApi(CURATA_URL, CURATA_API_KEY, "update_annotation", { slug, id: ann.id, status: resolveAs });
+      if (r.error) failed++;
+      else resolved++;
+    }
+    const msg = `Resolved ${resolved} annotation${resolved !== 1 ? "s" : ""} on "${slug}" as ${resolveAs}` +
+      (failed > 0 ? ` (${failed} failed)` : "");
+    return { content: [{ type: "text" as const, text: msg }] };
+  }
+);
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);

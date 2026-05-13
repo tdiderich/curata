@@ -4,6 +4,30 @@ import { can } from "@/lib/permissions";
 import { writePageJson } from "@/lib/pages";
 import { db } from "@/lib/db";
 
+export async function GET(request: NextRequest) {
+  const ctx = await resolveOrg();
+  if (!ctx) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const slug = request.nextUrl.searchParams.get("slug");
+  if (!slug) {
+    return NextResponse.json({ error: "slug is required" }, { status: 400 });
+  }
+
+  const version = await db.pageVersion.findFirst({
+    where: { page: { orgId: ctx.orgId, slug } },
+    orderBy: { createdAt: "desc" },
+    select: { contentHash: true },
+  });
+
+  if (!version) {
+    return NextResponse.json({ error: "page not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ contentHash: version.contentHash });
+}
+
 export async function PUT(request: NextRequest) {
   const ctx = await resolveOrg();
   if (!ctx) {

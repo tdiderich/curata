@@ -112,7 +112,7 @@ export function formatPageDetail(page) {
         for (const a of annotations) {
             const status = a.status || "pending";
             const kind = a.kind || "note";
-            lines.push(`- [${status}] (${kind}) by ${a.author}: ${a.text}`);
+            lines.push(`- [${status}] (${kind}) id=${a.id} by ${a.author}: ${a.text}`);
             if (a.section)
                 lines.push(`  Section: ${a.section}`);
         }

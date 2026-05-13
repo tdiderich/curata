@@ -487,7 +487,7 @@ function TableEditor({
 export default function PageEditor({
   slug,
   initial,
-  contentHash,
+  contentHash: initialHash,
 }: {
   slug: string;
   initial: PageJson;
@@ -497,6 +497,7 @@ export default function PageEditor({
   const [page, setPage] = useState<PageJson>(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [currentHash, setCurrentHash] = useState(initialHash);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
 
   const updateComponent = useCallback((index: number, data: ComponentData) => {
@@ -548,25 +549,39 @@ export default function PageEditor({
     };
 
     try {
-      const res = await fetch(`${basePath}/api/pages/content`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug,
-          json: clean,
-          expectedHash: contentHash,
-        }),
-      });
+      let hash = currentHash;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const res = await fetch(`${basePath}/api/pages/content`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slug,
+            json: clean,
+            expectedHash: hash,
+          }),
+        });
 
-      if (!res.ok) {
+        if (res.ok) {
+          setSaving(false);
+          router.push(`/pages/${slug}`);
+          return;
+        }
+
+        if (res.status === 409 && attempt === 0) {
+          const latest = await fetch(`${basePath}/api/pages/content?slug=${encodeURIComponent(slug)}`);
+          if (latest.ok) {
+            const data = await latest.json();
+            hash = data.contentHash;
+            setCurrentHash(hash);
+            continue;
+          }
+        }
+
         const data = await res.json();
         setError(data.error || "Save failed");
         setSaving(false);
         return;
       }
-
-      setSaving(false);
-      router.push(`/pages/${slug}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error");
       setSaving(false);
