@@ -1,8 +1,4 @@
-import fs from "fs/promises";
-import path from "path";
-import yaml from "js-yaml";
 import { db } from "./db";
-import { sitePath } from "./kazam";
 import { seedGettingStartedPage } from "./seed-page";
 import { generateFunSlug } from "./slug-words";
 
@@ -36,11 +32,6 @@ export async function seedOrg(name: string, slug?: string): Promise<{ id: string
   }
 
   if (!org) throw new Error("Failed to create org after retries");
-
-  // Create site directory + kazam.yaml
-  const dir = sitePath(org.slug);
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(path.join(dir, "kazam.yaml"), yaml.dump({ name }), "utf8");
 
   // Seed getting-started page
   await seedGettingStartedPage(org.id, "system").catch(err =>

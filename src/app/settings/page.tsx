@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Settings — curata" };
 import { resolveOrg, resolveCurrentUser } from "@/lib/auth";
+import { seedOrg } from "@/lib/seed";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { isPersonalEmailDomain } from "@/lib/personal-domains";
@@ -13,7 +15,11 @@ import { ThemeSettings } from "@/components/theme-settings";
 import { ApiKeyManager } from "@/components/api-key-manager";
 
 export default async function SettingsPage() {
-  const ctx = await resolveOrg();
+  let ctx = await resolveOrg();
+  if (!ctx) {
+    await seedOrg("curata");
+    ctx = await resolveOrg();
+  }
   if (!ctx) redirect("/sign-in");
 
   const canManage = can(ctx.role, "member:manage");
