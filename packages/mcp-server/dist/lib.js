@@ -13,7 +13,7 @@ export function slugify(title) {
         .slice(0, 80) || "untitled";
 }
 export async function callApi(baseUrl, apiKey, tool, args) {
-    const url = `${baseUrl}/api/kazam`;
+    const url = `${baseUrl}/api/mcp`;
     try {
         const headers = { "Content-Type": "application/json" };
         if (apiKey)
@@ -79,7 +79,8 @@ export function formatPageList(pages) {
         const views = p.viewCount || 0;
         const annotations = p.annotationCount || 0;
         const updated = p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : "unknown";
-        lines.push(`- **${p.title}** (slug: ${p.slug})`);
+        const folder = p.folderName ? ` [${p.folderName}]` : "";
+        lines.push(`- **${p.title}** (slug: ${p.slug})${folder}`);
         lines.push(`  Updated: ${updated} | Views: ${views} | Annotations: ${annotations}`);
     }
     return lines.join("\n");

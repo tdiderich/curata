@@ -59,7 +59,7 @@ describe("callApi", () => {
     await callApi("https://curata.ai", "ck_test123", "search", { query: "hello" });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://curata.ai/api/kazam",
+      "https://curata.ai/api/mcp",
       expect.objectContaining({
         method: "POST",
         headers: {

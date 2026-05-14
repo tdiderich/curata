@@ -23,7 +23,7 @@ export async function callApi(
   tool: string,
   args: Record<string, string>
 ): Promise<ApiResponse> {
-  const url = `${baseUrl}/api/kazam`;
+  const url = `${baseUrl}/api/mcp`;
   try {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
