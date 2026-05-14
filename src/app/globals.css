@@ -1274,6 +1274,37 @@ body .c-section.align-right > * { max-width: none !important; }
 
 /* ── Dashboard toolbar (search + actions) ── */
 
+.dash-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 10px;
+  font-size: 12px;
+}
+
+.dash-breadcrumb-link {
+  background: none;
+  border: none;
+  color: var(--teal);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 0;
+}
+
+.dash-breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.dash-breadcrumb-sep {
+  color: rgba(var(--text-rgb), 0.25);
+}
+
+.dash-breadcrumb-current {
+  color: rgba(var(--text-rgb), 0.5);
+  font-weight: 600;
+}
+
 .dash-toolbar {
   display: flex;
   align-items: center;
@@ -1509,6 +1540,35 @@ body .c-section.align-right > * { max-width: none !important; }
   padding-left: 24px;
 }
 
+.dash-row--deep .dash-td-title {
+  padding-left: 48px;
+}
+
+.dash-folder-row--child .dash-folder-td {
+  background: rgba(var(--text-rgb), 0.015);
+}
+
+.dash-folder-row-inner--child {
+  padding-left: 20px;
+}
+
+.dash-folder-row--child .dash-folder-name {
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.dash-folder-drill-hint {
+  color: rgba(var(--text-rgb), 0.25);
+  font-size: 14px;
+  transition: color 0.15s;
+}
+
+.dash-folder-row--drillable:hover .dash-folder-drill-hint {
+  color: var(--teal);
+}
+
 /* ── Visibility badge ── */
 
 .dash-visibility-badge {
@@ -1606,6 +1666,49 @@ body .c-section.align-right > * { max-width: none !important; }
 .dash-folder-actions-item:hover {
   background: rgba(var(--text-rgb), 0.05);
   color: var(--snow);
+}
+
+.dash-folder-actions-item--active {
+  color: var(--snow);
+}
+
+.dash-folder-actions-move-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.dash-folder-actions-move-target {
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-folder-actions-drill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  background: none;
+  border: none;
+  border-left: 1px solid rgba(var(--text-rgb), 0.08);
+  color: rgba(var(--text-rgb), 0.4);
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s, color 0.1s;
+}
+
+.dash-folder-actions-drill:hover {
+  background: rgba(var(--text-rgb), 0.08);
+  color: var(--snow);
+}
+
+.dash-folder-actions-back {
+  color: rgba(var(--text-rgb), 0.4);
+  font-size: 11px;
+}
+
+.dash-folder-actions-arrow {
+  margin-right: 6px;
 }
 
 .dash-folder-actions-item--danger:hover {
@@ -2069,7 +2172,8 @@ body .c-section.align-right > * { max-width: none !important; }
   color: var(--snow);
   font-size: 12px;
   font-family: inherit;
-  width: 180px;
+  flex: 1;
+  min-width: 0;
 }
 
 .search-bar-input::placeholder {
@@ -2624,18 +2728,19 @@ body .c-section.align-right > * { max-width: none !important; }
 .new-page-btn {
   font-size: 12px;
   font-weight: 600;
-  color: var(--teal);
-  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  color: var(--light-muted);
+  border: 1px solid rgba(var(--text-rgb), 0.15);
   border-radius: 6px;
   padding: 4px 12px;
-  background: rgba(var(--accent-rgb), 0.08);
+  background: none;
   cursor: pointer;
-  transition: all 0.15s;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s;
 }
 
 .new-page-btn:hover {
-  background: rgba(var(--accent-rgb), 0.16);
-  border-color: rgba(var(--accent-rgb), 0.5);
+  color: var(--teal);
+  border-color: rgba(var(--accent-rgb), 0.4);
 }
 
 .new-page-modal-overlay {

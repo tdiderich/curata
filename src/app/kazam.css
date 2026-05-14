@@ -1899,14 +1899,11 @@ body.shell-document .doc-body strong { color: #fff; }
 .c-chart-axis-y { text-anchor: end; }
 .c-chart-axis-y-right { text-anchor: end; }
 .c-chart-axis-x { text-anchor: middle; }
-.c-chart-bar {
-  rx: 2px;
-  transition: opacity 0.15s;
-}
-.c-chart-bar:hover, .c-chart-slice:hover, .c-chart-dot:hover { opacity: 0.85; }
+.c-chart-bar { rx: 2px; }
 .c-chart-slice { stroke: var(--bg); stroke-width: 2; }
+.c-chart-dot { transition: r 0.12s; }
+.c-chart-dot:hover { r: 6; }
 .c-chart-line { pointer-events: none; }
-.c-chart-dot { cursor: default; }
 .c-chart-empty {
   fill: rgba(var(--text-rgb),0.35);
   font-size: 13px;
