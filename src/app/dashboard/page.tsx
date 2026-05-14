@@ -8,10 +8,7 @@ import { DashboardClient, SerializedPageMeta } from "@/components/dashboard-clie
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
-  const ctx = await resolveOrg();
-  if (!ctx) return { title: "Dashboard" };
-  const org = await db.organization.findUnique({ where: { id: ctx.orgId }, select: { name: true } });
-  return { title: `Dashboard — ${org?.name ?? "curata"}` };
+  return { title: "Dashboard" };
 }
 
 interface FolderRow {
