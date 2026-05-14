@@ -1,12 +1,21 @@
 # @curata/mcp-server
 
+> **Note:** curata now includes a built-in MCP server via SSE. You no longer need this package. Just point your MCP client at `http://your-curata-url/api/mcp/stream`. This package is kept for backward compatibility with stdio-only MCP clients.
+
 MCP server for [curata](https://curata.ai) — connect your AI agents to your team's knowledge base.
 
 ## Install
 
+Install from the repo:
+
 ```bash
-npm install -g @curata/mcp-server
+cd packages/mcp-server
+npm install
+npm run build
+npm link
 ```
+
+> Once published to npm, you'll be able to install via `npm install -g @curata/mcp-server`.
 
 ## Setup
 
