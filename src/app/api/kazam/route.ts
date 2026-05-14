@@ -118,8 +118,14 @@ async function dispatch(
   actorId: string
 ): Promise<unknown> {
   switch (tool) {
-    case "list_pages":
-      return listPages(orgId);
+    case "list_pages": {
+      const [pages, folders] = await Promise.all([
+        listPages(orgId),
+        db.folder.findMany({ where: { orgId }, select: { id: true, name: true } }),
+      ]);
+      const folderMap = new Map(folders.map((f) => [f.id, f.name]));
+      return pages.map((p) => ({ ...p, folderName: p.folderId ? folderMap.get(p.folderId) ?? null : null }));
+    }
 
     case "read_page": {
       if (!args.slug) throw new Error("slug is required");
