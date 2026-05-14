@@ -34,10 +34,11 @@ export function OrgSettings({ canManage, isPersonalDomain, initial }: OrgSetting
     setSaved(false);
     setError(null);
     try {
-      const body: Record<string, string> = { name: name.trim(), slug: slug.trim() };
-      if (!isPersonalDomain) {
-        body.domain = domain.trim();
-      }
+      const body: Record<string, string> = {};
+      if (name !== initial.name) body.name = name.trim();
+      if (slug !== initial.slug) body.slug = slug.trim();
+      if (!isPersonalDomain && domain !== initial.domain) body.domain = domain.trim();
+      if (Object.keys(body).length === 0) return;
       const res = await fetch(`${basePath}/api/org-settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
