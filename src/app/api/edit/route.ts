@@ -4,6 +4,20 @@ import { can } from "@/lib/permissions";
 import { readPageYaml, writePage } from "@/lib/pages";
 import { db } from "@/lib/db";
 
+function escapeRegex(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function findInYaml(yaml: string, target: string): string | null {
+  const lines = target.split("\n");
+  if (lines.length <= 1) return null;
+  const pattern = new RegExp(
+    lines.map((l) => escapeRegex(l.trimStart())).join("\\n\\s*"),
+  );
+  const m = yaml.match(pattern);
+  return m ? m[0] : null;
+}
+
 export async function POST(request: NextRequest) {
   const ctx = await resolveOrg();
   if (!ctx) {
@@ -32,14 +46,26 @@ export async function POST(request: NextRequest) {
     }
 
     const page = await readPageYaml(ctx.orgId, slug);
-    if (!page || !page.yaml.includes(target)) {
+    if (!page) {
       return NextResponse.json(
-        { error: "target text not found in page source" },
+        { error: "page not found" },
         { status: 404 }
       );
     }
 
-    const occurrences = page.yaml.split(target).length - 1;
+    let yamlTarget = target;
+    if (!page.yaml.includes(target)) {
+      const found = findInYaml(page.yaml, target);
+      if (!found) {
+        return NextResponse.json(
+          { error: "target text not found in page source" },
+          { status: 404 }
+        );
+      }
+      yamlTarget = found;
+    }
+
+    const occurrences = page.yaml.split(yamlTarget).length - 1;
     if (occurrences > 1) {
       return NextResponse.json(
         { error: `target text is ambiguous — found ${occurrences} occurrences` },
@@ -47,7 +73,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newContent = page.yaml.replace(target, replacement);
+    const newContent = page.yaml.replace(yamlTarget, replacement);
     const result = await writePage(ctx.orgId, ctx.orgSlug, slug, newContent, "web", page.contentHash);
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 409 });

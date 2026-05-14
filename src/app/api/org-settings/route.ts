@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
@@ -126,6 +127,8 @@ export async function PATCH(request: NextRequest) {
       data,
       select: { name: true, slug: true, domain: true, theme: true, mode: true, texture: true, glow: true },
     });
+
+    revalidatePath("/", "layout");
 
     return NextResponse.json(updated);
   } catch (err) {

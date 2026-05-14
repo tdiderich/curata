@@ -122,11 +122,11 @@ export default function PageDetailClient({
   const [annPositions, setAnnPositions] = useState(
     new Map<string, number>(),
   );
-  const [mode, setMode] = useState<"annotate" | "edit">("annotate");
   const [formState, setFormState] = useState<FormState | null>(null);
   const [formText, setFormText] = useState("");
   const [formReplacement, setFormReplacement] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const [agentOpen, setAgentOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
@@ -259,28 +259,40 @@ export default function PageDetailClient({
     if (!isEdit && !formText.trim()) return;
 
     setSubmitting(true);
+    setEditError(null);
 
-    if (isEdit) {
-      await fetch(`${basePath}/api/edit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug,
-          target: formState.target,
-          replacement: formReplacement.trim(),
-        }),
-      });
-    } else {
-      await fetch(`${basePath}/api/annotations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug,
-          text: formText.trim(),
-          section: formState.section || undefined,
-          target: formState.target || undefined,
-        }),
-      });
+    try {
+      const res = isEdit
+        ? await fetch(`${basePath}/api/edit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              slug,
+              target: formState.target,
+              replacement: formReplacement.trim(),
+            }),
+          })
+        : await fetch(`${basePath}/api/annotations`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              slug,
+              text: formText.trim(),
+              section: formState.section || undefined,
+              target: formState.target || undefined,
+            }),
+          });
+
+      if (!res.ok) {
+        const json = (await res.json().catch(() => ({}))) as { error?: string };
+        setEditError(json.error ?? "Failed to save");
+        setSubmitting(false);
+        return;
+      }
+    } catch {
+      setEditError("Network error");
+      setSubmitting(false);
+      return;
     }
 
     setFormState(null);
@@ -298,17 +310,12 @@ export default function PageDetailClient({
         </Link>
         <div className="page-toolbar-spacer" />
         <div className="page-toolbar-right">
-          <button
-            className={`toolbar-mode-toggle${mode === "edit" ? " toolbar-mode-toggle--edit" : ""}`}
-            onClick={() => setMode(mode === "annotate" ? "edit" : "annotate")}
+          <Link
+            className="toolbar-mode-toggle toolbar-mode-toggle--edit"
+            href={`/pages/${slug}?edit=1`}
           >
-            <span className="toolbar-mode-track">
-              <span className="toolbar-mode-thumb" />
-            </span>
-            <span className="toolbar-mode-label">
-              {mode === "annotate" ? "Annotating" : "Editing"}
-            </span>
-          </button>
+            <span className="toolbar-mode-label">Edit</span>
+          </Link>
           {authMode !== "none" && <PublicToggle slug={slug} orgSlug={orgSlug} isPublic={isPublic} />}
           <div className="page-toolbar-divider" />
           <div className="page-actions-wrap" ref={actionsRef}>
@@ -379,9 +386,9 @@ export default function PageDetailClient({
       <div className="page-content-wrap">
         <PageContent
           ref={contentRef}
-          selectionAction={mode === "edit" ? "Replace" : "Annotate"}
+          selectionAction="Annotate"
           onTextSelect={(section, target) =>
-            openForm(mode === "edit" ? "edit" : "note", section, target)
+            openForm("note", section, target)
           }
         >
           {children}
@@ -527,6 +534,11 @@ export default function PageDetailClient({
                     if (e.key === "Enter" && e.metaKey) submitForm();
                   }}
                 />
+                {editError && (
+                  <div style={{ color: "var(--color-error, #f87171)", fontSize: 12, padding: "4px 0" }}>
+                    {editError}
+                  </div>
+                )}
                 <div className="ann-form-footer">
                   <span className="ann-form-mode">{formState.mode}</span>
                   <div className="ann-form-btns">

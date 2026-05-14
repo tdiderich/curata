@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { normalizeLegacyTheme } from "@/lib/theme";
 import { basePath } from "@/lib/api-fetch";
 
@@ -41,6 +42,7 @@ interface ThemeSettingsProps {
 }
 
 export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
+  const router = useRouter();
   const initColor = ["dark", "light"].includes(initial.theme) ? "violet" : initial.theme;
   const initMode = ["dark", "light"].includes(initial.theme) ? initial.theme : initial.mode;
   const [color, setColor] = useState(initColor);
@@ -49,6 +51,7 @@ export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
   const [glow, setGlow] = useState(initial.glow);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const d = document.documentElement;
@@ -67,6 +70,7 @@ export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
   async function save() {
     setSaving(true);
     setSaved(false);
+    setError(null);
     try {
       const res = await fetch(`${basePath}/api/org-settings`, {
         method: "PATCH",
@@ -75,7 +79,11 @@ export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
       });
       if (res.ok) {
         setSaved(true);
+        router.refresh();
         setTimeout(() => setSaved(false), 2000);
+      } else {
+        const json = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(json.error ?? "Failed to save theme");
       }
     } finally {
       setSaving(false);
@@ -155,6 +163,11 @@ export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
         </div>
       </div>
 
+      {error && (
+        <div style={{ color: "var(--color-error, #f87171)", marginBottom: 8, fontSize: 13 }}>
+          {error}
+        </div>
+      )}
       {canManage && (
         <div className="theme-actions">
           <button
