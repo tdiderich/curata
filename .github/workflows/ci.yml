@@ -17,6 +17,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install kazam
+        run: |
+          curl -fL https://github.com/tdiderich/kazam/releases/latest/download/kazam-linux-amd64 \
+            -o /usr/local/bin/kazam && chmod +x /usr/local/bin/kazam
       - run: pnpm lint
       - run: pnpm build
       - run: pnpm test
