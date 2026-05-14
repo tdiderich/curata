@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
 
 interface OrgSettingsProps {
@@ -10,6 +11,7 @@ interface OrgSettingsProps {
 }
 
 export function OrgSettings({ canManage, isPersonalDomain, initial }: OrgSettingsProps) {
+  const router = useRouter();
   const [name, setName] = useState(initial.name);
   const [domain, setDomain] = useState(initial.domain);
   const [slug, setSlug] = useState(initial.slug);
@@ -46,6 +48,7 @@ export function OrgSettings({ canManage, isPersonalDomain, initial }: OrgSetting
       });
       if (res.ok) {
         setSaved(true);
+        router.refresh();
         setTimeout(() => setSaved(false), 2000);
       } else {
         const json = (await res.json()) as { error?: string };
