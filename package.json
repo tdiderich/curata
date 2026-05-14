@@ -9,7 +9,8 @@
     "start": "prisma db push && next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepare": "bash scripts/install-hooks.sh 2>/dev/null || true"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
