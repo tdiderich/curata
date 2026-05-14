@@ -11,6 +11,7 @@ const VALID_THEMES = [
   "orange",
   "yellow",
   "green",
+  "teal",
   "blue",
   "indigo",
   "violet",
