@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { NewFolderButton, FolderMenu, PageMenu } from "@/components/folder-actions";
 import { NewPageButton } from "@/components/new-page-button";
@@ -293,7 +293,28 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
     () => new Set(["__unfiled", ...folders.map((f) => f.id)])
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [rootFolderId, setRootFolderId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const [rootFolderId, _setRootFolderId] = useState<string | null>(
+    () => searchParams.get("folder") ?? null
+  );
+  const setRootFolderId = useCallback((id: string | null) => {
+    _setRootFolderId(id);
+    const url = new URL(window.location.href);
+    if (id) {
+      url.searchParams.set("folder", id);
+    } else {
+      url.searchParams.delete("folder");
+    }
+    window.history.pushState({}, "", url.toString());
+  }, []);
+  useEffect(() => {
+    const onPop = () => {
+      const id = new URL(window.location.href).searchParams.get("folder");
+      _setRootFolderId(id);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   const sorted = useMemo(() => sortPages(pages, sortKey), [pages, sortKey]);
 
