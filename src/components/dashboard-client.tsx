@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { NewFolderButton, FolderMenu, PageMenu } from "@/components/folder-actions";
-
-
 import { NewPageButton } from "@/components/new-page-button";
 import { DashboardFeed } from "@/components/dashboard-feed";
 import { useDashView } from "@/components/view-toggle";
@@ -37,6 +35,7 @@ function useSortKey(): [SortKey, (k: SortKey) => void] {
   const [key, setKey] = useState<SortKey>("lastActivity");
   useEffect(() => {
     const stored = localStorage.getItem("curata-sort") as SortKey | null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored) setKey(stored);
   }, []);
   const set = useCallback((k: SortKey) => {
@@ -249,21 +248,12 @@ interface DashboardClientProps {
 }
 
 export function DashboardClient({ pages, folders, pageCount, orgName }: DashboardClientProps) {
-  const router = useRouter();
   const [view, setView] = useDashView();
   const [sortKey, setSortKey] = useSortKey();
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(
     () => new Set(["__unfiled", ...folders.map((f) => f.id)])
   );
   const [searchQuery, setSearchQuery] = useState("");
-
-  if (pageCount === 0) {
-    return (
-      <div className="dash-root">
-        <EmptyWelcome orgName={orgName} />
-      </div>
-    );
-  }
 
   const sorted = useMemo(() => sortPages(pages, sortKey), [pages, sortKey]);
 
@@ -273,8 +263,6 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
     return sorted.filter((p) => p.title.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q));
   }, [sorted, searchQuery]);
 
-  const unfiledPages = filtered.filter((p) => p.folderId === null);
-
   const toggleFolderCollapse = useCallback((folderId: string) => {
     setCollapsedFolders((prev) => {
       const next = new Set(prev);
@@ -283,6 +271,16 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
       return next;
     });
   }, []);
+
+  if (pageCount === 0) {
+    return (
+      <div className="dash-root">
+        <EmptyWelcome orgName={orgName} />
+      </div>
+    );
+  }
+
+  const unfiledPages = filtered.filter((p) => p.folderId === null);
 
   const sortLabel = sortKey === "title" ? "Title" : sortKey === "views" ? "Views" : "Updated";
 

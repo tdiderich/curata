@@ -95,8 +95,6 @@ export default function PageDetailClient({
   slug,
   children,
   annotations,
-  sections,
-  pageTitle,
   orgSlug,
   isPublic,
   autoConnect,
@@ -105,8 +103,8 @@ export default function PageDetailClient({
   slug: string;
   children?: React.ReactNode;
   annotations: Annotation[];
-  sections: string[];
-  pageTitle: string;
+  sections?: string[];
+  pageTitle?: string;
   orgSlug: string;
   isPublic: boolean;
   autoConnect: boolean;
@@ -147,6 +145,7 @@ export default function PageDetailClient({
     const key = `curata:agent-prompted:${slug}`;
     if (localStorage.getItem(key)) return;
     localStorage.setItem(key, "1");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAgentOpen(true);
   }, [autoConnect, slug]);
 

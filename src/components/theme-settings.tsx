@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { normalizeLegacyTheme } from "@/lib/theme";
 import { basePath } from "@/lib/api-fetch";
 
 const COLORS = [
