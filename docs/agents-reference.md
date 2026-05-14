@@ -1,1123 +1,912 @@
-# AGENTS.md — kazam authoring guide for LLMs
+# kazam component reference
 
-This file tells LLMs (Claude, GPT, etc.) how to author pages in a kazam site.
-Read this before generating or editing any `.yaml` file.
+Auto-generated from schema. Do not edit.
 
-## What kazam is
+## Enums
 
-kazam is a Rust CLI that does two things: (1) turns YAML files into themed
-static HTML, and (2) provides an agent workspace with codebase indexing, task
-tracking, and a visual board. This guide covers the site-generation side. For
-the workspace side, run `kazam workspace init --agent claude` in any repo —
-it indexes your codebase, installs hooks, and writes workspace rules so your
-agent navigates faster and tracks its work.
+### Align
+Values: `left`, `right`, `center`
 
-The site format is designed for you — the machine — to generate easily:
-consistent `type:` tags, no nested conditionals, no templating logic.
+### AnnotationSource
+Values: `cli`, `agent`, `web`
 
-## Authoring recommendations — pick the right component
+### AnnotationStatus
+Values: `pending`, `incorporated`, `ignored`, `stale`
 
-**This section is mandatory reading before writing any page.** The most common
-agent mistake is dumping everything into `markdown` blocks. kazam has 33+
-components — use them. A good page uses 4-8 different component types.
+### AvatarSize
+Values: `sm`, `md`, `lg`, `xl`
 
-### Data shape → component cheat sheet
+### ButtonVariant
+Values: `primary`, `secondary`, `ghost`
 
-| You have… | Use this | NOT this |
-|-----------|----------|----------|
-| 2-5 headline metrics (KPIs, totals, rates) | `stat_grid` | markdown with bold numbers |
-| A list of items with status/category | `card_grid` with badges | markdown bullet list |
-| Tabular data (rows × columns) | `table` (sortable/filterable) | markdown table |
-| Part-of-whole breakdown | `table` with a percentage column + `progress_bar` per row | markdown list with percentages |
-| Values across categories (comparison) | `table` with sortable numeric columns | markdown bullet list |
-| Trend over time | `table` with time-period columns, sortable | markdown list of values |
-| Ranked list (top N) | `table` sorted by value column | numbered markdown list |
-| Before/after transformation | `before_after` | two markdown paragraphs |
-| Side-by-side comparison (A vs B) | `split_compare` | columns with markdown |
-| Project phases / deployment stages | `timeline` or `selectable_grid` with `connector: dots_line` | markdown numbered list |
-| Chronological event history | `event_timeline` with severity | markdown bullet list with dates |
-| Hierarchical plan with status per node | `tree` with `show_filter_toggle: true` | nested markdown lists |
-| Key terms and definitions | `definition_list` | markdown bold/colon patterns |
-| Warnings, blockers, action items | `callout` (variant: warn/danger) | bold markdown text |
-| Success confirmation | `callout variant: success` | markdown with checkmarks |
-| Long page with distinct topics | `section` wrappers with `eyebrow` + `heading` | markdown `##` headings |
-| Optional detail the reader may skip | `accordion` | everything visible at once |
-| Multiple views of same data | `tabs` | everything stacked vertically |
-| Team members / stakeholders | `avatar_group` or `avatar` with subtitle | markdown name list |
-| Overlapping concerns / shared ownership | `venn` (2 or 3 sets) | prose description |
-| Step-by-step instructions | `steps` | markdown numbered list |
-| Progress toward a goal | `progress_bar` | "72% complete" in markdown |
-| Page metadata (author, date, status) | `meta` | markdown key-value lines |
+### CalloutVariant
+Values: `info`, `warn`, `success`, `danger`
 
-### Page structure rules
+### ChartKind
+Values: `pie`, `bar`, `timeseries`
 
-1. **Lead with `header`** — every page starts with `type: header`. Always set
-   `title`. Add `subtitle` for context (date, scope) and `eyebrow` for category.
+### ChartOrientation
+Values: `vertical`, `horizontal`
 
-2. **Follow with `stat_grid`** — if the page has any numeric KPIs, put them
-   immediately after the header. This is the "executive summary" — a reader
-   should absorb the key numbers in 2 seconds.
+### Connector
+Values: `none`, `dots_line`, `arrow`
 
-3. **Group with `section`** — break the rest of the page into sections with
-   `eyebrow` + `heading`. This creates scannable structure and deep-link anchors.
+### EventFilter
+Values: `all`, `major`
 
-4. **Use `callout` for actions** — if something needs attention (a risk, a
-   blocker, an ask), put it in a `callout` with the right variant. Don't bury
-   it in prose.
+### EventSeverity
+Values: `major`, `minor`, `info`
 
-5. **Use `table` for structured data** — if you have 3+ rows of data with
-   consistent fields, use `table`. Always set `filterable: true` and mark
-   key columns as `sortable: true`.
+### Glow
+Values: `none`, `accent`, `corner`
 
-6. **Use `tabs` to reduce scroll** — if a section has 3+ distinct views
-   (e.g., by-quarter, by-team, details vs summary), use tabs instead of
-   stacking everything.
+### IconSize
+Values: `xs`, `sm`, `md`, `lg`, `xl`
 
-8. **Use `accordion` for reference detail** — FAQs, troubleshooting steps,
-   and supplementary context that most readers will skip.
+### Interaction
+Values: `single_select`, `multi_select`, `none`
 
-### Anti-patterns to avoid
+### Mode
+Values: `dark`, `light`
 
-- **Wall of markdown** — if your page is >80% `type: markdown`, you're doing it
-  wrong. Break it up with structured components.
-- **Numbers in prose** — "We have 1,284 users, up 12%" belongs in a `stat_grid`,
-  not a paragraph.
-- **Markdown tables** — use `type: table` instead. It gets sorting, filtering,
-  and proper styling for free.
-- **Markdown bullet lists for structured data** — if every bullet has the same
-  shape (name, value, status), use `card_grid`, `table`, or `definition_list`.
-- **Multiple sections that could be tabs** — if sections are parallel views of
-  the same topic (Q1/Q2/Q3, Team A/Team B), use `tabs`.
-- **Missing colors/badges** — every status should have a color. "Healthy" = green,
-  "At Risk" = yellow, "Critical" = red. Don't leave readers to interpret raw text.
-- **Flat pages** — always use `section` wrappers. A page with 20 components at
-  the top level is unreadable. Group into 3-6 sections.
+### NavLayout
+Values: `top`, `sidebar`
 
-### Example: report page skeleton
+### PrintFlow
+Values: `slides`, `continuous`, `square`
+
+### RefreshMode
+Values: `human`, `auto`, `assisted`
+
+### SemColor
+Values: `default`, `green`, `yellow`, `red`, `teal`
+
+### Shell
+Values: `standard`, `document`, `deck`
+
+### Texture
+Values: `none`, `dots`, `grid`, `grain`, `topography`, `diagonal`
+
+### ThemeName
+Values: `dark`, `light`, `red`, `orange`, `yellow`, `green`, `blue`, `indigo`, `violet`
+
+### TimelineStatus
+Values: `completed`, `active`, `upcoming`
+
+### TreeFilter
+Values: `all`, `incomplete`, `blocked`, `priority`
+
+### TreeStatus
+Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
+
+## Types
+
+### AccordionItem
+| Field | Type | Required |
+|-------|------|----------|
+| components | Component[] | yes |
+| title | string | yes |
+
+### Annotation
+| Field | Type | Required |
+|-------|------|----------|
+| added | string | yes |
+| author | string | yes |
+| id | string | yes |
+| section | string | no |
+| source | AnnotationSource | yes |
+| status | AnnotationStatus | yes |
+| text | string | yes |
+
+### AvatarConfig
+| Field | Type | Required |
+|-------|------|----------|
+| name | string | yes |
+| src | string | no |
+
+### Badge
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| label | string | yes |
+
+### BeforeAfterItem
+| Field | Type | Required |
+|-------|------|----------|
+| after | string | yes |
+| after_context | string | no |
+| before | string | yes |
+| title | string | yes |
+
+### BreadcrumbItem
+| Field | Type | Required |
+|-------|------|----------|
+| href | string | no |
+| label | string | yes |
+
+### ButtonConfig
+| Field | Type | Required |
+|-------|------|----------|
+| external | boolean | no |
+| href | string | yes |
+| icon | string | no |
+| label | string | yes |
+| variant | ButtonVariant | no |
+
+### Card
+| Field | Type | Required |
+|-------|------|----------|
+| badge | Badge | no |
+| color | SemColor | no |
+| description | string | no |
+| href | string | no |
+| links | Link[] | no |
+| title | string | yes |
+
+### ChartPoint
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| label | string | yes |
+| value | number | yes |
+
+### ChartSeries
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| label | string | yes |
+| points | ChartPoint[] | yes |
+
+### ComparePanel
+| Field | Type | Required |
+|-------|------|----------|
+| eyebrow | string | no |
+| stats | CompareStat[] | yes |
+| title | string | yes |
+
+### CompareStat
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| label | string | yes |
+| value | string | yes |
+
+### DefinitionItem
+| Field | Type | Required |
+|-------|------|----------|
+| definition | string | yes |
+| term | string | yes |
+
+### DriftConfig
+| Field | Type | Required |
+|-------|------|----------|
+| repos | DriftRepo[] | yes |
+
+### DriftRepo
+| Field | Type | Required |
+|-------|------|----------|
+| local | string | no |
+| prefix | string | yes |
+
+### EmptyStateAction
+| Field | Type | Required |
+|-------|------|----------|
+| href | string | yes |
+| label | string | yes |
+
+### EventItem
+| Field | Type | Required |
+|-------|------|----------|
+| date | string | yes |
+| link | string | no |
+| severity | EventSeverity | no |
+| source | string | no |
+| summary | string | no |
+| title | string | yes |
+
+### Freshness
+| Field | Type | Required |
+|-------|------|----------|
+| expires | string | no |
+| owner | string | no |
+| refresh | string | RefreshConfig | no |
+| review_every | string | no |
+| sources_of_truth | (string | SourceOfTruth)[] | no |
+| updated | string | no |
+
+### Link
+| Field | Type | Required |
+|-------|------|----------|
+| href | string | yes |
+| label | string | yes |
+
+### MetaField
+| Field | Type | Required |
+|-------|------|----------|
+| key | string | yes |
+| value | string | yes |
+
+### NavLink
+| Field | Type | Required |
+|-------|------|----------|
+| children | NavLink[] | no |
+| collapsed | boolean | no |
+| href | string | no |
+| label | string | yes |
+| personas | string[] | no |
+
+### Reference
+| Field | Type | Required |
+|-------|------|----------|
+| note | string | no |
+| url | string | yes |
+
+### RefreshConfig
+| Field | Type | Required |
+|-------|------|----------|
+| mode | RefreshMode | no |
+| steps | RefreshStep[] | no |
+
+### RefreshStep
+| Field | Type | Required |
+|-------|------|----------|
+| prompt | string | no |
+| review | string | no |
+| run | string | no |
+
+### ResourceItem
+| Field | Type | Required |
+|-------|------|----------|
+| description | string | no |
+| href | string | yes |
+| owner | string | no |
+| title | string | yes |
+
+### Role
+| Field | Type | Required |
+|-------|------|----------|
+| description | string | no |
+| href | string | no |
+| icon | string | no |
+| id | string | yes |
+| label | string | yes |
+
+### SelectableCard
+| Field | Type | Required |
+|-------|------|----------|
+| body | string | no |
+| bullets | string[] | no |
+| color | SemColor | no |
+| eyebrow | string | no |
+| title | string | yes |
+
+### Slide
+| Field | Type | Required |
+|-------|------|----------|
+| components | Component[] | yes |
+| hide_label | boolean | no |
+| label | string | yes |
+
+### SourceOfTruth
+| Field | Type | Required |
+|-------|------|----------|
+| href | string | no |
+| label | string | yes |
+
+### Stat
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| detail | string | no |
+| label | string | yes |
+| value | string | yes |
+
+### Step
+| Field | Type | Required |
+|-------|------|----------|
+| detail | string | no |
+| title | string | yes |
+
+### Tab
+| Field | Type | Required |
+|-------|------|----------|
+| components | Component[] | yes |
+| label | string | yes |
+
+### TableColumn
+| Field | Type | Required |
+|-------|------|----------|
+| align | Align | no |
+| key | string | yes |
+| label | string | yes |
+| sortable | boolean | no |
+
+### ThemeTokens
+| Field | Type | Required |
+|-------|------|----------|
+| accent | string | yes |
+| accent_soft | string | yes |
+| bg | string | yes |
+| border | string | yes |
+| border_strong | string | yes |
+| green | string | yes |
+| header_border | string | yes |
+| overlay_hover | string | yes |
+| red | string | yes |
+| surface | string | yes |
+| surface_strong | string | yes |
+| text | string | yes |
+| text_muted | string | yes |
+| text_subtle | string | yes |
+| yellow | string | yes |
+
+### TimelineItem
+| Field | Type | Required |
+|-------|------|----------|
+| name | string | yes |
+| status | TimelineStatus | yes |
+
+### TreeNode
+| Field | Type | Required |
+|-------|------|----------|
+| children | TreeNode[] | no |
+| label | string | yes |
+| note | string | no |
+| status | TreeStatus | no |
+
+### ValidationError
+| Field | Type | Required |
+|-------|------|----------|
+| error_type | string | yes |
+| file | string | yes |
+| message | string | yes |
+| path | string | yes |
+| suggestion | string | no |
+
+### VennOverlap
+| Field | Type | Required |
+|-------|------|----------|
+| label | string | no |
+| sets | number[] | yes |
+
+### VennSet
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| label | string | yes |
+
+### Voice
+| Field | Type | Required |
+|-------|------|----------|
+| reading_level | string | no |
+| terminology | { prefer?: Record<string, string>; avoid?: string[] } | no |
+| tone | string | no |
+
+## Components
+
+### accordion
+| Field | Type | Required |
+|-------|------|----------|
+| items | AccordionItem[] | yes |
 
 ```yaml
-title: Pipeline Analysis — Q1 2026
-shell: standard
-
-components:
-  - type: header
-    title: Pipeline Analysis
-    subtitle: Q1 2026 — all-time and quarterly breakdown
-    eyebrow: Sales Report
-
-  - type: stat_grid
-    columns: 4
-    stats:
-      - label: Total Deals
-        value: "593"
-        detail: all-time
-      - label: Q1 Deals
-        value: "182"
-        detail: this quarter
-      - label: Win Rate
-        value: 1.2%
-        detail: 7 won
-        color: yellow
-      - label: Q1 Lost
-        value: "113"
-        color: red
-
-  - type: section
-    eyebrow: Funnel
-    heading: Stage Conversion
-    components:
-      - type: table
-        filterable: true
-        columns:
-          - { key: stage, label: Stage, sortable: true }
-          - { key: count, label: Deals, sortable: true, align: right }
-          - { key: conversion, label: Conversion, sortable: true, align: right }
-        rows:
-          - { stage: Discovery, count: "82", conversion: 55% }
-          - { stage: Evaluation, count: "45", conversion: 62% }
-          - { stage: Negotiation, count: "28", conversion: 25% }
-          - { stage: Closed Won, count: "7", conversion: — }
-          - { stage: Closed Lost, count: "113", conversion: — }
-
-  - type: section
-    eyebrow: Analysis
-    heading: Loss Reasons
-    components:
-      - type: table
-        filterable: true
-        columns:
-          - { key: reason, label: Reason, sortable: true }
-          - { key: count, label: Count, sortable: true, align: right }
-          - { key: pct, label: "% of Lost", sortable: true, align: right }
-        rows:
-          - { reason: No budget, count: "42", pct: 37% }
-          - { reason: Went competitor, count: "31", pct: 27% }
-          - { reason: No decision, count: "25", pct: 22% }
-          - { reason: Timing, count: "15", pct: 13% }
-
-  - type: section
-    eyebrow: Actions
-    heading: Recommendations
-    components:
-      - type: callout
-        variant: warn
-        title: Fix stage weights
-        body: Current weights don't match actual conversion. Recalibrate in HubSpot.
-      - type: table
-        filterable: true
-        columns:
-          - { key: action, label: Action, sortable: true }
-          - { key: owner, label: Owner, sortable: true }
-          - { key: priority, label: Priority, sortable: true }
-        rows:
-          - { action: Recalibrate weights, owner: RevOps, priority: High }
-          - { action: Move deal creation earlier, owner: AEs, priority: Medium }
+- type: accordion
+  items: []
 ```
 
-## File structure
-
-```
-my-site/
-  kazam.yaml         # site-wide config (name, theme, nav, favicon)
-  index.yaml         # → _site/index.html
-  guide.yaml         # → _site/guide.html
-  reference/
-    api.yaml         # → _site/reference/api.html
-```
-
-Any non-`.yaml` file (images, SVGs, fonts) is copied verbatim into the output.
-
-## kazam.yaml — site config
+### avatar
+| Field | Type | Required |
+|-------|------|----------|
+| name | string | yes |
+| size | AvatarSize | no |
+| src | string | no |
+| subtitle | string | no |
 
 ```yaml
-name: Site Name
-theme: dark              # dark | light | red | orange | yellow | green | blue | indigo | violet
-mode: dark               # optional: dark (default) | light — flips rainbow themes onto the light base
-colors:                  # optional per-token overrides
-  accent: '#14b8b8'
-favicon: favicon.svg
-logo: /assets/logo.svg   # optional — replaces the text `name:` in the site bar with an <img>.
-                         # Expanded form: logo: { src, height, alt }. height caps rendered px;
-                         # alt defaults to `name`. Rendered height is bounded by the site-bar
-                         # content area (never pushes the bar taller); width flows from aspect
-                         # ratio and caps at 240px. SVG recommended; raster sources should be
-                         # 2× target height for retina. Lead with `/` for site-root paths so
-                         # the depth-aware rewriter keeps them portable on nested pages.
-texture: dots            # optional: none | dots | grid | grain | topography | diagonal
-glow: accent             # optional: none | accent | corner
-nav_layout: top          # optional: top (default) | sidebar
-nav:
-  - label: Home
-    href: /index.html
-  - label: Guide
-    href: /guide.html
-  - label: Components     # parent with a dropdown / sidebar section
-    href: /components/index.html   # optional — acts as default link when clicked
-    children:
-      - label: Content
-        href: /components/content.html
-      - label: Grids
-        href: components/grids.html
+- type: avatar
+  name: "Example"
+  size: "sm"  # optional
+  src: "https://example.com"  # optional
 ```
 
-`nav_layout: top` (default) renders the nav in the sticky top bar. Parent
-entries with `children:` render as a hover/focus dropdown. `nav_layout:
-sidebar` moves the full nav into a fixed 240px left sidebar; parent entries
-with children become labeled sections, their leaves become indented links.
-Sidebar layout is only applied to `shell: standard` pages.
-
-`theme` picks a built-in palette. The seven rainbow themes share the
-neutral dark base by default and only swap the accent color — safe to use
-with any `texture`/`glow` combination. Set `mode: light` to flip any
-rainbow theme onto the light base (#F7F7F2 paper + near-black text).
-`theme: dark` and `theme: light` are self-contained and ignore `mode`.
-Use `colors:` to override individual tokens on top.
-
-`texture` paints a subtle pattern behind every page (tinted via the active
-theme's text color, so dark/light just work). `glow` paints a soft
-accent-colored radial behind the header area. Both are off by default;
-both are stripped under `@media print`.
-
-## Page structure
-
-Every page has a `title`, a `shell`, and EITHER `components:` (for most shells)
-OR `slides:` (for deck). Nothing else is required.
+### avatar_group
+| Field | Type | Required |
+|-------|------|----------|
+| avatars | AvatarConfig[] | yes |
+| max | number | no |
+| size | AvatarSize | no |
 
 ```yaml
-title: Page Title           # required
-shell: standard             # standard | document | deck
-eyebrow: Reference          # optional — small label in document/deck headers
-subtitle: Q4 2026           # optional — date / context in document/deck
-texture: none               # optional — override site-wide texture on this page
-glow: corner                # optional — override site-wide glow on this page
-components:                 # for standard + document shells
-  - type: header
-    title: Hello
-slides:                     # for deck shell only
-  - label: Slide One
-    components: [...]
+- type: avatar_group
+  avatars: []
+  max: 3  # optional
+  size: "sm"  # optional
 ```
 
-`texture:` and `glow:` at the page level override the site-wide values in
-`kazam.yaml`. Setting either to `none` turns that layer off on this page;
-setting it to any other preset swaps it in. Omit to inherit the site-wide
-value.
-
-### Freshness (optional)
-
-Pages can declare review cadence + sources of truth. At build time, kazam
-computes staleness against today's date and injects a banner at the top
-of the page — **yellow** if the review comes due within the next 7 days,
-**red** if it's already overdue. No runtime JS; staleness is a pure
-date compare. A build-time report also prints every stale page, grouped
-by overdue vs due-soon, sorted most-urgent first. Silent when nothing
-is stale.
+### badge
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| label | string | yes |
 
 ```yaml
-freshness:
-  updated: 2026-01-15              # ISO date of last content change
-  review_every: 90d                # Nd | Nw | Nm | Ny | weekly | monthly | quarterly | yearly
-  owner: owner@example.com         # free-form — email, handle, team name
-  sources_of_truth:                # bare URL or { label, href }
-    - https://notion.so/abc123
-    - label: "#ts-hub"
-      href: https://company.slack.com/archives/C012345
-    - label: "Linear: TSH"
-      href: https://linear.app/co/project/tsh
+- type: badge
+  color: "default"  # optional
+  label: "Example Title"
 ```
 
-All fields are optional. A page with only `updated:` and `review_every:`
-still computes the banner; missing either field means the page is never
-stale (nothing to compare against). To simulate "today" for tests or
-snapshot builds, set `KAZAM_TODAY=YYYY-MM-DD` in the environment.
-
-kazam does not fetch the sources — it just renders the labels as links.
-Refreshing the content is the agent's job: when a reader (or an agent
-working on the page) clicks through, they read the source and propose
-updates.
-
-### Link graph (automatic)
-
-Every `kazam build` also runs a link-graph pass. Two things surface in the
-build summary and in `_site/links.md`:
-
-- **Orphan pages** — built pages not reachable from `index.html` via nav or
-  any in-page href. Either link them from somewhere reachable, delete them,
-  or set `unlisted: true` on the page (same flag `llms.txt` uses).
-- **Broken internal links** — `.html` hrefs that don't match any built page.
-
-Silent on clean builds; `links.md` is removed when there's nothing to
-report. `kazam dev` and `kazam build --allow-orphans` silence orphan
-detection (useful for drafts); broken links always surface.
-
-## Shells
-
-- **standard** — sticky site header + nav + 1200px container. Default. Use for
-  dashboards, reference pages, wikis, blog-style content.
-- **document** — centered 720px card, teal-bordered header (driven by `eyebrow` +
-  `subtitle`), print-optimized. Use for meeting agendas, one-pagers, briefs.
-- **deck** — full-viewport slides. Arrow keys to navigate. Print/PDF exports all
-  slides paginated. Use for QBRs, pitch decks, strategy reviews.
-
-## Component catalog
-
-Every component has `type:` (snake_case name) + props. Keep YAML indentation
-consistent (2 spaces). Quote any string that looks like a number (e.g. `"47"`).
-
-### Content
-
-- **header** — page title block. Auto-emits `id` from the `title` slug
-  so `/page.html#my-title` works; override with explicit `id:` for a
-  stable anchor that survives copy edits.
-  ```yaml
-  - type: header
-    title: Required
-    subtitle: Optional subtitle
-    eyebrow: Optional label
-    id: optional-stable-anchor   # else auto-slugged from title
-  ```
-
-- **meta** — key-value strip (author, date, status, version)
-  ```yaml
-  - type: meta
-    fields:
-      - key: Author
-        value: Someone
-      - key: Updated
-        value: '2026-04-17'
-  ```
-
-- **markdown** — rich prose (CommonMark + tables + strikethrough)
-  ```yaml
-  - type: markdown
-    body: |
-      ## Heading
-      Paragraph with **bold** and [link](/path).
-
-      | a | b |
-      |---|---|
-      | 1 | 2 |
-  ```
-
-- **code** — syntax-styled code block
-  ```yaml
-  - type: code
-    language: rust
-    code: |
-      fn main() { println!("hi"); }
-  ```
-
-- **callout** — info/warn/success/danger box
-  ```yaml
-  - type: callout
-    variant: warn            # info | warn | success | danger
-    title: Heads up
-    body: Body can include **markdown**.
-  ```
-
-- **blockquote** — testimonial with optional attribution
-  ```yaml
-  - type: blockquote
-    body: The best product we've shipped.
-    attribution: Jane Doe, CTO
-  ```
-
-- **image** — figure with caption + max_width
-  ```yaml
-  - type: image
-    src: /dashboard.png
-    alt: Dashboard screenshot
-    caption: Optional caption.
-    max_width: 600
-  ```
-
-- **kbd** — keyboard keys joined by `+`
-  ```yaml
-  - type: kbd
-    keys: [Cmd, K]
-  ```
-
-### Indicators
-
-- **badge** — small colored label. Colors: default, green, yellow, red, teal.
-- **tag** — monospace pill label. Same color palette as badge.
-- **status** — dot + label (operational / degraded / down). Same colors.
-- **progress_bar** — horizontal fill
-  ```yaml
-  - type: progress_bar
-    value: 72                # 0-100
-    label: Scan coverage
-    color: green
-    detail: 72 of 100 accounts
-  ```
-- **divider** — horizontal rule, optionally with a center label
-  ```yaml
-  - type: divider
-    label: Operational data  # optional
-  ```
-
-### Grids
-
-- **card_grid** — responsive cards with optional badge, description, links
-  ```yaml
-  - type: card_grid
-    min_width: 320           # optional; default 320
-    cards:
-      - title: Acme Corp
-        badge:
-          label: Healthy
-          color: green
-        description: Enterprise — AWS
-        links:
-          - label: Open
-            href: /acme
-  ```
-
-- **stat_grid** — big-number metric tiles
-  ```yaml
-  - type: stat_grid
-    columns: 3
-    stats:
-      - label: Users
-        value: '1,284'
-        detail: Up 12% MoM
-        color: green
-  ```
-
-- **selectable_grid** — interactive phase tracker / click-to-focus cards
-  ```yaml
-  - type: selectable_grid
-    interaction: single_select   # single_select | multi_select | none
-    connector: dots_line         # none | dots_line
-    cards:
-      - eyebrow: Phase 1
-        title: Planning
-        bullets:
-          - Use cases defined
-  ```
-
-- **before_after** — transformation storytelling (QBR-style)
-  ```yaml
-  - type: before_after
-    items:
-      - title: Deployment time
-        before: Manual, 2 weeks
-        after: 4 hours
-        after_context: fully automated
-  ```
-
-- **avatar** — profile circle with initials fallback
-  ```yaml
-  - type: avatar
-    name: Sarah M.
-    src: /sarah.png            # optional
-    size: md                   # sm | md | lg | xl
-    subtitle: VP Engineering   # optional inline text
-  ```
-
-- **avatar_group** — overlapping avatar stack
-  ```yaml
-  - type: avatar_group
-    size: md
-    max: 4
-    avatars:
-      - name: Sarah M.
-      - name: Marcus T.
-  ```
-
-- **definition_list** — term/definition pairs
-  ```yaml
-  - type: definition_list
-    items:
-      - term: ACV
-        definition: Annual contract value.
-  ```
-
-### Interactive
-
-- **table** — sortable + filterable
-  ```yaml
-  - type: table
-    filterable: true
-    columns:
-      - key: name
-        label: Name
-        sortable: true
-        align: left              # left | right | center
-    rows:
-      - name: Acme Corp
-  ```
-
-- **tabs** — tabbed panels with arbitrary content
-  ```yaml
-  - type: tabs
-    tabs:
-      - label: Overview
-        components: [...]
-      - label: Details
-        components: [...]
-  ```
-
-- **accordion** — collapsible sections
-  ```yaml
-  - type: accordion
-    items:
-      - title: Question 1
-        components: [...]
-  ```
-
-- **role_map** — grid of role cards read from the site's `roles:` config in kazam.yaml. Each
-  card is a jump point to a role-specific landing page. Renders an empty-state message
-  when no roles are defined.
-  ```yaml
-  - type: role_map
-    title: "Pick your role"    # optional heading
-  ```
-  Roles are defined in kazam.yaml. `href` links the card to a landing page; when
-  omitted it falls back to `?role=<id>`:
-  ```yaml
-  roles:
-    - id: engineering
-      label: Engineering
-      description: Build and ship product.
-      icon: "⚙️"
-      href: /engineering/index.html
-    - id: gtm
-      label: GTM
-      description: Sales, marketing, and customer success.
-      href: /gtm/index.html
-  ```
-
-### Navigation
-
-- **breadcrumb** — multi-hop trail (last item = current, no href)
-  ```yaml
-  - type: breadcrumb
-    items:
-      - label: Home
-        href: /
-      - label: Reference
-        href: /reference
-      - label: Components       # current page — no href
-  ```
-
-- **button_group** — CTA button row
-  ```yaml
-  - type: button_group
-    buttons:
-      - label: Get started
-        href: /guide
-        variant: primary         # primary | secondary | ghost
-      - label: GitHub
-        href: https://github.com/...
-        variant: secondary
-        external: true           # adds ↗ and target=_blank
-        icon: github             # any bundled lucide icon
-  ```
-
-### Layout
-
-- **section** — grouping with eyebrow + heading + nested components.
-  Auto-emits `id` from the `heading` slug (no heading → no id); override
-  with explicit `id:` for a stable anchor. Duplicate slugs on a page
-  dedupe with `-2`, `-3`, etc.
-  ```yaml
-  - type: section
-    eyebrow: Category
-    heading: Section Title
-    id: optional-stable-anchor   # else auto-slugged from heading
-    components: [...]
-  ```
-
-- **columns** — multi-column row
-  ```yaml
-  - type: columns
-    equal_heights: true          # optional; makes children fill column height
-    columns:
-      - - type: callout
-          ...
-      - - type: callout
-          ...
-  ```
-  Note the `- -` pattern: each column is itself a list of components.
-
-- **timeline** — horizontal phase tracker
-  ```yaml
-  - type: timeline
-    items:
-      - name: Planning
-        status: completed        # completed | active | upcoming
-  ```
-
-- **event_timeline** — vertical event history with severity filter
-  ```yaml
-  - type: event_timeline
-    default_filter: major        # major | all (default: all)
-    show_filter_toggle: true     # default: false; renders an in-page Major/All toggle
-    limit: 5                    # optional; only render the last N events (useful for deck slides)
-    events:
-      - date: 2026-04-27
-        severity: major          # major | minor | info (default: minor)
-        title: Weekly sync — Jira asset model confirmed
-        summary: |               # optional markdown body; renders inside <details>
-          Working session booked Tuesday 3 PM CT.
-        source: granola          # optional small chip
-        link: https://...        # optional; renders an "open source" arrow icon
-  ```
-  Use for chronological event lists where the reader wants the big picture first
-  but full history on demand. The `summary` field is markdown — when present, the
-  event collapses behind a `<details>` toggle. Sort order is rendered as given;
-  the component does not re-sort. When `show_filter_toggle: false` and
-  `default_filter` is not `all`, only matching events are rendered at build time
-  (instead of rendering all and CSS-hiding some). Use `limit:` to cap the number
-  of events — handy for deck slides where space is tight.
-
-- **tree** — nested status tree (deployment plans, project breakdowns)
-  ```yaml
-  - type: tree
-    default_filter: all          # all (default) | incomplete | blocked | priority
-    show_filter_toggle: true     # default: false; renders an All / Incomplete / Blocked / Priority toggle
-    nodes:
-      - label: "Phase 1 — Planning"
-        status: completed         # default | completed | active | blocked | priority | upcoming
-        children:
-          - label: Identify stakeholders
-            status: completed
-          - label: Deploy Maze stack
-            status: blocked
-            note: "Waiting on change-window approval"
-          - label: Ship Q3 deliverable
-            status: priority
-            note: "Must land before Q3 close"
-  ```
-  Recursive — each node can have `children:`. Status drives the glyph (✓ / ▸ / ⚠ / ★ / ○)
-  and color. Optional inline `note:` renders on the same row as the label; for
-  blocked nodes it gets red emphasis, for priority nodes it gets yellow emphasis.
-  With `show_filter_toggle: true` the user can flip between **All** (everything),
-  **Incomplete** (hide completed nodes), **Blocked** (show only blocked nodes
-  plus their ancestor chain), and **Priority** (show only priority nodes plus
-  their ancestor chain). When `show_filter_toggle: false` and `default_filter`
-  is not `all`, only matching nodes and their ancestors are rendered at build time
-  (instead of rendering all and CSS-hiding some). Tiny inline
-  JS for the toggle; semantic `<ul>`/`<li>` underneath.
-
-- **venn** — two- or three-set venn diagram (inline SVG)
-  ```yaml
-  - type: venn
-    title: "Team overlap"          # optional
-    sets:
-      - label: Frontend
-        color: teal                # default | green | yellow | red | teal
-      - label: Backend
-        color: red
-    overlaps:                      # optional intersection labels
-      - sets: [0, 1]               # indices into sets[]
-        label: APIs
-  ```
-  Native SVG, no charting library. Two-set or three-set; circles are positioned
-  automatically. Per-set color uses the standard `color:` enum. `overlaps[].sets`
-  takes 2 or 3 indices and places its `label` at the centroid of the involved
-  circles. Inherits theme tokens — light/dark theme swap just works.
-
-- **steps** — numbered or bulleted ordered list
-  ```yaml
-  - type: steps
-    numbered: true               # default; false for bullets
-    items:
-      - title: Install
-        detail: Optional detail.
-  ```
-
-- **empty_state** — zero-data placeholder with optional action
-  ```yaml
-  - type: empty_state
-    icon: inbox                  # any bundled lucide icon
-    title: No items yet
-    body: Add your first item.
-    action:
-      label: Add item
-      href: /new
-  ```
-
-- **icon** — standalone inline SVG
-  ```yaml
-  - type: icon
-    name: github                 # any bundled lucide icon
-    size: md                     # xs | sm | md | lg | xl
-    color: teal                  # same palette as badge/tag/status
-  ```
-
-## Bundled icons
-
-~30 lucide icons: `arrow-left`, `arrow-right`, `arrow-up-right`,
-`chevron-left`, `chevron-right`, `chevron-down`, `check`, `x`, `plus`,
-`search`, `info`, `alert-triangle`, `alert-circle`, `check-circle`,
-`x-circle`, `file`, `folder`, `link`, `mail`, `inbox`, `lock`, `bell`,
-`calendar`, `clock`, `user`, `users`, `home`, `menu`, `settings`,
-`github`.
-
-## Colors (semantic palette)
-
-Every colored component accepts the same 5-value palette:
-
-- `default` — teal accent (brand)
-- `green` — success, healthy
-- `yellow` — warning, at-risk
-- `red` — danger, critical
-- `teal` — explicit teal (same as default)
-
-## Common gotchas
-
-- **YAML number-parsing**: `"47"`, `"1.2"` — quote anything that should stay a
-  string. Unquoted `47` is an integer, which will fail `label: expected string`.
-- **Columns pattern**: each column is a list of components, so you get `- -` at
-  the start of each inner list. This is correct YAML.
-- **nav_back was removed**. Use `breadcrumb` instead (first component on the page).
-- **Hrefs** follow standard HTML/Markdown semantics:
-  - **Bare names** (`content.html`, `assets/foo.svg`) are page-relative — the
-    browser resolves them against the current page. Use these for siblings
-    and same-directory references.
-  - **Leading `/`** (`/index.html`, `/components/grids.html`) is site-root.
-    The renderer prepends the depth base (`../`) per page so the link works
-    on subpath deployments like GitHub Pages `/kazam/`. Use these in
-    `kazam.yaml` nav, site favicon/og_image/logo, and anywhere you need a
-    link that has to work from any page depth.
-  - `../`, `./`, `http(s)://`, `#`, `mailto:`, `tel:` are emitted verbatim.
-- **deck shell** expects `slides:` not `components:` at the page root. Each
-  slide has its own `label:` + `components:` list. Optional top-level
-  `print_flow: slides | continuous` controls PDF export shape. `slides`
-  (default) = one slide per landscape page (Keynote-style). `continuous`
-  = all slides flow as one portrait document with thin separators — nicer
-  for sharing as a readable artifact.
-- **Markdown body scalars**: use the `|` literal block style in YAML to preserve
-  newlines — `body: |` followed by indented content.
-
-## 404 page
-
-Every `kazam build` generates `404.html` at the site root. Hosting platforms
-(GitHub Pages, Netlify, Vercel, etc.) serve this page automatically when a
-visitor hits a URL that doesn't exist. The default page shows a themed "Page
-not found" empty state with a "Go home" button.
-
-All internal links in the 404 page are absolute (root-relative or, if the
-site has a `url:` configured, full canonical URLs) because the hosting
-platform serves the page at whatever path the browser tried — relative links
-would break.
-
-To customize, create `404.yaml` in the source directory. It renders through
-the same pipeline as any other page (with the same absolute-link treatment),
-so you can use any shell and any components. Use site-root paths (leading `/`)
-for all hrefs so they work from any URL depth.
+### before_after
+| Field | Type | Required |
+|-------|------|----------|
+| after_label | string | no |
+| before_label | string | no |
+| items | BeforeAfterItem[] | yes |
 
 ```yaml
-title: Not found
-shell: standard
-components:
-  - type: callout
-    variant: danger
-    title: Page not found
-    body: This page doesn't exist yet.
-  - type: button_group
-    buttons:
-      - label: Go home
-        href: /index.html
-        variant: primary
+- type: before_after
+  after_label: "example"  # optional
+  before_label: "example"  # optional
+  items: []
 ```
 
-## Running
+### blockquote
+| Field | Type | Required |
+|-------|------|----------|
+| attribution | string | no |
+| body | string | yes |
 
-```bash
-kazam dev .              # watch + serve at localhost:3000 (live reload)
-kazam build .            # one-shot build to _site/
-kazam build . --release  # minified production build
-```
-
-## Agent workspace
-
-kazam includes a built-in workspace for agent task tracking and context
-intelligence. State lives in `.kazam/` as YAML files. Install kazam first:
-
-```bash
-cargo install --git https://github.com/tdiderich/kazam
-```
-
-### Setup
-
-```bash
-kazam workspace init          # one-shot: track + ctx + scan + hooks (recommended)
-```
-
-Or piecemeal:
-```bash
-kazam track init              # create .kazam/ with empty task + log stores
-kazam ctx init --scan         # scan project files into anatomy index
-kazam ctx hooks install       # register session hooks for Claude Code
-```
-
-Use `--skunkworks` with init commands to gitignore `.kazam/` (for shared repos
-where teammates don't use it).
-
-### Task tracking (`kazam track`)
-
-```bash
-kazam track add "title" [--priority 0-4] [--type task|bug|feature|epic] [--parent ID] [--blocks ID,...] [--assign NAME] [--note "..."] [--json]
-kazam track ready [--json]                 # unblocked tasks sorted by priority
-kazam track claim ID [--name NAME] [--json]  # atomic claim (fails if already taken)
-kazam track close ID [--reason "..."] [--json]
-kazam track block ID [--reason "..."] [--json]
-kazam track list [--status S] [--assignee N] [--json]
-kazam track tree [--filter all|incomplete|blocked|priority] [--json]
-kazam track show ID [--json]
-kazam track import PLAN.md [--dry-run] [--json]  # ## headings → epics, - bullets → tasks
-kazam track dep add BLOCKER BLOCKED
-kazam track dep rm BLOCKER BLOCKED
-kazam track log add "message" [--source NAME] [--severity major|minor|info] [--task ID]
-kazam track log [--limit N] [--json]
-```
-
-### Context intelligence (`kazam ctx`)
-
-```bash
-kazam ctx scan [--check] [--json]          # rescan anatomy (--check = diff only)
-kazam ctx status [--json]                  # file count, token total, learning count
-kazam ctx describe FILE "description"      # enrich a file's anatomy description
-kazam ctx learn "lesson" [--category preference|correction|bug] [--json]
-kazam ctx learnings [--json]
-kazam ctx bug "symptom" [--file PATH] [--json]
-kazam ctx bugs [--file PATH] [--json]
-kazam ctx resolve BUG_ID --fix "..." [--json]
-```
-
-### Live dashboard
-
-```bash
-kazam board [--port 3001]    # serve .kazam/ state as a visual board (live-reload)
-```
-
-### YAML schemas
-
-**`.kazam/track/tasks.yaml`**
 ```yaml
-tasks:
-  - id: kz-a1b2
-    title: Implement auth middleware
-    status: open          # open | active | closed | blocked | deferred
-    priority: 1           # 0 (critical) – 4 (backlog)
-    task_type: feature    # task | bug | feature | epic
-    assignee: null
-    parent: null          # parent task ID
-    blocks: []            # IDs this task blocks
-    related: []
-    note: null
-    created: '2026-04-30T10:00:00-05:00'
-    updated: '2026-04-30T10:00:00-05:00'
-    closed: null
-    close_reason: null
+- type: blockquote
+  attribution: "example"  # optional
+  body: "Description text"
 ```
 
-**`.kazam/track/log.yaml`**
+### breadcrumb
+| Field | Type | Required |
+|-------|------|----------|
+| items | BreadcrumbItem[] | yes |
+
 ```yaml
-events:
-  - date: '2026-04-30T10:15:00-05:00'
-    title: Claimed kz-a1b2
-    detail: null
-    severity: info        # major | minor | info
-    source: claude        # agent name
-    task_id: kz-a1b2
+- type: breadcrumb
+  items: []
 ```
 
-**`.kazam/ctx/anatomy.tsv`** (agent-facing, compact TSV)
-```
-# scanned: 2026-04-30T10:00:00-05:00
-# root_files
-path	tokens	reads	description
-src/main.rs	850	0	CLI entry point
+### button_group
+| Field | Type | Required |
+|-------|------|----------|
+| buttons | ButtonConfig[] | yes |
 
-# directories
-path	files	tokens	description
-src	12	45000	Core source
-```
-
-**`.kazam/ctx/anatomy.flat.yaml`** (internal, used by board)
 ```yaml
-scanned: '2026-04-30T10:00:00-05:00'
-files:
-  - path: src/main.rs
-    description: CLI entry point
-    tokens: 850
-    reads: 0
+- type: button_group
+  buttons: []
 ```
 
-**`.kazam/ctx/learnings.yaml`**
+### callout
+| Field | Type | Required |
+|-------|------|----------|
+| body | string | yes |
+| links | ButtonConfig[] | no |
+| title | string | no |
+| variant | CalloutVariant | no |
+
 ```yaml
-learnings:
-  - id: kz-c3d4
-    text: Prefer snake_case for all YAML keys
-    category: preference  # preference | correction | bug
-    created: '2026-04-30T10:20:00-05:00'
+- type: callout
+  body: "Description text"
+  links: []  # optional
+  title: "Example Title"  # optional
 ```
 
-**`.kazam/ctx/bugs.yaml`**
+### card_grid
+| Field | Type | Required |
+|-------|------|----------|
+| cards | Card[] | yes |
+| connector | Connector | no |
+| min_width | number | no |
+
 ```yaml
-bugs:
-  - id: kz-e5f6
-    symptom: Tree nodes don't render note text
-    file_path: src/render/components.rs
-    resolution: null
-    created: '2026-04-30T10:25:00-05:00'
-    resolved: null
+- type: card_grid
+  cards: []
+  connector: "none"  # optional
+  min_width: 3  # optional
 ```
 
-Agents can edit these YAML files directly. The board auto-refreshes on any
-`.kazam/*.yaml` change.
+### chart
+| Field | Type | Required |
+|-------|------|----------|
+| data | ChartPoint[] | no |
+| height | number | no |
+| kind | ChartKind | yes |
+| orientation | ChartOrientation | no |
+| series | ChartSeries[] | no |
+| title | string | no |
+| x_label | string | no |
+| y_label | string | no |
 
-### Workflow
-
-If `.kazam/` exists in the project, follow this loop:
-
-1. **Pick work**: `kazam track ready --json` → pick the highest-priority task.
-2. **Claim it**: `kazam track claim <ID> --name <your-name>` (fails if another
-   agent already claimed it — pick a different task).
-3. **Check context before editing**: `kazam ctx bugs --file <path>` for known
-   bugs on files you're about to touch. Skim `.kazam/ctx/anatomy.tsv` for
-   token budgets and descriptions.
-4. **Work normally.** Hooks log file writes automatically.
-5. **Enrich as you go**: After reading an unfamiliar file, run
-   `kazam ctx describe <path> "what this file actually does"`. Record surprises
-   with `kazam ctx learn "lesson" --category correction`.
-6. **Close**: `kazam track close <ID> --reason "what you did"`.
-7. **If blocked**: `kazam track block <ID> --reason "why"` and pick the next
-   ready task.
-
-If `.kazam/` does not exist and you want to use it:
-```bash
-kazam workspace init    # creates .kazam/, scans files, installs hooks
+```yaml
+- type: chart
+  data: []  # optional
+  height: 300  # optional
+  kind: "pie"
 ```
 
-### Importing plans
+### chart_group
+| Field | Type | Required |
+|-------|------|----------|
+| columns | number | no |
+| components | Component[] | yes |
+| title | string | no |
 
-If you have a markdown plan (from `/plan` mode or a design doc), import it:
-```bash
-kazam track import plan.md --dry-run   # preview what would be created
-kazam track import plan.md             # ## headings → epics, - bullets → tasks
+```yaml
+- type: chart_group
+  columns: 3  # optional
+  components: []
+  title: "Example Title"  # optional
 ```
 
-## If you hit a kazam bug
+### code
+| Field | Type | Required |
+|-------|------|----------|
+| code | string | yes |
+| language | string | no |
 
-Agents using this guide are on the front line of catching kazam bugs. If you
-reproduce one (parser error on valid YAML, surprising rendering, flag that
-doesn't work as documented), please file it upstream so the next agent hits a
-fixed version. Follow this protocol in order — do not skip the dedup step.
+```yaml
+- type: code
+  code: "console.log('hello')"
+  language: "typescript"  # optional
+```
 
-1. **Confirm `gh` is authenticated.** Run `gh auth status`. If it errors, skip
-   to step 4 and tell the user how to file by hand.
+### columns
+| Field | Type | Required |
+|-------|------|----------|
+| columns | Component[][] | yes |
+| equal_heights | boolean | no |
 
-2. **Search for duplicates before filing.** Covers both open and closed —
-   a closed issue may mean the fix already landed and the user just needs to
-   upgrade.
+```yaml
+- type: columns
+  columns: []
+  equal_heights: false  # optional
+```
 
-   ```bash
-   gh issue list --repo tdiderich/kazam --state all \
-     --search "<2-4 keywords describing the symptom>"
-   ```
+### definition_list
+| Field | Type | Required |
+|-------|------|----------|
+| items | DefinitionItem[] | yes |
 
-   Skim the titles. If anything looks like a match:
+```yaml
+- type: definition_list
+  items: []
+```
 
-   - Show the user the URL and ask whether to add a reproducer comment on the
-     existing issue instead of opening a new one.
-   - If it's closed and fixed, tell the user which version the fix shipped in
-     and suggest upgrading (`brew upgrade kazam` or
-     `cargo install kazam --force`). Don't file a duplicate.
+### divider
+| Field | Type | Required |
+|-------|------|----------|
+| label | string | no |
 
-3. **If no duplicate, file a new issue.** Tell the user what you're about to
-   do before running the command — file-and-surprise is rude. Use this
-   template:
+```yaml
+- type: divider
+  label: "Example Title"  # optional
+```
 
-   ```bash
-   gh issue create --repo tdiderich/kazam \
-     --title "<short imperative — what breaks>" \
-     --label bug \
-     --body "$(cat <<'EOF'
-   ## What happened
-   <one sentence>
+### embed
+| Field | Type | Required |
+|-------|------|----------|
+| aspect | string | no |
+| src | string | yes |
+| title | string | no |
 
-   ## Minimal repro
-   <smallest YAML + command that reproduces the bug>
+```yaml
+- type: embed
+  aspect: "16:9"  # optional
+  src: "https://example.com"
+  title: "Example Title"  # optional
+```
 
-   ## Expected
-   <what the docs say should happen>
+### empty_state
+| Field | Type | Required |
+|-------|------|----------|
+| action | EmptyStateAction | no |
+| body | string | no |
+| icon | string | no |
+| title | string | yes |
 
-   ## Actual
-   <what kazam does — paste the error message or wrong HTML snippet>
+```yaml
+- type: empty_state
+  action: {}  # optional
+  body: "Description text"  # optional
+  title: "Example Title"
+```
 
-   ## Version
-   <paste `kazam --version`>
-   EOF
-   )"
-   ```
+### event_timeline
+| Field | Type | Required |
+|-------|------|----------|
+| default_filter | EventFilter | no |
+| events | EventItem[] | yes |
+| limit | number | no |
+| show_filter_toggle | boolean | no |
 
-4. **Fallback when `gh` isn't available.** Show the user:
+```yaml
+- type: event_timeline
+  default_filter: "all"  # optional
+  events: []
+  limit: 3  # optional
+```
 
-   > Couldn't auto-file this — open
-   > https://github.com/tdiderich/kazam/issues/new and paste:
-   > [then show the filled-out template body]
+### header
+| Field | Type | Required |
+|-------|------|----------|
+| align | Align | no |
+| eyebrow | string | no |
+| id | string | no |
+| subtitle | string | no |
+| title | string | yes |
 
-Rules of thumb:
+```yaml
+- type: header
+  align: "left"  # optional
+  eyebrow: "example"  # optional
+  title: "Example Title"
+```
 
-- File only reproducible bugs here. Feature requests use the protocol below.
-- Keep the repro minimal — smallest YAML + command that triggers it.
-- Never open duplicates. When in doubt, comment on the closest existing issue
-  instead.
+### hero_banner
+| Field | Type | Required |
+|-------|------|----------|
+| buttons | ButtonConfig[] | no |
+| eyebrow | string | no |
+| subtitle | string | no |
+| title | string | yes |
 
-## If you have a feature idea for kazam
+```yaml
+- type: hero_banner
+  buttons: []  # optional
+  eyebrow: "example"  # optional
+  title: "Example Title"
+```
 
-Agents often bump into "kazam would be more useful if it could do X" while
-authoring a site. Great — that signal is valuable, but the filing bar is
-higher than for bugs because the maintainer has to weigh scope. Follow this
-protocol in order.
+### icon
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| name | string | yes |
+| size | IconSize | no |
 
-1. **Confirm `gh` is authenticated.** Same check as bug filing (step 1 above).
-   If not, drop to step 5 and tell the user how to file by hand.
+```yaml
+- type: icon
+  color: "default"  # optional
+  name: "Example"
+  size: "xs"  # optional
+```
 
-2. **Search for duplicates — both issues and open PRs.** Feature ideas get
-   proposed and deferred more than bugs do; the same idea may be open, closed
-   as wontfix, or already in flight as a PR.
+### image
+| Field | Type | Required |
+|-------|------|----------|
+| align | Align | no |
+| alt | string | no |
+| caption | string | no |
+| max_width | number | no |
+| src | string | yes |
 
-   ```bash
-   gh issue list --repo tdiderich/kazam --state all \
-     --search "<2-4 keywords> in:title,body"
-   gh pr list --repo tdiderich/kazam --state all \
-     --search "<2-4 keywords>"
-   ```
+```yaml
+- type: image
+  align: "left"  # optional
+  alt: "Image description"  # optional
+  src: "https://example.com"
+```
 
-   If anything looks like a match:
+### kbd
+| Field | Type | Required |
+|-------|------|----------|
+| keys | string[] | yes |
 
-   - Show the user the URL. If the discussion is active, suggest adding your
-     use case as a comment rather than opening a new issue.
-   - If it's closed as wontfix, respect the decision. Tell the user the
-     outcome and why (read the close comment), and suggest a userland
-     workaround (a `sync.sh` script, a custom component recipe, etc.).
+```yaml
+- type: kbd
+  keys: []
+```
 
-3. **Check the direction of the project first.** Before filing, confirm the
-   feature fits kazam's stated scope:
+### markdown
+| Field | Type | Required |
+|-------|------|----------|
+| body | string | yes |
 
-   - kazam ships as a single Rust binary with no network at build time. A
-     feature that pulls data from a live API at build time is out of scope
-     — it belongs in the user's own `sync.sh` that emits YAML.
-   - kazam does NOT ship third-party connectors (HubSpot, Linear, Slack,
-     etc.). Same reason: user owns the fetcher.
-   - The YAML schema stays narrow on purpose — the goal is LLMs producing it
-     correctly on the first try, which gets harder with every new component.
-     "Nice-to-have" components are a high bar.
+```yaml
+- type: markdown
+  body: "Description text"
+```
 
-   If the idea looks out-of-scope, tell the user and stop. Don't file a
-   request that will be closed as wontfix — that's noise.
+### meta
+| Field | Type | Required |
+|-------|------|----------|
+| fields | MetaField[] | yes |
 
-4. **If it fits, file a well-shaped feature request.** Tell the user what
-   you're about to do before running the command. Use this template:
+```yaml
+- type: meta
+  fields: []
+```
 
-   ```bash
-   gh issue create --repo tdiderich/kazam \
-     --title "<short imperative — what to add or change>" \
-     --label enhancement \
-     --body "$(cat <<'EOF'
-   ## What I'm trying to do
-   <the user-level goal — "I want to render a sortable table of customers
-   with per-row health badges" — not the implementation)
+### progress_bar
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| detail | string | no |
+| label | string | no |
+| value | number | yes |
 
-   ## Why kazam's current primitives don't fit
-   <specific components / flags you tried, and where they fell short>
+```yaml
+- type: progress_bar
+  color: "default"  # optional
+  detail: "Description text"  # optional
+  value: 42
+```
 
-   ## Proposed shape
-   <what the YAML would look like if this existed — be concrete>
+### resources
+| Field | Type | Required |
+|-------|------|----------|
+| items | ResourceItem[] | yes |
 
-   ```yaml
-   - type: <whatever>
-     ...
-   ```
+```yaml
+- type: resources
+  items: []
+```
 
-   ## Alternatives considered
-   <userland workaround, existing component combos, other tools>
+### role_map
+| Field | Type | Required |
+|-------|------|----------|
+| title | string | no |
 
-   ## Version
-   <paste `kazam --version`>
-   EOF
-   )"
-   ```
+```yaml
+- type: role_map
+  title: "Example Title"  # optional
+```
 
-5. **Fallback when `gh` isn't available.** Show the user:
+### section
+| Field | Type | Required |
+|-------|------|----------|
+| align | Align | no |
+| components | Component[] | yes |
+| eyebrow | string | no |
+| heading | string | no |
+| id | string | no |
 
-   > Couldn't auto-file this — open
-   > https://github.com/tdiderich/kazam/issues/new and paste:
-   > [then show the filled-out template body]
+```yaml
+- type: section
+  align: "left"  # optional
+  components: []
+  eyebrow: "example"  # optional
+```
 
-Rules of thumb for feature requests:
+### selectable_grid
+| Field | Type | Required |
+|-------|------|----------|
+| cards | SelectableCard[] | yes |
+| connector | Connector | no |
+| interaction | Interaction | no |
 
-- Lead with the user-level goal, not the implementation. "I want to render
-  sortable customer rows" beats "add a `sortable_table` component."
-- Show a concrete proposed YAML shape. Handwaving is the most common reason
-  a request stalls.
-- Always mention the workaround you already tried. If the answer is
-  "userland script + existing components already works," the maintainer
-  (or another agent reading the issue) will suggest that.
-- Never open duplicates. Comment on the closest existing thread instead.
+```yaml
+- type: selectable_grid
+  cards: []
+  connector: "none"  # optional
+  interaction: "single_select"  # optional
+```
+
+### split_compare
+| Field | Type | Required |
+|-------|------|----------|
+| left | ComparePanel | yes |
+| right | ComparePanel | yes |
+
+```yaml
+- type: split_compare
+  left: {}
+  right: {}
+```
+
+### stat_grid
+| Field | Type | Required |
+|-------|------|----------|
+| columns | number | no |
+| stats | Stat[] | yes |
+
+```yaml
+- type: stat_grid
+  columns: 3  # optional
+  stats: []
+```
+
+### status
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| label | string | yes |
+
+```yaml
+- type: status
+  color: "default"  # optional
+  label: "Example Title"
+```
+
+### steps
+| Field | Type | Required |
+|-------|------|----------|
+| items | Step[] | yes |
+| numbered | boolean | no |
+
+```yaml
+- type: steps
+  items: []
+  numbered: false  # optional
+```
+
+### table
+| Field | Type | Required |
+|-------|------|----------|
+| columns | TableColumn[] | yes |
+| filterable | boolean | no |
+| rows | Record<string, unknown>[] | yes |
+
+```yaml
+- type: table
+  columns: []
+  filterable: false  # optional
+  rows: []
+```
+
+### tabs
+| Field | Type | Required |
+|-------|------|----------|
+| tabs | Tab[] | yes |
+
+```yaml
+- type: tabs
+  tabs: []
+```
+
+### tag
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| label | string | yes |
+
+```yaml
+- type: tag
+  color: "default"  # optional
+  label: "Example Title"
+```
+
+### timeline
+| Field | Type | Required |
+|-------|------|----------|
+| items | TimelineItem[] | yes |
+
+```yaml
+- type: timeline
+  items: []
+```
+
+### tree
+| Field | Type | Required |
+|-------|------|----------|
+| default_collapsed | boolean | no |
+| default_filter | TreeFilter | no |
+| nodes | TreeNode[] | yes |
+| show_filter_toggle | boolean | no |
+
+```yaml
+- type: tree
+  default_collapsed: false  # optional
+  default_filter: "all"  # optional
+  nodes: []
+```
+
+### venn
+| Field | Type | Required |
+|-------|------|----------|
+| overlaps | VennOverlap[] | no |
+| sets | VennSet[] | yes |
+| title | string | no |
+
+```yaml
+- type: venn
+  overlaps: []  # optional
+  sets: []
+  title: "Example Title"  # optional
+```
+

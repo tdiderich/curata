@@ -66,18 +66,21 @@ server.tool(
 
 server.tool(
   "write_page",
-  "Create or update a page in your team's knowledge base. If a page with the derived slug already exists, it will be updated. Content should be valid kazam YAML.",
+  "Create or update a page in your team's knowledge base. If a page with the derived slug already exists, it will be updated. Content should be valid kazam YAML. Call get_component_reference first to learn the YAML syntax for charts, stat grids, and other components.",
   {
     title: z.string().describe("Page title (e.g., 'Q2 Revenue Analysis')"),
     content: z.string().describe("Full page content in kazam YAML format"),
     slug: z.string().optional().describe("Optional explicit slug. If omitted, derived from title."),
+    folder_id: z.string().optional().describe("Optional folder ID to place the page in. Use list_folders to find folder IDs."),
   },
-  async ({ title, content, slug: explicitSlug }) => {
+  async ({ title, content, slug: explicitSlug, folder_id }) => {
     const slug = explicitSlug || slugify(title);
-    const result = await callApi(CURATA_URL, CURATA_API_KEY, "write_page", { slug, content });
+    const args: Record<string, string> = { slug, content };
+    if (folder_id) args.folder_id = folder_id;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "write_page", args);
     if (result.error) {
       if (result.error.includes("page not found") || result.error.includes("not found")) {
-        const createResult = await callApi(CURATA_URL, CURATA_API_KEY, "create_page", { slug, content });
+        const createResult = await callApi(CURATA_URL, CURATA_API_KEY, "create_page", args);
         if (createResult.error) {
           return { content: [{ type: "text" as const, text: `Error creating page: ${createResult.error}` }], isError: true };
         }
@@ -91,19 +94,139 @@ server.tool(
 
 server.tool(
   "create_page",
-  "Create a new page in your team's knowledge base. Fails if a page with the same slug already exists. Content should be valid kazam YAML.",
+  "Create a new page in your team's knowledge base. Fails if a page with the same slug already exists. Content should be valid kazam YAML. Call get_component_reference first to learn the YAML syntax.",
   {
     title: z.string().describe("Page title"),
     content: z.string().describe("Full page content in kazam YAML format"),
     slug: z.string().optional().describe("Optional explicit slug. If omitted, derived from title."),
+    folder_id: z.string().optional().describe("Optional folder ID to place the page in. Use list_folders to find folder IDs."),
   },
-  async ({ title, content, slug: explicitSlug }) => {
+  async ({ title, content, slug: explicitSlug, folder_id }) => {
     const slug = explicitSlug || slugify(title);
-    const result = await callApi(CURATA_URL, CURATA_API_KEY, "create_page", { slug, content });
+    const args: Record<string, string> = { slug, content };
+    if (folder_id) args.folder_id = folder_id;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "create_page", args);
     if (result.error) {
       return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
     }
     return { content: [{ type: "text" as const, text: `Created page "${title}" (slug: ${slug})` }] };
+  }
+);
+
+server.tool(
+  "list_folders",
+  "List all folders in the knowledge base. Returns folder IDs, names, parent relationships, and page counts. Use folder IDs with create_page, write_page, or move_page.",
+  {},
+  async () => {
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "list_folders", {});
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    const folders = result.result as Array<{ id: string; name: string; parentId: string | null; pageCount: number }>;
+    if (!folders || folders.length === 0) {
+      return { content: [{ type: "text" as const, text: "No folders in the knowledge base." }] };
+    }
+    const lines = [`${folders.length} folder${folders.length !== 1 ? "s" : ""}:\n`];
+    for (const f of folders) {
+      const parent = f.parentId ? ` (parent: ${f.parentId})` : "";
+      lines.push(`- **${f.name}** (id: ${f.id})${parent} — ${f.pageCount} page${f.pageCount !== 1 ? "s" : ""}`);
+    }
+    return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+  }
+);
+
+server.tool(
+  "get_folder_structure",
+  "Get the full folder tree with pages nested under each folder. Shows the complete knowledge base structure at a glance.",
+  {},
+  async () => {
+    const [folderResult, pageResult] = await Promise.all([
+      callApi(CURATA_URL, CURATA_API_KEY, "list_folders", {}),
+      callApi(CURATA_URL, CURATA_API_KEY, "list_pages", {}),
+    ]);
+    if (folderResult.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${folderResult.error}` }], isError: true };
+    }
+    if (pageResult.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${pageResult.error}` }], isError: true };
+    }
+    const folders = (folderResult.result || []) as Array<{ id: string; name: string; parentId: string | null; pageCount: number }>;
+    const pages = (pageResult.result || []) as Array<{ title: string; slug: string; folderId: string | null }>;
+    const folderMap = new Map(folders.map((f) => [f.id, f]));
+    const childFolders = new Map<string | null, typeof folders>();
+    for (const f of folders) {
+      const key = f.parentId;
+      if (!childFolders.has(key)) childFolders.set(key, []);
+      childFolders.get(key)!.push(f);
+    }
+    const pagesByFolder = new Map<string | null, typeof pages>();
+    for (const p of pages) {
+      const key = p.folderId;
+      if (!pagesByFolder.has(key)) pagesByFolder.set(key, []);
+      pagesByFolder.get(key)!.push(p);
+    }
+    const lines: string[] = [];
+    function renderFolder(folderId: string, indent: string) {
+      const f = folderMap.get(folderId)!;
+      lines.push(`${indent}📁 **${f.name}** (id: ${f.id})`);
+      const folderPages = pagesByFolder.get(folderId) || [];
+      for (const p of folderPages) {
+        lines.push(`${indent}  📄 ${p.title} (${p.slug})`);
+      }
+      const children = childFolders.get(folderId) || [];
+      for (const child of children) {
+        renderFolder(child.id, indent + "  ");
+      }
+    }
+    const rootFolders = childFolders.get(null) || [];
+    for (const f of rootFolders) {
+      renderFolder(f.id, "");
+    }
+    const unfiled = pagesByFolder.get(null) || [];
+    if (unfiled.length > 0) {
+      lines.push("");
+      lines.push("📄 **Unfiled pages:**");
+      for (const p of unfiled) {
+        lines.push(`  📄 ${p.title} (${p.slug})`);
+      }
+    }
+    if (lines.length === 0) {
+      return { content: [{ type: "text" as const, text: "Knowledge base is empty." }] };
+    }
+    return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+  }
+);
+
+server.tool(
+  "move_page",
+  "Move a page to a different folder, or remove it from its current folder.",
+  {
+    slug: z.string().describe("Page slug to move"),
+    folder_id: z.string().optional().describe("Target folder ID. Omit or pass empty string to remove from folder."),
+  },
+  async ({ slug, folder_id }) => {
+    const args: Record<string, string> = { slug };
+    if (folder_id) args.folder_id = folder_id;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "move_page", args);
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    const dest = folder_id ? `folder ${folder_id}` : "no folder";
+    return { content: [{ type: "text" as const, text: `Moved "${slug}" to ${dest}` }] };
+  }
+);
+
+server.tool(
+  "get_component_reference",
+  "Get the full YAML authoring guide for kazam components — charts, stat grids, tables, callouts, and all other component types with syntax and examples. Call this before writing page content.",
+  {},
+  async () => {
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "get_component_reference", {});
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    const ref = result.result as { content: string };
+    return { content: [{ type: "text" as const, text: ref.content }] };
   }
 );
 

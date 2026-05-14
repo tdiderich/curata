@@ -103,7 +103,8 @@ export function formatPageList(pages: Array<Record<string, unknown>>): string {
     const views = (p.viewCount as number) || 0;
     const annotations = (p.annotationCount as number) || 0;
     const updated = p.updatedAt ? new Date(p.updatedAt as string).toLocaleDateString() : "unknown";
-    lines.push(`- **${p.title}** (slug: ${p.slug})`);
+    const folder = p.folderName ? ` [${p.folderName}]` : "";
+    lines.push(`- **${p.title}** (slug: ${p.slug})${folder}`);
     lines.push(`  Updated: ${updated} | Views: ${views} | Annotations: ${annotations}`);
   }
 
