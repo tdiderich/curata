@@ -8,6 +8,7 @@ interface Folder {
   id: string;
   name: string;
   visibility: string;
+  parentId?: string | null;
 }
 
 // ── New folder inline input ───────────────────────────────────────────────────
@@ -236,14 +237,16 @@ export function PageMenu({ slug, title, visibility, folderId, folders }: PageMen
 
 interface FolderMenuProps {
   folder: Folder;
+  allFolders?: Folder[];
 }
 
-export function FolderMenu({ folder }: FolderMenuProps) {
+export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(folder.name);
   const [busy, setBusy] = useState(false);
+  const [browseParent, setBrowseParent] = useState<string | null | undefined>(undefined);
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -283,6 +286,27 @@ export function FolderMenu({ folder }: FolderMenuProps) {
     } finally {
       setBusy(false);
       setRenaming(false);
+      router.refresh();
+    }
+  }
+
+  async function moveToFolder(parentId: string | null) {
+    setBusy(true);
+    setOpen(false);
+    try {
+      const res = await fetch(`${basePath}/api/folders`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: folder.id, parentId }),
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        console.error("[folder] move failed:", data.error);
+      }
+    } catch (err) {
+      console.error("[folder] move error:", err);
+    } finally {
+      setBusy(false);
       router.refresh();
     }
   }
@@ -351,7 +375,7 @@ export function FolderMenu({ folder }: FolderMenuProps) {
     <div ref={menuRef} className="dash-folder-actions">
       <button
         className="dash-folder-actions-btn"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => { setOpen((v) => !v); setBrowseParent(undefined); }}
         aria-label="Folder options"
       >
         &bull;&bull;&bull;
@@ -367,6 +391,66 @@ export function FolderMenu({ folder }: FolderMenuProps) {
           >
             Rename
           </button>
+          {allFolders.length > 0 && (() => {
+            const viewingParent = browseParent === undefined ? "__root" : browseParent;
+            const visibleFolders = allFolders.filter((f) => {
+              if (f.id === folder.id) return false;
+              if (viewingParent === "__root") return !f.parentId;
+              return f.parentId === viewingParent;
+            });
+            const parentFolder = viewingParent !== "__root" && viewingParent
+              ? allFolders.find((f) => f.id === viewingParent)
+              : null;
+            const hasChildren = (fId: string) => allFolders.some((f) => f.parentId === fId && f.id !== folder.id);
+            return (
+              <>
+                <div className="dash-page-actions-divider" />
+                <div className="dash-page-actions-section">Move to</div>
+                {viewingParent !== "__root" && (
+                  <button
+                    className="dash-folder-actions-item dash-folder-actions-back"
+                    onClick={() => {
+                      if (parentFolder?.parentId) setBrowseParent(parentFolder.parentId);
+                      else setBrowseParent(undefined);
+                    }}
+                  >
+                    <span className="dash-folder-actions-arrow">&#8592;</span>
+                    {parentFolder ? parentFolder.name : "Back"}
+                  </button>
+                )}
+                <button
+                  className={`dash-folder-actions-item${folder.parentId === (viewingParent === "__root" ? null : viewingParent) ? " dash-folder-actions-item--active" : ""}`}
+                  onClick={() => moveToFolder(viewingParent === "__root" ? null : viewingParent!)}
+                >
+                  {viewingParent === "__root" ? "Top level" : "Here"}
+                  {folder.parentId === (viewingParent === "__root" ? null : viewingParent) && (
+                    <span className="dash-page-actions-check">&#10003;</span>
+                  )}
+                </button>
+                {visibleFolders.map((f) => (
+                  <div key={f.id} className="dash-folder-actions-move-row">
+                    <button
+                      className={`dash-folder-actions-item dash-folder-actions-move-target${folder.parentId === f.id ? " dash-folder-actions-item--active" : ""}`}
+                      onClick={() => moveToFolder(f.id)}
+                    >
+                      {f.name}
+                      {folder.parentId === f.id && <span className="dash-page-actions-check">&#10003;</span>}
+                    </button>
+                    {hasChildren(f.id) && (
+                      <button
+                        className="dash-folder-actions-drill"
+                        onClick={() => setBrowseParent(f.id)}
+                        aria-label={`Browse ${f.name}`}
+                      >
+                        &#8250;
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </>
+            );
+          })()}
+          <div className="dash-page-actions-divider" />
           <button
             className="dash-folder-actions-item dash-folder-actions-item--danger"
             onClick={doDelete}

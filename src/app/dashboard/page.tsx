@@ -18,6 +18,9 @@ interface FolderRow {
   id: string;
   name: string;
   visibility: string;
+  parentId: string | null;
+  pageCount: number;
+  childFolderCount: number;
 }
 
 export default async function DashboardPage() {
@@ -33,7 +36,7 @@ export default async function DashboardPage() {
 
   const pages = await listPages(ctx.orgId, ctx.userId);
 
-  const folders: FolderRow[] = await db.folder.findMany({
+  const rawFolders = await db.folder.findMany({
     where: {
       orgId: ctx.orgId,
       OR: [
@@ -42,8 +45,23 @@ export default async function DashboardPage() {
       ],
     },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, visibility: true },
+    select: {
+      id: true,
+      name: true,
+      visibility: true,
+      parentId: true,
+      _count: { select: { pages: true, children: true } },
+    },
   });
+
+  const folders: FolderRow[] = rawFolders.map((f) => ({
+    id: f.id,
+    name: f.name,
+    visibility: f.visibility,
+    parentId: f.parentId,
+    pageCount: f._count.pages,
+    childFolderCount: f._count.children,
+  }));
 
 
   const serialized: SerializedPageMeta[] = pages.map((p) => ({

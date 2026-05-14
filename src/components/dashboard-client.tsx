@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { NewFolderButton, FolderMenu, PageMenu } from "@/components/folder-actions";
@@ -27,6 +27,9 @@ interface FolderRow {
   id: string;
   name: string;
   visibility: string;
+  parentId: string | null;
+  pageCount: number;
+  childFolderCount: number;
 }
 
 type SortKey = "lastActivity" | "title" | "views";
@@ -101,6 +104,7 @@ function DashActions({
 
   return (
     <div className="dash-actions-wrap" ref={ref}>
+      <NewFolderButton />
       <NewPageButton />
       <button
         className="dash-actions-trigger"
@@ -146,10 +150,6 @@ function DashActions({
           <Link href="/settings" className="dash-actions-item" onClick={() => setOpen(false)}>
             Settings
           </Link>
-          <div className="dash-actions-divider" />
-          <div className="dash-actions-folder-row">
-            <NewFolderButton />
-          </div>
         </div>
       )}
     </div>
@@ -247,6 +247,45 @@ interface DashboardClientProps {
   orgName?: string;
 }
 
+function PageRow({ page, folders, indent = 1 }: { page: SerializedPageMeta; folders: FolderRow[]; indent?: number }) {
+  return (
+    <tr className={`dash-row dash-row--nested${indent > 1 ? " dash-row--deep" : ""}`}>
+      <td className="dash-td dash-td-title" style={indent > 1 ? { paddingLeft: `${indent * 1.5}rem` } : undefined}>
+        <Link href={`/pages/${page.slug}`} className="dash-page-link">
+          {page.title}
+        </Link>
+      </td>
+      <td className="dash-td dash-td-muted">{formatDate(page.lastActivity)}</td>
+      <td className="dash-td dash-td-right dash-td-muted">
+        {page.viewCount > 0 ? page.viewCount : <span className="dash-none">&mdash;</span>}
+      </td>
+      <td className="dash-td dash-td-right">
+        {page.annotationCount > 0 ? (
+          <span className="dash-ann-count">{page.annotationCount}</span>
+        ) : (
+          <span className="dash-none">&mdash;</span>
+        )}
+      </td>
+      <td className="dash-td dash-td-actions">
+        <PageMenu
+          slug={page.slug}
+          title={page.title}
+          visibility={page.visibility}
+          folderId={page.folderId}
+          folders={folders}
+        />
+      </td>
+    </tr>
+  );
+}
+
+function FolderContentsLabel({ folder }: { folder: FolderRow }) {
+  const parts: string[] = [];
+  if (folder.pageCount > 0) parts.push(`${folder.pageCount} page${folder.pageCount !== 1 ? "s" : ""}`);
+  if (folder.childFolderCount > 0) parts.push(`${folder.childFolderCount} folder${folder.childFolderCount !== 1 ? "s" : ""}`);
+  return <span className="dash-folder-count">{parts.join(", ") || "empty"}</span>;
+}
+
 export function DashboardClient({ pages, folders, pageCount, orgName }: DashboardClientProps) {
   const [view, setView] = useDashView();
   const [sortKey, setSortKey] = useSortKey();
@@ -254,14 +293,80 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
     () => new Set(["__unfiled", ...folders.map((f) => f.id)])
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [rootFolderId, setRootFolderId] = useState<string | null>(null);
 
   const sorted = useMemo(() => sortPages(pages, sortKey), [pages, sortKey]);
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return sorted;
     const q = searchQuery.toLowerCase();
-    return sorted.filter((p) => p.title.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q));
-  }, [sorted, searchQuery]);
+    return sorted.filter((p) => {
+      if (p.title.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q)) return true;
+      if (p.folderId) {
+        let f = folders.find((x) => x.id === p.folderId);
+        while (f) {
+          if (f.name.toLowerCase().includes(q)) return true;
+          f = f.parentId ? folders.find((x) => x.id === f!.parentId) : undefined;
+        }
+      }
+      return false;
+    });
+  }, [sorted, searchQuery, folders]);
+
+  const folderMap = useMemo(() => {
+    const m = new Map<string, FolderRow>();
+    for (const f of folders) m.set(f.id, f);
+    return m;
+  }, [folders]);
+
+  const topFolders = useMemo(
+    () => folders.filter((f) => (rootFolderId ? f.parentId === rootFolderId : !f.parentId)),
+    [folders, rootFolderId]
+  );
+  const childFoldersByParent = useMemo(() => {
+    const map = new Map<string, FolderRow[]>();
+    for (const f of folders) {
+      if (f.parentId) {
+        const list = map.get(f.parentId) || [];
+        list.push(f);
+        map.set(f.parentId, list);
+      }
+    }
+    return map;
+  }, [folders]);
+
+  const rootBreadcrumb = useMemo(() => {
+    const crumbs: { id: string | null; name: string }[] = [];
+    let current = rootFolderId ? folderMap.get(rootFolderId) : null;
+    while (current) {
+      crumbs.unshift({ id: current.id, name: current.name });
+      current = current.parentId ? folderMap.get(current.parentId) : undefined;
+    }
+    crumbs.unshift({ id: null, name: "All" });
+    return crumbs;
+  }, [rootFolderId, folderMap]);
+
+  const folderIdsWithMatches = useMemo(() => {
+    const ids = new Set<string>();
+    for (const p of filtered) {
+      if (p.folderId) {
+        let current: FolderRow | undefined = folderMap.get(p.folderId);
+        while (current) {
+          ids.add(current.id);
+          current = current.parentId ? folderMap.get(current.parentId) : undefined;
+        }
+      }
+    }
+    return ids;
+  }, [filtered, folderMap]);
+
+  const effectiveCollapsed = useMemo(() => {
+    if (!searchQuery.trim()) return collapsedFolders;
+    const next = new Set(collapsedFolders);
+    for (const id of folderIdsWithMatches) next.delete(id);
+    if (filtered.some((p) => !p.folderId)) next.delete("__unfiled");
+    return next;
+  }, [collapsedFolders, searchQuery, folderIdsWithMatches, filtered]);
 
   const toggleFolderCollapse = useCallback((folderId: string) => {
     setCollapsedFolders((prev) => {
@@ -280,12 +385,30 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
     );
   }
 
-  const unfiledPages = filtered.filter((p) => p.folderId === null);
+  const unfiledPages = rootFolderId
+    ? filtered.filter((p) => p.folderId === rootFolderId)
+    : filtered.filter((p) => p.folderId === null);
 
   const sortLabel = sortKey === "title" ? "Title" : sortKey === "views" ? "Views" : "Updated";
 
   return (
     <div className="dash-root">
+      {rootFolderId && (
+        <div className="dash-breadcrumb">
+          {rootBreadcrumb.map((crumb, i) => (
+            <React.Fragment key={crumb.id ?? "__all"}>
+              {i > 0 && <span className="dash-breadcrumb-sep">/</span>}
+              {i < rootBreadcrumb.length - 1 ? (
+                <button className="dash-breadcrumb-link" onClick={() => setRootFolderId(crumb.id)}>
+                  {crumb.name}
+                </button>
+              ) : (
+                <span className="dash-breadcrumb-current">{crumb.name}</span>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
       <div className="dash-toolbar">
         <div className="search-bar">
           <div className="search-bar-input-wrap">
@@ -320,6 +443,47 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
         <div className="dash-workspace">
           <DashboardFeed pages={filtered} />
         </div>
+      ) : searchQuery.trim() ? (
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th className="dash-th dash-th-title">Title</th>
+              <th className="dash-th">Folder</th>
+              <th className="dash-th">{sortLabel}</th>
+              <th className="dash-th dash-th-right">Views</th>
+              <th className="dash-th dash-th-right">Annotations</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((page) => {
+              const f = page.folderId ? folderMap.get(page.folderId) : null;
+              return (
+                <tr key={page.slug} className="dash-row">
+                  <td className="dash-td dash-td-title">
+                    <Link href={`/pages/${page.slug}`} className="dash-page-link">
+                      {page.title}
+                    </Link>
+                  </td>
+                  <td className="dash-td dash-td-muted">{f ? f.name : <span className="dash-none">&mdash;</span>}</td>
+                  <td className="dash-td dash-td-muted">{formatDate(page.lastActivity)}</td>
+                  <td className="dash-td dash-td-right dash-td-muted">
+                    {page.viewCount > 0 ? page.viewCount : <span className="dash-none">&mdash;</span>}
+                  </td>
+                  <td className="dash-td dash-td-right">
+                    {page.annotationCount > 0 ? (
+                      <span className="dash-ann-count">{page.annotationCount}</span>
+                    ) : (
+                      <span className="dash-none">&mdash;</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {filtered.length === 0 && (
+              <tr><td colSpan={5} className="dash-td dash-td-muted" style={{ textAlign: "center", padding: "24px" }}>No pages match &ldquo;{searchQuery}&rdquo;</td></tr>
+            )}
+          </tbody>
+        </table>
       ) : (
         <table className="dash-table">
           <thead>
@@ -332,7 +496,7 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
             </tr>
           </thead>
           {unfiledPages.length > 0 && (() => {
-            const isCollapsed = collapsedFolders.has("__unfiled");
+            const isCollapsed = effectiveCollapsed.has("__unfiled");
             return (
               <tbody>
                 <tr
@@ -350,89 +514,68 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
                   </td>
                 </tr>
                 {!isCollapsed && unfiledPages.map((page) => (
-                  <tr key={page.slug} className="dash-row dash-row--nested">
-                    <td className="dash-td dash-td-title">
-                      <Link href={`/pages/${page.slug}`} className="dash-page-link">
-                        {page.title}
-                      </Link>
-                    </td>
-                    <td className="dash-td dash-td-muted">{formatDate(page.lastActivity)}</td>
-                    <td className="dash-td dash-td-right dash-td-muted">
-                      {page.viewCount > 0 ? page.viewCount : <span className="dash-none">&mdash;</span>}
-                    </td>
-                    <td className="dash-td dash-td-right">
-                      {page.annotationCount > 0 ? (
-                        <span className="dash-ann-count">{page.annotationCount}</span>
-                      ) : (
-                        <span className="dash-none">&mdash;</span>
-                      )}
-                    </td>
-                    <td className="dash-td dash-td-actions">
-                      <PageMenu
-                        slug={page.slug}
-                        title={page.title}
-                        visibility={page.visibility}
-                        folderId={page.folderId}
-                        folders={folders}
-                      />
-                    </td>
-                  </tr>
+                  <PageRow key={page.slug} page={page} folders={folders} />
                 ))}
               </tbody>
             );
           })()}
-          {folders.map((folder) => {
-            const folderPages = filtered.filter((p) => p.folderId === folder.id);
-            if (folderPages.length === 0 && searchQuery.trim()) return null;
-            const isCollapsed = collapsedFolders.has(folder.id);
+          {topFolders.map((folder) => {
+            const directPages = filtered.filter((p) => p.folderId === folder.id);
+            const children = childFoldersByParent.get(folder.id) || [];
+            const isCollapsed = effectiveCollapsed.has(folder.id);
             return (
               <tbody key={folder.id}>
                 <tr
                   className={`dash-folder-row${isCollapsed ? " dash-folder-row--collapsed" : ""}`}
                   onClick={() => toggleFolderCollapse(folder.id)}
+                  onDoubleClick={() => { if (folder.childFolderCount > 0) setRootFolderId(folder.id); }}
                 >
                   <td colSpan={5} className="dash-folder-td">
                     <div className="dash-folder-row-inner">
                       <span className="dash-folder-chevron">&#9660;</span>
                       <span className="dash-folder-name">{folder.name}</span>
-                      <span className="dash-folder-count">
-                        {folderPages.length} page{folderPages.length !== 1 ? "s" : ""}
-                      </span>
+                      <FolderContentsLabel folder={folder} />
                       <span className="dash-folder-menu" onClick={(e) => e.stopPropagation()}>
-                        <FolderMenu folder={folder} />
+                        <FolderMenu folder={folder} allFolders={folders} />
                       </span>
                     </div>
                   </td>
                 </tr>
-                {!isCollapsed && folderPages.map((page) => (
-                  <tr key={page.slug} className="dash-row dash-row--nested">
-                    <td className="dash-td dash-td-title">
-                      <Link href={`/pages/${page.slug}`} className="dash-page-link">
-                        {page.title}
-                      </Link>
-                    </td>
-                    <td className="dash-td dash-td-muted">{formatDate(page.lastActivity)}</td>
-                    <td className="dash-td dash-td-right dash-td-muted">
-                      {page.viewCount > 0 ? page.viewCount : <span className="dash-none">&mdash;</span>}
-                    </td>
-                    <td className="dash-td dash-td-right">
-                      {page.annotationCount > 0 ? (
-                        <span className="dash-ann-count">{page.annotationCount}</span>
-                      ) : (
-                        <span className="dash-none">&mdash;</span>
-                      )}
-                    </td>
-                    <td className="dash-td dash-td-actions">
-                      <PageMenu
-                        slug={page.slug}
-                        title={page.title}
-                        visibility={page.visibility}
-                        folderId={page.folderId}
-                        folders={folders}
-                      />
-                    </td>
-                  </tr>
-                ))}
+                {!isCollapsed && (
+                  <>
+                    {children.map((child) => {
+                      const drillable = child.childFolderCount > 0;
+                      const childCollapsed = drillable || effectiveCollapsed.has(child.id);
+                      const childPages = filtered.filter((p) => p.folderId === child.id);
+                      return (
+                        <React.Fragment key={child.id}>
+                          <tr
+                            className={`dash-folder-row dash-folder-row--child${drillable ? " dash-folder-row--drillable" : ""}${childCollapsed ? " dash-folder-row--collapsed" : ""}`}
+                            onClick={() => { if (drillable) setRootFolderId(child.id); else toggleFolderCollapse(child.id); }}
+                          >
+                            <td colSpan={5} className="dash-folder-td">
+                              <div className="dash-folder-row-inner dash-folder-row-inner--child">
+                                {!drillable && <span className="dash-folder-chevron">&#9660;</span>}
+                                <span className="dash-folder-name">{child.name}</span>
+                                <FolderContentsLabel folder={child} />
+                                {drillable && <span className="dash-folder-drill-hint">&#8250;</span>}
+                                <span className="dash-folder-menu" onClick={(e) => e.stopPropagation()}>
+                                  <FolderMenu folder={child} allFolders={folders} />
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                          {!childCollapsed && childPages.map((page) => (
+                            <PageRow key={page.slug} page={page} folders={folders} indent={2} />
+                          ))}
+                        </React.Fragment>
+                      );
+                    })}
+                    {directPages.map((page) => (
+                      <PageRow key={page.slug} page={page} folders={folders} />
+                    ))}
+                  </>
+                )}
               </tbody>
             );
           })}
