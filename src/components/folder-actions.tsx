@@ -247,8 +247,11 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
   const [name, setName] = useState(folder.name);
   const [busy, setBusy] = useState(false);
   const [browseParent, setBrowseParent] = useState<string | null | undefined>(undefined);
+  const [addingChild, setAddingChild] = useState(false);
+  const [childName, setChildName] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const childInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (renaming) inputRef.current?.focus();
@@ -340,6 +343,35 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
     }
   }
 
+  useEffect(() => {
+    if (addingChild) childInputRef.current?.focus();
+  }, [addingChild]);
+
+  async function createChild() {
+    const trimmed = childName.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`${basePath}/api/folders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed, parentId: folder.id }),
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        console.error("[folder] create child failed:", data.error);
+      }
+    } catch (err) {
+      console.error("[folder] create child error:", err);
+    } finally {
+      setBusy(false);
+      setAddingChild(false);
+      setChildName("");
+      setOpen(false);
+      router.refresh();
+    }
+  }
+
   if (renaming) {
     return (
       <div className="dash-new-folder" style={{ display: "inline-flex" }}>
@@ -375,7 +407,7 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
     <div ref={menuRef} className="dash-folder-actions">
       <button
         className="dash-folder-actions-btn"
-        onClick={() => { setOpen((v) => !v); setBrowseParent(undefined); }}
+        onClick={() => { setOpen((v) => !v); setBrowseParent(undefined); setAddingChild(false); setChildName(""); }}
         aria-label="Folder options"
       >
         &bull;&bull;&bull;
@@ -391,6 +423,32 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
           >
             Rename
           </button>
+          {addingChild ? (
+            <div className="dash-folder-actions-inline-create">
+              <input
+                ref={childInputRef}
+                className="dash-new-folder-input"
+                placeholder="Folder name"
+                value={childName}
+                onChange={(e) => setChildName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") createChild();
+                  if (e.key === "Escape") { setAddingChild(false); setChildName(""); }
+                }}
+                disabled={busy}
+              />
+              <button className="dash-new-folder-submit" onClick={createChild} disabled={busy || !childName.trim()}>
+                {busy ? "..." : "Create"}
+              </button>
+            </div>
+          ) : (
+            <button
+              className="dash-folder-actions-item"
+              onClick={() => setAddingChild(true)}
+            >
+              + Add folder
+            </button>
+          )}
           {allFolders.length > 0 && (() => {
             const viewingParent = browseParent === undefined ? "__root" : browseParent;
             const visibleFolders = allFolders.filter((f) => {
