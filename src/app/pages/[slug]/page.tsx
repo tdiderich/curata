@@ -3,7 +3,6 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { resolveOrg, AUTH_MODE } from "@/lib/auth";
 import { getAnnotations, getPageSections, readPage } from "@/lib/pages";
-import { db } from "@/lib/db";
 import { PageRenderer } from "@/generated/kazam-renderer";
 import PageDetailClient from "@/components/page-detail-client";
 import PageEditor from "@/components/page-editor";
@@ -16,12 +15,9 @@ export async function generateMetadata({
   const ctx = await resolveOrg();
   if (!ctx) return { title: "curata" };
   const { slug } = await params;
-  const [pageData, org] = await Promise.all([
-    readPage(ctx.orgId, slug),
-    db.organization.findUnique({ where: { id: ctx.orgId }, select: { name: true } }),
-  ]);
+  const pageData = await readPage(ctx.orgId, slug);
   const pageTitle = pageData ? (pageData.json.title as string) || slug : slug;
-  return { title: `${pageTitle} — ${org?.name ?? "curata"}` };
+  return { title: pageTitle };
 }
 
 export default async function PageDetailView({

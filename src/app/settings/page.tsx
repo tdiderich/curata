@@ -13,10 +13,7 @@ import { ApiKeyManager } from "@/components/api-key-manager";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
-  const ctx = await resolveOrg();
-  if (!ctx) return { title: "Settings" };
-  const org = await db.organization.findUnique({ where: { id: ctx.orgId }, select: { name: true } });
-  return { title: `Settings — ${org?.name ?? "curata"}` };
+  return { title: "Settings" };
 }
 
 export default async function SettingsPage() {
