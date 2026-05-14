@@ -5,12 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "pnpm generate && next build",
-    "generate": "prisma generate && kazam sdk emit > src/generated/kazam.ts && kazam sdk emit-react > src/generated/kazam-renderer.tsx",
+    "generate": "prisma generate && .bin/kazam sdk emit > src/generated/kazam.ts && .bin/kazam sdk emit-react > src/generated/kazam-renderer.tsx",
     "start": "prisma db push && next start",
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepare": "bash scripts/install-hooks.sh 2>/dev/null || true"
+    "prepare": "bash scripts/install-hooks.sh 2>/dev/null || true; bash scripts/install-kazam.sh 2>/dev/null || true"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
