@@ -1716,6 +1716,24 @@ body .c-section.align-right > * { max-width: none !important; }
   background: rgba(201, 123, 138, 0.08);
 }
 
+.dash-folder-actions-inline-create {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+}
+
+.dash-folder-actions-inline-create .dash-new-folder-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  padding: 3px 6px;
+}
+
+.dash-folder-actions-inline-create .dash-new-folder-submit {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
 /* ── Per-page "..." actions dropdown ── */
 
 .dash-td-actions {
