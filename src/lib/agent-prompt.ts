@@ -16,7 +16,7 @@ export function buildAgentPrompt({
 
 Start by reading the page to understand its current state:
 \`\`\`bash
-curl -X POST ${baseUrl}/api/kazam -H "Content-Type: application/json" -H "Authorization: Bearer ${token}" -d '{"tool": "read_page", "args": {"slug": "${slug}"}}'
+curl -X POST ${baseUrl}/api/mcp -H "Content-Type: application/json" -H "Authorization: Bearer ${token}" -d '{"tool": "read_page", "args": {"slug": "${slug}"}}'
 \`\`\`
 
 1. **Read the page** — call \`read_page\` with slug \`${slug}\` to get the current YAML, sections, and any open annotations.
@@ -60,7 +60,7 @@ curl -X POST ${baseUrl}/api/kazam -H "Content-Type: application/json" -H "Author
 
 ## Connection
 
-MCP Endpoint: ${baseUrl}/api/kazam
+MCP Endpoint: ${baseUrl}/api/mcp
 Authorization: Bearer ${token}
 ${slugSection}
 ## API Format
@@ -69,7 +69,7 @@ Every request is a POST to the endpoint with JSON body: \`{ "tool": "<tool_name>
 
 Example — read a page:
 \`\`\`bash
-curl -X POST ${baseUrl}/api/kazam \\
+curl -X POST ${baseUrl}/api/mcp \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer ${token}" \\
   -d '{"tool": "read_page", "args": {"slug": "${exampleSlug}"}}'
@@ -77,7 +77,7 @@ curl -X POST ${baseUrl}/api/kazam \\
 
 Example — add an annotation:
 \`\`\`bash
-curl -X POST ${baseUrl}/api/kazam \\
+curl -X POST ${baseUrl}/api/mcp \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer ${token}" \\
   -d '{"tool": "annotate_page", "args": {"slug": "${exampleSlug}", "text": "Updated metrics section", "author": "agent", "section": "Key Metrics", "kind": "note"}}'
@@ -85,7 +85,7 @@ curl -X POST ${baseUrl}/api/kazam \\
 
 Example — write updated page content:
 \`\`\`bash
-curl -X POST ${baseUrl}/api/kazam \\
+curl -X POST ${baseUrl}/api/mcp \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer ${token}" \\
   -d '{"tool": "write_page", "args": {"slug": "${exampleSlug}", "content": "<full YAML content>"}}'

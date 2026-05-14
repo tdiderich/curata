@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ result });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("POST /api/kazam failed:", message);
+    console.error("POST /api/mcp failed:", message);
     return NextResponse.json({
       error: message,
       hint: "Call get_component_reference (no args) for the full YAML authoring guide with component syntax and examples.",

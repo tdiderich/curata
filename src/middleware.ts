@@ -10,7 +10,7 @@ const PROTECTED_PREFIXES = ["/dashboard", "/settings"];
 const PUBLIC_PREFIXES = [
   "/sign-in",
   "/api/auth/",
-  "/api/kazam/",
+  "/api/mcp/",
   "/api/og/",
   "/api/public-annotations/",
   "/p/",
@@ -26,13 +26,13 @@ function isPublic(pathname: string): boolean {
 }
 
 function isAgentApi(pathname: string): boolean {
-  return pathname.startsWith("/api/kazam");
+  return pathname.startsWith("/api/mcp");
 }
 
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Rate limiting for /api/kazam
+  // Rate limiting for /api/mcp
   if (isAgentApi(pathname)) {
     const key =
       request.headers.get("authorization")?.slice(0, 20) ||
