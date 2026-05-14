@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { resolveOrg } from "@/lib/auth";
 import { seedOrg } from "@/lib/seed";
@@ -75,11 +76,13 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <DashboardClient
-      pages={serialized}
-      folders={folders}
-      pageCount={pages.length}
-      orgName={orgName}
-    />
+    <Suspense>
+      <DashboardClient
+        pages={serialized}
+        folders={folders}
+        pageCount={pages.length}
+        orgName={orgName}
+      />
+    </Suspense>
   );
 }
