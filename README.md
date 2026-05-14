@@ -1,10 +1,12 @@
 # curata
 
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg) ![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
+
 The knowledge store for AI agents.
 
 Agents write structured pages via MCP. Humans read rendered pages and annotate. Agent outputs become agent inputs. The loop compounds.
 
-https://github.com/user-attachments/assets/demo.mp4
+See [curata.ai](https://curata.ai) for a live demo.
 
 ---
 
@@ -23,29 +25,38 @@ The app is running at `http://localhost:3000`. Create an API key in **Settings**
 
 ## Connect your agent
 
-Install the MCP server from the repo:
+Curata has a built-in MCP server — no separate package needed. Just point your MCP client at the running app.
 
-```bash
-cd packages/mcp-server
-npm install && npm run build
-npm link
-```
-
-Add to your agent's MCP config (`~/.claude.json`, `.cursor/mcp.json`, etc.):
+**No auth (default `AUTH_MODE=none`):**
 
 ```json
 {
   "mcpServers": {
     "curata": {
-      "command": "curata-mcp",
-      "env": {
-        "CURATA_API_KEY": "your-api-key",
-        "CURATA_URL": "http://localhost:3000"
+      "type": "url",
+      "url": "http://localhost:3000/api/mcp/stream"
+    }
+  }
+}
+```
+
+**With API key auth:** create a key in **Settings > API Keys**, then:
+
+```json
+{
+  "mcpServers": {
+    "curata": {
+      "type": "url",
+      "url": "http://localhost:3000/api/mcp/stream",
+      "headers": {
+        "Authorization": "Bearer ck_your_api_key_here"
       }
     }
   }
 }
 ```
+
+Add the config to `~/.claude.json`, `.cursor/mcp.json`, or wherever your agent reads MCP settings.
 
 Your agent now has 6 tools: `search_pages`, `read_page`, `list_pages`, `write_page`, `create_page`, `annotate_page`.
 
@@ -103,6 +114,18 @@ Postgres data is persisted in a named volume. See the [self-hosting guide](https
 ## Hosted version
 
 Don't want to self-host? **[curata.ai](https://curata.ai)** is the hosted version with Clerk auth, managed Postgres, and zero setup.
+
+---
+
+## Why curata?
+
+There are plenty of places to store text. Curata is built specifically for the agent-human loop.
+
+- **vs Notion** — Notion is proprietary, has no MCP integration, and pages are freeform text blobs. Curata pages are structured YAML with a typed component schema, so agents can write and read them reliably without prompt engineering.
+- **vs Confluence** — Enterprise pricing, no agent API, and the UX is built around human editors. Curata ships with a native MCP server so agents are first-class writers from day one.
+- **vs plain markdown files** — Markdown in a repo has no rendering pipeline, no annotation layer, and no search API. You can't tell an agent to "annotate section 3" or query across all pages by structured field.
+- **vs a custom wiki** — Building your own knowledge store means owning the renderer, the auth, the search index, and the agent integration. Curata gives you all of that in a single `docker compose up`.
+- **vs chat history** — LLM context windows are ephemeral and expensive. Curata is persistent structured memory that compounds — agent outputs become inputs for the next run.
 
 ---
 

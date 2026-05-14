@@ -118,14 +118,15 @@ export async function runApiKey(): Promise<void> {
       [id, org.id, "cli-generated", hash, prefix, "{read,write}", "system", now]
     );
 
+    const curataUrl = process.env["CURATA_URL"] ?? "http://localhost:3000";
+
     const mcpConfig = {
       mcpServers: {
         curata: {
-          command: "npx",
-          args: ["-y", "@curata/mcp-server"],
-          env: {
-            CURATA_API_KEY: key,
-            CURATA_URL: "http://localhost:3000",
+          type: "url",
+          url: `${curataUrl}/api/mcp/stream`,
+          headers: {
+            Authorization: `Bearer ${key}`,
           },
         },
       },

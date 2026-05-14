@@ -133,31 +133,12 @@ const GETTING_STARTED_PAGE = {
     },
     {
       type: "divider",
-      label: "Pricing",
-    },
-    {
-      type: "section",
-      heading: "Simple pricing that scales with you",
-      components: [
-        {
-          type: "stat_grid",
-          columns: 3,
-          stats: [
-            { label: "Starter", value: "Free", detail: "5 pages, 1 agent, community support" },
-            { label: "Team", value: "$49/mo", detail: "Unlimited pages, 5 agents, priority support" },
-            { label: "Enterprise", value: "Custom", detail: "SSO, audit logs, dedicated support, SLA" },
-          ],
-        },
-      ],
-    },
-    {
-      type: "divider",
     },
     {
       type: "callout",
       variant: "success",
-      title: "Ready to get started?",
-      body: "Connect an agent using the button above, or create pages manually from the dashboard. Your agent can personalize this entire page in under a minute.",
+      title: "You're running curata self-hosted",
+      body: "Connect an agent via the MCP server to start the knowledge loop. Generate an API key in Settings, wire up the MCP server, and ask your agent to update this page.",
     },
   ],
 };
