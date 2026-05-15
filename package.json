@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "pnpm generate && next build",
-    "generate": "prisma generate && .bin/kazam sdk emit > src/generated/kazam.ts && .bin/kazam sdk emit-react > src/generated/kazam-renderer.tsx && .bin/kazam sdk emit-agents > docs/agents-reference.md",
+    "generate": "prisma generate && .bin/kazam sdk emit > src/generated/kazam.ts && .bin/kazam sdk emit-react > src/generated/kazam-renderer.tsx && .bin/kazam sdk emit-agents > docs/agents-reference.md && .bin/kazam theme css --switchable > src/app/kazam.css",
     "start": "prisma db push && next start",
     "lint": "eslint",
     "test": "vitest run",
