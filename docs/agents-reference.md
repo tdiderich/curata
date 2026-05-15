@@ -13,6 +13,9 @@ Values: `cli`, `agent`, `web`
 ### AnnotationStatus
 Values: `pending`, `incorporated`, `ignored`, `stale`
 
+### ArchDirection
+Values: `left_to_right`, `top_to_bottom`
+
 ### AvatarSize
 Values: `sm`, `md`, `lg`, `xl`
 
@@ -97,6 +100,22 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | source | AnnotationSource | yes |
 | status | AnnotationStatus | yes |
 | text | string | yes |
+
+### ArchConnection
+| Field | Type | Required |
+|-------|------|----------|
+| from | string | yes |
+| label | string | no |
+| to | string | yes |
+
+### ArchNode
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| detail | string | no |
+| icon | string | no |
+| id | string | yes |
+| label | string | yes |
 
 ### AvatarConfig
 | Field | Type | Required |
@@ -235,6 +254,21 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | label | string | yes |
 | personas | string[] | no |
 
+### QuadrantPoint
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| label | string | yes |
+| x | number | yes |
+| y | number | yes |
+
+### RadarCurve
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| label | string | yes |
+| values | number[] | yes |
+
 ### Reference
 | Field | Type | Required |
 |-------|------|----------|
@@ -270,6 +304,13 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | icon | string | no |
 | id | string | yes |
 | label | string | yes |
+
+### SankeyFlow
+| Field | Type | Required |
+|-------|------|----------|
+| source | string | yes |
+| target | string | yes |
+| value | number | yes |
 
 ### SelectableCard
 | Field | Type | Required |
@@ -392,6 +433,23 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 ```yaml
 - type: accordion
   items: []
+```
+
+### architecture
+| Field | Type | Required |
+|-------|------|----------|
+| connections | ArchConnection[] | yes |
+| direction | ArchDirection | no |
+| height | number | no |
+| nodes | ArchNode[] | yes |
+| title | string | no |
+
+```yaml
+- type: architecture
+  connections: []
+  direction: "left_to_right"  # optional
+  height: 300  # optional
+  nodes: []
 ```
 
 ### avatar
@@ -737,6 +795,43 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
   value: 42
 ```
 
+### quadrant
+| Field | Type | Required |
+|-------|------|----------|
+| height | number | no |
+| points | QuadrantPoint[] | yes |
+| quadrants | string[] | yes |
+| title | string | no |
+| x_axis | string | yes |
+| y_axis | string | yes |
+
+```yaml
+- type: quadrant
+  height: 300  # optional
+  points: []
+  quadrants: []
+  title: "Example Title"  # optional
+  x_axis: "example"
+  y_axis: "example"
+```
+
+### radar
+| Field | Type | Required |
+|-------|------|----------|
+| axes | string[] | yes |
+| curves | RadarCurve[] | yes |
+| height | number | no |
+| max | number | no |
+| title | string | no |
+
+```yaml
+- type: radar
+  axes: []
+  curves: []
+  height: 300  # optional
+  max: 3  # optional
+```
+
 ### resources
 | Field | Type | Required |
 |-------|------|----------|
@@ -755,6 +850,21 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 ```yaml
 - type: role_map
   title: "Example Title"  # optional
+```
+
+### sankey
+| Field | Type | Required |
+|-------|------|----------|
+| colors | Record<string, SemColor> | no |
+| flows | SankeyFlow[] | yes |
+| height | number | no |
+| title | string | no |
+
+```yaml
+- type: sankey
+  colors: {}  # optional
+  flows: []
+  height: 300  # optional
 ```
 
 ### section
