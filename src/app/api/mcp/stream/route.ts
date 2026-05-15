@@ -15,6 +15,7 @@ import {
   searchPages,
 } from "@/lib/pages";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
+import { createHash } from "crypto";
 import fs from "fs";
 import path from "path";
 
@@ -121,6 +122,97 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
     ]);
     return { content: [{ type: "text", text: JSON.stringify({ folders: folders.map((f) => ({ id: f.id, name: f.name, parentId: f.parentId, pageCount: f._count.pages })), pages: pages.map((p) => ({ slug: p.slug, title: p.title, folderId: p.folderId })) }, null, 2) }] };
   });
+
+  server.tool("create_folder", "Create a new folder",
+    { name: z.string(), parent_id: z.string().optional(), visibility: z.enum(["shared", "personal"]).optional() },
+    async ({ name, parent_id, visibility }) => {
+      if (parent_id) {
+        const parent = await db.folder.findFirst({ where: { id: parent_id, orgId } });
+        if (!parent) return { content: [{ type: "text", text: `Error: parent folder not found: ${parent_id}` }], isError: true };
+      }
+      const folder = await db.folder.create({
+        data: { orgId, name, visibility: visibility ?? "shared", createdBy: actorId, parentId: parent_id ?? null },
+      });
+      logAudit({ orgId, action: "folder.create", resourceType: "folder", resourceId: folder.id, actorType: "apikey", actorId, metadata: { name, parentId: parent_id } });
+      return { content: [{ type: "text", text: `Created folder "${name}" (id: ${folder.id})` }] };
+    });
+
+  server.tool("update_folder", "Rename, reparent, or change visibility of a folder",
+    { id: z.string(), name: z.string().optional(), parent_id: z.string().nullable().optional(), visibility: z.enum(["shared", "personal"]).optional() },
+    async ({ id, name, parent_id, visibility }) => {
+      const folder = await db.folder.findFirst({ where: { id, orgId } });
+      if (!folder) return { content: [{ type: "text", text: `Error: folder not found: ${id}` }], isError: true };
+      if (parent_id) {
+        const parent = await db.folder.findFirst({ where: { id: parent_id, orgId } });
+        if (!parent) return { content: [{ type: "text", text: `Error: parent folder not found: ${parent_id}` }], isError: true };
+      }
+      const data: Record<string, unknown> = {};
+      if (name !== undefined) data.name = name;
+      if (parent_id !== undefined) data.parentId = parent_id;
+      if (visibility !== undefined) data.visibility = visibility;
+      await db.folder.update({ where: { id }, data });
+      logAudit({ orgId, action: "folder.update", resourceType: "folder", resourceId: id, actorType: "apikey", actorId, metadata: { name, parentId: parent_id, visibility } });
+      return { content: [{ type: "text", text: `Updated folder "${folder.name}"` }] };
+    });
+
+  server.tool("delete_folder", "Delete a folder (pages are moved to no folder)",
+    { id: z.string() },
+    async ({ id }) => {
+      const folder = await db.folder.findFirst({ where: { id, orgId } });
+      if (!folder) return { content: [{ type: "text", text: `Error: folder not found: ${id}` }], isError: true };
+      await db.$transaction([
+        db.page.updateMany({ where: { folderId: id }, data: { folderId: null } }),
+        db.folder.delete({ where: { id } }),
+      ]);
+      logAudit({ orgId, action: "folder.delete", resourceType: "folder", resourceId: id, actorType: "apikey", actorId, metadata: { name: folder.name } });
+      return { content: [{ type: "text", text: `Deleted folder "${folder.name}". Pages moved to no folder.` }] };
+    });
+
+  server.tool("restore_page_version", "Restore a page to a previous version",
+    { slug: z.string(), version_id: z.string() },
+    async ({ slug, version_id }) => {
+      validateSlug(slug);
+      const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
+      if (!page) return { content: [{ type: "text", text: `Error: page not found: ${slug}` }], isError: true };
+      const targetVersion = await db.pageVersion.findFirst({ where: { id: version_id, pageId: page.id } });
+      if (!targetVersion) return { content: [{ type: "text", text: `Error: version not found: ${version_id}` }], isError: true };
+      const contentHash = createHash("sha256").update(targetVersion.yamlContent).digest("hex");
+      await db.$transaction([
+        db.pageVersion.create({
+          data: { pageId: page.id, yamlContent: targetVersion.yamlContent, jsonContent: targetVersion.jsonContent ?? undefined, contentHash, createdBy: actorId },
+        }),
+        db.page.update({ where: { id: page.id }, data: { updatedAt: new Date() } }),
+      ]);
+      logAudit({ orgId, action: "page.restore", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug, versionId: version_id } });
+      return { content: [{ type: "text", text: `Restored "${slug}" to version ${version_id}` }] };
+    });
+
+  server.tool("replace_in_page", "Find and replace text in a page's YAML source",
+    { slug: z.string(), target: z.string(), replacement: z.string() },
+    async ({ slug, target, replacement }) => {
+      validateSlug(slug);
+      const page = await readPageYaml(orgId, slug);
+      if (!page) return { content: [{ type: "text", text: `Error: page not found: ${slug}` }], isError: true };
+      let yamlTarget = target;
+      if (!page.yaml.includes(target)) {
+        const lines = target.split("\n");
+        if (lines.length > 1) {
+          const pattern = new RegExp(lines.map((l) => l.trimStart().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\n\\s*"));
+          const m = page.yaml.match(pattern);
+          if (m) yamlTarget = m[0];
+          else return { content: [{ type: "text", text: "Error: target text not found in page source" }], isError: true };
+        } else {
+          return { content: [{ type: "text", text: "Error: target text not found in page source" }], isError: true };
+        }
+      }
+      const occurrences = page.yaml.split(yamlTarget).length - 1;
+      if (occurrences > 1) return { content: [{ type: "text", text: `Error: target text is ambiguous — found ${occurrences} occurrences` }], isError: true };
+      const newContent = page.yaml.replace(yamlTarget, replacement);
+      const result = await writePage(orgId, orgSlug, slug, newContent, "agent", page.contentHash);
+      if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
+      logAudit({ orgId, action: "page.replace", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug } });
+      return { content: [{ type: "text", text: `Replaced text in "${slug}"` }] };
+    });
 
   server.tool("move_page", "Move a page to a folder",
     { slug: z.string(), folder_id: z.string().optional() },
