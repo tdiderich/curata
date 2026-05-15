@@ -73,6 +73,7 @@ export default async function DashboardPage() {
     visibility: p.visibility,
     snippet: p.snippet,
     createdBy: p.createdBy,
+    sortOrder: p.sortOrder,
   }));
 
   return (

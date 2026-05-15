@@ -4081,6 +4081,48 @@ body .c-section.align-right > * { max-width: none !important; }
   max-width: 100%;
 }
 
+/* ── Mobile responsive overrides ── */
+
+@media (max-width: 768px) {
+  /* Layout: reduce padding and max-width constraints */
+  body .container { max-width: calc(100vw - 16px) !important; }
+  body .doc-root { max-width: calc(100vw - 16px) !important; }
+  .page-content-wrap { max-width: calc(100vw - 16px); }
+  .page-detail-content { padding: 16px 12px; }
+
+  /* Dashboard sidebar collapse */
+  .dash-root { flex-direction: column; }
+  .dash-sidebar { width: 100%; min-width: 0; max-height: 200px; overflow-y: auto; border-right: none; border-bottom: 1px solid rgba(var(--text-rgb), 0.08); }
+
+  /* kazam component grids: single column */
+  .c-card-grid { grid-template-columns: 1fr !important; }
+  .c-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* Tables: horizontal scroll */
+  .c-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Nav bar: wrap or hide overflow */
+  .site-bar { flex-wrap: wrap; padding: 8px 12px; }
+  .site-bar-right { flex-wrap: wrap; gap: 6px; }
+
+  /* Docs page */
+  .docs-start-title { font-size: 24px; }
+  .docs-start-pre { font-size: 11px; padding: 14px; }
+  .docs-start-try { gap: 10px; }
+  .docs-index-grid { grid-template-columns: 1fr; }
+  .docs-main { padding: 16px 12px; }
+
+  /* Landing page */
+  .landing-hero { padding: 60px 16px 40px; }
+  .landing-demo { padding: 0 12px 40px; max-width: calc(100vw - 16px); }
+
+  /* Page toolbar */
+  .page-toolbar { flex-wrap: wrap; gap: 8px; }
+
+  /* Empty state grids */
+  .empty-groups { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* ── Landing page ── */
 
 .landing-hero {

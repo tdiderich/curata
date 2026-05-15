@@ -14,6 +14,7 @@ export interface PageMeta {
   visibility: string;
   snippet: string;
   createdBy: string;
+  sortOrder: number | null;
 }
 
 export interface AnnotationRow {
@@ -48,6 +49,10 @@ export async function listPages(orgId: string, userId?: string): Promise<PageMet
       annotations: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
       versions: { orderBy: { createdAt: "desc" }, take: 1, select: { jsonContent: true } },
     },
+    orderBy: [
+      { sortOrder: { sort: "asc", nulls: "last" } },
+      { title: "asc" },
+    ],
   });
 
   const mapped = pages.map((p) => {
@@ -77,10 +82,10 @@ export async function listPages(orgId: string, userId?: string): Promise<PageMet
       visibility: p.visibility,
       snippet,
       createdBy: p.createdBy,
+      sortOrder: p.sortOrder,
     };
   });
 
-  mapped.sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime());
   return mapped;
 }
 
@@ -180,7 +185,8 @@ async function _writePageInternal(
   jsonContent: Prisma.InputJsonValue | undefined,
   title: string,
   createdBy: string,
-  expectedHash?: string
+  expectedHash?: string,
+  sortOrder?: number | null
 ): Promise<{ ok: true; slug: string; contentHash: string } | { ok: false; error: string }> {
   const contentHash = createHash("sha256").update(yamlContent).digest("hex");
 
@@ -196,9 +202,12 @@ async function _writePageInternal(
   }
 
   if (existing) {
-    if (existing.versions.length > 0 && existing.versions[0].contentHash === contentHash) {
+    if (existing.versions.length > 0 && existing.versions[0].contentHash === contentHash && sortOrder === undefined) {
       return { ok: true, slug, contentHash };
     }
+
+    const pageUpdateData: Record<string, unknown> = { title, updatedAt: new Date() };
+    if (sortOrder !== undefined) pageUpdateData.sortOrder = sortOrder;
 
     await db.$transaction([
       db.pageVersion.create({
@@ -206,21 +215,22 @@ async function _writePageInternal(
       }),
       db.page.update({
         where: { id: existing.id },
-        data: { title, updatedAt: new Date() },
+        data: pageUpdateData,
       }),
     ]);
   } else {
-    await db.page.create({
-      data: {
-        orgId,
-        slug,
-        title,
-        createdBy,
-        versions: {
-          create: { yamlContent, jsonContent, contentHash, createdBy },
-        },
+    const createData: Record<string, unknown> = {
+      orgId,
+      slug,
+      title,
+      createdBy,
+      versions: {
+        create: { yamlContent, jsonContent, contentHash, createdBy },
       },
-    });
+    };
+    if (sortOrder !== undefined && sortOrder !== null) createData.sortOrder = sortOrder;
+
+    await db.page.create({ data: createData as Parameters<typeof db.page.create>[0]["data"] });
   }
 
   return { ok: true, slug, contentHash };
@@ -232,11 +242,12 @@ export async function writePage(
   slug: string,
   content: string,
   createdBy: string,
-  expectedHash?: string
+  expectedHash?: string,
+  sortOrder?: number | null
 ): Promise<{ ok: true; slug: string; contentHash: string } | { ok: false; error: string }> {
   const jsonContent = (parseYamlToJson(content) ?? undefined) as Prisma.InputJsonValue | undefined;
   const title = extractTitle(content, slug);
-  return _writePageInternal(orgId, orgSlug, slug, content, jsonContent, title, createdBy, expectedHash);
+  return _writePageInternal(orgId, orgSlug, slug, content, jsonContent, title, createdBy, expectedHash, sortOrder);
 }
 
 export async function writePageJson(
@@ -245,11 +256,12 @@ export async function writePageJson(
   slug: string,
   json: Record<string, unknown>,
   createdBy: string,
-  expectedHash?: string
+  expectedHash?: string,
+  sortOrder?: number | null
 ): Promise<{ ok: true; slug: string; contentHash: string } | { ok: false; error: string }> {
   const yamlContent = yaml.dump(json, { lineWidth: -1, noRefs: true });
   const title = (json.title as string) || slug;
-  return _writePageInternal(orgId, orgSlug, slug, yamlContent, json as Prisma.InputJsonValue, title, createdBy, expectedHash);
+  return _writePageInternal(orgId, orgSlug, slug, yamlContent, json as Prisma.InputJsonValue, title, createdBy, expectedHash, sortOrder);
 }
 
 export async function saveAnnotation(

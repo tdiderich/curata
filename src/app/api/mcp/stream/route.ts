@@ -71,14 +71,14 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
   });
 
   server.tool("write_page", "Create or update a page",
-    { slug: z.string(), content: z.string(), folder_id: z.string().optional() },
-    async ({ slug, content, folder_id }) => {
+    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages.") },
+    async ({ slug, content, folder_id, sort_order }) => {
       validateSlug(slug);
       const unsupported = checkUnsupportedComponents(content);
       if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
       const validationErrors = await validateContent(orgSlug, slug, content);
       if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: invalid YAML: ${validationErrors.map((e) => e.message).join("; ")}` }], isError: true };
-      const result = await writePage(orgId, orgSlug, slug, content, "agent");
+      const result = await writePage(orgId, orgSlug, slug, content, "agent", undefined, sort_order);
       if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
       if (folder_id) {
         await db.page.update({ where: { orgId_slug: { orgId, slug } }, data: { folderId: folder_id } });
@@ -88,8 +88,8 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
     });
 
   server.tool("create_page", "Create a new page",
-    { slug: z.string(), content: z.string(), folder_id: z.string().optional() },
-    async ({ slug, content, folder_id }) => {
+    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages.") },
+    async ({ slug, content, folder_id, sort_order }) => {
       validateSlug(slug);
       const existing = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
       if (existing) return { content: [{ type: "text", text: `Error: page already exists: ${slug}` }], isError: true };
@@ -97,7 +97,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
       if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
       const validationErrors = await validateContent(orgSlug, slug, content);
       if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: invalid YAML: ${validationErrors.map((e) => e.message).join("; ")}` }], isError: true };
-      const result = await writePage(orgId, orgSlug, slug, content, "agent");
+      const result = await writePage(orgId, orgSlug, slug, content, "agent", undefined, sort_order);
       if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
       if (folder_id) {
         await db.page.update({ where: { orgId_slug: { orgId, slug } }, data: { folderId: folder_id } });

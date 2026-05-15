@@ -21,6 +21,7 @@ export interface SerializedPageMeta {
   visibility: string;
   snippet: string;
   createdBy: string;
+  sortOrder: number | null;
 }
 
 interface FolderRow {
@@ -32,14 +33,16 @@ interface FolderRow {
   childFolderCount: number;
 }
 
-type SortKey = "lastActivity" | "title" | "views";
+type SortKey = "sortOrder" | "lastActivity" | "title" | "views";
+
+const VALID_SORT_KEYS: SortKey[] = ["sortOrder", "lastActivity", "title", "views"];
 
 function useSortKey(): [SortKey, (k: SortKey) => void] {
-  const [key, setKey] = useState<SortKey>("lastActivity");
+  const [key, setKey] = useState<SortKey>("sortOrder");
   useEffect(() => {
     const stored = localStorage.getItem("curata-sort") as SortKey | null;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored) setKey(stored);
+    if (stored && VALID_SORT_KEYS.includes(stored)) setKey(stored);
   }, []);
   const set = useCallback((k: SortKey) => {
     setKey(k);
@@ -51,6 +54,16 @@ function useSortKey(): [SortKey, (k: SortKey) => void] {
 function sortPages(pages: SerializedPageMeta[], key: SortKey): SerializedPageMeta[] {
   const sorted = [...pages];
   switch (key) {
+    case "sortOrder":
+      sorted.sort((a, b) => {
+        const aNull = a.sortOrder === null || a.sortOrder === undefined;
+        const bNull = b.sortOrder === null || b.sortOrder === undefined;
+        if (aNull && bNull) return a.title.localeCompare(b.title);
+        if (aNull) return 1;
+        if (bNull) return -1;
+        return a.sortOrder! - b.sortOrder!;
+      });
+      break;
     case "lastActivity":
       sorted.sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime());
       break;
@@ -73,6 +86,7 @@ function formatDate(iso: string): string {
 }
 
 const SORT_LABELS: Record<SortKey, string> = {
+  sortOrder: "Custom order",
   lastActivity: "Last updated",
   title: "Title",
   views: "Most views",
