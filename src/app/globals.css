@@ -4446,3 +4446,35 @@ body .c-section.align-right > * { max-width: none !important; }
     gap: 12px;
   }
 }
+
+/* ── Print ── */
+@media print {
+  .ann-bar,
+  .ann-margin,
+  .ann-bubble,
+  .ann-bubble--add,
+  .ann-card,
+  .ann-mode-toggle,
+  .ann-target-highlight,
+  .page-detail-nav,
+  .page-detail-actions,
+  .page-chrome,
+  .page-toolbar {
+    display: none !important;
+  }
+  .page-detail-content {
+    padding: 0 !important;
+  }
+  .page-content-wrap,
+  .container,
+  .doc-root {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 24px !important;
+    box-sizing: border-box !important;
+  }
+  .page-detail-layout {
+    min-height: auto !important;
+  }
+}

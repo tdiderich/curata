@@ -95,6 +95,7 @@ export default function PageDetailClient({
   slug,
   children,
   annotations,
+  pageTitle,
   orgSlug,
   isPublic,
   autoConnect,
@@ -307,6 +308,7 @@ export default function PageDetailClient({
         <Link className="page-toolbar-back" href="/dashboard">
           &larr; Pages
         </Link>
+        {pageTitle && <span className="page-toolbar-title">{pageTitle}</span>}
         <div className="page-toolbar-spacer" />
         <div className="page-toolbar-right">
           <Link

@@ -112,14 +112,6 @@ export default async function PageDetailView({
         authMode={AUTH_MODE}
       >
         <div className="page-detail-content">
-          {page.shell !== "deck" && (
-            <div className="c-header">
-              <h1 className="c-header-title">{page.title}</h1>
-              {page.subtitle && (
-                <p className="c-header-subtitle">{page.subtitle}</p>
-              )}
-            </div>
-          )}
           <PageRenderer page={page} />
         </div>
       </PageDetailClient>
