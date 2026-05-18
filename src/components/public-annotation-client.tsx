@@ -71,12 +71,14 @@ export default function PublicAnnotationClient({
   children,
   annotations,
   isSignedIn,
+  printFlow,
 }: {
   orgSlug: string;
   pageSlug: string;
   children?: React.ReactNode;
   annotations: Annotation[];
   isSignedIn: boolean;
+  printFlow?: string;
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -92,6 +94,13 @@ export default function PublicAnnotationClient({
     () => annotations.filter((a) => a.status !== "incorporated" && a.status !== "ignored"),
     [annotations],
   );
+
+  useEffect(() => {
+    if (!printFlow) return;
+    const cls = `print-${printFlow}`;
+    document.body.classList.add(cls);
+    return () => { document.body.classList.remove(cls); };
+  }, [printFlow]);
 
   useEffect(() => {
     const root = contentRef.current;

@@ -100,6 +100,7 @@ export default function PageDetailClient({
   isPublic,
   autoConnect,
   authMode = "none",
+  printFlow,
 }: {
   slug: string;
   children?: React.ReactNode;
@@ -110,6 +111,7 @@ export default function PageDetailClient({
   isPublic: boolean;
   autoConnect: boolean;
   authMode?: string;
+  printFlow?: string;
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -129,6 +131,13 @@ export default function PageDetailClient({
   const [agentOpen, setAgentOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!printFlow) return;
+    const cls = `print-${printFlow}`;
+    document.body.classList.add(cls);
+    return () => { document.body.classList.remove(cls); };
+  }, [printFlow]);
 
   useEffect(() => {
     if (!actionsOpen) return;

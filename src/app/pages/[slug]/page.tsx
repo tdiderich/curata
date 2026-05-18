@@ -110,6 +110,7 @@ export default async function PageDetailView({
         isPublic={pageData.visibility === "public"}
         autoConnect={slug === "getting-started"}
         authMode={AUTH_MODE}
+        printFlow={(pageData.json.print_flow as string) || undefined}
       >
         <div className="page-detail-content">
           <PageRenderer page={page} />

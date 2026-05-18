@@ -95,6 +95,7 @@ export default async function PublicPageView({ params }: Props) {
           pageSlug={pageSlug}
           annotations={annotations}
           isSignedIn={isSignedIn}
+          printFlow={(pageData.json.print_flow as string) || undefined}
         >
           <div className="page-detail-content">
             {(pageData.json.shell as string) !== "deck" && (
