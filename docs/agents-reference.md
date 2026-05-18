@@ -254,6 +254,28 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | label | string | yes |
 | personas | string[] | no |
 
+### PipelineCapability
+| Field | Type | Required |
+|-------|------|----------|
+| detail | string | no |
+| dim | boolean | no |
+| label | string | yes |
+
+### PipelineItem
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| detail | string | no |
+| dim | boolean | no |
+| label | string | yes |
+
+### PipelineStage
+| Field | Type | Required |
+|-------|------|----------|
+| capabilities | PipelineCapability[] | no |
+| detail | string | no |
+| label | string | yes |
+
 ### QuadrantPoint
 | Field | Type | Required |
 |-------|------|----------|
@@ -778,6 +800,25 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 ```yaml
 - type: meta
   fields: []
+```
+
+### pipeline
+| Field | Type | Required |
+|-------|------|----------|
+| context | PipelineItem[] | no |
+| height | number | no |
+| inputs | PipelineItem[] | yes |
+| outputs | PipelineItem[] | yes |
+| stages | PipelineStage[] | yes |
+| title | string | no |
+
+```yaml
+- type: pipeline
+  context: []  # optional
+  height: 300  # optional
+  inputs: []
+  outputs: []
+  stages: []
 ```
 
 ### progress_bar
