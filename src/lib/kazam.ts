@@ -10,7 +10,7 @@ const exec = promisify(execFile);
 const KAZAM_BIN = process.env.KAZAM_BIN || "kazam";
 const SITES_ROOT = process.env.SITES_ROOT || "/data/sites";
 
-const UNSUPPORTED_COMPONENTS = new Set(["chart"]);
+const UNSUPPORTED_COMPONENTS = new Set<string>([]);
 
 export function sitePath(orgSlug: string): string {
   return path.join(SITES_ROOT, orgSlug);
