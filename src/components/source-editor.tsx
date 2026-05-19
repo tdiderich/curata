@@ -16,7 +16,6 @@ export default function SourceEditor({ slug, onSaved }: { slug: string; onSaved?
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const yamlRef = useRef("");
-  const [yamlContent, setYamlContent] = useState("");
   const [hash, setHash] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -87,7 +86,7 @@ export default function SourceEditor({ slug, onSaved }: { slug: string; onSaved?
       setError("Network error");
       setSaving(false);
     }
-  }, [slug, hash, router]);
+  }, [slug, hash, router, onSaved]);
 
   // Initialize CodeMirror
   useEffect(() => {
@@ -156,7 +155,7 @@ export default function SourceEditor({ slug, onSaved }: { slug: string; onSaved?
       viewRef.current?.destroy();
       viewRef.current = null;
     };
-  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   // Cmd+S handler (from CodeMirror dispatch or keyboard)
   useEffect(() => {

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { PageContent, type SelectionAction } from "./page-viewer";
+import { PageContent } from "./page-viewer";
 import { PublicToggle } from "./public-toggle";
 import VersionHistory from "./version-history";
 import AgentConnectModal from "./agent-connect-modal";
