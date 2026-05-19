@@ -29,7 +29,6 @@ export default function SourceEditor({ slug, onSaved }: { slug: string; onSaved?
         if (data.error) {
           setError(data.error);
         } else {
-          setYamlContent(data.yaml);
           yamlRef.current = data.yaml;
           setHash(data.contentHash);
         }
