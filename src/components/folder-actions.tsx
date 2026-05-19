@@ -97,23 +97,19 @@ export function NewFolderButton() {
 
 // ── Per-page "..." dropdown ──────────────────────────────────────────────────
 
-interface PageMenuFolder {
-  id: string;
-  name: string;
-}
-
 interface PageMenuProps {
   slug: string;
   title: string;
   visibility: string;
   folderId: string | null;
-  folders: PageMenuFolder[];
+  folders: Folder[];
 }
 
 export function PageMenu({ slug, title, visibility, folderId, folders }: PageMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [browseParent, setBrowseParent] = useState<string | null | undefined>(undefined);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -174,11 +170,21 @@ export function PageMenu({ slug, title, visibility, folderId, folders }: PageMen
     { value: "public", label: "Public" },
   ];
 
+  const viewingParent = browseParent === undefined ? "__root" : browseParent;
+  const visibleFolders = folders.filter((f) => {
+    if (viewingParent === "__root") return !f.parentId;
+    return f.parentId === viewingParent;
+  });
+  const parentFolder = viewingParent !== "__root" && viewingParent
+    ? folders.find((f) => f.id === viewingParent)
+    : null;
+  const hasChildren = (fId: string) => folders.some((f) => f.parentId === fId);
+
   return (
     <div ref={menuRef} className="dash-page-actions">
       <button
         className="dash-page-actions-btn"
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); setBrowseParent(undefined); }}
         disabled={busy}
         aria-label="Page options"
       >
@@ -203,22 +209,46 @@ export function PageMenu({ slug, title, visibility, folderId, folders }: PageMen
           ))}
           <div className="dash-page-actions-divider" />
           <div className="dash-page-actions-section">Move to</div>
-          <button
-            className={`dash-page-actions-item${folderId === null ? " dash-page-actions-item--active" : ""}`}
-            onClick={() => moveTo(null)}
-          >
-            No folder
-            {folderId === null && <span className="dash-page-actions-check">&#10003;</span>}
-          </button>
-          {folders.map((f) => (
+          {viewingParent !== "__root" && (
             <button
-              key={f.id}
-              className={`dash-page-actions-item${folderId === f.id ? " dash-page-actions-item--active" : ""}`}
-              onClick={() => moveTo(f.id)}
+              className="dash-folder-actions-item dash-folder-actions-back"
+              onClick={() => {
+                if (parentFolder?.parentId) setBrowseParent(parentFolder.parentId);
+                else setBrowseParent(undefined);
+              }}
             >
-              {f.name}
-              {folderId === f.id && <span className="dash-page-actions-check">&#10003;</span>}
+              <span className="dash-folder-actions-arrow">&#8592;</span>
+              {parentFolder ? parentFolder.name : "Back"}
             </button>
+          )}
+          <button
+            className={`dash-page-actions-item${folderId === (viewingParent === "__root" ? null : viewingParent) ? " dash-page-actions-item--active" : ""}`}
+            onClick={() => moveTo(viewingParent === "__root" ? null : viewingParent!)}
+          >
+            {viewingParent === "__root" ? "No folder" : "Here"}
+            {folderId === (viewingParent === "__root" ? null : viewingParent) && (
+              <span className="dash-page-actions-check">&#10003;</span>
+            )}
+          </button>
+          {visibleFolders.map((f) => (
+            <div key={f.id} className="dash-folder-actions-move-row">
+              <button
+                className={`dash-folder-actions-item dash-folder-actions-move-target${folderId === f.id ? " dash-folder-actions-item--active" : ""}`}
+                onClick={() => moveTo(f.id)}
+              >
+                {f.name}
+                {folderId === f.id && <span className="dash-page-actions-check">&#10003;</span>}
+              </button>
+              {hasChildren(f.id) && (
+                <button
+                  className="dash-folder-actions-drill"
+                  onClick={() => setBrowseParent(f.id)}
+                  aria-label={`Browse ${f.name}`}
+                >
+                  &#8250;
+                </button>
+              )}
+            </div>
           ))}
           <div className="dash-page-actions-divider" />
           <button
