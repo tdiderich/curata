@@ -2,14 +2,20 @@
 
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 
+export interface SelectionAction {
+  label: string;
+  onSelect: (section: string, selectedText: string) => void;
+}
+
 export const PageContent = forwardRef<
   HTMLDivElement,
   {
     children?: React.ReactNode;
     selectionAction?: string;
+    selectionActions?: SelectionAction[];
     onTextSelect?: (section: string, selectedText: string) => void;
   }
->(function PageContent({ children, selectionAction, onTextSelect }, forwardedRef) {
+>(function PageContent({ children, selectionAction, selectionActions, onTextSelect }, forwardedRef) {
   const localRef = useRef<HTMLDivElement>(null);
   const selectedTextRef = useRef("");
   const [selectionPopup, setSelectionPopup] = useState<{
@@ -17,6 +23,8 @@ export const PageContent = forwardRef<
     y: number;
     section: string;
   } | null>(null);
+
+  const hasActions = selectionActions ? selectionActions.length > 0 : !!selectionAction;
 
   const mergedRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -30,7 +38,7 @@ export const PageContent = forwardRef<
   );
 
   const handleMouseUp = useCallback(() => {
-    if (!selectionAction) return;
+    if (!hasActions) return;
     const sel = window.getSelection();
     const container = localRef.current;
     if (!sel || sel.isCollapsed || !container) return;
@@ -61,7 +69,7 @@ export const PageContent = forwardRef<
       y: rect.top - containerRect.top - 8,
       section: sectionName,
     });
-  }, [selectionAction]);
+  }, [hasActions]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -72,6 +80,12 @@ export const PageContent = forwardRef<
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const actions: SelectionAction[] = selectionActions
+    ? selectionActions
+    : selectionAction && onTextSelect
+      ? [{ label: selectionAction, onSelect: onTextSelect }]
+      : [];
+
   return (
     <div
       ref={mergedRef}
@@ -80,7 +94,7 @@ export const PageContent = forwardRef<
       onMouseUp={handleMouseUp}
     >
       {children}
-      {selectionPopup && selectionAction && onTextSelect && (
+      {selectionPopup && actions.length > 0 && (
         <div
           className="selection-popup"
           style={{
@@ -90,17 +104,22 @@ export const PageContent = forwardRef<
             transform: "translate(-50%, -100%)",
           }}
         >
-          <button
-            className="selection-popup-btn"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onTextSelect(selectionPopup.section, selectedTextRef.current);
-              setSelectionPopup(null);
-            }}
-          >
-            {selectionAction}
-          </button>
+          <span className="selection-popup-inner">
+            {actions.map((action) => (
+              <button
+                key={action.label}
+                className="selection-popup-btn"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  action.onSelect(selectionPopup.section, selectedTextRef.current);
+                  setSelectionPopup(null);
+                }}
+              >
+                {action.label}
+              </button>
+            ))}
+          </span>
         </div>
       )}
     </div>

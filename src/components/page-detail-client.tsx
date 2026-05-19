@@ -4,10 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { PageContent } from "./page-viewer";
+import { PageContent, type SelectionAction } from "./page-viewer";
 import { PublicToggle } from "./public-toggle";
 import VersionHistory from "./version-history";
 import AgentConnectModal from "./agent-connect-modal";
+import SourceEditor from "./source-editor";
 import { basePath } from "@/lib/api-fetch";
 
 interface Annotation {
@@ -131,6 +132,7 @@ export default function PageDetailClient({
   const [agentOpen, setAgentOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
+  const [viewTab, setViewTab] = useState<"preview" | "source">("preview");
 
   useEffect(() => {
     if (!printFlow) return;
@@ -320,12 +322,12 @@ export default function PageDetailClient({
         {pageTitle && <span className="page-toolbar-title">{pageTitle}</span>}
         <div className="page-toolbar-spacer" />
         <div className="page-toolbar-right">
-          <Link
-            className="toolbar-mode-toggle toolbar-mode-toggle--edit"
-            href={`/pages/${slug}?edit=1`}
+          <button
+            className={`view-tab${viewTab === "source" ? " view-tab--active" : ""}`}
+            onClick={() => setViewTab(viewTab === "source" ? "preview" : "source")}
           >
-            <span className="toolbar-mode-label">Edit</span>
-          </Link>
+            {viewTab === "source" ? "Exit" : "Edit"}
+          </button>
           {authMode !== "none" && <PublicToggle slug={slug} orgSlug={orgSlug} isPublic={isPublic} />}
           <div className="page-toolbar-divider" />
           <div className="page-actions-wrap" ref={actionsRef}>
@@ -393,13 +395,16 @@ export default function PageDetailClient({
           document.body,
         )}
 
+      {viewTab === "source" ? (
+        <SourceEditor slug={slug} onSaved={() => setViewTab("preview")} />
+      ) : (
       <div className="page-content-wrap">
         <PageContent
           ref={contentRef}
-          selectionAction="Annotate"
-          onTextSelect={(section, target) =>
-            openForm("note", section, target)
-          }
+          selectionActions={[
+            { label: "Annotate", onSelect: (section, target) => openForm("note", section, target) },
+            { label: "Replace", onSelect: (section, target) => openForm("edit", section, target) },
+          ]}
         >
           {children}
         </PageContent>
@@ -582,6 +587,7 @@ export default function PageDetailClient({
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }
