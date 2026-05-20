@@ -4,7 +4,7 @@ import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 
 export interface SelectionAction {
   label: string;
-  onSelect: (section: string, selectedText: string) => void;
+  onSelect: (section: string, selectedText: string, componentId: string) => void;
 }
 
 export const PageContent = forwardRef<
@@ -22,6 +22,7 @@ export const PageContent = forwardRef<
     x: number;
     y: number;
     section: string;
+    componentId: string;
   } | null>(null);
 
   const hasActions = selectionActions ? selectionActions.length > 0 : !!selectionAction;
@@ -61,6 +62,16 @@ export const PageContent = forwardRef<
     const heading = sectionEl?.querySelector(".c-section-heading");
     const sectionName = heading?.textContent || "";
 
+    let compNode: Node | null = range.startContainer;
+    let componentId = "";
+    while (compNode && compNode !== container) {
+      if (compNode instanceof HTMLElement && compNode.id && /^c-/.test(compNode.id)) {
+        componentId = compNode.id;
+        break;
+      }
+      compNode = compNode.parentNode;
+    }
+
     const rect = range.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
     selectedTextRef.current = text;
@@ -68,6 +79,7 @@ export const PageContent = forwardRef<
       x: rect.left - containerRect.left + rect.width / 2,
       y: rect.top - containerRect.top - 8,
       section: sectionName,
+      componentId,
     });
   }, [hasActions]);
 
@@ -112,7 +124,7 @@ export const PageContent = forwardRef<
                 onMouseDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  action.onSelect(selectionPopup.section, selectedTextRef.current);
+                  action.onSelect(selectionPopup.section, selectedTextRef.current, selectionPopup.componentId);
                   setSelectionPopup(null);
                 }}
               >

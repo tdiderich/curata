@@ -259,14 +259,23 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
       if (!page) return { content: [{ type: "text", text: `Error: page not found: ${slug}` }], isError: true };
       let yamlTarget = target;
       if (!page.yaml.includes(target)) {
-        const lines = target.split("\n");
-        if (lines.length > 1) {
-          const pattern = new RegExp(lines.map((l) => l.trimStart().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\n\\s*"));
-          const m = page.yaml.match(pattern);
-          if (m) yamlTarget = m[0];
-          else return { content: [{ type: "text", text: "Error: target text not found in page source" }], isError: true };
+        // Try case-insensitive
+        const lowerYaml = page.yaml.toLowerCase();
+        const lowerTarget = target.toLowerCase();
+        const ciIdx = lowerYaml.indexOf(lowerTarget);
+        if (ciIdx !== -1) {
+          yamlTarget = page.yaml.slice(ciIdx, ciIdx + target.length);
         } else {
-          return { content: [{ type: "text", text: "Error: target text not found in page source" }], isError: true };
+          // Try multiline flexible whitespace
+          const lines = target.split("\n");
+          if (lines.length > 1) {
+            const pattern = new RegExp(lines.map((l) => l.trimStart().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\n\\s*"), "i");
+            const m = page.yaml.match(pattern);
+            if (m) yamlTarget = m[0];
+            else return { content: [{ type: "text", text: "Error: target text not found in page source" }], isError: true };
+          } else {
+            return { content: [{ type: "text", text: "Error: target text not found in page source" }], isError: true };
+          }
         }
       }
       const occurrences = page.yaml.split(yamlTarget).length - 1;

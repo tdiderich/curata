@@ -28,6 +28,7 @@ interface FormState {
   mode: "note" | "edit";
   section: string;
   target: string;
+  componentId: string;
   y: number;
 }
 
@@ -243,7 +244,7 @@ export default function PageDetailClient({
   );
 
   const openForm = useCallback(
-    (mode: "note" | "edit", section: string, target: string) => {
+    (mode: "note" | "edit", section: string, target: string, componentId: string = "") => {
       const root = contentRef.current;
       if (!root) return;
       const sel = window.getSelection();
@@ -254,7 +255,7 @@ export default function PageDetailClient({
         const rootRect = root.getBoundingClientRect();
         y = rect.top - rootRect.top;
       }
-      setFormState({ mode, section, target, y });
+      setFormState({ mode, section, target, componentId, y });
       setFormText("");
       setFormReplacement(mode === "edit" ? target : "");
       setExpandedId(null);
@@ -281,6 +282,7 @@ export default function PageDetailClient({
               slug,
               target: formState.target,
               replacement: formReplacement.trim(),
+              componentId: formState.componentId || undefined,
             }),
           })
         : await fetch(`${basePath}/api/annotations`, {
@@ -402,8 +404,8 @@ export default function PageDetailClient({
         <PageContent
           ref={contentRef}
           selectionActions={[
-            { label: "Annotate", onSelect: (section, target) => openForm("note", section, target) },
-            { label: "Replace", onSelect: (section, target) => openForm("edit", section, target) },
+            { label: "Annotate", onSelect: (section, target, componentId) => openForm("note", section, target, componentId) },
+            { label: "Replace", onSelect: (section, target, componentId) => openForm("edit", section, target, componentId) },
           ]}
         >
           {children}
@@ -414,7 +416,7 @@ export default function PageDetailClient({
             <button
               className="ann-bubble ann-bubble--add"
               onClick={() => {
-                setFormState({ mode: "note", section: "", target: "", y: 0 });
+                setFormState({ mode: "note", section: "", target: "", componentId: "", y: 0 });
                 setFormText("");
                 setExpandedId(null);
               }}
