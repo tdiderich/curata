@@ -80,6 +80,25 @@ describe("pages", () => {
       expect(page!.versions).toHaveLength(1);
     });
 
+    it("stamps component IDs on save", async () => {
+      const yamlContent = `title: ID Test
+shell: standard
+components:
+- type: section
+  eyebrow: Topic 1
+  heading: My Section
+  components: []
+- type: divider
+`;
+      const result = await writePage(orgId, orgSlug, "id-stamp-page", yamlContent, "user1");
+      expect(result.ok).toBe(true);
+
+      const read = await readPageYaml(orgId, "id-stamp-page");
+      expect(read).not.toBeNull();
+      expect(read!.yaml).toContain("id: topic-1-my-section");
+      expect(read!.yaml).toContain("id: divider-1");
+    });
+
     it("detects conflicts when expectedHash does not match", async () => {
       await writePage(orgId, orgSlug, "conflict-page", DEFAULT_YAML, "user1");
 

@@ -2,6 +2,7 @@ import yaml from "js-yaml";
 import { createHash } from "crypto";
 import { db } from "./db";
 import type { Prisma } from "@/generated/prisma/client";
+import { ensureComponentIds } from "./component-ids";
 
 export interface PageMeta {
   slug: string;
@@ -245,9 +246,16 @@ export async function writePage(
   expectedHash?: string,
   sortOrder?: number | null
 ): Promise<{ ok: true; slug: string; contentHash: string } | { ok: false; error: string }> {
-  const jsonContent = (parseYamlToJson(content) ?? undefined) as Prisma.InputJsonValue | undefined;
-  const title = extractTitle(content, slug);
-  return _writePageInternal(orgId, orgSlug, slug, content, jsonContent, title, createdBy, expectedHash, sortOrder);
+  let jsonContent = (parseYamlToJson(content) ?? undefined) as Record<string, unknown> | undefined;
+  let yamlContent = content;
+
+  if (jsonContent && Array.isArray(jsonContent.components)) {
+    jsonContent = { ...jsonContent, components: ensureComponentIds(jsonContent.components as Record<string, unknown>[]) };
+    yamlContent = yaml.dump(jsonContent, { lineWidth: -1, noRefs: true });
+  }
+
+  const title = (jsonContent?.title as string) || extractTitle(content, slug);
+  return _writePageInternal(orgId, orgSlug, slug, yamlContent, jsonContent as Prisma.InputJsonValue | undefined, title, createdBy, expectedHash, sortOrder);
 }
 
 export async function writePageJson(
