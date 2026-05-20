@@ -14,7 +14,8 @@ function deriveId(component: Component, index: number): string {
     if (typeof component.heading === "string" && component.heading) parts.push(component.heading);
     if (parts.length > 0) return toKebab(parts.join(" "));
   }
-  return `${component.type}-${index}`;
+  const typeName = typeof component.type === "string" && component.type ? component.type : "component";
+  return `${typeName}-${index}`;
 }
 
 export function ensureComponentIds(components: Component[]): Component[] {
