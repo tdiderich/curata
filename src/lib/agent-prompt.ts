@@ -4,19 +4,20 @@ export function buildAgentPrompt({
   slug,
 }: {
   baseUrl: string;
-  token: string;
+  token?: string;
   slug?: string;
 }): string {
   const slugSection = slug ? `Target page: ${slug}\n` : "";
 
   const exampleSlug = slug ?? "<page-slug>";
+  const authHeader = token ? ` -H "Authorization: Bearer ${token}"` : "";
 
   const workflowSection = slug
     ? `## Workflow
 
 Start by reading the page to understand its current state:
 \`\`\`bash
-curl -X POST ${baseUrl}/api/mcp -H "Content-Type: application/json" -H "Authorization: Bearer ${token}" -d '{"tool": "read_page", "args": {"slug": "${slug}"}}'
+curl -X POST ${baseUrl}/api/mcp -H "Content-Type: application/json"${authHeader} -d '{"tool": "read_page", "args": {"slug": "${slug}"}}'
 \`\`\`
 
 1. **Read the page** — call \`read_page\` with slug \`${slug}\` to get the current YAML, sections, and any open annotations.
@@ -60,34 +61,30 @@ curl -X POST ${baseUrl}/api/mcp -H "Content-Type: application/json" -H "Authoriz
 
 ## Connection
 
-MCP Endpoint: ${baseUrl}/api/mcp
-Authorization: Bearer ${token}
+MCP Endpoint: ${baseUrl}/api/mcp${token ? `\nAuthorization: Bearer ${token}` : `\nNo API key required — MCP tools are available directly.`}
 ${slugSection}
 ## API Format
 
-Every request is a POST to the endpoint with JSON body: \`{ "tool": "<tool_name>", "args": { ... } }\`
+All tools are available as MCP tools. If calling via REST, POST to the endpoint with JSON body: \`{ "tool": "<tool_name>", "args": { ... } }\`
 
 Example — read a page:
 \`\`\`bash
 curl -X POST ${baseUrl}/api/mcp \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${token}" \\
+  -H "Content-Type: application/json"${authHeader} \\
   -d '{"tool": "read_page", "args": {"slug": "${exampleSlug}"}}'
 \`\`\`
 
 Example — add an annotation:
 \`\`\`bash
 curl -X POST ${baseUrl}/api/mcp \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${token}" \\
+  -H "Content-Type: application/json"${authHeader} \\
   -d '{"tool": "annotate_page", "args": {"slug": "${exampleSlug}", "text": "Updated metrics section", "author": "agent", "section": "Key Metrics", "kind": "note"}}'
 \`\`\`
 
 Example — write updated page content:
 \`\`\`bash
 curl -X POST ${baseUrl}/api/mcp \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${token}" \\
+  -H "Content-Type: application/json"${authHeader} \\
   -d '{"tool": "write_page", "args": {"slug": "${exampleSlug}", "content": "<full YAML content>"}}'
 \`\`\`
 
