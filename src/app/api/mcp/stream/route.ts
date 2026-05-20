@@ -15,7 +15,8 @@ import {
   searchPages,
 } from "@/lib/pages";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
-import { ensureComponentIds } from "@/lib/component-ids";
+import { ensureComponentIds, applyPatchOperations } from "@/lib/component-ids";
+import type { PatchOperation } from "@/lib/component-ids";
 import yaml from "js-yaml";
 import { createHash } from "crypto";
 import fs from "fs";
@@ -94,6 +95,60 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
       }
       logAudit({ orgId, action: "page.write", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug } });
       return { content: [{ type: "text", text: `Updated page "${slug}"` }] };
+    });
+
+  server.tool("patch_page", "Apply targeted operations to a page without rewriting full YAML. Requires component IDs from read_page.",
+    {
+      slug: z.string().describe("Page slug"),
+      expected_hash: z.string().describe("Content hash from last read_page — rejects if page was modified"),
+      operations: z.string().describe("JSON array of patch operations: replace, insert_before, insert_after, remove, prepend, append, set_field"),
+    },
+    async ({ slug, expected_hash, operations: opsJson }) => {
+      validateSlug(slug);
+
+      let operations: PatchOperation[];
+      try {
+        operations = JSON.parse(opsJson);
+      } catch {
+        return { content: [{ type: "text", text: "Error: operations must be valid JSON" }], isError: true };
+      }
+      if (!Array.isArray(operations)) {
+        return { content: [{ type: "text", text: "Error: operations must be an array" }], isError: true };
+      }
+
+      const current = await readPageYaml(orgId, slug);
+      if (!current) return { content: [{ type: "text", text: `Error: page not found: ${slug}` }], isError: true };
+
+      if (current.contentHash !== expected_hash) {
+        return { content: [{ type: "text", text: `Error: conflict — page modified since last read (current hash: ${current.contentHash})` }], isError: true };
+      }
+
+      const parsed = yaml.load(current.yaml) as Record<string, unknown>;
+      if (!Array.isArray(parsed.components)) {
+        return { content: [{ type: "text", text: "Error: page has no components array — use write_page instead" }], isError: true };
+      }
+
+      try {
+        parsed.components = ensureComponentIds(parsed.components as Record<string, unknown>[]);
+        const patched = applyPatchOperations(parsed as { components: Record<string, unknown>[]; [k: string]: unknown }, operations);
+        patched.components = ensureComponentIds(patched.components);
+
+        const newYaml = yaml.dump(patched, { lineWidth: -1, noRefs: true });
+
+        const unsupported = checkUnsupportedComponents(newYaml);
+        if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
+        const validationErrors = await validateContent(orgSlug, slug, newYaml);
+        if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: invalid after patch: ${validationErrors.map((e) => e.message).join("; ")}` }], isError: true };
+
+        const result = await writePage(orgId, orgSlug, slug, newYaml, "agent", current.contentHash);
+        if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
+
+        logAudit({ orgId, action: "page.patch", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug, operationCount: operations.length } });
+        return { content: [{ type: "text", text: `Patched "${slug}" (${operations.length} operations applied)` }] };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { content: [{ type: "text", text: `Error: ${msg}` }], isError: true };
+      }
     });
 
   server.tool("create_page", "Create a new page",
