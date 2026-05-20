@@ -15,6 +15,8 @@ import {
   searchPages,
 } from "@/lib/pages";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
+import { ensureComponentIds } from "@/lib/component-ids";
+import yaml from "js-yaml";
 import { createHash } from "crypto";
 import fs from "fs";
 import path from "path";
@@ -65,6 +67,13 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
     validateSlug(slug);
     const result = await readPageYaml(orgId, slug);
     if (!result) return { content: [{ type: "text", text: `Error: page not found: ${slug}` }], isError: true };
+
+    const parsed = yaml.load(result.yaml) as Record<string, unknown>;
+    if (Array.isArray(parsed.components)) {
+      parsed.components = ensureComponentIds(parsed.components as Record<string, unknown>[]);
+      result.yaml = yaml.dump(parsed, { lineWidth: -1, noRefs: true });
+    }
+
     const sections = await getPageSections(orgId, slug);
     const annotations = await getAnnotations(orgId, slug);
     return { content: [{ type: "text", text: JSON.stringify({ slug, yaml: result.yaml, contentHash: result.contentHash, sections, annotations }, null, 2) }] };

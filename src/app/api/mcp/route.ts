@@ -14,6 +14,8 @@ import {
   getSiteConfig,
 } from "@/lib/pages";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
+import { ensureComponentIds } from "@/lib/component-ids";
+import yaml from "js-yaml";
 import fs from "fs";
 import path from "path";
 
@@ -132,6 +134,13 @@ async function dispatch(
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       const result = await readPageYaml(orgId, args.slug);
       if (!result) throw new Error(`page not found: ${args.slug}`);
+
+      const parsed = yaml.load(result.yaml) as Record<string, unknown>;
+      if (Array.isArray(parsed.components)) {
+        parsed.components = ensureComponentIds(parsed.components as Record<string, unknown>[]);
+        result.yaml = yaml.dump(parsed, { lineWidth: -1, noRefs: true });
+      }
+
       const sections = await getPageSections(orgId, args.slug);
       const annotations = await getAnnotations(orgId, args.slug);
       return {
