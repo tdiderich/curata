@@ -31,7 +31,11 @@ export function ensureComponentIds(components: Component[]): Component[] {
 
     let candidate = deriveId(c, i);
     if (usedIds.has(candidate)) {
-      candidate = `${candidate}-${i}`;
+      let suffix = i;
+      while (usedIds.has(`${candidate}-${suffix}`)) {
+        suffix++;
+      }
+      candidate = `${candidate}-${suffix}`;
     }
     usedIds.add(candidate);
     return { ...c, id: candidate };

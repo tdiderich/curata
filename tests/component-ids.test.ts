@@ -58,6 +58,30 @@ describe("ensureComponentIds", () => {
     expect(result[1].id).toBe("topic-same-name-1");
   });
 
+  it("deduplicates three identical sections", () => {
+    const components = [
+      { type: "section", eyebrow: "Topic", heading: "Same Name", components: [] },
+      { type: "section", eyebrow: "Topic", heading: "Same Name", components: [] },
+      { type: "section", eyebrow: "Topic", heading: "Same Name", components: [] },
+    ];
+    const result = ensureComponentIds(components);
+    expect(result[0].id).toBe("topic-same-name");
+    expect(result[1].id).toBe("topic-same-name-1");
+    expect(result[2].id).toBe("topic-same-name-2");
+  });
+
+  it("deduplicates when suffixed candidate also collides with existing id", () => {
+    const components = [
+      { type: "section", id: "topic-same-name-1", eyebrow: "X", components: [] },
+      { type: "section", eyebrow: "Topic", heading: "Same Name", components: [] },
+      { type: "section", eyebrow: "Topic", heading: "Same Name", components: [] },
+    ];
+    const result = ensureComponentIds(components);
+    expect(result[0].id).toBe("topic-same-name-1");
+    expect(result[1].id).toBe("topic-same-name");
+    expect(result[2].id).toBe("topic-same-name-2");
+  });
+
   it("deduplicates when generated id collides with existing id", () => {
     const components = [
       { type: "section", id: "overview", eyebrow: "X", components: [] },
