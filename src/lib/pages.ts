@@ -267,9 +267,13 @@ export async function writePageJson(
   expectedHash?: string,
   sortOrder?: number | null
 ): Promise<{ ok: true; slug: string; contentHash: string } | { ok: false; error: string }> {
-  const yamlContent = yaml.dump(json, { lineWidth: -1, noRefs: true });
-  const title = (json.title as string) || slug;
-  return _writePageInternal(orgId, orgSlug, slug, yamlContent, json as Prisma.InputJsonValue, title, createdBy, expectedHash, sortOrder);
+  let stamped = json;
+  if (Array.isArray(json.components)) {
+    stamped = { ...json, components: ensureComponentIds(json.components as Record<string, unknown>[]) };
+  }
+  const yamlContent = yaml.dump(stamped, { lineWidth: -1, noRefs: true });
+  const title = (stamped.title as string) || slug;
+  return _writePageInternal(orgId, orgSlug, slug, yamlContent, stamped as Prisma.InputJsonValue, title, createdBy, expectedHash, sortOrder);
 }
 
 export async function saveAnnotation(
