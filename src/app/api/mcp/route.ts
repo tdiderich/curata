@@ -14,7 +14,8 @@ import {
   getSiteConfig,
 } from "@/lib/pages";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
-import { ensureComponentIds } from "@/lib/component-ids";
+import { ensureComponentIds, applyPatchOperations } from "@/lib/component-ids";
+import type { PatchOperation } from "@/lib/component-ids";
 import yaml from "js-yaml";
 import fs from "fs";
 import path from "path";
@@ -30,7 +31,7 @@ const READ_TOOLS = [
   "get_versions",
   "validate_page",
 ];
-const WRITE_TOOLS = ["write_page", "create_page", "delete_page", "move_page", "annotate_page", "update_annotation"];
+const WRITE_TOOLS = ["write_page", "create_page", "delete_page", "move_page", "annotate_page", "update_annotation", "patch_page"];
 const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -414,6 +415,62 @@ async function dispatch(
         metadata: { slug: args.slug, status: args.status },
       });
       return { ok: true };
+    }
+
+    case "patch_page": {
+      if (!args.slug) throw new Error("slug is required");
+      if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
+      if (!args.expected_hash) throw new Error("expected_hash is required");
+      if (!args.operations) throw new Error("operations (JSON array) is required");
+
+      let operations: PatchOperation[];
+      try {
+        operations = JSON.parse(args.operations);
+      } catch {
+        throw new Error("operations must be valid JSON");
+      }
+      if (!Array.isArray(operations)) throw new Error("operations must be an array");
+
+      const current = await readPageYaml(orgId, args.slug);
+      if (!current) throw new Error(`page not found: ${args.slug}`);
+
+      if (current.contentHash !== args.expected_hash) {
+        throw new Error(`conflict: page was modified since last read (current hash: ${current.contentHash})`);
+      }
+
+      const parsed = yaml.load(current.yaml) as Record<string, unknown>;
+      if (!Array.isArray(parsed.components)) {
+        throw new Error("page has no components array — use write_page instead");
+      }
+
+      parsed.components = ensureComponentIds(parsed.components as Record<string, unknown>[]);
+      const patched = applyPatchOperations(parsed as { components: Record<string, unknown>[]; [k: string]: unknown }, operations);
+      patched.components = ensureComponentIds(patched.components);
+
+      const newYaml = yaml.dump(patched, { lineWidth: -1, noRefs: true });
+
+      const patchUnsupported = checkUnsupportedComponents(newYaml);
+      if (patchUnsupported.length > 0) {
+        throw new Error(patchUnsupported.map((e) => e.message).join("; "));
+      }
+      const patchValidation = await validateContent(orgSlug, args.slug, newYaml);
+      if (patchValidation.length > 0) {
+        throw new Error(`invalid after patch: ${patchValidation.map((e) => e.message).join("; ")}`);
+      }
+
+      const patchResult = await writePage(orgId, orgSlug, args.slug, newYaml, "agent", current.contentHash);
+      if (!patchResult.ok) throw new Error(patchResult.error);
+
+      logAudit({
+        orgId,
+        action: "page.patch",
+        resourceType: "page",
+        resourceId: args.slug,
+        actorType: "apikey",
+        actorId,
+        metadata: { slug: args.slug, operationCount: operations.length },
+      });
+      return patchResult;
     }
 
     default:
