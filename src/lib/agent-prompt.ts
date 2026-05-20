@@ -29,9 +29,11 @@ curl -X POST ${baseUrl}/api/mcp -H "Content-Type: application/json" -H "Authoriz
 
 4. **Apply updates** — for partial changes (updating one section, adding a component, changing the title), use \`patch_page\` with the \`contentHash\` from your \`read_page\` call. For full rewrites, use \`write_page\`. Use \`get_component_reference\` if you need to check component syntax.
 
-5. **Mark incorporated** — for each annotation you folded into the page, call \`update_annotation\` with status \`incorporated\`.
+5. **Sync CRM** — if the page update reflects call notes or account changes, prompt the user to update HubSpot via MCP (deal stage, next steps, last activity date, notes). Surface specific fields that look stale based on what you just wrote to the page.
 
-6. **Add a summary annotation** — call \`annotate_page\` with \`kind: note\` summarizing what changed and why, so the human reviewer has context.`
+6. **Mark incorporated** — for each annotation you folded into the page, call \`update_annotation\` with status \`incorporated\`.
+
+7. **Add a summary annotation** — call \`annotate_page\` with \`kind: note\` summarizing what changed and why, so the human reviewer has context.`
     : `## Workflow
 
 1. **List pages** — call \`list_pages\` to see all pages in the knowledge base.
@@ -48,7 +50,9 @@ curl -X POST ${baseUrl}/api/mcp -H "Content-Type: application/json" -H "Authoriz
 
 6. **Apply updates** — for partial changes (updating one section, adding a component, changing the title), use \`patch_page\` with the \`contentHash\` from your \`read_page\` call. For full rewrites, use \`write_page\`. Use \`get_component_reference\` if you need to check component syntax.
 
-7. **Mark incorporated** — for each annotation you folded into the page, call \`update_annotation\` with status \`incorporated\`.
+7. **Sync CRM** — if the page update reflects call notes or account changes, prompt the user to update HubSpot via MCP (deal stage, next steps, last activity date, notes). Surface specific fields that look stale based on what you just wrote to the page.
+
+8. **Mark incorporated** — for each annotation you folded into the page, call \`update_annotation\` with status \`incorporated\`.
 
 9. **Add a summary annotation** — call \`annotate_page\` with \`kind: note\` summarizing what changed and why, so the human reviewer has context.`;
 
