@@ -42,3 +42,88 @@ export function ensureComponentIds(components: Component[]): Component[] {
     return { ...c, id: candidate };
   });
 }
+
+export interface PatchOperation {
+  op: "replace" | "insert_before" | "insert_after" | "remove" | "prepend" | "append" | "set_field";
+  id?: string;
+  components?: Component[];
+  field?: string;
+  value?: string;
+}
+
+interface PageObject {
+  components: Component[];
+  [key: string]: unknown;
+}
+
+function findIndex(components: Component[], id: string): number {
+  const idx = components.findIndex((c) => c.id === id);
+  if (idx === -1) {
+    const available = components.map((c) => c.id).filter(Boolean).join(", ");
+    throw new Error(`Component ID "${id}" not found. available IDs: ${available}`);
+  }
+  return idx;
+}
+
+export function applyPatchOperations(page: PageObject, operations: PatchOperation[]): PageObject {
+  let result: PageObject = { ...page, components: [...page.components] };
+
+  for (const op of operations) {
+    switch (op.op) {
+      case "replace": {
+        const idx = findIndex(result.components, op.id!);
+        result.components = [
+          ...result.components.slice(0, idx),
+          ...(op.components || []),
+          ...result.components.slice(idx + 1),
+        ];
+        break;
+      }
+      case "insert_before": {
+        const idx = findIndex(result.components, op.id!);
+        result.components = [
+          ...result.components.slice(0, idx),
+          ...(op.components || []),
+          ...result.components.slice(idx),
+        ];
+        break;
+      }
+      case "insert_after": {
+        const idx = findIndex(result.components, op.id!);
+        result.components = [
+          ...result.components.slice(0, idx + 1),
+          ...(op.components || []),
+          ...result.components.slice(idx + 1),
+        ];
+        break;
+      }
+      case "remove": {
+        const idx = findIndex(result.components, op.id!);
+        result.components = [
+          ...result.components.slice(0, idx),
+          ...result.components.slice(idx + 1),
+        ];
+        break;
+      }
+      case "prepend": {
+        result.components = [...(op.components || []), ...result.components];
+        break;
+      }
+      case "append": {
+        result.components = [...result.components, ...(op.components || [])];
+        break;
+      }
+      case "set_field": {
+        if (!op.field) throw new Error("set_field requires a field name");
+        const allowed = ["title", "subtitle", "eyebrow", "shell"];
+        if (!allowed.includes(op.field)) throw new Error(`set_field: "${op.field}" is not an allowed field (${allowed.join(", ")})`);
+        result = { ...result, [op.field]: op.value };
+        break;
+      }
+      default:
+        throw new Error(`Unknown op: "${(op as PatchOperation).op}"`);
+    }
+  }
+
+  return result;
+}
