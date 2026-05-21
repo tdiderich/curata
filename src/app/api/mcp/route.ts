@@ -28,10 +28,11 @@ const READ_TOOLS = [
   "list_annotations",
   "get_component_reference",
   "list_folders",
+  "get_folder_structure",
   "get_versions",
   "validate_page",
 ];
-const WRITE_TOOLS = ["write_page", "create_page", "delete_page", "move_page", "annotate_page", "update_annotation", "patch_page"];
+const WRITE_TOOLS = ["write_page", "create_page", "delete_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "delete_folder"];
 const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -190,6 +191,66 @@ async function dispatch(
         visibility: f.visibility,
         pageCount: f._count.pages,
       }));
+    }
+
+    case "get_folder_structure": {
+      const [gfsFolders, gfsPages] = await Promise.all([
+        db.folder.findMany({ where: { orgId }, orderBy: { name: "asc" }, include: { _count: { select: { pages: true } } } }),
+        listPages(orgId),
+      ]);
+      return {
+        folders: gfsFolders.map((f) => ({ id: f.id, name: f.name, parentId: f.parentId, pageCount: f._count.pages })),
+        pages: gfsPages.map((p) => ({ slug: p.slug, title: p.title, folderId: p.folderId })),
+      };
+    }
+
+    case "create_folder": {
+      if (!args.name) throw new Error("name is required");
+      const cfVisibility = args.visibility ?? "shared";
+      if (cfVisibility !== "personal" && cfVisibility !== "shared") {
+        throw new Error("visibility must be 'personal' or 'shared'");
+      }
+      if (args.parent_id) {
+        const parent = await db.folder.findFirst({ where: { id: args.parent_id, orgId } });
+        if (!parent) throw new Error(`parent folder not found: ${args.parent_id}`);
+      }
+      const newFolder = await db.folder.create({
+        data: { orgId, name: args.name, visibility: cfVisibility, createdBy: actorId, parentId: args.parent_id ?? null },
+      });
+      logAudit({ orgId, action: "folder.create", resourceType: "folder", resourceId: newFolder.id, actorType: "apikey", actorId, metadata: { name: args.name, parentId: args.parent_id } });
+      return { ok: true, id: newFolder.id, name: newFolder.name };
+    }
+
+    case "update_folder": {
+      if (!args.id) throw new Error("id is required");
+      const ufFolder = await db.folder.findFirst({ where: { id: args.id, orgId } });
+      if (!ufFolder) throw new Error(`folder not found: ${args.id}`);
+      if (args.parent_id) {
+        const parent = await db.folder.findFirst({ where: { id: args.parent_id, orgId } });
+        if (!parent) throw new Error(`parent folder not found: ${args.parent_id}`);
+      }
+      if (args.visibility && args.visibility !== "personal" && args.visibility !== "shared") {
+        throw new Error("visibility must be 'personal' or 'shared'");
+      }
+      const ufData: Record<string, unknown> = {};
+      if (args.name !== undefined) ufData.name = args.name;
+      if (args.parent_id !== undefined) ufData.parentId = args.parent_id || null;
+      if (args.visibility !== undefined) ufData.visibility = args.visibility;
+      await db.folder.update({ where: { id: args.id }, data: ufData });
+      logAudit({ orgId, action: "folder.update", resourceType: "folder", resourceId: args.id, actorType: "apikey", actorId, metadata: { name: args.name, parentId: args.parent_id, visibility: args.visibility } });
+      return { ok: true, id: args.id };
+    }
+
+    case "delete_folder": {
+      if (!args.id) throw new Error("id is required");
+      const dfFolder = await db.folder.findFirst({ where: { id: args.id, orgId } });
+      if (!dfFolder) throw new Error(`folder not found: ${args.id}`);
+      await db.$transaction([
+        db.page.updateMany({ where: { folderId: args.id }, data: { folderId: null } }),
+        db.folder.delete({ where: { id: args.id } }),
+      ]);
+      logAudit({ orgId, action: "folder.delete", resourceType: "folder", resourceId: args.id, actorType: "apikey", actorId, metadata: { name: dfFolder.name } });
+      return { ok: true, id: args.id, name: dfFolder.name };
     }
 
     case "get_versions": {
