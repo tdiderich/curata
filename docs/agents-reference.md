@@ -43,6 +43,12 @@ Values: `major`, `minor`, `info`
 ### Glow
 Values: `none`, `accent`, `corner`
 
+### GraphEdgeStyle
+Values: `solid`, `dashed`
+
+### GraphShape
+Values: `box`, `diamond`, `pill`
+
 ### IconSize
 Values: `xs`, `sm`, `md`, `lg`, `xl`
 
@@ -54,6 +60,9 @@ Values: `dark`, `light`
 
 ### NavLayout
 Values: `top`, `sidebar`
+
+### PortSide
+Values: `right`, `left`, `top`, `bottom`
 
 ### PrintFlow
 Values: `slides`, `continuous`, `square`
@@ -233,6 +242,36 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | sources_of_truth | (string | SourceOfTruth)[] | no |
 | updated | string | no |
 
+### GraphEdge
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| from | string | yes |
+| label | string | no |
+| style | GraphEdgeStyle | no |
+| to | string | yes |
+
+### GraphGroup
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| id | string | yes |
+| label | string | no |
+| parent | string | no |
+
+### GraphNode
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| detail | string | no |
+| group | string | no |
+| height | number | no |
+| id | string | yes |
+| label | string | yes |
+| ports | PortLabel[] | no |
+| shape | GraphShape | no |
+| width | number | no |
+
 ### Link
 | Field | Type | Required |
 |-------|------|----------|
@@ -275,6 +314,12 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | capabilities | PipelineCapability[] | no |
 | detail | string | no |
 | label | string | yes |
+
+### PortLabel
+| Field | Type | Required |
+|-------|------|----------|
+| label | string | yes |
+| side | PortSide | yes |
 
 ### QuadrantPoint
 | Field | Type | Required |
@@ -709,6 +754,23 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
   default_filter: "all"  # optional
   events: []
   limit: 3  # optional
+```
+
+### graph
+| Field | Type | Required |
+|-------|------|----------|
+| direction | ArchDirection | no |
+| edges | GraphEdge[] | no |
+| groups | GraphGroup[] | no |
+| height | number | no |
+| nodes | GraphNode[] | yes |
+| title | string | no |
+
+```yaml
+- type: graph
+  direction: "left_to_right"  # optional
+  edges: []  # optional
+  nodes: []
 ```
 
 ### header
