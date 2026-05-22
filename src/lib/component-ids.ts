@@ -48,7 +48,7 @@ export interface PatchOperation {
   id?: string;
   components?: Component[];
   field?: string;
-  value?: string;
+  value?: unknown;
 }
 
 interface PageObject {
@@ -65,34 +65,46 @@ function findIndex(components: Component[], id: string): number {
   return idx;
 }
 
+function resolveComponents(op: PatchOperation): Component[] {
+  if (Array.isArray(op.components) && op.components.length > 0) return op.components;
+  if (op.value != null && typeof op.value === "object" && !Array.isArray(op.value)) return [op.value as Component];
+  if (Array.isArray(op.value) && op.value.length > 0) return op.value as Component[];
+  return [];
+}
+
 export function applyPatchOperations(page: PageObject, operations: PatchOperation[]): PageObject {
   let result: PageObject = { ...page, components: [...page.components] };
 
   for (const op of operations) {
+    const items = resolveComponents(op);
+
     switch (op.op) {
       case "replace": {
         const idx = findIndex(result.components, op.id!);
+        if (items.length === 0) throw new Error(`"${op.op}" requires components or value, but none were provided`);
         result.components = [
           ...result.components.slice(0, idx),
-          ...(op.components || []),
+          ...items,
           ...result.components.slice(idx + 1),
         ];
         break;
       }
       case "insert_before": {
         const idx = findIndex(result.components, op.id!);
+        if (items.length === 0) throw new Error(`"${op.op}" requires components or value, but none were provided`);
         result.components = [
           ...result.components.slice(0, idx),
-          ...(op.components || []),
+          ...items,
           ...result.components.slice(idx),
         ];
         break;
       }
       case "insert_after": {
         const idx = findIndex(result.components, op.id!);
+        if (items.length === 0) throw new Error(`"${op.op}" requires components or value, but none were provided`);
         result.components = [
           ...result.components.slice(0, idx + 1),
-          ...(op.components || []),
+          ...items,
           ...result.components.slice(idx + 1),
         ];
         break;
@@ -106,11 +118,13 @@ export function applyPatchOperations(page: PageObject, operations: PatchOperatio
         break;
       }
       case "prepend": {
-        result.components = [...(op.components || []), ...result.components];
+        if (items.length === 0) throw new Error(`"${op.op}" requires components or value, but none were provided`);
+        result.components = [...items, ...result.components];
         break;
       }
       case "append": {
-        result.components = [...result.components, ...(op.components || [])];
+        if (items.length === 0) throw new Error(`"${op.op}" requires components or value, but none were provided`);
+        result.components = [...result.components, ...items];
         break;
       }
       case "set_field": {
