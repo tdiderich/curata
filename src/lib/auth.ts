@@ -73,7 +73,8 @@ async function resolveOrgNone(): Promise<OrgContext | null> {
 }
 
 async function resolveOrgOAuth(): Promise<OrgContext | null> {
-  const { auth: getSession } = await import("@/lib/next-auth");
+  const mod = await (import("@/lib/next-auth") as Promise<{ auth: () => Promise<{ user?: { id?: string; email?: string; name?: string } } | null> }>);
+  const getSession = mod.auth;
   const session = await getSession();
   if (!session?.user?.email) return null;
 
@@ -166,7 +167,8 @@ export async function resolveCurrentUser(): Promise<CurrentUser | null> {
     };
   }
   if (AUTH_MODE === "oauth") {
-    const { auth: getSession } = await import("@/lib/next-auth");
+    const mod = await (import("@/lib/next-auth") as Promise<{ auth: () => Promise<{ user?: { id?: string; email?: string; name?: string } } | null> }>);
+  const getSession = mod.auth;
     const session = await getSession();
     if (!session?.user) return null;
     return {
