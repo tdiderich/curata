@@ -18,29 +18,90 @@ function deriveId(component: Component, index: number): string {
   return `${typeName}-${index}`;
 }
 
-export function ensureComponentIds(components: Component[]): Component[] {
-  const usedIds = new Set<string>();
-
+function collectUsedIds(components: Component[], usedIds: Set<string>): void {
   for (const c of components) {
-    if (typeof c.id === "string" && c.id) {
-      usedIds.add(c.id);
+    if (typeof c.id === "string" && c.id) usedIds.add(c.id);
+    for (const nested of extractNestedArrays(c)) {
+      collectUsedIds(nested, usedIds);
     }
   }
+}
 
-  return components.map((c, i) => {
-    if (typeof c.id === "string" && c.id) return { ...c };
-
-    let candidate = deriveId(c, i);
-    if (usedIds.has(candidate)) {
-      let suffix = i;
-      while (usedIds.has(`${candidate}-${suffix}`)) {
-        suffix++;
-      }
-      candidate = `${candidate}-${suffix}`;
+function extractNestedArrays(c: Component): Component[][] {
+  const arrays: Component[][] = [];
+  if (Array.isArray(c.components)) arrays.push(c.components as Component[]);
+  if (Array.isArray(c.items)) {
+    for (const item of c.items as Component[]) {
+      if (Array.isArray(item.components)) arrays.push(item.components as Component[]);
     }
-    usedIds.add(candidate);
-    return { ...c, id: candidate };
+  }
+  if (Array.isArray(c.tabs)) {
+    for (const tab of c.tabs as Component[]) {
+      if (Array.isArray(tab.components)) arrays.push(tab.components as Component[]);
+    }
+  }
+  if (Array.isArray(c.columns)) {
+    for (const col of c.columns as unknown[]) {
+      if (Array.isArray(col)) arrays.push(col as Component[]);
+    }
+  }
+  return arrays;
+}
+
+function stampIds(components: Component[], usedIds: Set<string>): Component[] {
+  return components.map((c, i) => {
+    let stamped = { ...c };
+    if (!(typeof stamped.id === "string" && stamped.id)) {
+      let candidate = deriveId(c, i);
+      if (usedIds.has(candidate)) {
+        let suffix = i;
+        while (usedIds.has(`${candidate}-${suffix}`)) suffix++;
+        candidate = `${candidate}-${suffix}`;
+      }
+      usedIds.add(candidate);
+      stamped = { ...stamped, id: candidate };
+    }
+    for (const key of ["components"] as const) {
+      if (Array.isArray(stamped[key])) {
+        stamped = { ...stamped, [key]: stampIds(stamped[key] as Component[], usedIds) };
+      }
+    }
+    if (Array.isArray(stamped.items)) {
+      stamped = {
+        ...stamped,
+        items: (stamped.items as Component[]).map((item) =>
+          Array.isArray(item.components)
+            ? { ...item, components: stampIds(item.components as Component[], usedIds) }
+            : item
+        ),
+      };
+    }
+    if (Array.isArray(stamped.tabs)) {
+      stamped = {
+        ...stamped,
+        tabs: (stamped.tabs as Component[]).map((tab) =>
+          Array.isArray(tab.components)
+            ? { ...tab, components: stampIds(tab.components as Component[], usedIds) }
+            : tab
+        ),
+      };
+    }
+    if (Array.isArray(stamped.columns)) {
+      stamped = {
+        ...stamped,
+        columns: (stamped.columns as unknown[]).map((col) =>
+          Array.isArray(col) ? stampIds(col as Component[], usedIds) : col
+        ),
+      };
+    }
+    return stamped;
   });
+}
+
+export function ensureComponentIds(components: Component[]): Component[] {
+  const usedIds = new Set<string>();
+  collectUsedIds(components, usedIds);
+  return stampIds(components, usedIds);
 }
 
 export interface PatchOperation {

@@ -79,8 +79,45 @@ export async function POST(request: NextRequest) {
       }
 
       const components = (page.json.components ?? []) as Array<Record<string, unknown>>;
-      const idx = components.findIndex((c) => c.id === componentId);
-      if (idx === -1) {
+
+      type Loc = { arr: Array<Record<string, unknown>>; idx: number };
+      function findComponentDeep(
+        arr: Array<Record<string, unknown>>,
+        id: string,
+      ): Loc | null {
+        for (let i = 0; i < arr.length; i++) {
+          if (arr[i].id === id) return { arr, idx: i };
+          for (const nested of nestedArrays(arr[i])) {
+            const found = findComponentDeep(nested, id);
+            if (found) return found;
+          }
+        }
+        return null;
+      }
+
+      function nestedArrays(c: Record<string, unknown>): Array<Array<Record<string, unknown>>> {
+        const out: Array<Array<Record<string, unknown>>> = [];
+        if (Array.isArray(c.components)) out.push(c.components);
+        if (Array.isArray(c.items)) {
+          for (const item of c.items as Array<Record<string, unknown>>) {
+            if (Array.isArray(item.components)) out.push(item.components as Array<Record<string, unknown>>);
+          }
+        }
+        if (Array.isArray(c.tabs)) {
+          for (const tab of c.tabs as Array<Record<string, unknown>>) {
+            if (Array.isArray(tab.components)) out.push(tab.components as Array<Record<string, unknown>>);
+          }
+        }
+        if (Array.isArray(c.columns)) {
+          for (const col of c.columns as unknown[]) {
+            if (Array.isArray(col)) out.push(col as Array<Record<string, unknown>>);
+          }
+        }
+        return out;
+      }
+
+      const loc = findComponentDeep(components, componentId);
+      if (!loc) {
         return NextResponse.json(
           { error: `component ${componentId} not found` },
           { status: 404 }
@@ -88,9 +125,9 @@ export async function POST(request: NextRequest) {
       }
 
       // Try exact match first, then case-insensitive
-      let { result, count } = replaceInValue(components[idx], target, replacement, false);
+      let { result, count } = replaceInValue(loc.arr[loc.idx], target, replacement, false);
       if (count === 0) {
-        ({ result, count } = replaceInValue(components[idx], target, replacement, true));
+        ({ result, count } = replaceInValue(loc.arr[loc.idx], target, replacement, true));
       }
 
       if (count === 0) {
@@ -107,9 +144,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const newComponents = [...components];
-      newComponents[idx] = result as Record<string, unknown>;
-      const newJson = { ...page.json, components: newComponents };
+      loc.arr[loc.idx] = result as Record<string, unknown>;
+      const newJson = { ...page.json, components };
       const writeResult = await writePageJson(ctx.orgId, ctx.orgSlug, slug, newJson, "web", page.contentHash);
       if (!writeResult.ok) {
         return NextResponse.json({ error: writeResult.error }, { status: 409 });
