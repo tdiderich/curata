@@ -7,7 +7,8 @@ const RATE_LIMIT_MAX = 120;
 const agentHits = new Map<string, { count: number; reset: number }>();
 
 const PROTECTED_PREFIXES = ["/dashboard", "/settings"];
-const PUBLIC_PREFIXES = [
+
+const PUBLIC_PREFIXES_BASE = [
   "/sign-in",
   "/api/auth/",
   "/api/mcp/",
@@ -16,64 +17,59 @@ const PUBLIC_PREFIXES = [
   "/p/",
 ];
 
+const PUBLIC_PREFIXES_CLERK = [
+  ...PUBLIC_PREFIXES_BASE,
+  "/sign-up",
+  "/api/webhooks/",
+  "/api/playground/",
+  "/docs",
+  "/try",
+  "/playground",
+  "/privacy",
+  "/terms",
+];
+
 function isProtected(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
 function isPublic(pathname: string): boolean {
   if (pathname === "/" || pathname === "/sign-in") return true;
-  return PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+  const prefixes = AUTH_MODE === "clerk" ? PUBLIC_PREFIXES_CLERK : PUBLIC_PREFIXES_BASE;
+  return prefixes.some((p) => pathname.startsWith(p));
 }
 
 function isAgentApi(pathname: string): boolean {
   return pathname.startsWith("/api/mcp");
 }
 
-export default async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Rate limiting for /api/mcp
-  if (isAgentApi(pathname)) {
-    const key =
-      request.headers.get("authorization")?.slice(0, 20) ||
-      request.headers.get("x-forwarded-for") ||
-      "anon";
-    const now = Date.now();
-    const entry = agentHits.get(key);
-    if (!entry || now > entry.reset) {
-      if (agentHits.size > 10_000) {
-        for (const [k, v] of agentHits) {
-          if (now > v.reset) agentHits.delete(k);
-        }
-      }
-      agentHits.set(key, { count: 1, reset: now + RATE_LIMIT_WINDOW });
-    } else {
-      entry.count++;
-      if (entry.count > RATE_LIMIT_MAX) {
-        return NextResponse.json(
-          { error: "rate limit exceeded" },
-          { status: 429, headers: { "Retry-After": "60" } },
-        );
+function applyRateLimit(request: NextRequest): NextResponse | null {
+  const key =
+    request.headers.get("authorization")?.slice(0, 20) ||
+    request.headers.get("x-forwarded-for") ||
+    "anon";
+  const now = Date.now();
+  const entry = agentHits.get(key);
+  if (!entry || now > entry.reset) {
+    if (agentHits.size > 10_000) {
+      for (const [k, v] of agentHits) {
+        if (now > v.reset) agentHits.delete(k);
       }
     }
-  }
-
-  // Auth enforcement for oauth mode
-  if (AUTH_MODE === "oauth" && isProtected(pathname) && !isPublic(pathname)) {
-    // Check for next-auth session token cookie
-    const sessionToken =
-      request.cookies.get("next-auth.session-token")?.value ||
-      request.cookies.get("__Secure-next-auth.session-token")?.value;
-
-    if (!sessionToken) {
-      const signInUrl = new URL("/sign-in", request.url);
-      return NextResponse.redirect(signInUrl);
+    agentHits.set(key, { count: 1, reset: now + RATE_LIMIT_WINDOW });
+  } else {
+    entry.count++;
+    if (entry.count > RATE_LIMIT_MAX) {
+      return NextResponse.json(
+        { error: "rate limit exceeded" },
+        { status: 429, headers: { "Retry-After": "60" } },
+      );
     }
   }
+  return null;
+}
 
-  const response = NextResponse.next();
-
-  // Security headers
+function applySecurityHeaders(request: NextRequest, response: NextResponse): void {
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -87,21 +83,85 @@ export default async function middleware(request: NextRequest) {
   );
 
   const isDev = request.headers.get("host")?.includes("localhost");
+  const clerkDomains = AUTH_MODE === "clerk"
+    ? isDev
+      ? " https://*.clerk.accounts.dev"
+      : " https://accounts.curata.ai https://clerk.curata.ai"
+    : "";
+  const clerkImg = AUTH_MODE === "clerk" ? " https://*.clerk.com https://img.clerk.com" : "";
+  const clerkFrame = AUTH_MODE === "clerk"
+    ? isDev
+      ? " https://*.clerk.accounts.dev"
+      : " https://accounts.curata.ai"
+    : "";
+
   response.headers.set(
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com https://static.cloudflareinsights.com`,
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}${clerkDomains} https://challenges.cloudflare.com https://static.cloudflareinsights.com`,
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob:",
+      `img-src 'self' data: blob:${clerkImg}`,
       "font-src 'self' data:",
-      `connect-src 'self' https://cloudflareinsights.com`,
-      `frame-src https://challenges.cloudflare.com`,
+      `connect-src 'self'${clerkDomains}${AUTH_MODE === "clerk" ? " https://*.clerk.com" : ""} https://cloudflareinsights.com`,
+      `frame-src${clerkFrame} https://challenges.cloudflare.com`,
       "worker-src 'self' blob:",
     ].join("; "),
   );
+}
 
+async function middlewareClerk(request: NextRequest) {
+  const { clerkMiddleware, createRouteMatcher } = await import("@clerk/nextjs/server");
+  const isPublicRoute = createRouteMatcher(
+    PUBLIC_PREFIXES_CLERK.map((p) => `${p}(.*)`).concat(["/", "/sign-in(.*)"])
+  );
+
+  return new Promise<NextResponse>((resolve) => {
+    const handler = clerkMiddleware(async (auth, req) => {
+      if (!isPublicRoute(req)) {
+        await auth.protect();
+      }
+
+      if (isAgentApi(req.nextUrl.pathname)) {
+        const limited = applyRateLimit(req);
+        if (limited) { resolve(limited); return limited; }
+      }
+
+      const response = NextResponse.next();
+      applySecurityHeaders(req, response);
+      resolve(response);
+      return response;
+    });
+    handler(request, {} as never);
+  });
+}
+
+async function middlewareDefault(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (isAgentApi(pathname)) {
+    const limited = applyRateLimit(request);
+    if (limited) return limited;
+  }
+
+  if (AUTH_MODE === "oauth" && isProtected(pathname) && !isPublic(pathname)) {
+    const sessionToken =
+      request.cookies.get("next-auth.session-token")?.value ||
+      request.cookies.get("__Secure-next-auth.session-token")?.value;
+
+    if (!sessionToken) {
+      return NextResponse.redirect(new URL("/sign-in", request.url));
+    }
+  }
+
+  const response = NextResponse.next();
+  applySecurityHeaders(request, response);
   return response;
+}
+
+export default async function middleware(request: NextRequest) {
+  if (AUTH_MODE === "clerk") return middlewareClerk(request);
+  return middlewareDefault(request);
 }
 
 export const config = {

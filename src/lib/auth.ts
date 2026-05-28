@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { hashApiKey } from "./api-key";
+import { isPersonalEmailDomain } from "./personal-domains";
 import type { Role } from "./permissions";
 
 export interface OrgContext {
@@ -24,22 +25,36 @@ export interface CurrentUser {
 
 export const AUTH_MODE = process.env.AUTH_MODE ?? "none";
 
-// Static default user for no-auth mode
 const DEFAULT_USER: CurrentUser = {
   id: "default",
   email: "admin@localhost",
   name: "Admin",
 };
 
+const VALID_ROLES: readonly string[] = ["owner", "admin", "member", "viewer"];
+
+function normalizeClerkRole(clerkRole: string): Role {
+  if (clerkRole === "org:admin") return "owner";
+  if (clerkRole === "org:member") return "member";
+  if (VALID_ROLES.includes(clerkRole)) return clerkRole as Role;
+  return "member";
+}
+
+async function findOrCreateMember(orgId: string, userId: string, defaultRole: Role) {
+  return db.orgMember.upsert({
+    where: { orgId_userId: { orgId, userId } },
+    update: {},
+    create: { orgId, userId, role: defaultRole },
+  });
+}
+
 async function resolveOrgNone(): Promise<OrgContext | null> {
-  // In no-auth mode, find the single implicit org
   try {
     const org = await db.organization.findFirst({
       orderBy: { createdAt: "asc" },
     });
     if (!org) return null;
 
-    // Ensure a default member record exists
     const member = await db.orgMember.upsert({
       where: { orgId_userId: { orgId: org.id, userId: DEFAULT_USER.id } },
       update: {},
@@ -78,15 +93,78 @@ async function resolveOrgOAuth(): Promise<OrgContext | null> {
   };
 }
 
-export async function resolveOrg(): Promise<OrgContext | null> {
-  if (AUTH_MODE === "oauth") {
-    return resolveOrgOAuth();
+async function resolveOrgClerk(): Promise<OrgContext | null> {
+  const { auth, currentUser } = await import("@clerk/nextjs/server");
+  const { userId, orgId: clerkOrgId, orgRole } = await auth();
+  if (!userId) return null;
+
+  if (clerkOrgId) {
+    const org = await db.organization.findUnique({ where: { clerkOrgId } });
+    if (!org) return null;
+
+    if (!org.domain) {
+      try {
+        const user = await currentUser();
+        const email = user?.emailAddresses?.find(
+          (e) => e.id === user.primaryEmailAddressId
+        )?.emailAddress;
+        if (email) {
+          const emailDomain = email.split("@")[1]?.toLowerCase();
+          if (emailDomain && !isPersonalEmailDomain(emailDomain)) {
+            await db.organization.update({
+              where: { id: org.id },
+              data: { domain: emailDomain },
+            });
+          }
+        }
+      } catch {
+        // best-effort
+      }
+    }
+
+    const role = orgRole ? normalizeClerkRole(orgRole) : "member";
+    const member = await findOrCreateMember(org.id, userId, role);
+    return { orgId: org.id, orgSlug: org.slug, userId, role: normalizeClerkRole(member.role) };
   }
-  // Default: no-auth mode
+
+  const user = await currentUser();
+  if (!user) return null;
+
+  const email = user.emailAddresses?.find(
+    (e) => e.id === user.primaryEmailAddressId
+  )?.emailAddress;
+  if (!email) return null;
+
+  const domain = email.split("@")[1]?.toLowerCase();
+  if (!domain) return null;
+
+  const org = await db.organization.findFirst({ where: { domain } });
+  if (!org) return null;
+
+  const member = await findOrCreateMember(org.id, userId, "member");
+  return { orgId: org.id, orgSlug: org.slug, userId, role: normalizeClerkRole(member.role) };
+}
+
+export async function resolveOrg(): Promise<OrgContext | null> {
+  if (AUTH_MODE === "clerk") return resolveOrgClerk();
+  if (AUTH_MODE === "oauth") return resolveOrgOAuth();
   return resolveOrgNone();
 }
 
 export async function resolveCurrentUser(): Promise<CurrentUser | null> {
+  if (AUTH_MODE === "clerk") {
+    const { currentUser } = await import("@clerk/nextjs/server");
+    const user = await currentUser();
+    if (!user) return null;
+    const email = user.emailAddresses?.find(
+      (e) => e.id === user.primaryEmailAddressId
+    )?.emailAddress ?? "";
+    return {
+      id: user.id,
+      email,
+      name: user.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : email || "Unknown",
+    };
+  }
   if (AUTH_MODE === "oauth") {
     const { auth: getSession } = await import("@/lib/next-auth");
     const session = await getSession();

@@ -8,10 +8,11 @@ datasource db {
 }
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  domain    String?  @unique
+  id         String   @id @default(cuid())
+  clerkOrgId String?  @unique @map("clerk_org_id")
+  name       String
+  slug       String   @unique
+  domain     String?  @unique
   theme     String   @default("dark")
   mode      String   @default("dark")
   texture   String   @default("none")
