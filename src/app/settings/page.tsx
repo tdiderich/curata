@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { resolveOrg, resolveCurrentUser } from "@/lib/auth";
+import { AUTH_MODE, resolveOrg, resolveCurrentUser } from "@/lib/auth";
 import { seedOrg } from "@/lib/seed";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
@@ -18,11 +18,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function SettingsPage() {
   let ctx = await resolveOrg();
-  if (!ctx) {
+  if (!ctx && AUTH_MODE !== "clerk") {
     await seedOrg("curata");
     ctx = await resolveOrg();
   }
-  if (!ctx) redirect("/sign-in");
+  if (!ctx) redirect(AUTH_MODE === "clerk" ? "/onboarding" : "/sign-in");
 
   const canManage = can(ctx.role, "member:manage");
   const canManageKeys = can(ctx.role, "key:manage");

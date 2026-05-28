@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { resolveOrg } from "@/lib/auth";
+import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { seedOrg } from "@/lib/seed";
 import { listPages } from "@/lib/pages";
 import { db } from "@/lib/db";
@@ -23,11 +23,11 @@ interface FolderRow {
 
 export default async function DashboardPage() {
   let ctx = await resolveOrg();
-  if (!ctx) {
+  if (!ctx && AUTH_MODE !== "clerk") {
     await seedOrg("curata");
     ctx = await resolveOrg();
   }
-  if (!ctx) redirect("/sign-in");
+  if (!ctx) redirect(AUTH_MODE === "clerk" ? "/onboarding" : "/sign-in");
 
   const org = await db.organization.findUnique({ where: { id: ctx.orgId }, select: { name: true } });
   const orgName = org?.name ?? "curata";

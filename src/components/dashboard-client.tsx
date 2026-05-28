@@ -8,7 +8,6 @@ import { NewPageButton } from "@/components/new-page-button";
 import { DashboardFeed } from "@/components/dashboard-feed";
 import { useDashView } from "@/components/view-toggle";
 import { TEMPLATES, PERSONAS } from "@/lib/templates";
-import { basePath } from "@/lib/api-fetch";
 
 export interface SerializedPageMeta {
   slug: string;
@@ -177,7 +176,7 @@ function EmptyWelcome({ orgName }: { orgName?: string }) {
 
   async function createFromTemplate(slug: string, title: string) {
     setCreating(slug);
-    const res = await fetch(`${basePath}/api/pages`, {
+    const res = await fetch("/api/pages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title, templateSlug: slug }),
@@ -192,7 +191,7 @@ function EmptyWelcome({ orgName }: { orgName?: string }) {
 
   async function createBlank() {
     setCreating("__blank");
-    const res = await fetch(`${basePath}/api/pages`, {
+    const res = await fetch("/api/pages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "Untitled", shell: "standard" }),
@@ -262,10 +261,11 @@ interface DashboardClientProps {
 }
 
 function PageRow({ page, folders, indent = 1 }: { page: SerializedPageMeta; folders: FolderRow[]; indent?: number }) {
+  const href = `/pages/${page.slug}`;
   return (
     <tr className={`dash-row dash-row--nested${indent > 1 ? " dash-row--deep" : ""}`}>
       <td className="dash-td dash-td-title" style={indent > 1 ? { paddingLeft: `${indent * 1.5}rem` } : undefined}>
-        <Link href={`/pages/${page.slug}`} className="dash-page-link">
+        <Link href={href} className="dash-page-link">
           {page.title}
         </Link>
       </td>
@@ -424,7 +424,7 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
     ? filtered.filter((p) => p.folderId === rootFolderId)
     : filtered.filter((p) => p.folderId === null);
 
-  const sortLabel = sortKey === "title" ? "Title" : sortKey === "views" ? "Views" : "Updated";
+  const sortLabel = sortKey === "title" ? "Title" : sortKey === "views" ? "Views" : sortKey === "sortOrder" ? "Order" : "Updated";
 
   return (
     <div className="dash-root">

@@ -43,8 +43,9 @@ export function MemberList({ canManage, currentUserId }: MemberListProps) {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   async function changeRole(memberId: string, role: string) {

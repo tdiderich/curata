@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { normalizeLegacyTheme } from "@/lib/theme";
 import { basePath } from "@/lib/api-fetch";
 
 const COLORS = [
@@ -42,8 +43,9 @@ interface ThemeSettingsProps {
 
 export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
   const router = useRouter();
-  const initColor = ["dark", "light"].includes(initial.theme) ? "violet" : initial.theme;
-  const initMode = ["dark", "light"].includes(initial.theme) ? initial.theme : initial.mode;
+  const { theme: normalizedTheme, mode: normalizedMode } = normalizeLegacyTheme(initial.theme, initial.mode);
+  const initColor = normalizedTheme ?? "violet";
+  const initMode = normalizedMode ?? initial.mode;
   const [color, setColor] = useState(initColor);
   const [mode, setMode] = useState(initMode);
   const [texture, setTexture] = useState(initial.texture);
