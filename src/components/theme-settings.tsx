@@ -2,8 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { normalizeLegacyTheme } from "@/lib/theme";
 import { basePath } from "@/lib/api-fetch";
+
+function normalizeLegacyTheme(
+  theme: string | null,
+  mode: string | null
+): { theme: string | null; mode: string | null } {
+  if (theme === "dark" || theme === "light") return { theme: null, mode: theme };
+  return { theme, mode };
+}
 
 const COLORS = [
   { value: "red", label: "Red", color: "#BB7777" },
