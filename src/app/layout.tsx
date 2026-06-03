@@ -42,6 +42,22 @@ async function ClerkWrapper({ children }: { children: React.ReactNode }) {
           colorInputText: "#F7F7F2",
           borderRadius: "8px",
         },
+        elements: {
+          card: { background: "#121113", border: "1px solid rgba(247, 247, 242, 0.08)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" },
+          headerTitle: { color: "#F7F7F2" },
+          headerSubtitle: { color: "#B0B3AD" },
+          socialButtonsBlockButton: { background: "rgba(247, 247, 242, 0.04)", border: "1px solid rgba(247, 247, 242, 0.08)", color: "#F7F7F2" },
+          socialButtonsBlockButtonText: { color: "#F7F7F2" },
+          footerActionLink: { color: "#899878" },
+          userButtonPopoverCard: { background: "#121113", border: "1px solid rgba(247, 247, 242, 0.08)" },
+          userButtonPopoverActionButton: { color: "#F7F7F2" },
+          userButtonPopoverActionButtonText: { color: "#F7F7F2" },
+          userButtonPopoverActionButtonIcon: { color: "#B0B3AD" },
+          userButtonPopoverFooter: { display: "none" },
+          footer: { "& a": { color: "#899878" } },
+          internal: { display: "none" },
+          badge: { background: "#899878", color: "#121113" },
+        },
       }}
     >
       {children}
