@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
 
@@ -22,37 +22,30 @@ function formatDate(iso: string): string {
   });
 }
 
-export default function VersionHistory({ slug, onOpen }: { slug: string; onOpen?: () => void }) {
+export function VersionHistoryPanel({ slug, onClose }: { slug: string; onClose: () => void }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [versions, setVersions] = useState<PageVersion[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
 
-  async function loadVersions() {
-    if (versions) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`${basePath}/api/versions?slug=${encodeURIComponent(slug)}`);
-      if (res.ok) {
-        const data = (await res.json()) as PageVersion[];
-        setVersions(data);
-        if (data.length > 0) setSelectedId(data[0].id);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch(`${basePath}/api/versions?slug=${encodeURIComponent(slug)}`);
+        if (res.ok && !cancelled) {
+          const data = (await res.json()) as PageVersion[];
+          setVersions(data);
+          if (data.length > 0) setSelectedId(data[0].id);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } finally {
-      setLoading(false);
     }
-  }
-
-  function toggle() {
-    const next = !open;
-    setOpen(next);
-    if (next) {
-      loadVersions();
-      onOpen?.();
-    }
-  }
+    load();
+    return () => { cancelled = true; };
+  }, [slug]);
 
   async function restore(versionId: string) {
     setRestoring(true);
@@ -63,9 +56,7 @@ export default function VersionHistory({ slug, onOpen }: { slug: string; onOpen?
         body: JSON.stringify({ slug, versionId }),
       });
       if (res.ok) {
-        setVersions(null);
-        setSelectedId(null);
-        setOpen(false);
+        onClose();
         router.refresh();
       }
     } finally {
@@ -77,67 +68,59 @@ export default function VersionHistory({ slug, onOpen }: { slug: string; onOpen?
   const isCurrent = selected && versions && selected.id === versions[0].id;
 
   return (
-    <>
-      <button className="page-actions-item" onClick={toggle}>
-        Revert to past version
-      </button>
+    <div className="vh-panel">
+      <div className="vh-panel-header">
+        <span className="vh-panel-title">Version history</span>
+        <button className="vh-panel-close" onClick={onClose}>
+          &times;
+        </button>
+      </div>
 
-      {open && (
-        <div className="vh-panel">
-          <div className="vh-panel-header">
-            <span className="vh-panel-title">Version history</span>
-            <button className="vh-panel-close" onClick={() => setOpen(false)}>
-              &times;
-            </button>
+      {loading && <div className="vh-empty">Loading&hellip;</div>}
+
+      {!loading && versions && versions.length === 0 && (
+        <div className="vh-empty">No versions found.</div>
+      )}
+
+      {!loading && versions && versions.length > 0 && (
+        <div className="vh-body">
+          <div className="vh-list">
+            {versions.map((v, i) => (
+              <button
+                key={v.id}
+                className={`vh-list-item${selectedId === v.id ? " vh-list-item--active" : ""}`}
+                onClick={() => setSelectedId(v.id)}
+              >
+                <span className="vh-list-date">{formatDate(v.createdAt)}</span>
+                <span className="vh-list-meta">
+                  <span className="vh-list-hash">{v.contentHash.slice(0, 8)}</span>
+                  {i === 0 && <span className="vh-list-badge">current</span>}
+                </span>
+              </button>
+            ))}
           </div>
 
-          {loading && <div className="vh-empty">Loading&hellip;</div>}
-
-          {!loading && versions && versions.length === 0 && (
-            <div className="vh-empty">No versions found.</div>
-          )}
-
-          {!loading && versions && versions.length > 0 && (
-            <div className="vh-body">
-              <div className="vh-list">
-                {versions.map((v, i) => (
+          {selected && (
+            <div className="vh-preview">
+              <div className="vh-preview-header">
+                <span className="vh-preview-label">
+                  {isCurrent ? "Current version" : `Version from ${formatDate(selected.createdAt)}`}
+                </span>
+                {!isCurrent && (
                   <button
-                    key={v.id}
-                    className={`vh-list-item${selectedId === v.id ? " vh-list-item--active" : ""}`}
-                    onClick={() => setSelectedId(v.id)}
+                    className="vh-restore-btn"
+                    disabled={restoring}
+                    onClick={() => restore(selected.id)}
                   >
-                    <span className="vh-list-date">{formatDate(v.createdAt)}</span>
-                    <span className="vh-list-meta">
-                      <span className="vh-list-hash">{v.contentHash.slice(0, 8)}</span>
-                      {i === 0 && <span className="vh-list-badge">current</span>}
-                    </span>
+                    {restoring ? "Restoring…" : "Restore this version"}
                   </button>
-                ))}
+                )}
               </div>
-
-              {selected && (
-                <div className="vh-preview">
-                  <div className="vh-preview-header">
-                    <span className="vh-preview-label">
-                      {isCurrent ? "Current version" : `Version from ${formatDate(selected.createdAt)}`}
-                    </span>
-                    {!isCurrent && (
-                      <button
-                        className="vh-restore-btn"
-                        disabled={restoring}
-                        onClick={() => restore(selected.id)}
-                      >
-                        {restoring ? "Restoring…" : "Restore this version"}
-                      </button>
-                    )}
-                  </div>
-                  <pre className="vh-preview-yaml">{selected.yamlContent}</pre>
-                </div>
-              )}
+              <pre className="vh-preview-yaml">{selected.yamlContent}</pre>
             </div>
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }

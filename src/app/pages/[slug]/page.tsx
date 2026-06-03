@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { resolveOrg, AUTH_MODE } from "@/lib/auth";
 import { getAnnotations, getPageSections, readPage } from "@/lib/pages";
+import { db } from "@/lib/db";
 import { PageRenderer } from "@/generated/kazam-renderer";
 import PageDetailClient from "@/components/page-detail-client";
 import PageEditor from "@/components/page-editor";
@@ -36,6 +37,11 @@ export default async function PageDetailView({
 
   const pageData = await readPage(ctx.orgId, slug);
   if (!pageData) notFound();
+
+  db.page.update({
+    where: { orgId_slug: { orgId: ctx.orgId, slug } },
+    data: { viewCount: { increment: 1 } },
+  }).catch(() => {});
 
   const pageTitle = (pageData.json.title as string) || slug;
 

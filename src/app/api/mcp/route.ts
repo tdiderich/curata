@@ -145,6 +145,15 @@ async function dispatch(
 
       const sections = await getPageSections(orgId, args.slug);
       const annotations = await getAnnotations(orgId, args.slug);
+
+      const page = await db.page.findUnique({
+        where: { orgId_slug: { orgId, slug: args.slug } },
+        select: { id: true },
+      });
+      if (page) {
+        db.page.update({ where: { id: page.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+      }
+
       return {
         slug: args.slug,
         yaml: result.yaml,

@@ -77,6 +77,15 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
 
     const sections = await getPageSections(orgId, slug);
     const annotations = await getAnnotations(orgId, slug);
+
+    const page = await db.page.findUnique({
+      where: { orgId_slug: { orgId, slug } },
+      select: { id: true },
+    });
+    if (page) {
+      db.page.update({ where: { id: page.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+    }
+
     return { content: [{ type: "text", text: JSON.stringify({ slug, yaml: result.yaml, contentHash: result.contentHash, sections, annotations }, null, 2) }] };
   });
 

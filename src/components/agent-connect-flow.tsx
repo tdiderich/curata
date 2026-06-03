@@ -7,15 +7,18 @@ import { basePath } from "@/lib/api-fetch";
 interface AgentConnectFlowProps {
   slug?: string;
   temporary?: boolean;
+  authMode?: string;
 }
 
-export function AgentConnectFlow({ slug, temporary }: AgentConnectFlowProps) {
-  const [apiKey, setApiKey] = useState<string | null>(null);
+export function AgentConnectFlow({ slug, temporary, authMode }: AgentConnectFlowProps) {
+  const [apiKey, setApiKey] = useState<string | null>(authMode === "none" ? "noauth" : null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-  const prompt = apiKey ? buildAgentPrompt({ baseUrl, token: apiKey, slug }) : "";
+  const prompt = authMode === "none"
+    ? buildAgentPrompt({ baseUrl })
+    : (apiKey ? buildAgentPrompt({ baseUrl, token: apiKey, slug }) : "");
 
   const handleGenerate = useCallback(async () => {
     setLoading(true);
@@ -63,7 +66,7 @@ export function AgentConnectFlow({ slug, temporary }: AgentConnectFlowProps) {
 
   return (
     <div className="agent-step">
-      {temporary && (
+      {temporary && authMode !== "none" && (
         <div className="agent-warning">
           This key expires in 1 hour. Create a long-lived key in Settings for ongoing access.
         </div>

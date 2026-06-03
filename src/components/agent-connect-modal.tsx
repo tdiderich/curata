@@ -5,9 +5,10 @@ import { AgentConnectFlow } from "./agent-connect-flow";
 interface AgentConnectModalProps {
   slug: string;
   onClose: () => void;
+  authMode?: string;
 }
 
-export default function AgentConnectModal({ slug, onClose }: AgentConnectModalProps) {
+export default function AgentConnectModal({ slug, onClose, authMode }: AgentConnectModalProps) {
   return (
     <div className="agent-overlay" onClick={onClose}>
       <div className="agent-modal" onClick={(e) => e.stopPropagation()}>
@@ -17,7 +18,7 @@ export default function AgentConnectModal({ slug, onClose }: AgentConnectModalPr
             &#x2715;
           </button>
         </div>
-        <AgentConnectFlow slug={slug} temporary />
+        <AgentConnectFlow slug={slug} temporary authMode={authMode} />
       </div>
     </div>
   );

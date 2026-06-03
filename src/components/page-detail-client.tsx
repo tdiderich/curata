@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { PageContent } from "./page-viewer";
 import { PublicToggle } from "./public-toggle";
-import VersionHistory from "./version-history";
+import { VersionHistoryPanel } from "./version-history";
 import AgentConnectModal from "./agent-connect-modal";
 import SourceEditor from "./source-editor";
 import { basePath } from "@/lib/api-fetch";
@@ -131,6 +131,7 @@ export default function PageDetailClient({
   const [submitting, setSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [agentOpen, setAgentOpen] = useState(false);
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
   const [viewTab, setViewTab] = useState<"preview" | "source">("preview");
@@ -352,7 +353,12 @@ export default function PageDetailClient({
                 >
                   Add agent
                 </button>
-                <VersionHistory slug={slug} onOpen={() => setActionsOpen(false)} />
+                <button
+                  className="page-actions-item"
+                  onClick={() => { setVersionHistoryOpen(true); setActionsOpen(false); }}
+                >
+                  Revert to past version
+                </button>
                 <Link
                   href={`/pages/${slug}?edit=1`}
                   className="page-actions-item"
@@ -393,7 +399,12 @@ export default function PageDetailClient({
       </div>
       {agentOpen &&
         createPortal(
-          <AgentConnectModal slug={slug} onClose={() => setAgentOpen(false)} />,
+          <AgentConnectModal slug={slug} onClose={() => setAgentOpen(false)} authMode={authMode} />,
+          document.body,
+        )}
+      {versionHistoryOpen &&
+        createPortal(
+          <VersionHistoryPanel slug={slug} onClose={() => setVersionHistoryOpen(false)} />,
           document.body,
         )}
 
