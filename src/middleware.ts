@@ -160,6 +160,9 @@ async function middlewareDefault(request: NextRequest) {
 }
 
 export default async function middleware(request: NextRequest) {
+  if (request.nextUrl.pathname === "/") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
   if (AUTH_MODE === "clerk") return middlewareClerk(request);
   return middlewareDefault(request);
 }
