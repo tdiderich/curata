@@ -2,6 +2,7 @@ packages:
   - "packages/*"
 
 allowBuilds:
+  '@clerk/shared': true
   '@prisma/engines': true
   esbuild: true
   prisma: true

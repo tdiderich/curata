@@ -1,7 +1,7 @@
 FROM node:22-slim AS base
 
 RUN apt-get update && apt-get install -y curl openssl && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@11.0.9 --activate
 
 ADD https://api.github.com/repos/tdiderich/kazam/releases/latest /tmp/kazam-latest.json
 RUN curl -fL https://github.com/tdiderich/kazam/releases/latest/download/kazam-linux-amd64 \
