@@ -76,6 +76,9 @@ model Page {
   folder      Folder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
   versions    PageVersion[]
   annotations Annotation[]
+  concepts    PageConcept[]
+  linksFrom   PageLink[]    @relation("PageLinksFrom")
+  linksTo     PageLink[]    @relation("PageLinksTo")
 
   @@unique([orgId, slug])
   @@index([orgId, visibility])
@@ -152,4 +155,53 @@ model AuditLog {
   @@index([orgId])
   @@index([resourceType, resourceId])
   @@map("audit_logs")
+}
+
+model Concept {
+  id             String   @id @default(cuid())
+  normalizedName String   @unique @map("normalized_name")
+  displayName    String   @map("display_name")
+  kind           String   @default("")
+  usageCount     Int      @default(1) @map("usage_count")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  pages PageConcept[]
+
+  @@map("concepts")
+}
+
+model PageConcept {
+  id        String   @id @default(cuid())
+  pageId    String   @map("page_id")
+  conceptId String   @map("concept_id")
+  section   String   @default("")
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  page    Page    @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  concept Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, conceptId, section])
+  @@index([pageId])
+  @@index([conceptId])
+  @@map("page_concepts")
+}
+
+model PageLink {
+  id          String   @id @default(cuid())
+  fromPageId  String   @map("from_page_id")
+  toPageId    String   @map("to_page_id")
+  rel         String
+  description String?
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  fromPage Page @relation("PageLinksFrom", fields: [fromPageId], references: [id], onDelete: Cascade)
+  toPage   Page @relation("PageLinksTo", fields: [toPageId], references: [id], onDelete: Cascade)
+
+  @@unique([fromPageId, toPageId, rel])
+  @@index([fromPageId])
+  @@index([toPageId])
+  @@map("page_links")
 }

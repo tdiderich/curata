@@ -1,0 +1,112 @@
+title: "Workflow — Semantic Refresh"
+subtitle: Scan all pages for missing concept tags and backfill the knowledge graph.
+shell: standard
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this workflow does
+    components:
+      - type: callout
+        variant: info
+        title: Backfill the knowledge graph without a batch job
+        body: |
+          This workflow scans all pages in curata, identifies those with zero concept tags, reads each one, and writes concepts and cross-page links back. It reuses the existing vocabulary to maintain consistency. Run it after initial setup, after a bulk import, or periodically to catch pages that agents missed during normal writes.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual or scheduled. Run after onboarding new customers, after bulk page creation, or weekly to catch gaps.
+          - term: Cadence
+            definition: On-demand or weekly. Safe to re-run — skips pages that already have concepts.
+          - term: Data Sources
+            definition: All pages in this curata instance. Uses get_semantic_map for gap detection and get_vocabulary for term reuse.
+          - term: Output
+            definition: Concepts and links added to previously untagged pages. A summary annotation on the workflow page with stats.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this workflow
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - At least one page in the knowledge base to scan
+          - No external tool access required — this workflow is entirely self-contained within curata
+
+          This workflow does not modify page content. It only adds concept and link metadata alongside existing content.
+
+  - type: section
+    eyebrow: Workflow Steps
+    heading: Steps
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Get the semantic map to find gaps
+            detail: |
+              Call `get_semantic_map` to get the full graph topology. Check `stats.pagesWithoutConcepts` to understand the scope of work. If zero, the refresh is complete — stop here.
+          - title: Load the current vocabulary
+            detail: |
+              Call `get_vocabulary` to get all existing canonical terms. Keep this list in context — you'll reference it when tagging each page to avoid creating synonyms. Note the most-used terms and established kinds.
+          - title: Process each untagged page
+            detail: |
+              For each page that has no concepts (identified from the semantic map), call `read_page` to get its content. Analyze the YAML content and identify:
+              - Vendor and tool names (kind: vendor, tool)
+              - Security frameworks and standards (kind: framework)
+              - Findings and risk areas (kind: finding, risk)
+              - Activities and processes (kind: activity, process)
+              - Key metrics (kind: metric)
+
+              Reuse vocabulary terms wherever possible. Create new terms only when nothing in the vocabulary matches.
+          - title: Write concepts and links back
+            detail: |
+              Call `write_page` with the same content (unchanged) plus the new `concepts` and `links` arrays. This is metadata-only — the page content stays exactly as it was.
+
+              For links, look for references to other pages by slug in the content, related customer pages, or pages that inform or supersede each other.
+
+              Tag 3-8 concepts per page. Don't tag every noun — focus on terms that enable cross-page discovery.
+          - title: Produce a summary
+            detail: |
+              After processing all pages, annotate this workflow page with a summary:
+              - Pages processed
+              - New concepts created
+              - Existing concepts reused
+              - Links discovered
+              - Vocabulary size before and after
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this workflow
+    components:
+      - type: callout
+        variant: info
+        title: Vocabulary first, always
+        body: |
+          The most important rule: always check the vocabulary before creating a new term. "CrowdStrike Falcon" and "Falcon" might both exist — pick the one with higher usage. If neither exists and the concept is important, create one canonical term and use it consistently.
+
+          Don't modify page content. This workflow is metadata-only. If you notice content issues, leave an annotation — don't fix them inline during a refresh run.
+
+          Tag conservatively. 3-8 concepts per page. The goal is cross-page discoverability, not exhaustive indexing. If a term only appears on one page and is unlikely to appear elsewhere, skip it.
+
+  - type: section
+    eyebrow: Related Workflows
+    heading: Related Workflows
+    components:
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: Customer Onboarding
+            badge:
+              label: Workflow
+              color: teal
+            description: Creates customer page sets. Run semantic refresh after onboarding to tag the new pages.
+          - title: Weekly Highlights
+            badge:
+              label: Workflow
+              color: teal
+            description: Scans pages for recent changes. Richer concept graph improves pattern detection in highlights.
+          - title: Account Health Report
+            badge:
+              label: Workflow
+              color: teal
+            description: Builds health dashboards. Cross-customer concept links surface relevant comparisons.

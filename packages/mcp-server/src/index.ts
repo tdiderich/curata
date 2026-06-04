@@ -66,17 +66,21 @@ server.tool(
 
 server.tool(
   "write_page",
-  "Create or update a page in your team's knowledge base. If a page with the derived slug already exists, it will be updated. Content should be valid kazam YAML. Call get_component_reference first to learn the YAML syntax for charts, stat grids, and other components.",
+  "Create or update a page in your team's knowledge base. If a page with the derived slug already exists, it will be updated. Content should be valid kazam YAML. Call get_component_reference first to learn the YAML syntax for charts, stat grids, and other components. Optionally tag concepts and cross-page links — call get_vocabulary first to reuse existing terms.",
   {
     title: z.string().describe("Page title (e.g., 'Q2 Revenue Analysis')"),
     content: z.string().describe("Full page content in kazam YAML format"),
     slug: z.string().optional().describe("Optional explicit slug. If omitted, derived from title."),
     folder_id: z.string().optional().describe("Optional folder ID to place the page in. Use list_folders to find folder IDs."),
+    concepts: z.string().optional().describe("JSON array of concepts to tag on this page. Each: {term, kind?, section?}. Call get_vocabulary first to reuse existing terms."),
+    links: z.string().optional().describe("JSON array of cross-page links. Each: {target (slug), rel (informs|references|supersedes|conflicts), description?}"),
   },
-  async ({ title, content, slug: explicitSlug, folder_id }) => {
+  async ({ title, content, slug: explicitSlug, folder_id, concepts, links }) => {
     const slug = explicitSlug || slugify(title);
     const args: Record<string, string> = { slug, content };
     if (folder_id) args.folder_id = folder_id;
+    if (concepts) args.concepts = concepts;
+    if (links) args.links = links;
     const result = await callApi(CURATA_URL, CURATA_API_KEY, "write_page", args);
     if (result.error) {
       if (result.error.includes("page not found") || result.error.includes("not found")) {
@@ -298,6 +302,91 @@ server.tool(
     const msg = `Resolved ${resolved} annotation${resolved !== 1 ? "s" : ""} on "${slug}" as ${resolveAs}` +
       (failed > 0 ? ` (${failed} failed)` : "");
     return { content: [{ type: "text" as const, text: msg }] };
+  }
+);
+
+server.tool(
+  "get_vocabulary",
+  "Get the shared concept vocabulary — canonical terms that agents have tagged across all pages. Call this before tagging concepts on a page to reuse existing terms and avoid synonyms. Returns terms sorted by usage count (most-used first).",
+  {
+    kind: z.string().optional().describe("Filter by concept kind (e.g., 'vendor', 'finding', 'framework')"),
+    query: z.string().optional().describe("Prefix search on term name (e.g., 'crowd' matches 'CrowdStrike')"),
+  },
+  async ({ kind, query }) => {
+    const args: Record<string, string> = {};
+    if (kind) args.kind = kind;
+    if (query) args.query = query;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "get_vocabulary", args);
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    const data = result.result as { concepts: Array<{ term: string; kind: string; usageCount: number }>; kinds: string[] };
+    if (!data.concepts || data.concepts.length === 0) {
+      return { content: [{ type: "text" as const, text: "No concepts in vocabulary yet." }] };
+    }
+    const lines = [`**Vocabulary** (${data.concepts.length} terms, kinds: ${data.kinds.join(", ") || "none"})\n`];
+    for (const c of data.concepts) {
+      lines.push(`- **${c.term}** [${c.kind || "untyped"}] — used ${c.usageCount}x`);
+    }
+    return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+  }
+);
+
+server.tool(
+  "get_related",
+  "Find pages and concepts related to a given term or page. Use to discover cross-customer patterns and connections in the knowledge graph.",
+  {
+    term: z.string().optional().describe("Concept term to look up (e.g., 'CrowdStrike')"),
+    slug: z.string().optional().describe("Page slug to find related content for"),
+  },
+  async ({ term, slug }) => {
+    const args: Record<string, string> = {};
+    if (term) args.term = term;
+    if (slug) args.slug = slug;
+    if (!term && !slug) {
+      return { content: [{ type: "text" as const, text: "Error: provide either 'term' or 'slug'" }], isError: true };
+    }
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "get_related", args);
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    const data = result.result as {
+      concepts: Array<{ term: string; kind: string; usageCount: number }>;
+      pages: Array<{ slug: string; title: string; sharedConcepts: string[] }>;
+      links: Array<{ from: string; to: string; rel: string }>;
+    };
+    const lines: string[] = [];
+    if (data.concepts.length > 0) {
+      lines.push("**Concepts:**");
+      for (const c of data.concepts) lines.push(`- ${c.term} [${c.kind}] (${c.usageCount}x)`);
+    }
+    if (data.pages.length > 0) {
+      lines.push("\n**Related pages:**");
+      for (const p of data.pages) lines.push(`- ${p.title} (${p.slug}) — shared: ${p.sharedConcepts.join(", ")}`);
+    }
+    if (data.links.length > 0) {
+      lines.push("\n**Direct links:**");
+      for (const l of data.links) lines.push(`- ${l.from} → ${l.to} [${l.rel}]`);
+    }
+    if (lines.length === 0) lines.push("No related content found.");
+    return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+  }
+);
+
+server.tool(
+  "get_semantic_map",
+  "Get the full knowledge graph in compact form — all concepts with their page lists, all cross-page links, and stats (including count of pages without concepts). Use to understand the full knowledge structure, find gaps for semantic refresh, or discover cross-customer patterns.",
+  {
+    kind: z.string().optional().describe("Filter concepts by kind (e.g., 'vendor')"),
+  },
+  async ({ kind }) => {
+    const args: Record<string, string> = {};
+    if (kind) args.kind = kind;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "get_semantic_map", args);
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    return { content: [{ type: "text" as const, text: JSON.stringify(result.result, null, 2) }] };
   }
 );
 

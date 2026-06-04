@@ -14,6 +14,16 @@ import {
   getSiteConfig,
 } from "@/lib/pages";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
+import {
+  upsertConcepts,
+  upsertLinks,
+  getPageConcepts,
+  getPageLinks,
+  getVocabulary,
+  getRelated,
+  getSemanticMap,
+} from "@/lib/concepts";
+import type { ConceptInput, LinkInput } from "@/lib/concepts";
 import { ensureComponentIds, applyPatchOperations } from "@/lib/component-ids";
 import type { PatchOperation } from "@/lib/component-ids";
 import yaml from "js-yaml";
@@ -33,6 +43,9 @@ const READ_TOOLS = [
   "validate_page",
   "list_workflows",
   "list_templates",
+  "get_vocabulary",
+  "get_related",
+  "get_semantic_map",
 ];
 const WRITE_TOOLS = ["write_page", "create_page", "delete_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "delete_folder", "create_from_template"];
 const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
@@ -101,8 +114,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const actorId = "keyPrefix" in ctx ? ctx.keyPrefix : "dev";
-    const result = await dispatch(tool, args || {}, ctx.orgId, ctx.orgSlug, actorId);
+    const actorId = ("keyPrefix" in ctx && ctx.keyPrefix) ? ctx.keyPrefix : "dev";
+    const result = await dispatch(tool, args || {}, ctx.orgId, ctx.orgSlug ?? "", actorId);
     return NextResponse.json({ result });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -200,12 +213,17 @@ async function dispatch(
         db.page.update({ where: { id: page.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
       }
 
+      const concepts = page ? await getPageConcepts(page.id) : [];
+      const links = page ? await getPageLinks(orgId, page.id) : [];
+
       return {
         slug: args.slug,
         yaml: result.yaml,
         contentHash: result.contentHash,
         sections,
         annotations,
+        concepts,
+        links,
       };
     }
 
@@ -459,6 +477,22 @@ async function dispatch(
           data: { folderId: args.folder_id },
         });
       }
+      if (args.concepts || args.links) {
+        const wpPage = await db.page.findUnique({
+          where: { orgId_slug: { orgId, slug: args.slug } },
+          select: { id: true },
+        });
+        if (wpPage) {
+          if (args.concepts) {
+            const conceptInputs: ConceptInput[] = JSON.parse(args.concepts);
+            await upsertConcepts(wpPage.id, conceptInputs, actorId);
+          }
+          if (args.links) {
+            const linkInputs: LinkInput[] = JSON.parse(args.links);
+            await upsertLinks(orgId, wpPage.id, linkInputs, actorId);
+          }
+        }
+      }
       logAudit({
         orgId,
         action: "page.write",
@@ -577,6 +611,22 @@ async function dispatch(
       const patchResult = await writePage(orgId, orgSlug, args.slug, newYaml, "agent", current.contentHash);
       if (!patchResult.ok) throw new Error(patchResult.error);
 
+      if (args.concepts || args.links) {
+        const ppPage = await db.page.findUnique({
+          where: { orgId_slug: { orgId, slug: args.slug } },
+          select: { id: true },
+        });
+        if (ppPage) {
+          if (args.concepts) {
+            const conceptInputs: ConceptInput[] = JSON.parse(args.concepts);
+            await upsertConcepts(ppPage.id, conceptInputs, actorId);
+          }
+          if (args.links) {
+            const linkInputs: LinkInput[] = JSON.parse(args.links);
+            await upsertLinks(orgId, ppPage.id, linkInputs, actorId);
+          }
+        }
+      }
       logAudit({
         orgId,
         action: "page.patch",
@@ -703,6 +753,21 @@ async function dispatch(
         metadata: { slug: args.target_slug, templateSlug: args.template_slug, folderId: args.folder_id },
       });
       return { ...cftResult, slug: args.target_slug };
+    }
+
+    case "get_vocabulary": {
+      return getVocabulary(args.kind || undefined, args.query || undefined);
+    }
+
+    case "get_related": {
+      return getRelated(orgId, {
+        term: args.term || undefined,
+        slug: args.slug || undefined,
+      });
+    }
+
+    case "get_semantic_map": {
+      return getSemanticMap(args.kind || undefined);
     }
 
     default:
