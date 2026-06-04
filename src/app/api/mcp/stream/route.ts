@@ -37,6 +37,18 @@ async function resolveAuth(request: Request) {
     return { orgId: org.id, orgSlug: org.slug, actorId: "noauth" };
   }
 
+  if (process.env.AUTH_MODE === "tailscale") {
+    const tsLogin = request.headers.get("tailscale-user-login");
+    const devUser = process.env.NODE_ENV === "development" ? process.env.TAILSCALE_DEV_USER : null;
+    if (tsLogin || devUser) {
+      const { resolveOrg } = await import("@/lib/auth");
+      const orgCtx = await resolveOrg();
+      if (orgCtx) {
+        return { orgId: orgCtx.orgId, orgSlug: orgCtx.orgSlug, actorId: `ts:${tsLogin || devUser}` };
+      }
+    }
+  }
+
   const authHeader = request.headers.get("authorization") || "";
   if (!authHeader.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7).trim();
