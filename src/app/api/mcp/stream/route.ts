@@ -15,6 +15,16 @@ import {
   searchPages,
 } from "@/lib/pages";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
+import {
+  upsertConcepts,
+  upsertLinks,
+  getPageConcepts,
+  getPageLinks,
+  getVocabulary,
+  getRelated,
+  getSemanticMap,
+} from "@/lib/concepts";
+import type { ConceptInput, LinkInput } from "@/lib/concepts";
 import { ensureComponentIds, applyPatchOperations } from "@/lib/component-ids";
 import type { PatchOperation } from "@/lib/component-ids";
 import yaml from "js-yaml";
@@ -94,16 +104,18 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
       where: { orgId_slug: { orgId, slug } },
       select: { id: true },
     });
+    const concepts = page ? await getPageConcepts(page.id) : [];
+    const links = page ? await getPageLinks(orgId, page.id) : [];
     if (page) {
       db.page.update({ where: { id: page.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
     }
 
-    return { content: [{ type: "text", text: JSON.stringify({ slug, yaml: result.yaml, contentHash: result.contentHash, sections, annotations }, null, 2) }] };
+    return { content: [{ type: "text", text: JSON.stringify({ slug, yaml: result.yaml, contentHash: result.contentHash, sections, annotations, concepts, links }, null, 2) }] };
   });
 
   server.tool("write_page", "Create or update a page",
-    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages.") },
-    async ({ slug, content, folder_id, sort_order }) => {
+    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe("JSON array of concept objects: [{term, kind?, section?}]"), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]") },
+    async ({ slug, content, folder_id, sort_order, concepts: conceptsJson, links: linksJson }) => {
       validateSlug(slug);
       const unsupported = checkUnsupportedComponents(content);
       if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
@@ -113,6 +125,19 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
       if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
       if (folder_id) {
         await db.page.update({ where: { orgId_slug: { orgId, slug } }, data: { folderId: folder_id } });
+      }
+      if (conceptsJson || linksJson) {
+        const wpPage = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
+        if (wpPage) {
+          if (conceptsJson) {
+            const conceptInputs: ConceptInput[] = JSON.parse(conceptsJson);
+            await upsertConcepts(wpPage.id, conceptInputs, actorId);
+          }
+          if (linksJson) {
+            const linkInputs: LinkInput[] = JSON.parse(linksJson);
+            await upsertLinks(orgId, wpPage.id, linkInputs, actorId);
+          }
+        }
       }
       logAudit({ orgId, action: "page.write", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug } });
       return { content: [{ type: "text", text: `Updated page "${slug}"` }] };
@@ -348,6 +373,27 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
     if (!fs.existsSync(refPath)) return { content: [{ type: "text", text: "Component reference not found" }], isError: true };
     return { content: [{ type: "text", text: fs.readFileSync(refPath, "utf-8") }] };
   });
+
+  server.tool("get_vocabulary", "Get all concept terms in the knowledge graph, optionally filtered by kind or search query",
+    { kind: z.string().optional(), query: z.string().optional() },
+    async ({ kind, query }) => {
+      const result = await getVocabulary(kind, query);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("get_related", "Get pages and concepts related to a term or page slug",
+    { term: z.string().optional(), slug: z.string().optional() },
+    async ({ term, slug }) => {
+      const result = await getRelated(orgId, { term, slug });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("get_semantic_map", "Get full knowledge graph topology — all concepts with their pages and all cross-page links",
+    { kind: z.string().optional() },
+    async ({ kind }) => {
+      const result = await getSemanticMap(kind);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
 
   return server;
 }
