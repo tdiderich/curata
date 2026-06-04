@@ -1,0 +1,109 @@
+title: "Workflow — Deal Debrief"
+subtitle: Post-deal win/loss analysis — capture what was sold, what was promised, and what to do differently next time.
+shell: standard
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this workflow does
+    components:
+      - type: callout
+        variant: info
+        title: Win or loss — both deserve a debrief
+        body: |
+          This workflow runs after a deal closes (win or loss) to build a structured deal brief page. It pulls data from your CRM, call recordings, and communications to capture the full story: who was involved, what was sold, what was promised, what objections came up, and what the team should learn for next time. The output is a permanent record that informs onboarding, renewal planning, and sales coaching.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual — run within 5 business days of a deal closing (win or loss). Can also be triggered by a CRM stage change to Closed Won or Closed Lost.
+          - term: Cadence
+            definition: Once per closed deal. For wins, the deal brief becomes input to the Customer Onboarding workflow. For losses, it feeds the deal review cadence.
+          - term: Data Sources
+            definition: CRM deal record, call recordings and transcripts, email and messaging history, any proposals or pricing documents, and notes from the AE and SE.
+          - term: Output
+            definition: A deal brief page in curata with the full deal story, key stakeholders, what was promised, risk factors, and lessons learned. For wins, this page links to the customer's onboarding page set.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this workflow
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - Deal name, outcome (won/lost), and closed date
+          - Access to the CRM deal record
+          - At least one person to interview — the AE or primary deal owner (even brief async notes work)
+
+          For losses: a hypothesis about the primary loss reason, even if unconfirmed. The workflow will help structure the investigation but needs a starting point.
+
+  - type: section
+    eyebrow: Workflow Steps
+    heading: Steps
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Pull deal data from CRM
+            detail: |
+              Read the full deal record: company, deal value, products, contract terms, close date, deal duration, sales cycle length, and any CRM fields related to deal qualification, competition, or loss reason. Note any fields that were left blank — gaps in CRM data are themselves a signal.
+          - title: Pull call recordings and communications
+            detail: |
+              Search your connected tools for call recordings, email threads, and messaging associated with this deal. Read or skim the most significant touchpoints: first discovery call, technical evaluation, pricing discussion, and final decision call. Extract key quotes, objections raised, and decisions made at each stage.
+          - title: Interview the deal owner
+            detail: |
+              Ask the AE or primary deal owner a structured set of questions: What was the real reason we won/lost? What did the customer care about most? What objections came up and how were they handled? What was promised that isn't in the contract? What would you do differently? Capture their answers verbatim where possible.
+          - title: Build the stakeholder map
+            detail: |
+              List every person who was involved in the buying decision. For each: name, title, role (champion, economic buyer, technical buyer, blocker), engagement level, and their stance at deal close. Note who was never engaged that should have been.
+          - title: Document what was sold and what was promised
+            detail: |
+              List exactly what was sold (products, tiers, seat counts, contract terms). Separately list any commitments made outside the contract — feature requests promised on the roadmap, implementation support offered, custom configurations agreed to, SLA commitments made verbally. This section is critical for the account team and must be accurate.
+          - title: Identify risk factors
+            detail: |
+              For wins: what is the most likely reason this customer churns or shrinks? What were the signs of risk during the deal that the account team should watch? For losses: what were the root causes — product gap, pricing, process failure, competitive loss, or something else?
+          - title: Write the deal brief page
+            detail: |
+              Assemble the deal brief page with all sections. For wins, add a callout linking to the customer onboarding page set. For losses, add a section with specific recommendations for how to improve the approach for similar deals. Save to the Deals folder.
+          - title: Share and annotate
+            detail: |
+              Share the deal brief with the relevant team (sales leadership, product, CS). Annotate the page with any open questions or follow-up actions. For wins, trigger the Customer Onboarding workflow if the customer page set doesn't exist yet.
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this workflow
+    components:
+      - type: callout
+        variant: info
+        title: Be honest, especially about losses
+        body: |
+          The deal debrief is only useful if it's honest. Loss reasons in the CRM are often sanitized ("bad timing", "budget") when the real reason was a product gap, a pricing mistake, or a process failure. The deal brief is internal — write the true story.
+
+          Promises matter. The "what was promised" section is not optional for wins. The account team will be held to commitments made during the sales process whether or not they're in the contract.
+
+  - type: section
+    eyebrow: Related Workflows
+    heading: Related Workflows
+    components:
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: Customer Onboarding
+            badge:
+              label: Workflow
+              color: teal
+            description: For won deals — run immediately after the deal debrief to create the customer's page set using the deal context captured here.
+          - title: Call Prep & Debrief
+            badge:
+              label: Workflow
+              color: teal
+            description: Use to run the post-close transition call with the AE and new account team, capturing handoff context.
+          - title: Assessment Builder
+            badge:
+              label: Workflow
+              color: teal
+            description: For complex wins — build a baseline assessment of the customer's current state before implementation begins.
+          - title: Account Health Report
+            badge:
+              label: Workflow
+              color: teal
+            description: Build the first health baseline after onboarding. The deal debrief sets the expectations the health report will measure against.

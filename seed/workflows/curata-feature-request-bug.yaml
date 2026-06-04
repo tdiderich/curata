@@ -1,0 +1,105 @@
+title: "Workflow — Feature Request & Bug Filing"
+subtitle: Identify, deduplicate, file, and track customer-reported issues and requests in your project tracker.
+shell: standard
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this workflow does
+    components:
+      - type: callout
+        variant: info
+        title: File issues cleanly with customer attribution
+        body: |
+          This workflow takes a customer-reported issue or request, determines whether it already exists in your project tracker, and either files a new issue or updates an existing one with the customer attribution. It then updates the customer's tracking page in curata so the account team can see what's been filed on their behalf.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual — run after a customer reports a bug or makes a feature request. Can be triggered from a call debrief, email summary, or support ticket.
+          - term: Cadence
+            definition: Per-issue. Run once per distinct bug or request. Batch similar items from the same call in a single workflow run.
+          - term: Data Sources
+            definition: Customer pages in curata, your connected project tracker (search and write), and any context from the original report (call notes, email, support ticket).
+          - term: Output
+            definition: A filed or updated issue in your project tracker with customer attribution, and an updated tracking table on the customer's priorities page in curata.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this workflow
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - A clear description of the bug or feature request (what the customer reported, verbatim or paraphrased)
+          - Customer name and any relevant account context (plan, use case, urgency)
+          - Access to your project tracker (search and create/update permissions)
+          - A customer priorities page in curata to update (or run Customer Onboarding first)
+
+  - type: section
+    eyebrow: Workflow Steps
+    heading: Steps
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Classify the item — bug or feature request
+            detail: |
+              Determine whether this is a bug (something that doesn't work as designed) or a feature request (something the customer wants that doesn't exist yet). If ambiguous, default to feature request and note the ambiguity. The classification affects where it gets filed and how it's prioritized.
+          - title: Extract a clean, reproducible description
+            detail: |
+              Rewrite the customer's report in a format your engineering or product team can act on. For bugs: include what the customer expected, what actually happened, and any context about their environment or workflow. For feature requests: describe the job-to-be-done, not just the specific solution the customer suggested.
+          - title: Search for duplicates in the project tracker
+            detail: |
+              Search your project tracker for existing issues that match this report. Use 2–3 keyword variations to be thorough. If a duplicate exists, note its ID, title, current status, and priority. Do not file a new issue if an exact duplicate is found — proceed to step 5 to add attribution.
+          - title: File a new issue (if no duplicate found)
+            detail: |
+              Create a new issue in the appropriate project or backlog. Include: a clear title, the reproducible description from step 2, customer attribution (company name, tier if known, and verbatim quote if helpful), and a link to the curata customer page. Tag or label the issue appropriately (bug vs. feature, customer-reported, etc.).
+          - title: Add customer attribution to the existing or new issue
+            detail: |
+              Whether the issue is new or a duplicate, add the customer as a reporter. If your tracker supports a "customers affected" or "upvote" field, increment it. Add a comment noting which customer reported the issue, when, and any relevant context about their urgency or impact.
+          - title: Update the customer's priorities page in curata
+            detail: |
+              Open the customer's priorities page and add the issue to the appropriate tracking table (bugs table or feature requests table). Record: the issue ID/link, title, current status, date reported, and any notes about customer urgency. If no tracking table exists on the page, add one.
+          - title: Confirm and notify
+            detail: |
+              Summarize what was filed or updated and share the issue link with whoever reported it. If the customer expects a follow-up, note it on the priorities page as an open commitment.
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this workflow
+    components:
+      - type: callout
+        variant: info
+        title: Dedup before filing
+        body: |
+          Always search before filing. Duplicate issues dilute signal and frustrate engineering teams. If you find a near-duplicate (same problem, different context), add attribution to the existing issue rather than creating a new one — and note the nuance in a comment.
+
+          Customer attribution matters. An issue reported by one customer has different weight than one reported by ten. Always record the customer name and any urgency signals so product and engineering teams can make informed prioritization decisions.
+
+  - type: section
+    eyebrow: Related Workflows
+    heading: Related Workflows
+    components:
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: Call Prep & Debrief
+            badge:
+              label: Workflow
+              color: teal
+            description: Often the source of bug reports and feature requests. Run debrief first, then this workflow for each item that needs to be filed.
+          - title: Account Priorities Template
+            badge:
+              label: Template
+              color: default
+            description: The template for the customer priorities page where bugs and feature requests are tracked.
+          - title: Customer Onboarding
+            badge:
+              label: Workflow
+              color: teal
+            description: Creates the customer's initial page set including the priorities page. Run this first if the customer has no pages.
+          - title: Weekly Highlights
+            badge:
+              label: Workflow
+              color: teal
+            description: Surfaces recently filed issues across all accounts in the weekly digest.

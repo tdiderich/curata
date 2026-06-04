@@ -1,0 +1,129 @@
+title: "Workflow — Call Prep & Debrief"
+subtitle: Research before a customer call, capture notes after, and keep account pages current.
+shell: standard
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this workflow does
+    components:
+      - type: callout
+        variant: info
+        title: Two-phase workflow — prep before, debrief after
+        body: |
+          Run the prep phase 30–60 minutes before a customer call to arrive ready. Run the debrief phase within 24 hours after the call to capture what happened and keep account pages current. Both phases read from and write to the same customer page set.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual — run before any customer call (QBR, onboarding sync, check-in, escalation, renewal). Can also be triggered by a calendar event or CRM stage change.
+          - term: Cadence
+            definition: Per-call. Prep runs before; debrief runs after. No fixed schedule — depends on your call frequency with each account.
+          - term: Data Sources
+            definition: Your connected MCP tools — CRM records, calendar events, messaging history, call recordings, and any customer pages in this curata instance. Uses whatever you have connected; works with partial data.
+          - term: Output
+            definition: Pre-call — a summary of the customer's current state, open items, and a proposed agenda. Post-call — updated customer page with notes, decisions, and next steps captured.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this workflow
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - Customer name or account identifier
+          - At least one customer page in curata (priorities, account plan, or meeting notes page)
+          - Access to at least one data source — CRM, calendar, or messaging history
+
+          If you have no prior customer pages, run the Customer Onboarding workflow first to create them.
+
+  - type: section
+    eyebrow: Phase 1
+    heading: Pre-Call Prep Steps
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Identify the call context
+            detail: |
+              Confirm the customer name, call type (QBR, onboarding, check-in, renewal, escalation), scheduled time, and known attendees. Pull the calendar invite if available.
+          - title: Read the customer's current pages
+            detail: |
+              Read the customer's priorities page, account plan, and any recent meeting notes pages. Note open items, recent annotations, and anything flagged since the last call.
+          - title: Pull recent activity from connected tools
+            detail: |
+              Search your connected tools (CRM, messaging, call recordings) for any activity from the past 30 days — emails sent, tickets opened, product usage signals, or relationship notes. Synthesize into a 3–5 bullet "since last time" summary.
+          - title: Identify open items and risks
+            detail: |
+              Cross-reference what was committed in the last call (from meeting notes) against what actually happened (from CRM and product data). Flag anything that was promised but not delivered, or any new risks that have emerged.
+          - title: Propose an agenda
+            detail: |
+              Draft a proposed agenda for the call based on open items, the call type, and any customer signals. Write it as a simple ordered list. If the customer sent a pre-call agenda, compare and merge — note any gaps.
+          - title: Write or update the prep page
+            detail: |
+              Write the prep summary to a meeting notes page (or a prep section on the priorities page). Include the proposed agenda, open items, and any context the call attendees should know before dialing in.
+
+  - type: section
+    eyebrow: Phase 2
+    heading: Post-Call Debrief Steps
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Pull the call recording or notes
+            detail: |
+              If a call recording or transcript is available in your connected tools, read it. If not, use the notes taken during the call. The goal is a factual account of what was discussed — not a summary of what was planned.
+          - title: Extract decisions, commitments, and next steps
+            detail: |
+              Identify everything that was agreed to on the call. Separate: (a) decisions made, (b) action items with owners, (c) questions that were raised but not answered, and (d) anything that changed about the customer's status, priorities, or timeline.
+          - title: Draft the debrief update
+            detail: |
+              Write a structured debrief covering: what was discussed, what was decided, action items (with owners and due dates), and any changes to the customer's situation. Keep it factual and brief — 200–400 words is usually enough.
+          - title: Propose updates to customer pages
+            detail: |
+              Based on the debrief, propose specific edits to the customer's pages — updated priorities, new action items in the account plan, revised deployment tracker stages, or new risks. Present the proposed changes before applying them.
+          - title: Apply approved changes
+            detail: |
+              After the human reviews and approves the proposed changes, write the updated content to the relevant pages. Annotate each changed page with a note indicating what changed and when.
+          - title: Update CRM if applicable
+            detail: |
+              If your CRM is connected and the call produced updates to deal stage, next steps, or contact info, write those back. Log the call activity with a link to the curata meeting notes page.
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this workflow
+    components:
+      - type: callout
+        variant: info
+        title: Human review before applying updates
+        body: |
+          Always present proposed page updates for human review before writing them. Never overwrite existing page content without approval. If there is ambiguity about what to update, ask rather than guess.
+
+          Meeting notes pages are append-only — add a new dated section rather than editing prior notes. Account plan and priorities pages can be updated in place with approval.
+
+  - type: section
+    eyebrow: Related Workflows
+    heading: Related Workflows
+    components:
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: Customer Onboarding
+            badge:
+              label: Workflow
+              color: teal
+            description: Set up a new customer's page set at deal close. Run this first if the customer has no pages yet.
+          - title: Weekly Highlights
+            badge:
+              label: Workflow
+              color: teal
+            description: Scan all customer pages for recent changes and produce a cross-account digest. Good for Monday standups.
+          - title: Account Health Report
+            badge:
+              label: Workflow
+              color: teal
+            description: Build a health dashboard page for a specific account. Complements the debrief with quantitative signals.
+          - title: Deal Debrief
+            badge:
+              label: Workflow
+              color: teal
+            description: Post-deal win/loss analysis. Use after a deal closes — different scope from a regular call debrief.

@@ -1,0 +1,121 @@
+title: "Workflow — Assessment Builder"
+subtitle: Build a structured current-state assessment with findings, gap analysis, and recommendations.
+shell: standard
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this workflow does
+    components:
+      - type: callout
+        variant: info
+        title: Research-first — build before you recommend
+        body: |
+          This workflow runs a structured research phase across multiple data sources, then fills an assessment template with findings. The output is a professional assessment page with a current vs. target state comparison, a findings table, and a prioritized set of recommendations. Use it for security assessments, maturity evaluations, process reviews, or any structured analysis that requires gathering evidence before drawing conclusions.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual — run at the start of any assessment or evaluation engagement. Can also be run proactively for key accounts before a QBR or renewal conversation.
+          - term: Cadence
+            definition: Per engagement. Reassessments can be run on a periodic basis (quarterly or annually) to track progress against recommendations.
+          - term: Data Sources
+            definition: Your connected tools — product usage data, CRM notes, call recordings, any documents shared by the customer (architecture diagrams, policies, reports), and responses to a structured intake questionnaire. The workflow adapts to whatever sources are available.
+          - term: Output
+            definition: An assessment report page in curata with a current vs. target state split_compare, a findings table organized by area and severity, an executive summary, and a prioritized recommendations list.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this workflow
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - The scope of the assessment (what is being evaluated and why)
+          - The customer or subject name
+          - A defined target state or standard to assess against (e.g., "SOC 2 readiness", "product adoption maturity", "deployment best practices")
+          - At least one data source to work from — even an intake questionnaire response is sufficient to start
+
+          The quality of the assessment is proportional to the quality of the inputs. If the scope is vague or data is thin, note this in the executive summary rather than overstating confidence.
+
+  - type: section
+    eyebrow: Phase 1
+    heading: Research Phase
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Define the assessment scope and framework
+            detail: |
+              Confirm the scope: what areas are being assessed, what is the target state or standard, and what is the purpose of the assessment (internal improvement, external audit prep, customer-facing deliverable, etc.). Define the dimensions or domains that will be evaluated — these will become the rows in the findings table.
+          - title: Run the intake questionnaire
+            detail: |
+              If the subject (customer, team, or process) has not already provided information, run a structured intake. Ask about current state across each assessment dimension: what tools and processes are in place, what is working, what is not, and where they believe the biggest gaps are. Capture responses verbatim.
+          - title: Pull data from connected sources
+            detail: |
+              Search your connected tools for evidence relevant to the assessment dimensions. For each dimension, look for: existing documentation, historical performance data, recent incidents or issues, and any prior assessments or audits. Note the source and date for every data point — the findings table requires evidence citations.
+          - title: Identify gaps and findings
+            detail: |
+              For each assessment dimension, compare the current state (from intake and data) to the target state (the standard defined in step 1). Document the gap as a finding. Rate each finding by severity: Critical (immediate risk), High (significant gap requiring near-term action), Medium (gap with manageable risk), or Low (minor or informational). Findings must be supported by specific evidence — do not include findings you cannot cite.
+
+  - type: section
+    eyebrow: Phase 2
+    heading: Report Construction
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Build the current vs. target state comparison
+            detail: |
+              Construct a split_compare showing the current state on the left and the target state on the right. Each stat should represent a concrete, observable dimension of the assessment. Current state values should reflect what was found in the research phase — not idealized or softened.
+          - title: Write the findings table
+            detail: |
+              Organize findings into a table with columns for area, finding, severity, evidence, and recommendation. Sort by severity (Critical first). Include one row per distinct finding — do not combine unrelated findings to keep the table shorter. Brevity per finding is fine; completeness of the finding set is not negotiable.
+          - title: Write the executive summary
+            detail: |
+              Write a 3–5 paragraph executive summary covering: what was assessed, overall state (one honest sentence), the top 3 findings, the most important recommendation, and the recommended next step. The executive summary should stand alone — a reader who only reads this section should understand the situation and the ask.
+          - title: Write prioritized recommendations
+            detail: |
+              List recommendations in priority order (highest impact, lowest effort first). For each recommendation: what to do, why it matters (which finding it addresses), who should own it, and a suggested timeline. Do not recommend more than 7 items — a long recommendations list signals unclear prioritization.
+          - title: Assemble and review the assessment page
+            detail: |
+              Assemble the full assessment report page. Present it to the human for review before finalizing. Walk through the findings and confirm that each one is accurately supported by the evidence. Make corrections and then publish.
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this workflow
+    components:
+      - type: callout
+        variant: info
+        title: Evidence-first — no unsupported findings
+        body: |
+          Every finding must have a specific citation. "Based on the intake questionnaire, the customer does not have a documented incident response process" is acceptable. "The customer's security posture appears weak" is not — it is vague and unsupported.
+
+          Be honest about confidence level. If a finding is based on limited data, note that. An assessment with five well-evidenced findings is more credible than one with fifteen vague ones.
+
+  - type: section
+    eyebrow: Related Workflows
+    heading: Related Workflows
+    components:
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: Implementation Planning
+            badge:
+              label: Workflow
+              color: teal
+            description: Use the assessment findings as the basis for an implementation plan. Assessment defines the gap; the plan closes it.
+          - title: Call Prep & Debrief
+            badge:
+              label: Workflow
+              color: teal
+            description: Present the assessment to the customer in a call. Use call prep to prepare the narrative and debrief to capture their response.
+          - title: Account Health Report
+            badge:
+              label: Workflow
+              color: teal
+            description: Health reports surface where to look. Assessments dig deep into what the health signals mean.
+          - title: Assessment Report Template
+            badge:
+              label: Template
+              color: default
+            description: The pre-built assessment report template used to create the output page.

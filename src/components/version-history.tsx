@@ -93,6 +93,7 @@ export function VersionHistoryPanel({ slug, onClose }: { slug: string; onClose: 
               >
                 <span className="vh-list-date">{formatDate(v.createdAt)}</span>
                 <span className="vh-list-meta">
+                  <span className="vh-list-author">{v.createdBy}</span>
                   <span className="vh-list-hash">{v.contentHash.slice(0, 8)}</span>
                   {i === 0 && <span className="vh-list-badge">current</span>}
                 </span>

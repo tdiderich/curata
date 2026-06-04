@@ -1,0 +1,109 @@
+title: "Workflow — Account Health Report"
+subtitle: Build a health dashboard page for a customer account — metrics, trends, signals, and recommended actions.
+shell: standard
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this workflow does
+    components:
+      - type: callout
+        variant: info
+        title: Quantify account health before problems become emergencies
+        body: |
+          This workflow pulls metrics from your connected data sources, builds a health snapshot for a specific customer account, and writes a health report page. It tracks trends over time and flags accounts that need attention before they escalate. The report page can be updated on a recurring cadence or regenerated on demand.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual or scheduled. Run monthly for all accounts, or on demand when a customer shows early warning signs. Can also be triggered after a significant event (go-live, support escalation, renewal approaching).
+          - term: Cadence
+            definition: Monthly (standard) or weekly (at-risk accounts). Each run appends a new snapshot section to the health report page so trends are visible over time.
+          - term: Data Sources
+            definition: Your connected tools — product usage data, support ticket volume and severity, NPS or CSAT scores, CRM activity signals (last contact date, open opportunities), and any financial data (ARR, expansion, invoicing). Uses whatever is connected; flags missing data sources rather than failing.
+          - term: Output
+            definition: A health report page for the customer with a current health score, key metrics, trend indicators, risk signals, and recommended actions for the account team.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this workflow
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - Customer name or account identifier
+          - Access to at least one connected data source (product usage, support, or CRM)
+          - A customer page set in curata to link the health report to
+
+          The report is most useful when multiple data sources are connected. With only one source, the health score will reflect that dimension only — note this limitation clearly in the report.
+
+  - type: section
+    eyebrow: Workflow Steps
+    heading: Steps
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Identify available data sources for this account
+            detail: |
+              Check which connected data sources have data for this customer. List what is available: product usage metrics, support ticket data, NPS/CSAT scores, CRM activity, ARR and billing data. Note any expected sources that are missing — missing data is itself a signal (e.g., no product usage data may mean the integration is broken or the customer isn't using the product).
+          - title: Pull product usage metrics
+            detail: |
+              If product usage data is available, pull: active users in the past 30 days, feature adoption breadth (how many features are being used vs. available), session frequency, and any drop-off trends. Compare to the previous period and to similar customers at the same stage.
+          - title: Pull support signals
+            detail: |
+              Pull support ticket volume (past 30 days vs. prior 30 days), open ticket count, tickets by severity, average time to resolution, and any recurring issue patterns. A spike in support volume or unresolved high-severity tickets is a primary health indicator.
+          - title: Pull relationship signals from CRM
+            detail: |
+              Pull from the CRM: date of last meaningful contact (call or in-person meeting, not just email), number of stakeholders engaged in the past 90 days, any open renewal or expansion opportunities, and notes from recent touches. Relationship health is often the leading indicator that product and support data misses.
+          - title: Pull customer satisfaction data
+            detail: |
+              If NPS, CSAT, or survey data is available, pull the most recent scores and any verbatim feedback. Note the date of the last survey — data older than 6 months should be flagged as stale.
+          - title: Calculate a health score and trend
+            detail: |
+              Combine the available signals into an overall health score. Weight signals according to your team's judgment (product usage and support volume typically carry the most weight). Note the score as a number or label (Healthy / At Risk / Critical). Compare to the previous period's score to show the trend direction.
+          - title: Identify the top 1–3 risks and recommended actions
+            detail: |
+              Based on the signals, identify the most significant risks to this account. For each risk, write a specific recommended action for the account team. Be concrete — "schedule a QBR" is less useful than "schedule a QBR with the VP of Operations to discuss the drop in daily active users since the March release."
+          - title: Write or update the health report page
+            detail: |
+              Create the health report page (or append a new snapshot section if the page exists). Include: current health score and trend, stat grid of key metrics, risk signals, recommended actions, and the date and data sources used. Link from the customer's priorities page.
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this workflow
+    components:
+      - type: callout
+        variant: info
+        title: Flag missing data, don't hide it
+        body: |
+          A health report based on incomplete data is still useful — but only if the gaps are visible. Always list which data sources were used and which were unavailable. A "Healthy" score based on only one signal is very different from one based on five.
+
+          Trends matter more than snapshots. A customer with a score of 7 that was 9 last month needs more attention than a customer with a score of 6 that has been stable for 6 months.
+
+  - type: section
+    eyebrow: Related Workflows
+    heading: Related Workflows
+    components:
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: Weekly Highlights
+            badge:
+              label: Workflow
+              color: teal
+            description: Surfaces health changes across all accounts in the weekly digest. Health reports feed the highlights scan.
+          - title: Call Prep & Debrief
+            badge:
+              label: Workflow
+              color: teal
+            description: Use a health report as pre-call context. Health signals should drive the call agenda for at-risk accounts.
+          - title: Assessment Builder
+            badge:
+              label: Workflow
+              color: teal
+            description: Build a deeper assessment when the health report surfaces a systemic issue that needs structured analysis.
+          - title: Deal Debrief
+            badge:
+              label: Workflow
+              color: teal
+            description: The deal debrief sets the baseline expectations. The health report measures against them.

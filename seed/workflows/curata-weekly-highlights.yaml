@@ -1,0 +1,99 @@
+title: "Workflow — Weekly Highlights"
+subtitle: Scan all customer pages for recent changes and produce a cross-account digest for standups.
+shell: standard
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this workflow does
+    components:
+      - type: callout
+        variant: info
+        title: 5-minute Monday morning briefing — generated, not written
+        body: |
+          This workflow scans all customer pages in curata for changes, annotations, and notable events from the past 7 days. It synthesizes the most relevant items into a single digest page that the account team can read in under 5 minutes. Run it before your Monday standup or weekly team sync.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Scheduled (weekly) or manual. Typically run Monday morning before the team standup. Can also be run ad hoc before a leadership review or quarterly business update.
+          - term: Cadence
+            definition: Weekly. Each run produces a new dated digest page or appends a new week's section to a running highlights page.
+          - term: Data Sources
+            definition: All customer pages in this curata instance — priorities pages, account plans, deployment trackers, and meeting notes. Looks at page updates, new annotations, and status changes from the past 7 days.
+          - term: Output
+            definition: A weekly highlights page (or updated section) listing the most important developments across all accounts — milestones hit, risks surfaced, action items due, and any accounts needing attention.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this workflow
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - At least one customer page set in curata to scan
+          - The date range to cover (defaults to the past 7 days)
+
+          This workflow is read-only — it does not modify any customer pages. It only produces a new digest page. No external tool access is required if customer pages are kept up to date.
+
+  - type: section
+    eyebrow: Workflow Steps
+    heading: Steps
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Scan all customer pages for recent activity
+            detail: |
+              Read all customer priorities pages, account plans, deployment trackers, and meeting notes pages. Look for pages that were updated in the past 7 days, new annotations added, status changes (e.g., deployment stage advanced, health score changed), and new action items or open commitments.
+          - title: Identify the most important developments
+            detail: |
+              From the full scan, surface the items that matter most: go-lives that happened or are imminent, escalations or risks that were flagged, deals that closed or moved stage, action items that are overdue, and any customer that had significant activity. Filter out routine updates that don't require team attention.
+          - title: Organize by category
+            detail: |
+              Group the highlights into categories: Milestones & Wins, Active Risks & Escalations, Upcoming Deadlines, and General Updates. Within each category, order accounts by urgency or ARR. Limit each category to the 3–5 most important items to keep the digest skimmable.
+          - title: Write the digest page
+            detail: |
+              Create or update the weekly highlights page. Include the date range, a summary stat (accounts active, milestones this week, open risks), and the categorized highlights. Each highlight should be one to two sentences with a link to the relevant customer page. Keep the total reading time under 5 minutes.
+          - title: Flag any accounts needing immediate attention
+            detail: |
+              If any account has a critical risk, overdue commitment, or escalation that requires action before the next standup, call it out at the top of the digest with a callout component. Do not bury urgent items in the general highlights.
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this workflow
+    components:
+      - type: callout
+        variant: info
+        title: Digest, don't dump
+        body: |
+          The value of this workflow is curation, not completeness. A digest that lists every change to every page is useless. Filter aggressively — only surface things that require team awareness or action. If in doubt, leave it out of the digest and let people read the customer page directly.
+
+          Link everything. Every highlight should link to the relevant customer page so readers can get full context with one click.
+
+  - type: section
+    eyebrow: Related Workflows
+    heading: Related Workflows
+    components:
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: Call Prep & Debrief
+            badge:
+              label: Workflow
+              color: teal
+            description: Keeps customer pages fresh so the highlights scan has current data to work with.
+          - title: Account Health Report
+            badge:
+              label: Workflow
+              color: teal
+            description: Build a detailed health dashboard for a specific account. Use when the weekly highlights surface a concern that needs deeper investigation.
+          - title: Customer Onboarding
+            badge:
+              label: Workflow
+              color: teal
+            description: Creates the customer page set that the highlights workflow scans. Accounts with no pages will not appear in the digest.
+          - title: Feature Request & Bug Filing
+            badge:
+              label: Workflow
+              color: teal
+            description: Filed issues appear in the customer's priorities page and will surface in the next highlights run.

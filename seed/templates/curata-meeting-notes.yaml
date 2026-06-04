@@ -1,0 +1,103 @@
+title: "{{company_name}} — {{meeting_type}} Notes"
+subtitle: "{{date}} · {{meeting_purpose}}"
+shell: standard
+components:
+  - type: section
+    eyebrow: Meeting Info
+    heading: Meeting Details
+    components:
+      - type: definition_list
+        items:
+          - term: Date
+            definition: "{{date}}"
+          - term: Meeting type
+            definition: "{{meeting_type}}"
+          - term: Purpose
+            definition: "{{meeting_purpose}}"
+          - term: Attendees (us)
+            definition: "{{attendees_internal}}"
+          - term: Attendees (customer)
+            definition: "{{attendees_customer}}"
+          - term: Duration
+            definition: "{{duration}}"
+          - term: Recording
+            definition: "{{recording_link}}"
+
+  - type: section
+    eyebrow: Agenda
+    heading: Agenda
+    components:
+      - type: markdown
+        body: |
+          {{agenda_item_1}}
+          {{agenda_item_2}}
+          {{agenda_item_3}}
+
+          _Actual agenda may have deviated from above — see discussion notes for what was actually covered._
+
+  - type: section
+    eyebrow: Notes
+    heading: Discussion Notes
+    components:
+      - type: markdown
+        body: |
+          **{{discussion_topic_1}}**
+
+          {{discussion_notes_1}}
+
+          ---
+
+          **{{discussion_topic_2}}**
+
+          {{discussion_notes_2}}
+
+          ---
+
+          **{{discussion_topic_3}}**
+
+          {{discussion_notes_3}}
+
+  - type: section
+    eyebrow: Outcomes
+    heading: Decisions Made
+    components:
+      - type: callout
+        variant: success
+        title: Decisions
+        body: |
+          {{decision_1}}
+
+          {{decision_2}}
+
+          {{decision_3}}
+
+  - type: section
+    eyebrow: Follow-up
+    heading: Action Items
+    components:
+      - type: tree
+        show_filter_toggle: false
+        nodes:
+          - label: "Action items from this call"
+            status: active
+            children:
+              - label: "{{action_item_1}}"
+                status: active
+                note: "Owner: {{action_item_1_owner}} — Due: {{action_item_1_due}}"
+              - label: "{{action_item_2}}"
+                status: active
+                note: "Owner: {{action_item_2_owner}} — Due: {{action_item_2_due}}"
+              - label: "{{action_item_3}}"
+                status: active
+                note: "Owner: {{action_item_3_owner}} — Due: {{action_item_3_due}}"
+          - label: "Open items carried from prior calls"
+            status: upcoming
+            children:
+              - label: "{{open_item_1}}"
+                status: upcoming
+                note: "Originally due: {{open_item_1_original_due}}"
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: "Populate all {{placeholder}} variables with the actual call details. Your agents can auto-fill this template from call recordings, transcripts, or calendar events using the Call Prep & Debrief workflow. Action items added here should also be tracked on the customer's Account Priorities page."

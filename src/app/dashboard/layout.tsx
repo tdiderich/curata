@@ -1,6 +1,20 @@
 import Link from "next/link";
-import { AUTH_MODE, resolveOrg } from "@/lib/auth";
+import { AUTH_MODE, resolveOrg, resolveCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+
+function UserAvatar({ name, email }: { name: string; email: string }) {
+  const initials = name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+  return (
+    <div className="user-avatar-group">
+      <span className="user-avatar-initials">{initials || "?"}</span>
+      <span className="user-avatar-name">{name || email}</span>
+    </div>
+  );
+}
 
 async function AuthControls() {
   if (AUTH_MODE === "clerk") {
@@ -8,11 +22,19 @@ async function AuthControls() {
     return <UserButton />;
   }
   if (AUTH_MODE === "oauth") {
+    const user = await resolveCurrentUser();
     return (
-      <Link href="/api/auth/signout" className="nav-link">
-        Sign out
-      </Link>
+      <div className="user-avatar-group">
+        {user && <UserAvatar name={user.name} email={user.email} />}
+        <Link href="/api/auth/signout" className="nav-link">
+          Sign out
+        </Link>
+      </div>
     );
+  }
+  if (AUTH_MODE === "tailscale") {
+    const user = await resolveCurrentUser();
+    if (user) return <UserAvatar name={user.name} email={user.email} />;
   }
   return null;
 }

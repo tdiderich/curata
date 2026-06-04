@@ -70,6 +70,7 @@ function applyRateLimit(request: NextRequest): NextResponse | null {
 }
 
 function applySecurityHeaders(request: NextRequest, response: NextResponse): void {
+  if (process.env.NODE_ENV === "development") return;
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -82,7 +83,7 @@ function applySecurityHeaders(request: NextRequest, response: NextResponse): voi
     "max-age=63072000; includeSubDomains; preload",
   );
 
-  const isDev = request.headers.get("host")?.includes("localhost");
+  const isDev = request.headers.get("host")?.includes("localhost") || (process.env.NODE_ENV as string) === "development";
   const clerkDomains = AUTH_MODE === "clerk"
     ? isDev
       ? " https://*.clerk.accounts.dev"
@@ -142,6 +143,17 @@ async function middlewareDefault(request: NextRequest) {
   if (isAgentApi(pathname)) {
     const limited = applyRateLimit(request);
     if (limited) return limited;
+  }
+
+  if (AUTH_MODE === "tailscale" && isProtected(pathname) && !isPublic(pathname)) {
+    const tsLogin = request.headers.get("tailscale-user-login");
+    const hasDevFallback = process.env.NODE_ENV === "development" && process.env.TAILSCALE_DEV_USER;
+    if (!tsLogin && !hasDevFallback) {
+      return NextResponse.json(
+        { error: "Tailscale identity required. Access this app through your tailnet." },
+        { status: 401 },
+      );
+    }
   }
 
   if (AUTH_MODE === "oauth" && isProtected(pathname) && !isPublic(pathname)) {

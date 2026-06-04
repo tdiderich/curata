@@ -1,0 +1,131 @@
+title: "{{company_name}} — {{assessment_type}} Assessment"
+subtitle: "{{assessment_scope}} — Assessed {{date}}"
+shell: standard
+components:
+  - type: section
+    eyebrow: Executive Summary
+    heading: Summary
+    components:
+      - type: markdown
+        body: |
+          **Assessment:** {{assessment_type}}
+          **Subject:** {{company_name}}
+          **Date:** {{date}}
+          **Assessor:** {{assessor_name}}
+          **Scope:** {{assessment_scope}}
+
+          {{executive_summary_paragraph_1}}
+
+          {{executive_summary_paragraph_2}}
+
+          **Overall assessment:** {{overall_rating}} — {{overall_rating_rationale}}
+
+          **Top recommendation:** {{top_recommendation}}
+
+  - type: section
+    eyebrow: Gap Analysis
+    heading: Current State vs. Recommended State
+    components:
+      - type: split_compare
+        left:
+          eyebrow: Current State
+          title: Where {{company_name}} is today
+          stats:
+            - label: "{{dimension_1_label}}"
+              value: "{{dimension_1_current}}"
+              color: default
+            - label: "{{dimension_2_label}}"
+              value: "{{dimension_2_current}}"
+              color: default
+            - label: "{{dimension_3_label}}"
+              value: "{{dimension_3_current}}"
+              color: default
+            - label: "{{dimension_4_label}}"
+              value: "{{dimension_4_current}}"
+              color: default
+            - label: "{{dimension_5_label}}"
+              value: "{{dimension_5_current}}"
+              color: default
+        right:
+          eyebrow: Recommended State
+          title: Where {{company_name}} should be
+          stats:
+            - label: "{{dimension_1_label}}"
+              value: "{{dimension_1_target}}"
+              color: green
+            - label: "{{dimension_2_label}}"
+              value: "{{dimension_2_target}}"
+              color: green
+            - label: "{{dimension_3_label}}"
+              value: "{{dimension_3_target}}"
+              color: green
+            - label: "{{dimension_4_label}}"
+              value: "{{dimension_4_target}}"
+              color: green
+            - label: "{{dimension_5_label}}"
+              value: "{{dimension_5_target}}"
+              color: green
+
+  - type: section
+    eyebrow: Findings
+    heading: Findings
+    components:
+      - type: table
+        filterable: true
+        columns:
+          - key: area
+            label: Area
+          - key: finding
+            label: Finding
+          - key: severity
+            label: Severity
+          - key: evidence
+            label: Evidence
+          - key: recommendation
+            label: Recommendation
+        rows:
+          - area: "{{finding_1_area}}"
+            finding: "{{finding_1_description}}"
+            severity: Critical
+            evidence: "{{finding_1_evidence}}"
+            recommendation: "{{finding_1_recommendation}}"
+          - area: "{{finding_2_area}}"
+            finding: "{{finding_2_description}}"
+            severity: High
+            evidence: "{{finding_2_evidence}}"
+            recommendation: "{{finding_2_recommendation}}"
+          - area: "{{finding_3_area}}"
+            finding: "{{finding_3_description}}"
+            severity: Medium
+            evidence: "{{finding_3_evidence}}"
+            recommendation: "{{finding_3_recommendation}}"
+          - area: "{{finding_4_area}}"
+            finding: "{{finding_4_description}}"
+            severity: Low
+            evidence: "{{finding_4_evidence}}"
+            recommendation: "{{finding_4_recommendation}}"
+
+  - type: section
+    eyebrow: Recommendations
+    heading: Prioritized Recommendations
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: "{{recommendation_1_title}}"
+            detail: |
+              {{recommendation_1_detail}}
+              Owner: {{recommendation_1_owner}} — Timeline: {{recommendation_1_timeline}}
+          - title: "{{recommendation_2_title}}"
+            detail: |
+              {{recommendation_2_detail}}
+              Owner: {{recommendation_2_owner}} — Timeline: {{recommendation_2_timeline}}
+          - title: "{{recommendation_3_title}}"
+            detail: |
+              {{recommendation_3_detail}}
+              Owner: {{recommendation_3_owner}} — Timeline: {{recommendation_3_timeline}}
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: "Populate all {{placeholder}} variables with the actual assessment findings, evidence, and recommendations. Every finding in the table must have a specific evidence citation — do not leave the evidence field vague. Your agents can populate this template by running the Assessment Builder workflow."

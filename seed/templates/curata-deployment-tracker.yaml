@@ -1,0 +1,171 @@
+title: "{{company_name}} — Deployment Tracker"
+subtitle: "Implementation status, phase progress, and go-live timeline for {{company_name}}."
+shell: standard
+components:
+  - type: section
+    eyebrow: Progress
+    heading: Deployment Progress
+    components:
+      - type: stat_grid
+        columns: 4
+        stats:
+          - label: Current Phase
+            value: "{{current_phase}}"
+            detail: "{{current_phase_detail}}"
+            color: teal
+          - label: Days in Phase
+            value: "{{days_in_phase}}"
+            detail: "{{phase_target}} day target"
+            color: default
+          - label: Go-Live Target
+            value: "{{go_live_date}}"
+            detail: "{{days_to_go_live}} days away"
+            color: default
+          - label: Open Blockers
+            value: "{{open_blockers}}"
+            detail: "{{open_blockers_detail}}"
+            color: default
+
+  - type: section
+    eyebrow: Phases
+    heading: Deployment Phases
+    components:
+      - type: tree
+        show_filter_toggle: true
+        nodes:
+          - label: "Phase 1 — Planning & Kickoff"
+            status: upcoming
+            children:
+              - label: Kickoff call held
+                status: upcoming
+                note: "{{kickoff_date}}"
+              - label: Discovery questionnaire completed
+                status: upcoming
+                note: Use cases, integrations, user volume documented
+              - label: Go-live target date confirmed
+                status: upcoming
+                note: "{{go_live_date}}"
+              - label: Stakeholder map finalized
+                status: upcoming
+                note: Champion, economic buyer, technical lead identified
+              - label: Implementation project plan shared
+                status: upcoming
+                note: Sign-off from customer required before phase 2
+              - label: Sandbox environment provisioned
+                status: upcoming
+                note: Credentials sent to technical lead
+
+          - label: "Phase 2 — Technical Setup & Integration"
+            status: upcoming
+            children:
+              - label: Production environment provisioned
+                status: upcoming
+                note: "{{integration_start_date}}"
+              - label: SSO / identity provider configured
+                status: upcoming
+                note: SAML, OIDC, or SCIM as applicable
+              - label: API credentials provisioned and validated
+                status: upcoming
+                note: Endpoint connectivity confirmed
+              - label: Data mapping and field configuration complete
+                status: upcoming
+                note: Workshop held with customer data team
+              - label: Data pipeline configured
+                status: upcoming
+                note: Webhooks, SFTP, or native integration
+              - label: Initial data import validated
+                status: upcoming
+                note: Record counts confirmed
+              - label: Engineering sign-off
+                status: upcoming
+                note: Integration checklist complete
+
+          - label: "Phase 3 — Testing & UAT"
+            status: upcoming
+            children:
+              - label: UAT credentials and test plan distributed
+                status: upcoming
+                note: "{{uat_start_date}}"
+              - label: UAT kickoff walkthrough held
+                status: upcoming
+                note: All stakeholders present
+              - label: Customer completes test scenarios
+                status: upcoming
+                note: All primary workflows covered
+              - label: Bugs logged and triaged
+                status: upcoming
+                note: High-severity issues must be resolved before go-live
+              - label: UAT sign-off received
+                status: upcoming
+                note: Signed off by project owner and executive sponsor
+
+          - label: "Phase 4 — Go-Live & Handoff"
+            status: upcoming
+            children:
+              - label: Go-live readiness checklist complete
+                status: upcoming
+                note: "{{go_live_date}}"
+              - label: Cutover executed
+                status: upcoming
+                note: Final data migration to production
+              - label: Post-cutover validation complete
+                status: upcoming
+                note: Key workflows spot-checked with customer
+              - label: Go-live announcement sent
+                status: upcoming
+                note: All stakeholders notified
+              - label: 7-day check-in call held
+                status: upcoming
+                note: "{{seven_day_checkin_date}}"
+              - label: Account handoff to success team
+                status: upcoming
+                note: Full context doc provided
+
+  - type: section
+    eyebrow: Timeline
+    heading: Key Dates
+    components:
+      - type: table
+        filterable: false
+        columns:
+          - key: milestone
+            label: Milestone
+          - key: target_date
+            label: Target Date
+          - key: actual_date
+            label: Actual Date
+          - key: status
+            label: Status
+          - key: notes
+            label: Notes
+        rows:
+          - milestone: Kickoff call
+            target_date: "{{kickoff_date}}"
+            actual_date: "—"
+            status: Upcoming
+            notes: "{{kickoff_notes}}"
+          - milestone: Integration complete
+            target_date: "{{integration_target_date}}"
+            actual_date: "—"
+            status: Upcoming
+            notes: "{{integration_notes}}"
+          - milestone: UAT start
+            target_date: "{{uat_start_date}}"
+            actual_date: "—"
+            status: Upcoming
+            notes: "{{uat_notes}}"
+          - milestone: UAT sign-off
+            target_date: "{{uat_signoff_date}}"
+            actual_date: "—"
+            status: Upcoming
+            notes: "—"
+          - milestone: Go-live
+            target_date: "{{go_live_date}}"
+            actual_date: "—"
+            status: Upcoming
+            notes: "{{go_live_notes}}"
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: "Populate all {{placeholder}} variables with your actual customer and project data. Advance phase statuses (upcoming → active → completed) as the deployment progresses. Your agents can update phase statuses, add timeline events, and flag blockers automatically from call debriefs and project tracker updates."

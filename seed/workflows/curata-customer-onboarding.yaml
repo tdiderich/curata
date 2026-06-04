@@ -1,0 +1,106 @@
+title: "Workflow — Customer Onboarding"
+subtitle: Create a full page set for a new customer at deal close — priorities, account plan, and deployment tracker.
+shell: standard
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this workflow does
+    components:
+      - type: callout
+        variant: info
+        title: Idempotent — safe to run more than once
+        body: |
+          This workflow creates a standard set of curata pages for a new customer when a deal closes. It pulls context from your CRM and communications, then creates the page set from templates. Pages that already exist are skipped — you can safely re-run the workflow if it was interrupted or if you want to fill in missing pages.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual or automated — run when a deal closes (CRM stage change to Closed Won, contract signed, or equivalent). Can also be triggered manually when onboarding a customer who was added outside the normal deal flow.
+          - term: Cadence
+            definition: Once per new customer. Idempotent — pages that already exist are not overwritten.
+          - term: Data Sources
+            definition: Your connected CRM (account record, deal record, contact list), recent communications (email, messaging), and any notes from the sales process. The workflow degrades gracefully if only partial data is available.
+          - term: Output
+            definition: A customer folder in curata containing three pages — Account Priorities, Account Plan, and Deployment Tracker — populated with context from the deal. Each page is ready for the account team to use immediately.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this workflow
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - Customer company name and a short slug for page naming (e.g., "acme-corp")
+          - At least one contact record (name, title, email) for the primary stakeholder
+          - Access to the CRM to read the deal record
+
+          Helpful but not required: a signed contract or SOW, any deal notes from the AE, and a clear go-live target date. The workflow will flag missing context and prompt for it rather than failing silently.
+
+  - type: section
+    eyebrow: Workflow Steps
+    heading: Steps
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Pull deal context from CRM
+            detail: |
+              Read the deal record from your CRM. Extract: company name, deal value, products sold, contract start and end dates, go-live target, primary contact, and any deal notes or discovery call summaries. Note any promises made during the sales process that the account team should know about.
+          - title: Pull contact list and stakeholder context
+            detail: |
+              Read the contact records associated with the account. For each contact, note their name, title, and role in the relationship (champion, economic buyer, technical lead, etc.). If contacts were tagged during the deal, use those tags. If not, infer roles from titles and deal notes.
+          - title: Search for existing pages — skip if found
+            detail: |
+              Before creating any pages, search curata for existing pages with the customer's slug. If an Account Priorities page already exists, skip that page. If an Account Plan already exists, skip it. Log which pages were found and which will be created.
+          - title: Create the Account Priorities page
+            detail: |
+              If no priorities page exists for this customer, create one from the Account Priorities template. Populate the company name, executive overview with deal context, and any known priorities from the sales process. Leave agenda, bug, and feature request tables empty — they will be filled in over time.
+          - title: Create the Account Plan page
+            detail: |
+              If no account plan exists, create one from the Account Plan template. Populate current state (pre-deployment, onboarding in progress), target state (go-live, adoption goals), key milestones (kickoff, integration, UAT, go-live), and stakeholders from the contact list. Set next steps to the standard onboarding kickoff checklist.
+          - title: Create the Deployment Tracker page
+            detail: |
+              If no deployment tracker exists, create one from the Deployment Tracker template. Set the customer name, go-live target date, and move the first phase (Planning) to active status. Leave integration, testing, and go-live phases as upcoming — the implementation team will advance them.
+          - title: Annotate and confirm
+            detail: |
+              Annotate each created page with a note indicating it was created during onboarding and the date. Present the created pages to the human for review. If any context is missing or incorrect, make corrections before the account team receives access.
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this workflow
+    components:
+      - type: callout
+        variant: info
+        title: Never overwrite existing pages
+        body: |
+          This workflow is idempotent by design. If a page already exists, skip it — do not overwrite it with template defaults. Existing pages may contain hand-edited content or annotations that would be lost.
+
+          If a page is found but appears to be a stub (no content beyond the template defaults), flag it for human review rather than overwriting automatically.
+
+  - type: section
+    eyebrow: Related Workflows
+    heading: Related Workflows
+    components:
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: Call Prep & Debrief
+            badge:
+              label: Workflow
+              color: teal
+            description: Run this after onboarding to prepare for the kickoff call and capture notes afterward.
+          - title: Implementation Planning
+            badge:
+              label: Workflow
+              color: teal
+            description: Build a detailed implementation plan page. Complements the Deployment Tracker for complex deployments.
+          - title: Account Priorities Template
+            badge:
+              label: Template
+              color: default
+            description: The template used to create the priorities page. Review before running onboarding if you want to customize it.
+          - title: Account Plan Template
+            badge:
+              label: Template
+              color: default
+            description: The template used to create the account plan page.

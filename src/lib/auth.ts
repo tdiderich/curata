@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { db } from "./db";
 import { hashApiKey } from "./api-key";
 import { isPersonalEmailDomain } from "./personal-domains";
@@ -94,6 +95,45 @@ async function resolveOrgOAuth(): Promise<OrgContext | null> {
   };
 }
 
+export async function getTailscaleIdentity(): Promise<{ login: string; name: string; profilePic: string } | null> {
+  const h = await headers();
+  const login = h.get("tailscale-user-login");
+  if (login) {
+    return {
+      login,
+      name: h.get("tailscale-user-name") ?? login,
+      profilePic: h.get("tailscale-user-profile-pic") ?? "",
+    };
+  }
+  if (process.env.NODE_ENV === "development" && process.env.TAILSCALE_DEV_USER) {
+    const devUser = process.env.TAILSCALE_DEV_USER;
+    return {
+      login: devUser,
+      name: process.env.TAILSCALE_DEV_NAME ?? devUser.split("@")[0] ?? devUser,
+      profilePic: "",
+    };
+  }
+  return null;
+}
+
+async function resolveOrgTailscale(): Promise<OrgContext | null> {
+  const identity = await getTailscaleIdentity();
+  if (!identity) return null;
+
+  const email = identity.login;
+
+  const org = await db.organization.findFirst({ orderBy: { createdAt: "asc" } });
+  if (!org) return null;
+
+  const member = await findOrCreateMember(org.id, email, "member");
+  return {
+    orgId: org.id,
+    orgSlug: org.slug,
+    userId: email,
+    role: member.role as Role,
+  };
+}
+
 async function resolveOrgClerk(): Promise<OrgContext | null> {
   const { auth, currentUser } = await import("@clerk/nextjs/server");
   const { userId, orgId: clerkOrgId, orgRole } = await auth();
@@ -149,6 +189,7 @@ async function resolveOrgClerk(): Promise<OrgContext | null> {
 export async function resolveOrg(): Promise<OrgContext | null> {
   if (AUTH_MODE === "clerk") return resolveOrgClerk();
   if (AUTH_MODE === "oauth") return resolveOrgOAuth();
+  if (AUTH_MODE === "tailscale") return resolveOrgTailscale();
   return resolveOrgNone();
 }
 
@@ -175,6 +216,15 @@ export async function resolveCurrentUser(): Promise<CurrentUser | null> {
       id: session.user.id ?? session.user.email ?? "unknown",
       email: session.user.email ?? "",
       name: session.user.name ?? session.user.email ?? "Unknown",
+    };
+  }
+  if (AUTH_MODE === "tailscale") {
+    const identity = await getTailscaleIdentity();
+    if (!identity) return null;
+    return {
+      id: identity.login,
+      email: identity.login,
+      name: identity.name,
     };
   }
   return DEFAULT_USER;

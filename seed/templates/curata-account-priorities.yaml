@@ -1,0 +1,102 @@
+title: "{{company_name}} — Account Priorities"
+subtitle: "Open items, active requests, and agenda topics for {{company_name}}."
+shell: standard
+components:
+  - type: section
+    eyebrow: Overview
+    heading: Executive Overview
+    components:
+      - type: markdown
+        body: |
+          **{{company_name}}** is an active customer. This page tracks open priorities, meeting agenda items, filed bugs, and feature requests for the account team.
+
+          Use this page as the single source of truth for what the {{company_name}} team cares about right now. Keep it current after every customer interaction.
+
+          - **Account Owner:** {{account_owner}}
+          - **Customer Since:** {{customer_since}}
+          - **Renewal Date:** {{renewal_date}}
+          - **Contract ARR:** {{contract_arr}}
+
+  - type: section
+    eyebrow: Next Meeting
+    heading: Agenda
+    components:
+      - type: table
+        filterable: false
+        columns:
+          - key: topic
+            label: Topic
+          - key: owner
+            label: Owner
+          - key: status
+            label: Status
+          - key: notes
+            label: Notes
+        rows:
+          - topic: "{{agenda_topic_1}}"
+            owner: "{{agenda_owner_1}}"
+            status: Open
+            notes: "{{agenda_notes_1}}"
+          - topic: "{{agenda_topic_2}}"
+            owner: "{{agenda_owner_2}}"
+            status: Open
+            notes: "{{agenda_notes_2}}"
+
+  - type: section
+    eyebrow: Open Bugs
+    heading: Bugs & Issues
+    components:
+      - type: table
+        filterable: true
+        columns:
+          - key: issue_id
+            label: Issue
+          - key: title
+            label: Title
+          - key: severity
+            label: Severity
+          - key: status
+            label: Status
+          - key: date_reported
+            label: Reported
+          - key: notes
+            label: Notes
+        rows:
+          - issue_id: "—"
+            title: No open bugs
+            severity: "—"
+            status: "—"
+            date_reported: "—"
+            notes: File bugs using the Feature Request & Bug Filing workflow.
+
+  - type: section
+    eyebrow: Feature Requests
+    heading: Feature Requests
+    components:
+      - type: table
+        filterable: true
+        columns:
+          - key: issue_id
+            label: Issue
+          - key: title
+            label: Request
+          - key: priority
+            label: Priority
+          - key: status
+            label: Status
+          - key: date_requested
+            label: Requested
+          - key: notes
+            label: Notes
+        rows:
+          - issue_id: "—"
+            title: No open requests
+            priority: "—"
+            status: "—"
+            date_requested: "—"
+            notes: File requests using the Feature Request & Bug Filing workflow.
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: "Populate {{company_name}}, {{account_owner}}, {{customer_since}}, {{renewal_date}}, {{contract_arr}}, and the agenda table rows with your actual customer data. Your agents can update the agenda, bugs, and feature request tables automatically after each call debrief."

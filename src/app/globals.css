@@ -1981,6 +1981,12 @@ body .c-section.align-right > * { max-width: none !important; }
   flex-shrink: 0;
 }
 
+.vh-list-author {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--teal);
+}
+
 .vh-list-hash {
   font-family: ui-monospace, monospace;
   font-size: 11px;
@@ -2466,10 +2472,42 @@ body .c-section.align-right > * { max-width: none !important; }
   color: var(--teal);
 }
 
+.feed-source-user {
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+}
+
+.feed-source-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: var(--bg);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
 .feed-card-ann {
   font-size: 11px;
   color: var(--muted);
 }
+
+/* ── User avatar (nav bar) ── */
+
+.user-avatar-group { display: flex; align-items: center; gap: 8px; }
+.user-avatar-initials {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--teal); color: var(--bg);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+.user-avatar-name { font-size: 13px; font-weight: 500; color: var(--text); opacity: 0.8; }
 
 /* ── Settings nav link ── */
 

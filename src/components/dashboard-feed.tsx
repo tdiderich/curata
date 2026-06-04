@@ -21,12 +21,6 @@ function relativeTime(iso: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function sourceLabel(createdBy: string): string {
-  if (createdBy === "agent-api" || createdBy.startsWith("agent")) return "Agent";
-  if (createdBy === "web") return "Web";
-  return createdBy;
-}
-
 function VisibilityPill({ visibility }: { visibility: string }) {
   return (
     <span
@@ -39,8 +33,25 @@ function VisibilityPill({ visibility }: { visibility: string }) {
 }
 
 function SourceBadge({ createdBy }: { createdBy: string }) {
-  const label = sourceLabel(createdBy);
-  const isAgent = label === "Agent";
+  const isAgent = createdBy === "agent-api" || createdBy.startsWith("agent");
+  const isWeb = createdBy === "web";
+  const isUser = createdBy.includes("@");
+
+  if (isUser) {
+    const initials = createdBy
+      .split("@")[0]
+      .split(/[._-]/)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? "")
+      .join("");
+    return (
+      <span className="feed-source-user" title={createdBy}>
+        <span className="feed-source-avatar">{initials || "?"}</span>
+      </span>
+    );
+  }
+
+  const label = isAgent ? "Agent" : isWeb ? "Web" : createdBy;
   return (
     <span className="feed-source-badge" data-agent={isAgent ? "true" : undefined}>
       {label}

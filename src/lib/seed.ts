@@ -1,6 +1,68 @@
 import { db } from "./db";
 import { seedGettingStartedPage } from "./seed-page";
 import { generateFunSlug } from "./slug-words";
+import yaml from "js-yaml";
+import { createHash } from "crypto";
+import fs from "fs";
+import path from "path";
+import type { Prisma } from "@/generated/prisma/client";
+
+async function findOrCreateFolder(orgId: string, name: string): Promise<string> {
+  const existing = await db.folder.findFirst({ where: { orgId, name } });
+  if (existing) return existing.id;
+  const created = await db.folder.create({
+    data: { orgId, name, visibility: "shared", createdBy: "system" },
+  });
+  return created.id;
+}
+
+async function seedPagesFromDir(orgId: string, folderId: string, dirPath: string): Promise<void> {
+  if (!fs.existsSync(dirPath)) {
+    console.log(`[seed] directory not found, skipping: ${dirPath}`);
+    return;
+  }
+  let files: string[];
+  try {
+    files = fs.readdirSync(dirPath).filter((f) => f.endsWith(".yaml") || f.endsWith(".yml"));
+  } catch (err) {
+    console.error(`[seed] failed to read directory ${dirPath}:`, err);
+    return;
+  }
+  for (const file of files) {
+    const slug = path.basename(file, path.extname(file));
+    try {
+      const existing = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
+      if (existing) {
+        console.log(`[seed] skipping existing page: ${slug}`);
+        continue;
+      }
+      const yamlContent = fs.readFileSync(path.join(dirPath, file), "utf-8");
+      const parsed = yaml.load(yamlContent) as Record<string, unknown>;
+      const title = typeof parsed?.title === "string" ? parsed.title : slug;
+      const contentHash = createHash("sha256").update(yamlContent).digest("hex");
+      await db.page.create({
+        data: {
+          orgId,
+          slug,
+          title,
+          folderId,
+          createdBy: "system",
+          versions: {
+            create: {
+              yamlContent,
+              jsonContent: parsed as unknown as Prisma.InputJsonValue,
+              contentHash,
+              createdBy: "system",
+            },
+          },
+        },
+      });
+      console.log(`[seed] created page: ${slug}`);
+    } catch (err) {
+      console.error(`[seed] failed to seed page ${slug}:`, err);
+    }
+  }
+}
 
 export async function seedOrg(name: string, slug?: string): Promise<{ id: string; slug: string }> {
   // Check if org already exists (idempotent)
@@ -37,6 +99,26 @@ export async function seedOrg(name: string, slug?: string): Promise<{ id: string
   await seedGettingStartedPage(org.id, "system").catch(err =>
     console.error("[seed] getting-started page failed:", err)
   );
+
+  // Seed Workflows folder and stock workflow pages
+  await (async () => {
+    try {
+      const workflowsFolderId = await findOrCreateFolder(org.id, "Workflows");
+      await seedPagesFromDir(org.id, workflowsFolderId, path.join(process.cwd(), "seed", "workflows"));
+    } catch (err) {
+      console.error("[seed] workflows folder/pages failed:", err);
+    }
+  })();
+
+  // Seed Templates folder and stock template pages
+  await (async () => {
+    try {
+      const templatesFolderId = await findOrCreateFolder(org.id, "Templates");
+      await seedPagesFromDir(org.id, templatesFolderId, path.join(process.cwd(), "seed", "templates"));
+    } catch (err) {
+      console.error("[seed] templates folder/pages failed:", err);
+    }
+  })();
 
   return { id: org.id, slug: org.slug };
 }

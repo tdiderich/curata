@@ -1,0 +1,123 @@
+title: "Workflow — Implementation Planning"
+subtitle: Build a structured implementation plan as a curata page — from discovery questions to task breakdown.
+shell: standard
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this workflow does
+    components:
+      - type: callout
+        variant: info
+        title: Turn a goal into a traceable plan page
+        body: |
+          This workflow runs a structured set of discovery questions, builds a before/after view of the implementation scope, and produces a plan page with a phased task breakdown. The output is a curata page in the Plans folder that the team can update as work progresses. No external tools required — this workflow runs entirely within curata.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual — run at the start of any implementation, project, or initiative that needs a written plan. Works for customer deployments, internal initiatives, and product launches.
+          - term: Cadence
+            definition: Once per project. The resulting plan page becomes the living record — update it in place rather than re-running the workflow.
+          - term: Data Sources
+            definition: Answers to forcing questions provided by the human (context interview), plus any existing customer or project pages in curata that provide relevant background.
+          - term: Output
+            definition: A new plan page in the Plans folder containing a before/after scope view, a phased task breakdown, owners, and a timeline. The page is ready to use as a project tracker.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this workflow
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - The name of the project or initiative
+          - At least 10 minutes to answer discovery questions (the quality of the plan depends on the quality of the answers)
+          - A defined owner or DRI for the plan
+
+          Optional but helpful: any existing documentation (scope doc, sales notes, customer brief) that can be read before the discovery questions.
+
+  - type: section
+    eyebrow: Phase 1
+    heading: Discovery — Forcing Questions
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Name the plan and set the scope
+            detail: |
+              What is this plan for? Give it a name. Is this a customer deployment, an internal project, a product launch, or something else? Who is the primary owner? What is the target completion date?
+          - title: Define the current state
+            detail: |
+              Describe what exists today. What processes, tools, or capabilities does the team or customer currently have? What is working? What is broken or missing? Be specific — vague current-state descriptions produce vague plans.
+          - title: Define the target state
+            detail: |
+              Describe what "done" looks like. What will be true when this implementation is complete that is not true today? Be concrete — if you cannot describe the target state in measurable terms, the plan will drift. Include success criteria: how will you know it worked?
+          - title: Identify constraints and dependencies
+            detail: |
+              What are the known constraints? (Timeline, budget, headcount, technical limitations.) What are the dependencies? (Other teams, external vendors, customer actions required.) What could block this — and what is the mitigation plan for each?
+          - title: List the stakeholders
+            detail: |
+              Who needs to be involved? Who is the decision-maker? Who does the work? Who needs to be informed but not consulted? Capture name, role, and level of involvement for each stakeholder.
+
+  - type: section
+    eyebrow: Phase 2
+    heading: Plan Construction
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Build the before/after view
+            detail: |
+              Using the discovery answers, construct a split_compare component showing Current State vs. Target State. Each stat should reflect a concrete, observable dimension — a process, a metric, a capability. The before/after view is the single most useful thing in the plan: it defines scope and makes drift visible.
+          - title: Break down the work into phases
+            detail: |
+              Group the work into 3–5 logical phases. Each phase should have a clear goal, a defined set of tasks, an owner, and a target date. Phases should be sequential where there are dependencies, and parallel where possible. Use a tree component to show the phased breakdown with task-level detail.
+          - title: Identify risks and open questions
+            detail: |
+              List the top 3–5 risks to the plan. For each risk, note the likelihood, the impact if it materializes, and the mitigation. Also list any open questions that need to be resolved before work can begin — with owners and due dates.
+          - title: Write the plan page
+            detail: |
+              Assemble the plan page with: title (plan name), overview section (scope, owner, target date), before/after split_compare, phased task breakdown tree, risks table, and open questions definition_list. Save the page to the Plans folder with slug plan-[project-slug].
+          - title: Review and confirm
+            detail: |
+              Present the plan page to the human for review. Walk through the before/after view and the task breakdown. Confirm owners, dates, and any open items. Apply edits before publishing.
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this workflow
+    components:
+      - type: callout
+        variant: info
+        title: Plans are living documents
+        body: |
+          A plan page is not a snapshot — it should be updated as the project progresses. Encourage the team to update task statuses in the tree, annotate the page when milestones are hit, and revise the timeline if dates slip. An outdated plan is worse than no plan.
+
+          The before/after view is the anchor. If scope changes, update the split_compare first — it forces clarity about what changed and why.
+
+  - type: section
+    eyebrow: Related Workflows
+    heading: Related Workflows
+    components:
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: Customer Onboarding
+            badge:
+              label: Workflow
+              color: teal
+            description: Creates a customer's initial page set including a deployment tracker. Complements this workflow for customer-facing plans.
+          - title: Deployment Tracker Template
+            badge:
+              label: Template
+              color: default
+            description: A pre-built deployment tracker template with phases and milestones. Use as an alternative to a custom plan for standard deployments.
+          - title: Assessment Builder
+            badge:
+              label: Workflow
+              color: teal
+            description: Build a current-state assessment before planning. Useful when the current state is unknown and needs to be researched.
+          - title: Call Prep & Debrief
+            badge:
+              label: Workflow
+              color: teal
+            description: Use to capture alignment on the plan in stakeholder calls and update the plan page with decisions made.

@@ -1,0 +1,144 @@
+title: "{{company_name}} — Account Plan"
+subtitle: "Success plan, milestones, stakeholders, and next steps for {{company_name}}."
+shell: standard
+components:
+  - type: section
+    eyebrow: State of the Account
+    heading: Current State vs. Target State
+    components:
+      - type: split_compare
+        left:
+          eyebrow: Current State
+          title: Where we are today
+          stats:
+            - label: Deployment stage
+              value: "{{current_deployment_stage}}"
+              color: default
+            - label: Active users
+              value: "{{current_active_users}}"
+              color: default
+            - label: Features adopted
+              value: "{{current_features_adopted}}"
+              color: default
+            - label: Support tickets (30d)
+              value: "{{current_support_tickets}}"
+              color: default
+            - label: NPS / CSAT
+              value: "{{current_nps}}"
+              color: default
+        right:
+          eyebrow: Target State
+          title: Where we're going
+          stats:
+            - label: Deployment stage
+              value: "{{target_deployment_stage}}"
+              color: green
+            - label: Active users
+              value: "{{target_active_users}}"
+              color: green
+            - label: Features adopted
+              value: "{{target_features_adopted}}"
+              color: green
+            - label: Support tickets (30d)
+              value: "{{target_support_tickets}}"
+              color: green
+            - label: NPS / CSAT
+              value: "{{target_nps}}"
+              color: green
+
+  - type: section
+    eyebrow: Milestones
+    heading: Key Milestones
+    components:
+      - type: tree
+        show_filter_toggle: false
+        nodes:
+          - label: "Phase 1 — Onboarding"
+            status: active
+            children:
+              - label: Kickoff call completed
+                status: upcoming
+                note: "{{kickoff_date}}"
+              - label: Initial page set created in curata
+                status: upcoming
+                note: Account priorities, plan, and deployment tracker
+              - label: Account team introductions made
+                status: upcoming
+                note: CS and account executive introduced to customer stakeholders
+          - label: "Phase 2 — Deployment"
+            status: upcoming
+            children:
+              - label: Technical integration complete
+                status: upcoming
+                note: "{{integration_target_date}}"
+              - label: User acceptance testing passed
+                status: upcoming
+                note: "{{uat_target_date}}"
+              - label: Go-live
+                status: upcoming
+                note: "{{go_live_date}}"
+          - label: "Phase 3 — Adoption"
+            status: upcoming
+            children:
+              - label: Adoption milestone — {{adoption_target}} active users
+                status: upcoming
+                note: "{{adoption_target_date}}"
+              - label: First business review
+                status: upcoming
+                note: "{{first_qbr_date}}"
+              - label: Expansion opportunity identified
+                status: upcoming
+                note: "{{expansion_target_date}}"
+
+  - type: section
+    eyebrow: People
+    heading: Stakeholders
+    components:
+      - type: table
+        filterable: false
+        columns:
+          - key: name
+            label: Name
+          - key: title
+            label: Title
+          - key: role
+            label: Role
+          - key: engagement
+            label: Engagement
+          - key: notes
+            label: Notes
+        rows:
+          - name: "{{stakeholder_1_name}}"
+            title: "{{stakeholder_1_title}}"
+            role: Champion
+            engagement: High
+            notes: "{{stakeholder_1_notes}}"
+          - name: "{{stakeholder_2_name}}"
+            title: "{{stakeholder_2_title}}"
+            role: Economic Buyer
+            engagement: Medium
+            notes: "{{stakeholder_2_notes}}"
+          - name: "{{stakeholder_3_name}}"
+            title: "{{stakeholder_3_title}}"
+            role: Technical Lead
+            engagement: High
+            notes: "{{stakeholder_3_notes}}"
+
+  - type: section
+    eyebrow: Actions
+    heading: Next Steps
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: "{{next_step_1}}"
+            detail: "Owner: {{next_step_1_owner}} — Due: {{next_step_1_due}}"
+          - title: "{{next_step_2}}"
+            detail: "Owner: {{next_step_2_owner}} — Due: {{next_step_2_due}}"
+          - title: "{{next_step_3}}"
+            detail: "Owner: {{next_step_3_owner}} — Due: {{next_step_3_due}}"
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: "Populate all {{placeholder}} variables with your customer's actual data. The split_compare should reflect real current-state metrics, not aspirational ones — the gap between current and target is what drives your account plan. Your agents can update milestones, stakeholder details, and next steps automatically after call debriefs and CRM syncs."
