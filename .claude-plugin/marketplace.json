@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "curata",
+  "description": "Claude Code skills for managing curata pages, plans, and workflows via MCP.",
+  "owner": {
+    "name": "Tyler Diderich",
+    "url": "https://github.com/tdiderich"
+  },
+  "plugins": [
+    {
+      "name": "curata",
+      "description": "Read, write, plan, and run workflows in your curata instance via MCP.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

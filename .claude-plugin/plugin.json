@@ -1,0 +1,9 @@
+{
+  "name": "curata",
+  "description": "Read, write, plan, and run workflows in your curata instance via MCP. Skills are thin pointers — workflow content lives as curata pages.",
+  "version": "0.1.0",
+  "author": {
+    "name": "curata",
+    "url": "https://github.com/tdiderich/curata"
+  }
+}

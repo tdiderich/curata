@@ -1,0 +1,104 @@
+title: "Plan: {{plan_title}}"
+subtitle: "{{plan_subtitle}}"
+shell: standard
+components:
+  - type: section
+    eyebrow: Context
+    heading: "{{context_heading}}"
+    components:
+      - type: markdown
+        body: |
+          {{context_body}}
+
+  - type: section
+    eyebrow: Scope
+    heading: Current State vs. Target State
+    components:
+      - type: split_compare
+        left:
+          eyebrow: Current
+          title: Where we are
+          stats:
+            - label: "{{dimension_1}}"
+              value: "{{current_1}}"
+              color: red
+            - label: "{{dimension_2}}"
+              value: "{{current_2}}"
+              color: red
+            - label: "{{dimension_3}}"
+              value: "{{current_3}}"
+              color: red
+        right:
+          eyebrow: Target
+          title: Where we're going
+          stats:
+            - label: "{{dimension_1}}"
+              value: "{{target_1}}"
+              color: green
+            - label: "{{dimension_2}}"
+              value: "{{target_2}}"
+              color: green
+            - label: "{{dimension_3}}"
+              value: "{{target_3}}"
+              color: green
+
+  - type: section
+    eyebrow: Tasks
+    heading: Work Breakdown
+    components:
+      - type: tree
+        show_filter_toggle: true
+        default_filter: all
+        nodes:
+          - label: "Phase 1: {{phase_1_name}}"
+            status: active
+            children:
+              - label: "{{task_1_1}}"
+                status: upcoming
+              - label: "{{task_1_2}}"
+                status: upcoming
+          - label: "Phase 2: {{phase_2_name}}"
+            status: upcoming
+            children:
+              - label: "{{task_2_1}}"
+                status: upcoming
+              - label: "{{task_2_2}}"
+                status: upcoming
+
+  - type: section
+    eyebrow: Risks
+    heading: Risks & Open Questions
+    components:
+      - type: table
+        filterable: false
+        columns:
+          - key: risk
+            label: Risk
+          - key: likelihood
+            label: Likelihood
+          - key: impact
+            label: Impact
+          - key: mitigation
+            label: Mitigation
+        rows:
+          - risk: "{{risk_1}}"
+            likelihood: "{{risk_1_likelihood}}"
+            impact: "{{risk_1_impact}}"
+            mitigation: "{{risk_1_mitigation}}"
+
+  - type: section
+    eyebrow: Verification
+    heading: How to Test
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: "{{verification_step_1}}"
+            detail: "{{verification_detail_1}}"
+          - title: "{{verification_step_2}}"
+            detail: "{{verification_detail_2}}"
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: "Populate all {{placeholder}} variables with your project's actual data. The split_compare should reflect real current-state observations — the gap between current and target is what drives your plan. Update tree node statuses as work progresses."
