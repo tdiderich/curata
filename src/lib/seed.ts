@@ -95,30 +95,27 @@ export async function seedOrg(name: string, slug?: string): Promise<{ id: string
 
   if (!org) throw new Error("Failed to create org after retries");
 
-  // Seed getting-started page
-  await seedGettingStartedPage(org.id, "system").catch(err =>
+  await seedOrgContent(org.id);
+
+  return { id: org.id, slug: org.slug };
+}
+
+export async function seedOrgContent(orgId: string): Promise<void> {
+  await seedGettingStartedPage(orgId, "system").catch(err =>
     console.error("[seed] getting-started page failed:", err)
   );
 
-  // Seed Workflows folder and stock workflow pages
-  await (async () => {
-    try {
-      const workflowsFolderId = await findOrCreateFolder(org.id, "Workflows");
-      await seedPagesFromDir(org.id, workflowsFolderId, path.join(process.cwd(), "seed", "workflows"));
-    } catch (err) {
-      console.error("[seed] workflows folder/pages failed:", err);
-    }
-  })();
+  try {
+    const workflowsFolderId = await findOrCreateFolder(orgId, "Workflows");
+    await seedPagesFromDir(orgId, workflowsFolderId, path.join(process.cwd(), "seed", "workflows"));
+  } catch (err) {
+    console.error("[seed] workflows folder/pages failed:", err);
+  }
 
-  // Seed Templates folder and stock template pages
-  await (async () => {
-    try {
-      const templatesFolderId = await findOrCreateFolder(org.id, "Templates");
-      await seedPagesFromDir(org.id, templatesFolderId, path.join(process.cwd(), "seed", "templates"));
-    } catch (err) {
-      console.error("[seed] templates folder/pages failed:", err);
-    }
-  })();
-
-  return { id: org.id, slug: org.slug };
+  try {
+    const templatesFolderId = await findOrCreateFolder(orgId, "Templates");
+    await seedPagesFromDir(orgId, templatesFolderId, path.join(process.cwd(), "seed", "templates"));
+  } catch (err) {
+    console.error("[seed] templates folder/pages failed:", err);
+  }
 }
