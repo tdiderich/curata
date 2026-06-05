@@ -112,29 +112,27 @@ function applySecurityHeaders(request: NextRequest, response: NextResponse): voi
 }
 
 async function middlewareClerk(request: NextRequest) {
-  const { auth } = await import("@clerk/nextjs/server");
-  const { pathname } = request.nextUrl;
+  const { clerkMiddleware, createRouteMatcher } = await import("@clerk/nextjs/server");
+  const isPublicRoute = createRouteMatcher(
+    PUBLIC_PREFIXES_CLERK.map((p) => `${p}(.*)`).concat(["/", "/sign-in(.*)"])
+  );
 
-  if (!isPublic(pathname)) {
-    try {
-      const session = await auth();
-      if (!session.userId) {
-        return NextResponse.redirect(new URL("/sign-in", request.url));
-      }
-    } catch {
-      console.error("[middleware] Clerk auth() failed for", pathname);
-      return NextResponse.redirect(new URL("/sign-in", request.url));
+  const handler = clerkMiddleware(async (auth, req) => {
+    if (!isPublicRoute(req)) {
+      await auth.protect();
     }
-  }
 
-  if (isAgentApi(pathname)) {
-    const limited = applyRateLimit(request);
-    if (limited) return limited;
-  }
+    if (isAgentApi(req.nextUrl.pathname)) {
+      const limited = applyRateLimit(req);
+      if (limited) return limited;
+    }
 
-  const response = NextResponse.next();
-  applySecurityHeaders(request, response);
-  return response;
+    const response = NextResponse.next();
+    applySecurityHeaders(req, response);
+    return response;
+  });
+
+  return await handler(request, { waitUntil: () => {} } as never);
 }
 
 async function middlewareDefault(request: NextRequest) {
