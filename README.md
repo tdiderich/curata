@@ -62,6 +62,30 @@ Your agent now has 6 tools: `search_pages`, `read_page`, `list_pages`, `write_pa
 
 ---
 
+## Claude Code plugin
+
+Curata ships as a Claude Code plugin with skills for planning, workflows, and page management.
+
+```
+/plugin marketplace add tdiderich/curata
+/plugin install curata@curata
+/curata-setup
+```
+
+`/curata-setup` configures the MCP connection — works with curata.ai (cloud), self-hosted, or local dev.
+
+| Skill | What it does |
+|-------|-------------|
+| `/curata-setup` | Configure MCP connection |
+| `/curata-plan` | Build implementation plans as curata pages |
+| `/curata-workflow` | List and run workflows from your instance |
+| `/curata-read` | Search, browse, and read pages |
+| `/curata-write` | Create and update pages |
+
+Skills are thin pointers — workflow content lives as curata pages (seeded on first run), so you can customize workflows by editing pages directly.
+
+---
+
 ## What is curata?
 
 Most AI agent output is ephemeral — written to a chat thread and forgotten. Curata gives agents a durable, structured place to store what they learn. Pages written by agents become inputs for the next agent run, creating a compounding knowledge loop instead of a flat conversation history.
