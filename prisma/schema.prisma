@@ -13,6 +13,9 @@ model Organization {
   name       String
   slug       String   @unique
   domain     String?  @unique
+  logoUrl    String?  @map("logo_url")
+  logoData   Bytes?   @map("logo_data")
+  logoMime   String?  @map("logo_mime")
   theme     String   @default("dark")
   mode      String   @default("dark")
   texture   String   @default("none")
@@ -69,6 +72,10 @@ model Page {
   createdBy  String    @map("created_by")
   viewCount  Int       @default(0) @map("view_count")
   sortOrder  Int?      @map("sort_order")
+  pinned     Boolean   @default(false)
+  status     String    @default("active")
+  supersededBy String? @map("superseded_by")
+  lastViewedAt DateTime? @map("last_viewed_at")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 
@@ -76,6 +83,7 @@ model Page {
   folder      Folder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
   versions    PageVersion[]
   annotations Annotation[]
+  flags       PageFlag[]
   concepts    PageConcept[]
   linksFrom   PageLink[]    @relation("PageLinksFrom")
   linksTo     PageLink[]    @relation("PageLinksTo")
@@ -83,6 +91,28 @@ model Page {
   @@unique([orgId, slug])
   @@index([orgId, visibility])
   @@map("pages")
+}
+
+model PageFlag {
+  id           String    @id @default(cuid())
+  pageId       String    @map("page_id")
+  action       String
+  reason       String
+  evidence     String
+  supersededBy String?   @map("superseded_by")
+  confidence   String    @default("medium")
+  actorId      String    @map("actor_id")
+  status       String    @default("pending")
+  snoozeUntil  DateTime? @map("snooze_until")
+  resolvedBy   String?   @map("resolved_by")
+  resolvedAt   DateTime? @map("resolved_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([status])
+  @@map("page_flags")
 }
 
 model PageVersion {

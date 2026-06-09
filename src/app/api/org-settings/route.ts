@@ -31,7 +31,7 @@ export async function GET() {
 
   const org = await db.organization.findUnique({
     where: { id: ctx.orgId },
-    select: { name: true, slug: true, domain: true, theme: true, mode: true, texture: true, glow: true },
+    select: { name: true, slug: true, domain: true, logoUrl: true, theme: true, mode: true, texture: true, glow: true },
   });
 
   return NextResponse.json(org);
@@ -89,6 +89,16 @@ export async function PATCH(request: NextRequest) {
       }
       data.domain = d || null;
     }
+    if (body.logoUrl !== undefined) {
+      const l = (body.logoUrl as string).trim();
+      if (l && !/^(https?:\/\/|\/)/.test(l)) {
+        return NextResponse.json({ error: "logo URL must be absolute (https://…) or site-relative (/…)" }, { status: 400 });
+      }
+      if (l.length > 500) {
+        return NextResponse.json({ error: "logo URL too long" }, { status: 400 });
+      }
+      data.logoUrl = l || null;
+    }
     if (body.theme !== undefined) {
       const theme = body.theme as string;
       if (!VALID_THEMES.includes(theme)) {
@@ -125,7 +135,7 @@ export async function PATCH(request: NextRequest) {
     const updated = await db.organization.update({
       where: { id: ctx.orgId },
       data,
-      select: { name: true, slug: true, domain: true, theme: true, mode: true, texture: true, glow: true },
+      select: { name: true, slug: true, domain: true, logoUrl: true, theme: true, mode: true, texture: true, glow: true },
     });
 
     revalidatePath("/", "layout");

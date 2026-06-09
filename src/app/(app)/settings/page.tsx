@@ -29,7 +29,7 @@ export default async function SettingsPage() {
 
   const org = await db.organization.findUnique({
     where: { id: ctx.orgId },
-    select: { name: true, slug: true, domain: true, theme: true, mode: true, texture: true, glow: true },
+    select: { name: true, slug: true, domain: true, logoUrl: true, logoMime: true, theme: true, mode: true, texture: true, glow: true },
   });
 
   // Determine if the current user's email is a personal domain so we can
@@ -55,7 +55,7 @@ export default async function SettingsPage() {
           <OrgSettings
             canManage={canManage}
             isPersonalDomain={isPersonalDomain}
-            initial={{ name: org?.name ?? "", slug: org?.slug ?? "", domain: org?.domain ?? "" }}
+            initial={{ name: org?.name ?? "", slug: org?.slug ?? "", domain: org?.domain ?? "", logoUrl: org?.logoUrl ?? "", hasLogo: Boolean(org?.logoMime) }}
           />
           <div className="dash-workspace-header dash-workspace-header--top">
             <span className="dash-workspace-label">Theme</span>

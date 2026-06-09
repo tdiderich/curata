@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { resolveCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { readPage, getAnnotations } from "@/lib/pages";
+import { readPage, getAnnotations, bumpViewCount } from "@/lib/pages";
 import { PageRenderer } from "@/generated/kazam-renderer";
 import { ThemeScript } from "@/components/theme-script";
 import PublicAnnotationClient from "@/components/public-annotation-client";
@@ -65,10 +65,7 @@ export default async function PublicPageView({ params }: Props) {
   const pageData = await readPage(org.id, pageSlug);
   if (!pageData) notFound();
 
-  db.page.update({
-    where: { id: page.id },
-    data: { viewCount: { increment: 1 } },
-  }).catch(() => {});
+  bumpViewCount(page.id).catch(() => {});
 
   const user = await resolveCurrentUser();
   const isSignedIn = !!user;

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
 import { toast } from "@/components/toast";
@@ -10,6 +11,71 @@ interface Folder {
   name: string;
   visibility: string;
   parentId?: string | null;
+}
+
+// Dropdown menus portal to <body> with fixed positioning so they can't be
+// clipped by scroll containers (the sidebar tree, long tables). Position is
+// computed from the trigger button and clamped to the viewport, flipping
+// above the trigger when there's no room below.
+function AnchoredMenu({
+  anchorRef,
+  menuRef,
+  className,
+  children,
+}: {
+  anchorRef: React.RefObject<HTMLElement | null>;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const position = useCallback(() => {
+    const a = anchorRef.current;
+    const m = menuRef.current;
+    if (!a || !m) return;
+    const r = a.getBoundingClientRect();
+    const mw = m.offsetWidth;
+    const mh = m.offsetHeight;
+    let left = r.right - mw;
+    if (left < 8) left = r.left;
+    left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
+    let top = r.bottom + 4;
+    if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 4);
+    m.style.left = `${left}px`;
+    m.style.top = `${top}px`;
+    m.style.visibility = "visible";
+  }, [anchorRef, menuRef]);
+
+  // Re-measure every render: menu contents change in place (inline inputs,
+  // move-to drill navigation) and the menu must track its anchor.
+  useLayoutEffect(() => {
+    position();
+  });
+
+  useEffect(() => {
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    // The menu changes size after mount (fonts, inline inputs, drill
+    // navigation) — re-clamp whenever it does.
+    const ro = new ResizeObserver(position);
+    if (menuRef.current) ro.observe(menuRef.current);
+    return () => {
+      window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
+      ro.disconnect();
+    };
+  }, [position, menuRef]);
+
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div
+      ref={menuRef}
+      className={className}
+      style={{ position: "fixed", top: 0, left: 0, right: "auto", visibility: "hidden", zIndex: 10000 }}
+    >
+      {children}
+    </div>,
+    document.body
+  );
 }
 
 // ── New folder inline input ───────────────────────────────────────────────────
@@ -105,20 +171,23 @@ interface PageMenuProps {
   folderId: string | null;
   folders: Folder[];
   allowPublic?: boolean;
+  pinned?: boolean;
 }
 
-export function PageMenu({ slug, title, visibility, folderId, folders, allowPublic = true }: PageMenuProps) {
+export function PageMenu({ slug, title, visibility, folderId, folders, allowPublic = true, pinned = false }: PageMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [browseParent, setBrowseParent] = useState<string | null | undefined>(undefined);
   const menuRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const portalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const t = e.target as Node;
+      if (menuRef.current?.contains(t) || portalRef.current?.contains(t)) return;
+      setOpen(false);
     }
     if (open) document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
@@ -195,6 +264,7 @@ export function PageMenu({ slug, title, visibility, folderId, folders, allowPubl
   return (
     <div ref={menuRef} className="dash-page-actions">
       <button
+        ref={btnRef}
         className="dash-page-actions-btn"
         onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); setBrowseParent(undefined); }}
         disabled={busy}
@@ -207,7 +277,14 @@ export function PageMenu({ slug, title, visibility, folderId, folders, allowPubl
         </svg>
       </button>
       {open && (
-        <div className="dash-page-actions-menu" onClick={(e) => e.stopPropagation()}>
+        <AnchoredMenu anchorRef={btnRef} menuRef={portalRef} className="dash-page-actions-menu">
+          <button
+            className="dash-page-actions-item"
+            onClick={() => patchPage({ pinned: !pinned }, pinned ? "Couldn't unpin page" : "Couldn't pin page")}
+          >
+            {pinned ? "Unpin from top" : "Pin to top"}
+          </button>
+          <div className="dash-page-actions-divider" />
           <div className="dash-page-actions-section">Visibility</div>
           {visOptions.map((o) => (
             <button
@@ -269,7 +346,7 @@ export function PageMenu({ slug, title, visibility, folderId, folders, allowPubl
           >
             Delete
           </button>
-        </div>
+        </AnchoredMenu>
       )}
     </div>
   );
@@ -292,6 +369,8 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
   const [addingChild, setAddingChild] = useState(false);
   const [childName, setChildName] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const portalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const childInputRef = useRef<HTMLInputElement>(null);
 
@@ -301,9 +380,9 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const t = e.target as Node;
+      if (menuRef.current?.contains(t) || portalRef.current?.contains(t)) return;
+      setOpen(false);
     }
     if (open) document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
@@ -392,6 +471,36 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
     if (addingChild) childInputRef.current?.focus();
   }, [addingChild]);
 
+  async function createPageHere() {
+    setBusy(true);
+    setOpen(false);
+    try {
+      const res = await fetch(`${basePath}/api/pages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Untitled", shell: "standard" }),
+      });
+      const data = (await res.json()) as { slug?: string; error?: string };
+      if (!res.ok || !data.slug) {
+        toast.error(`Couldn't create page: ${data.error ?? "unknown error"}`);
+        return;
+      }
+      const moveRes = await fetch(`${basePath}/api/pages`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: data.slug, folderId: folder.id }),
+      });
+      if (!moveRes.ok) {
+        toast.error(`Page created but couldn't move it into "${folder.name}" — find it under No Folder.`);
+      }
+      router.push(`/pages/${data.slug}?edit=1`);
+    } catch {
+      toast.error("Couldn't create page — check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function createChild() {
     const trimmed = childName.trim();
     if (!trimmed) return;
@@ -451,6 +560,7 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
   return (
     <div ref={menuRef} className="dash-folder-actions">
       <button
+        ref={btnRef}
         className="dash-folder-actions-btn"
         onClick={() => { setOpen((v) => !v); setBrowseParent(undefined); setAddingChild(false); setChildName(""); }}
         aria-label="Folder options"
@@ -458,7 +568,7 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
         &bull;&bull;&bull;
       </button>
       {open && (
-        <div className="dash-folder-actions-menu">
+        <AnchoredMenu anchorRef={btnRef} menuRef={portalRef} className="dash-folder-actions-menu">
           <button
             className="dash-folder-actions-item"
             onClick={() => {
@@ -467,6 +577,13 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
             }}
           >
             Rename
+          </button>
+          <button
+            className="dash-folder-actions-item"
+            onClick={createPageHere}
+            disabled={busy}
+          >
+            + Add page
           </button>
           {addingChild ? (
             <div className="dash-folder-actions-inline-create">
@@ -560,7 +677,7 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
           >
             Delete
           </button>
-        </div>
+        </AnchoredMenu>
       )}
     </div>
   );

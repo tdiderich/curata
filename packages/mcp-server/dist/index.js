@@ -39,16 +39,22 @@ server.tool("list_pages", "List all pages in your team's knowledge base. Returns
     const text = formatPageList(result.result);
     return { content: [{ type: "text", text }] };
 });
-server.tool("write_page", "Create or update a page in your team's knowledge base. If a page with the derived slug already exists, it will be updated. Content should be valid kazam YAML. Call get_component_reference first to learn the YAML syntax for charts, stat grids, and other components.", {
+server.tool("write_page", "Create or update a page in your team's knowledge base. If a page with the derived slug already exists, it will be updated. Content should be valid kazam YAML. Call get_component_reference first to learn the YAML syntax for charts, stat grids, and other components. Optionally tag concepts and cross-page links — call get_vocabulary first to reuse existing terms.", {
     title: z.string().describe("Page title (e.g., 'Q2 Revenue Analysis')"),
     content: z.string().describe("Full page content in kazam YAML format"),
     slug: z.string().optional().describe("Optional explicit slug. If omitted, derived from title."),
     folder_id: z.string().optional().describe("Optional folder ID to place the page in. Use list_folders to find folder IDs."),
-}, async ({ title, content, slug: explicitSlug, folder_id }) => {
+    concepts: z.string().optional().describe("JSON array of concepts to tag on this page. Each: {term, kind?, section?}. Call get_vocabulary first to reuse existing terms."),
+    links: z.string().optional().describe("JSON array of cross-page links. Each: {target (slug), rel (informs|references|supersedes|conflicts), description?}"),
+}, async ({ title, content, slug: explicitSlug, folder_id, concepts, links }) => {
     const slug = explicitSlug || slugify(title);
     const args = { slug, content };
     if (folder_id)
         args.folder_id = folder_id;
+    if (concepts)
+        args.concepts = concepts;
+    if (links)
+        args.links = links;
     const result = await callApi(CURATA_URL, CURATA_API_KEY, "write_page", args);
     if (result.error) {
         if (result.error.includes("page not found") || result.error.includes("not found")) {
@@ -231,6 +237,146 @@ server.tool("resolve_annotations", "Mark all pending annotations on a page as in
     const msg = `Resolved ${resolved} annotation${resolved !== 1 ? "s" : ""} on "${slug}" as ${resolveAs}` +
         (failed > 0 ? ` (${failed} failed)` : "");
     return { content: [{ type: "text", text: msg }] };
+});
+server.tool("flag_page", "Flag a page for cleanup. Agent proposes, human disposes: this files a flag with evidence into the human Cleanup queue — it never archives or deletes anything itself. Call list_flags first to avoid re-filing proposals a human already dismissed.", {
+    slug: z.string().describe("Page slug to flag"),
+    action: z.enum(["archive", "delete", "merge", "supersede"]).describe("Proposed disposition"),
+    reason: z.enum(["shipped-not-closed", "superseded", "stale", "duplicate", "one-off-expired"]).describe("Why this page is a cleanup candidate"),
+    evidence: z.string().describe("What you checked — repo paths, commit dates, task-tree state, the replacing page"),
+    superseded_by: z.string().optional().describe("Slug of the replacing page (required when action is supersede)"),
+    confidence: z.enum(["high", "medium", "low"]).optional().describe("How sure you are (default medium)"),
+}, async ({ slug, action, reason, evidence, superseded_by, confidence }) => {
+    const args = { slug, action, reason, evidence };
+    if (superseded_by)
+        args.superseded_by = superseded_by;
+    if (confidence)
+        args.confidence = confidence;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "flag_page", args);
+    if (result.error) {
+        return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
+    }
+    const data = result.result;
+    if (data.skipped) {
+        return { content: [{ type: "text", text: data.message ?? "Flag skipped." }] };
+    }
+    return { content: [{ type: "text", text: `Flagged "${slug}" for ${action} (${reason}).${data.note ? ` Note: ${data.note}` : ""}` }] };
+});
+server.tool("list_flags", "List cleanup flags: pending proposals plus human dispositions (kept/snoozed/resolved). Check this before a cleanup sweep so you don't re-file flags a human already dismissed.", {
+    status: z.enum(["pending", "kept", "snoozed", "resolved", "all"]).optional().describe("Filter (default: all)"),
+}, async ({ status }) => {
+    const args = {};
+    if (status)
+        args.status = status;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "list_flags", args);
+    if (result.error) {
+        return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
+    }
+    const flags = result.result;
+    if (flags.length === 0) {
+        return { content: [{ type: "text", text: "No flags on record." }] };
+    }
+    const lines = [`**${flags.length} flag${flags.length !== 1 ? "s" : ""}**\n`];
+    for (const f of flags) {
+        lines.push(`- [${f.status}] ${f.title} (${f.slug}) — ${f.action}/${f.reason} (${f.confidence}) by ${f.flaggedBy}${f.resolvedBy ? `, resolved by ${f.resolvedBy}` : ""}: ${f.evidence}`);
+    }
+    return { content: [{ type: "text", text: lines.join("\n") }] };
+});
+server.tool("list_open_annotations", "Fetch the org-wide queue of open human feedback: every pending/approved annotation across all pages, grouped by page. This is the entry point for processing annotations — for each page, read_page, apply the feedback, write the page back, then update_annotation to incorporated (or ignored, with a reason). See the 'Workflow — Process Annotations' page for the full procedure.", {
+    status: z.enum(["pending", "approved"]).optional().describe("Filter to one status (default: both pending and approved)"),
+}, async ({ status }) => {
+    const args = {};
+    if (status)
+        args.status = status;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "list_open_annotations", args);
+    if (result.error) {
+        return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
+    }
+    const data = result.result;
+    if (!data.totalAnnotations) {
+        return { content: [{ type: "text", text: "Annotation queue is empty — nothing to process." }] };
+    }
+    const lines = [`**${data.totalAnnotations} open annotation${data.totalAnnotations !== 1 ? "s" : ""} across ${data.pageCount} page${data.pageCount !== 1 ? "s" : ""}**\n`];
+    for (const p of data.pages) {
+        lines.push(`## ${p.title} (${p.slug})`);
+        for (const a of p.annotations) {
+            const edit = a.kind === "edit" && a.target ? ` | edit: "${a.target}" → "${a.replacement ?? ""}"` : "";
+            lines.push(`- [${a.id}] (${a.status}, by ${a.author}) ${a.text}${edit}`);
+        }
+        lines.push("");
+    }
+    return { content: [{ type: "text", text: lines.join("\n") }] };
+});
+server.tool("get_vocabulary", "Get the shared concept vocabulary — canonical terms that agents have tagged across all pages. Call this before tagging concepts on a page to reuse existing terms and avoid synonyms. Returns terms sorted by usage count (most-used first).", {
+    kind: z.string().optional().describe("Filter by concept kind (e.g., 'vendor', 'finding', 'framework')"),
+    query: z.string().optional().describe("Prefix search on term name (e.g., 'crowd' matches 'CrowdStrike')"),
+}, async ({ kind, query }) => {
+    const args = {};
+    if (kind)
+        args.kind = kind;
+    if (query)
+        args.query = query;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "get_vocabulary", args);
+    if (result.error) {
+        return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
+    }
+    const data = result.result;
+    if (!data.concepts || data.concepts.length === 0) {
+        return { content: [{ type: "text", text: "No concepts in vocabulary yet." }] };
+    }
+    const lines = [`**Vocabulary** (${data.concepts.length} terms, kinds: ${data.kinds.join(", ") || "none"})\n`];
+    for (const c of data.concepts) {
+        lines.push(`- **${c.term}** [${c.kind || "untyped"}] — used ${c.usageCount}x`);
+    }
+    return { content: [{ type: "text", text: lines.join("\n") }] };
+});
+server.tool("get_related", "Find pages and concepts related to a given term or page. Use to discover cross-customer patterns and connections in the knowledge graph.", {
+    term: z.string().optional().describe("Concept term to look up (e.g., 'CrowdStrike')"),
+    slug: z.string().optional().describe("Page slug to find related content for"),
+}, async ({ term, slug }) => {
+    const args = {};
+    if (term)
+        args.term = term;
+    if (slug)
+        args.slug = slug;
+    if (!term && !slug) {
+        return { content: [{ type: "text", text: "Error: provide either 'term' or 'slug'" }], isError: true };
+    }
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "get_related", args);
+    if (result.error) {
+        return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
+    }
+    const data = result.result;
+    const lines = [];
+    if (data.concepts.length > 0) {
+        lines.push("**Concepts:**");
+        for (const c of data.concepts)
+            lines.push(`- ${c.term} [${c.kind}] (${c.usageCount}x)`);
+    }
+    if (data.pages.length > 0) {
+        lines.push("\n**Related pages:**");
+        for (const p of data.pages)
+            lines.push(`- ${p.title} (${p.slug}) — shared: ${p.sharedConcepts.join(", ")}`);
+    }
+    if (data.links.length > 0) {
+        lines.push("\n**Direct links:**");
+        for (const l of data.links)
+            lines.push(`- ${l.from} → ${l.to} [${l.rel}]`);
+    }
+    if (lines.length === 0)
+        lines.push("No related content found.");
+    return { content: [{ type: "text", text: lines.join("\n") }] };
+});
+server.tool("get_semantic_map", "Get the full knowledge graph in compact form — all concepts with their page lists, all cross-page links, and stats (including count of pages without concepts). Use to understand the full knowledge structure, find gaps for semantic refresh, or discover cross-customer patterns.", {
+    kind: z.string().optional().describe("Filter concepts by kind (e.g., 'vendor')"),
+}, async ({ kind }) => {
+    const args = {};
+    if (kind)
+        args.kind = kind;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "get_semantic_map", args);
+    if (result.error) {
+        return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(result.result, null, 2) }] };
 });
 async function main() {
     const transport = new StdioServerTransport();

@@ -13,6 +13,7 @@ import {
   saveAnnotation,
   updateAnnotationStatus,
   searchPages,
+  bumpViewCount,
 } from "@/lib/pages";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
 import {
@@ -107,7 +108,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
     const concepts = page ? await getPageConcepts(page.id) : [];
     const links = page ? await getPageLinks(orgId, page.id) : [];
     if (page) {
-      db.page.update({ where: { id: page.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+      bumpViewCount(page.id).catch(() => {});
     }
 
     return { content: [{ type: "text", text: JSON.stringify({ slug, yaml: result.yaml, contentHash: result.contentHash, sections, annotations, concepts, links }, null, 2) }] };

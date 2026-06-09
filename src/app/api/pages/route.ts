@@ -128,6 +128,8 @@ export async function PATCH(request: NextRequest) {
       slug?: string;
       folderId?: string | null;
       visibility?: string;
+      pinned?: boolean;
+      status?: string;
     };
 
     if (!body.slug) {
@@ -159,6 +161,18 @@ export async function PATCH(request: NextRequest) {
     const data: Record<string, unknown> = {};
     if (body.folderId !== undefined) data.folderId = body.folderId;
     if (body.visibility !== undefined) data.visibility = body.visibility;
+    if (body.pinned !== undefined) data.pinned = body.pinned;
+    if (body.status !== undefined) {
+      // Humans archive/restore; "flagged" is set by the flag pipeline only.
+      if (body.status !== "active" && body.status !== "archived") {
+        return NextResponse.json(
+          { error: "status must be 'active' or 'archived'" },
+          { status: 400 }
+        );
+      }
+      data.status = body.status;
+      if (body.status === "active") data.supersededBy = null;
+    }
 
     const updated = await db.page.update({
       where: { id: page.id },

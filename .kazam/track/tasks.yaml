@@ -902,3 +902,39 @@ tasks:
   updated: 2026-06-09T14:11:22.940050-05:00
   closed: 2026-06-09T14:11:22.940050-05:00
   close_reason: toast system, error surfacing on all mutations, cmd-K palette (kazam pattern), settings gear, allowPublic gating by auth mode, state-aware Save/Done/Discard editors, persisted folder state, error boundary recovery, concepts skeleton. Optimistic updates deferred.
+- id: kz-10af
+  title: 'UX P4.5: landing upgrade — attention strip, since-last-visit badges, jump-back-in, freshness, pins, palette button'
+  status: closed
+  priority: 2
+  task_type: task
+  created: 2026-06-09T14:29:48.355064-05:00
+  updated: 2026-06-09T14:39:03.749634-05:00
+  closed: 2026-06-09T14:39:03.749634-05:00
+  close_reason: attention strip (annotations/updated/stale, filterable), pinned pages (schema+API+menu+cards), jump-back-in recents, row badges incl freshness from kazam metadata, palette search button. Verified live.
+- id: kz-ade9
+  title: 'UX P4.6: Notion-style sidebar shell — (app) route group, persistent nav tree, dashboard as landing feed'
+  status: closed
+  priority: 2
+  task_type: task
+  assignee: claude
+  created: 2026-06-09T14:52:45.562515-05:00
+  updated: 2026-06-09T14:52:57.366568-05:00
+  closed: 2026-06-09T14:52:57.366568-05:00
+  close_reason: '(app) route group with shared sidebar layout: folder tree w/ collapsible nav + hover menus, pinned/recent sections, search trigger, auth controls + settings in footer. Dashboard rewritten as landing: attention chips + activity feed default, flat table for filter/sort. Brand bars removed; widths container-relative. Build + 52 tests green.'
+- id: kz-c0b6
+  title: 'UX P4.7: annotation processing loop (list_open_annotations MCP tool + OOTB workflow) + org logo + folder add-page'
+  status: closed
+  priority: 2
+  task_type: task
+  assignee: claude
+  created: 2026-06-09T15:06:21.014780-05:00
+  updated: 2026-06-09T15:07:25.046463-05:00
+  closed: 2026-06-09T15:07:25.046463-05:00
+  close_reason: list_open_annotations MCP tool (HTTP + stdio), OOTB Process Annotations workflow seeded + created in live org, list_workflows trigger extraction fixed for nested definition_lists, org logoUrl (schema+API+settings+sidebar), folder menu + Add page
+- id: kz-0ed0
+  title: 'UX P4.8: page lifecycle & cleanup — flag tool, cleanup queue, archive semantics, timestamp split, staleness heuristics'
+  status: open
+  priority: 2
+  task_type: task
+  created: 2026-06-09T15:23:00.000371-05:00
+  updated: 2026-06-09T15:23:00.000371-05:00

@@ -34,8 +34,15 @@ export function CommandPalette() {
         setOpen((v) => !v);
       }
     }
+    function onOpenEvent() {
+      setOpen(true);
+    }
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    window.addEventListener("curata-open-palette", onOpenEvent);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("curata-open-palette", onOpenEvent);
+    };
   }, []);
 
   useEffect(() => {

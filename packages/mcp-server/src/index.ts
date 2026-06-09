@@ -306,6 +306,92 @@ server.tool(
 );
 
 server.tool(
+  "flag_page",
+  "Flag a page for cleanup. Agent proposes, human disposes: this files a flag with evidence into the human Cleanup queue — it never archives or deletes anything itself. Call list_flags first to avoid re-filing proposals a human already dismissed.",
+  {
+    slug: z.string().describe("Page slug to flag"),
+    action: z.enum(["archive", "delete", "merge", "supersede"]).describe("Proposed disposition"),
+    reason: z.enum(["shipped-not-closed", "superseded", "stale", "duplicate", "one-off-expired"]).describe("Why this page is a cleanup candidate"),
+    evidence: z.string().describe("What you checked — repo paths, commit dates, task-tree state, the replacing page"),
+    superseded_by: z.string().optional().describe("Slug of the replacing page (required when action is supersede)"),
+    confidence: z.enum(["high", "medium", "low"]).optional().describe("How sure you are (default medium)"),
+  },
+  async ({ slug, action, reason, evidence, superseded_by, confidence }) => {
+    const args: Record<string, string> = { slug, action, reason, evidence };
+    if (superseded_by) args.superseded_by = superseded_by;
+    if (confidence) args.confidence = confidence;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "flag_page", args);
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    const data = result.result as { ok: boolean; skipped?: boolean; message?: string; flagId?: string; note?: string };
+    if (data.skipped) {
+      return { content: [{ type: "text" as const, text: data.message ?? "Flag skipped." }] };
+    }
+    return { content: [{ type: "text" as const, text: `Flagged "${slug}" for ${action} (${reason}).${data.note ? ` Note: ${data.note}` : ""}` }] };
+  }
+);
+
+server.tool(
+  "list_flags",
+  "List cleanup flags: pending proposals plus human dispositions (kept/snoozed/resolved). Check this before a cleanup sweep so you don't re-file flags a human already dismissed.",
+  {
+    status: z.enum(["pending", "kept", "snoozed", "resolved", "all"]).optional().describe("Filter (default: all)"),
+  },
+  async ({ status }) => {
+    const args: Record<string, string> = {};
+    if (status) args.status = status;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "list_flags", args);
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    const flags = result.result as Array<{ id: string; slug: string; title: string; action: string; reason: string; confidence: string; status: string; evidence: string; flaggedBy: string; resolvedBy?: string }>;
+    if (flags.length === 0) {
+      return { content: [{ type: "text" as const, text: "No flags on record." }] };
+    }
+    const lines = [`**${flags.length} flag${flags.length !== 1 ? "s" : ""}**\n`];
+    for (const f of flags) {
+      lines.push(`- [${f.status}] ${f.title} (${f.slug}) — ${f.action}/${f.reason} (${f.confidence}) by ${f.flaggedBy}${f.resolvedBy ? `, resolved by ${f.resolvedBy}` : ""}: ${f.evidence}`);
+    }
+    return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+  }
+);
+
+server.tool(
+  "list_open_annotations",
+  "Fetch the org-wide queue of open human feedback: every pending/approved annotation across all pages, grouped by page. This is the entry point for processing annotations — for each page, read_page, apply the feedback, write the page back, then update_annotation to incorporated (or ignored, with a reason). See the 'Workflow — Process Annotations' page for the full procedure.",
+  {
+    status: z.enum(["pending", "approved"]).optional().describe("Filter to one status (default: both pending and approved)"),
+  },
+  async ({ status }) => {
+    const args: Record<string, string> = {};
+    if (status) args.status = status;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "list_open_annotations", args);
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    const data = result.result as {
+      totalAnnotations: number;
+      pageCount: number;
+      pages: Array<{ slug: string; title: string; annotations: Array<{ id: string; kind: string; status: string; author: string; text: string; target?: string; replacement?: string }> }>;
+    };
+    if (!data.totalAnnotations) {
+      return { content: [{ type: "text" as const, text: "Annotation queue is empty — nothing to process." }] };
+    }
+    const lines = [`**${data.totalAnnotations} open annotation${data.totalAnnotations !== 1 ? "s" : ""} across ${data.pageCount} page${data.pageCount !== 1 ? "s" : ""}**\n`];
+    for (const p of data.pages) {
+      lines.push(`## ${p.title} (${p.slug})`);
+      for (const a of p.annotations) {
+        const edit = a.kind === "edit" && a.target ? ` | edit: "${a.target}" → "${a.replacement ?? ""}"` : "";
+        lines.push(`- [${a.id}] (${a.status}, by ${a.author}) ${a.text}${edit}`);
+      }
+      lines.push("");
+    }
+    return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+  }
+);
+
+server.tool(
   "get_vocabulary",
   "Get the shared concept vocabulary — canonical terms that agents have tagged across all pages. Call this before tagging concepts on a page to reuse existing terms and avoid synonyms. Returns terms sorted by usage count (most-used first).",
   {

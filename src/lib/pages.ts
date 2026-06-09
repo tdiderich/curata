@@ -8,14 +8,27 @@ export interface PageMeta {
   slug: string;
   title: string;
   annotationCount: number;
+  pendingAnnotationCount: number;
   viewCount: number;
   updatedAt: Date;
   lastActivity: Date;
+  lastEditedBy: string;
   folderId: string | null;
   visibility: string;
   snippet: string;
   createdBy: string;
   sortOrder: number | null;
+  pinned: boolean;
+  status: string;
+  freshness: "fresh" | "due" | "overdue" | null;
+  staleReason: string | null;
+}
+
+/// Bump view stats without touching updatedAt. Prisma's @updatedAt fires on
+/// every update, so a normal increment would make "recently updated" mean
+/// "recently looked at" — raw SQL keeps the content clock honest.
+export async function bumpViewCount(pageId: string): Promise<void> {
+  await db.$executeRaw`UPDATE pages SET view_count = view_count + 1, last_viewed_at = now() WHERE id = ${pageId}`;
 }
 
 export interface AnnotationRow {
@@ -35,20 +48,33 @@ export async function listPages(orgId: string, userId?: string): Promise<PageMet
   const where = userId
     ? {
         orgId,
+        status: { not: "archived" },
         OR: [
           { visibility: "shared" },
           { visibility: "public" },
           { visibility: "personal", createdBy: userId },
         ],
       }
-    : { orgId };
+    : { orgId, status: { not: "archived" } };
 
   const pages = await db.page.findMany({
     where,
     include: {
-      _count: { select: { annotations: true } },
-      annotations: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
-      versions: { orderBy: { createdAt: "desc" }, take: 1, select: { jsonContent: true } },
+      _count: {
+        select: {
+          annotations: true,
+          // Pending = anything a human hasn't dispositioned yet.
+        },
+      },
+      annotations: {
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true, status: true },
+      },
+      versions: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { jsonContent: true, createdBy: true },
+      },
     },
     orderBy: [
       { sortOrder: { sort: "asc", nulls: "last" } },
@@ -61,6 +87,9 @@ export async function listPages(orgId: string, userId?: string): Promise<PageMet
     const lastActivity = latestAnnotation && latestAnnotation > p.updatedAt
       ? latestAnnotation
       : p.updatedAt;
+    const pendingAnnotationCount = p.annotations.filter(
+      (a) => a.status !== "incorporated" && a.status !== "ignored"
+    ).length;
 
     let snippet = p.title;
     const latestVersion = p.versions[0];
@@ -72,22 +101,124 @@ export async function listPages(orgId: string, userId?: string): Promise<PageMet
       }
     }
 
+    const [freshness, staleReason] = staleness(
+      latestVersion?.jsonContent as Record<string, unknown> | null,
+      p.updatedAt,
+      p.lastViewedAt
+    );
+
     return {
       slug: p.slug,
       title: p.title,
       annotationCount: p._count.annotations,
+      pendingAnnotationCount,
       viewCount: p.viewCount,
       updatedAt: p.updatedAt,
       lastActivity,
+      lastEditedBy: latestVersion?.createdBy ?? p.createdBy,
       folderId: p.folderId,
       visibility: p.visibility,
       snippet,
       createdBy: p.createdBy,
       sortOrder: p.sortOrder,
+      pinned: p.pinned,
+      status: p.status,
+      freshness,
+      staleReason,
     };
   });
 
   return mapped;
+}
+
+/// True when the page content contains a task tree with unfinished nodes —
+/// the signal that a "plan" page claims ongoing work.
+function hasOpenTasks(json: Record<string, unknown> | null): boolean {
+  if (!json) return false;
+  let open = false;
+  function walkNodes(nodes: unknown) {
+    if (!Array.isArray(nodes) || open) return;
+    for (const n of nodes as Record<string, unknown>[]) {
+      const st = (n.status as string) ?? "default";
+      if (st !== "completed") {
+        open = true;
+        return;
+      }
+      walkNodes(n.children);
+    }
+  }
+  function walkComponents(comps: unknown) {
+    if (!Array.isArray(comps) || open) return;
+    for (const c of comps as Record<string, unknown>[]) {
+      if (c.type === "tree") walkNodes(c.nodes);
+      walkComponents(c.components);
+      if (Array.isArray(c.tabs)) {
+        for (const t of c.tabs as Record<string, unknown>[]) walkComponents(t.components);
+      }
+    }
+  }
+  walkComponents(json.components);
+  return open;
+}
+
+const DAY_MS = 86400000;
+
+/// Staleness signal: explicit freshness metadata wins; otherwise cheap
+/// passive heuristics. Returns [state, human-readable reason]. These are
+/// hints for the dashboard and seed data for the cleanup audit — they never
+/// auto-flag anything.
+function staleness(
+  json: Record<string, unknown> | null,
+  updatedAt: Date,
+  lastViewedAt: Date | null
+): ["fresh" | "due" | "overdue" | null, string | null] {
+  const explicit = freshnessStatus(json, updatedAt);
+  if (explicit) {
+    return [
+      explicit,
+      explicit === "fresh" ? null : "past its review cadence",
+    ];
+  }
+  const contentAgeDays = (Date.now() - updatedAt.getTime()) / DAY_MS;
+  if (contentAgeDays > 60 && hasOpenTasks(json)) {
+    return ["overdue", "open tasks but no content change in 60+ days"];
+  }
+  // Only trust the view signal once we have one — lastViewedAt ships null
+  // for every page that predates the column.
+  if (lastViewedAt && (Date.now() - lastViewedAt.getTime()) / DAY_MS > 60) {
+    return ["due", "no views in 60+ days"];
+  }
+  return [null, null];
+}
+
+/// Freshness from the page's kazam metadata when present: `freshness.review_every`
+/// (weekly/monthly/quarterly/yearly or Nd/Nw/Nm/Ny) measured against the page's
+/// last content update. Pages without freshness metadata return null — no badge.
+function freshnessStatus(
+  json: Record<string, unknown> | null,
+  updatedAt: Date
+): "fresh" | "due" | "overdue" | null {
+  const f = json?.freshness as Record<string, unknown> | undefined;
+  if (!f || typeof f !== "object") return null;
+  const cadence = f.review_every as string | undefined;
+  if (!cadence) return null;
+
+  const cadenceMap: Record<string, number> = {
+    weekly: 7, monthly: 30, quarterly: 90, yearly: 365, annually: 365,
+  };
+  let days = cadenceMap[cadence];
+  if (!days) {
+    const m = cadence.match(/^(\d+)(d|w|m|y)$/);
+    if (!m) return null;
+    const n = parseInt(m[1], 10);
+    days = m[2] === "d" ? n : m[2] === "w" ? n * 7 : m[2] === "m" ? n * 30 : n * 365;
+  }
+
+  const base = typeof f.updated === "string" ? new Date(f.updated) : updatedAt;
+  const elapsed = (Date.now() - base.getTime()) / 86400000;
+  if (elapsed > days) return "overdue";
+  if (elapsed > days * 0.8) return "due";
+  return "fresh";
 }
 
 export async function readPageYaml(
@@ -144,7 +275,7 @@ export async function searchPages(
     : { orgId };
 
   const pages = await db.page.findMany({
-    where,
+    where: { ...where, status: { not: "archived" } },
     include: {
       versions: { orderBy: { createdAt: "desc" }, take: 1 },
     },

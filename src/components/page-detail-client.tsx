@@ -104,6 +104,7 @@ export default function PageDetailClient({
   autoConnect,
   authMode = "none",
   printFlow,
+  archived,
 }: {
   slug: string;
   children?: React.ReactNode;
@@ -115,6 +116,7 @@ export default function PageDetailClient({
   autoConnect: boolean;
   authMode?: string;
   printFlow?: string;
+  archived?: { since: string; supersededBy: string | null };
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -170,6 +172,23 @@ export default function PageDetailClient({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAgentOpen(true);
   }, [autoConnect, slug]);
+
+  // Record this page in the per-browser recently-viewed list that powers the
+  // dashboard's "Jump back in" row.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("curata-recent") ?? "[]";
+      const list = JSON.parse(raw) as Array<{ slug: string; title: string; ts: number }>;
+      const next = [
+        { slug, title: pageTitle ?? slug, ts: Date.now() },
+        ...list.filter((e) => e.slug !== slug),
+      ].slice(0, 8);
+      localStorage.setItem("curata-recent", JSON.stringify(next));
+    } catch {
+      // corrupted entry — drop the list rather than break page view
+      localStorage.removeItem("curata-recent");
+    }
+  }, [slug, pageTitle]);
 
   const activeAnns = useMemo(
     () =>
@@ -332,8 +351,39 @@ export default function PageDetailClient({
     router.refresh();
   }
 
+  async function restorePage() {
+    try {
+      const res = await fetch(`${basePath}/api/pages`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, status: "active" }),
+      });
+      if (res.ok) {
+        toast.success("Page restored");
+        router.refresh();
+      } else {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(`Couldn't restore page: ${data.error ?? "unknown error"}`);
+      }
+    } catch {
+      toast.error("Couldn't restore page — check your connection and try again.");
+    }
+  }
+
   return (
     <div className="page-detail-layout">
+      {archived && (
+        <div className="archived-banner" role="status">
+          <span>
+            Archived {archived.since}
+            {archived.supersededBy && (
+              <> — superseded by <Link href={`/pages/${archived.supersededBy}`} className="archived-banner-link">{archived.supersededBy}</Link></>
+            )}
+            . Hidden from lists, search, and agents.
+          </span>
+          <button className="archived-banner-restore" onClick={restorePage}>Restore</button>
+        </div>
+      )}
       <div className="page-toolbar">
         <Link className="page-toolbar-back" href="/dashboard">
           &larr; Pages

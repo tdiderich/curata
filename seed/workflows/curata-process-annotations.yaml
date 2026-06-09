@@ -1,0 +1,74 @@
+title: "Workflow — Process Annotations"
+subtitle: Work the org-wide queue of human feedback — incorporate edits, resolve notes, close the loop.
+shell: standard
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this workflow does
+    components:
+      - type: callout
+        variant: info
+        title: Human feedback should never sit unread
+        body: |
+          Humans leave annotations on pages — inline edits, notes, corrections. This workflow drains that queue: it fetches every open annotation across the org, applies the requested changes to page content, and marks each annotation incorporated (or ignored, with a stated reason). Run it on a schedule or whenever the review queue grows.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: '"process annotations", "review annotations", "incorporate feedback", "work the annotation queue", or scheduled (daily works well).'
+          - term: Cadence
+            definition: On-demand or daily. Safe to re-run — an empty queue is a no-op.
+          - term: Data Sources
+            definition: list_open_annotations for the queue; read_page for content and contentHash; the page's own YAML for context.
+          - term: Output
+            definition: Updated page content with feedback applied; every processed annotation dispositioned as incorporated or ignored.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this workflow
+    components:
+      - type: callout
+        variant: warn
+        title: Ground rules
+        body: |
+          - Never mark an annotation incorporated without actually changing the page (unless the content already reflects it).
+          - Never ignore an annotation silently — when ignoring, add a brief note annotation explaining why.
+          - Respect contentHash optimistic locking: always pass expected_hash when writing, and re-read on conflict.
+
+  - type: section
+    eyebrow: Workflow Steps
+    heading: Steps
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Fetch the queue
+            detail: |
+              Call `list_open_annotations` (no args). It returns open annotations grouped by page, with counts. If `totalAnnotations` is 0, report "queue empty" and stop.
+          - title: Process page by page
+            detail: |
+              For each page in the result, call `read_page` to get the current YAML, `contentHash`, and full annotation context. Handle all of that page's annotations in one pass so you write the page once.
+          - title: Apply edit-kind annotations
+            detail: |
+              Annotations with `kind: edit` carry a `target` (original text) and `replacement`. Find the target in the page YAML and replace it with the replacement. Prefer `patch_page` with set operations when the change maps to a component; otherwise `write_page` with the full updated YAML and `expected_hash`.
+          - title: Judge note-kind annotations
+            detail: |
+              Annotations with `kind: note` are freeform feedback. Read the note in the context of its `section`/`target`, decide what change it asks for, and apply it. If the note is a question or out of scope for content changes, leave the page alone and disposition the annotation accordingly in the next step.
+          - title: Disposition every annotation
+            detail: |
+              After writing the page, call `update_annotation` for each handled annotation: `status: incorporated` when the content changed (or already reflected the feedback), `status: ignored` when no change was warranted. When ignoring, also call `annotate_page` with a short note explaining the reasoning so the human sees why.
+          - title: Report the run
+            detail: |
+              Summarize: pages touched, annotations incorporated, annotations ignored (with reasons), conflicts encountered. If anything was ambiguous, list it for human follow-up rather than guessing.
+
+  - type: section
+    eyebrow: Edge Cases
+    heading: When things get weird
+    components:
+      - type: callout
+        variant: warn
+        title: Handle these explicitly
+        body: |
+          - **Stale target**: an edit annotation whose `target` no longer appears in the page — the content moved on. Mark it ignored and annotate why.
+          - **Conflicting annotations**: two annotations asking for opposite changes — apply neither, leave both pending, and add a note asking the humans to break the tie.
+          - **Hash conflict on write**: someone edited mid-run. Re-read the page and re-apply against the fresh content.
+          - **approved status**: a human pre-approved the annotation — treat it as a clear mandate to apply.

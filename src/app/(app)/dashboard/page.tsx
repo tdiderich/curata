@@ -66,14 +66,18 @@ export default async function DashboardPage() {
     slug: p.slug,
     title: p.title,
     annotationCount: p.annotationCount,
+    pendingAnnotationCount: p.pendingAnnotationCount,
     viewCount: p.viewCount,
     updatedAt: p.updatedAt.toISOString(),
     lastActivity: p.lastActivity.toISOString(),
+    lastEditedBy: p.lastEditedBy,
     folderId: p.folderId,
     visibility: p.visibility,
     snippet: p.snippet,
     createdBy: p.createdBy,
     sortOrder: p.sortOrder,
+    pinned: p.pinned,
+    freshness: p.freshness,
   }));
 
   return (

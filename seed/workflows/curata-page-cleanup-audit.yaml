@@ -1,0 +1,74 @@
+title: "Workflow — Page Cleanup Audit"
+subtitle: Sweep the knowledge base for dead pages and file evidence-backed cleanup flags for human review.
+shell: standard
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this workflow does
+    components:
+      - type: callout
+        variant: info
+        title: Agent proposes, human disposes
+        body: |
+          Knowledge bases accumulate dead weight — shipped plans never closed, superseded drafts, one-off reports past their moment. This workflow cross-references every page against reality and files flags with evidence into the human Cleanup queue. It never archives or deletes anything itself: humans clear the queue in one sitting from the Cleanup view.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: '"cleanup audit", "audit pages", "sweep for dead pages", "flag stale pages", or scheduled (weekly works well).'
+          - term: Cadence
+            definition: Weekly or on-demand. Safe to re-run — dismissed flags are not re-filed.
+          - term: Data Sources
+            definition: list_pages (staleness hints included), read_page for content, list_flags for prior decisions, plus whatever external context you have (repo state, issue tracker, calendar).
+          - term: Output
+            definition: flag_page calls with action, reason, evidence, and confidence. A summary of what was flagged and what was left alone.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this workflow
+    components:
+      - type: callout
+        variant: warn
+        title: Ground rules
+        body: |
+          - Call list_flags first. A kept (dismissed) flag is a human decision — do not re-file the same reason on the same page.
+          - Every flag needs evidence: cite the file paths, dates, task states, or replacing pages you checked. "Looks old" is not evidence.
+          - Default action is archive (reversible). Propose delete only for true junk (test pages, empty drafts) and mark confidence honestly.
+
+  - type: section
+    eyebrow: Workflow Steps
+    heading: Steps
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Load prior decisions
+            detail: |
+              Call `list_flags` (no args). Note pages with pending flags (skip — already queued) and kept flags (skip that reason — a human said no).
+          - title: Inventory the pages
+            detail: |
+              Call `list_pages`. The response includes staleness hints (`freshness`, `staleReason`) — pages with open tasks and no content change in 60+ days, overdue review cadences, or no views in 60+ days. Treat hints as leads, not verdicts.
+          - title: Investigate each candidate
+            detail: |
+              For each lead, `read_page` and ask:
+              - **Shipped but never closed**: does the page describe work (task trees, plans) that external evidence shows is done? Check the repo, tracker, or newer pages for proof.
+              - **Superseded**: does a newer page cover the same ground? Look for "v2"/"final" siblings and supersedes links.
+              - **One-off expired**: was this a point-in-time report (a date in the title, a single meeting) whose moment has passed?
+              - **Duplicate**: same content as another page, fewer views.
+          - title: File flags with evidence
+            detail: |
+              For each confirmed candidate, call `flag_page` with slug, action (archive | delete | merge | supersede), reason, concrete evidence, confidence, and superseded_by when applicable. Group iterations: flag each superseded draft with the same superseded_by slug so the human can disposition the chain in one click.
+          - title: Report the sweep
+            detail: |
+              Summarize: pages scanned, flags filed (by reason and confidence), leads investigated and cleared, anything ambiguous left for the human. The Cleanup view badge now shows the queue.
+
+  - type: section
+    eyebrow: Edge Cases
+    heading: When things get weird
+    components:
+      - type: callout
+        variant: warn
+        title: Handle these explicitly
+        body: |
+          - **Templates and workflows**: never flag pages in the Templates or Workflows folders — they look stale by design.
+          - **Pinned pages**: a pin is a human signal of importance. Flag only with high-confidence evidence and say so.
+          - **Low confidence**: when you can't verify against external evidence, file with confidence low or skip — a noisy queue erodes trust faster than a missed page.

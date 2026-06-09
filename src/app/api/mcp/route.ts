@@ -12,6 +12,7 @@ import {
   updateAnnotationStatus,
   searchPages,
   getSiteConfig,
+  bumpViewCount,
 } from "@/lib/pages";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
 import {
@@ -36,6 +37,8 @@ const READ_TOOLS = [
   "search",
   "get_config",
   "list_annotations",
+  "list_open_annotations",
+  "list_flags",
   "get_component_reference",
   "list_folders",
   "get_folder_structure",
@@ -47,7 +50,7 @@ const READ_TOOLS = [
   "get_related",
   "get_semantic_map",
 ];
-const WRITE_TOOLS = ["write_page", "create_page", "delete_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "delete_folder", "create_from_template"];
+const WRITE_TOOLS = ["write_page", "create_page", "delete_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "delete_folder", "create_from_template", "flag_page"];
 const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -167,7 +170,7 @@ export async function GET(request: NextRequest) {
       workflows: workflowCount,
       templates: templateCount,
       instructions:
-        "Read a workflow page before executing a multi-step task. Use list_workflows to discover available workflows and match user intent to trigger patterns. Use templates when creating new pages — call list_templates to see what's available, then create_from_template to instantiate.",
+        "Read a workflow page before executing a multi-step task. Use list_workflows to discover available workflows and match user intent to trigger patterns. Use templates when creating new pages — call list_templates to see what's available, then create_from_template to instantiate. Use list_open_annotations to fetch the org-wide queue of human feedback awaiting processing.",
     },
     usage: "POST { tool, args } to invoke a tool",
   });
@@ -210,7 +213,7 @@ async function dispatch(
         select: { id: true },
       });
       if (page) {
-        db.page.update({ where: { id: page.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+        bumpViewCount(page.id).catch(() => {});
       }
 
       const concepts = page ? await getPageConcepts(page.id) : [];
@@ -239,6 +242,146 @@ async function dispatch(
       if (!args.slug) throw new Error("slug is required");
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       return getAnnotations(orgId, args.slug);
+    }
+
+    case "list_open_annotations": {
+      // Org-wide review queue: every annotation a human hasn't dispositioned
+      // yet, grouped by page. This is the entry point for the
+      // process-annotations workflow.
+      const statusArg = args.status;
+      const statusWhere =
+        statusArg === "pending" || statusArg === "approved"
+          ? statusArg
+          : { in: ["pending", "approved"] };
+      const openAnns = await db.annotation.findMany({
+        where: { status: statusWhere, page: { orgId } },
+        orderBy: { createdAt: "asc" },
+        include: { page: { select: { slug: true, title: true } } },
+      });
+      const grouped = new Map<
+        string,
+        { slug: string; title: string; annotations: Array<Record<string, unknown>> }
+      >();
+      for (const a of openAnns) {
+        const entry = grouped.get(a.page.slug) ?? {
+          slug: a.page.slug,
+          title: a.page.title,
+          annotations: [],
+        };
+        entry.annotations.push({
+          id: a.id,
+          text: a.text,
+          author: a.author,
+          section: a.section,
+          target: a.target,
+          kind: a.kind,
+          replacement: a.replacement,
+          status: a.status,
+          source: a.source,
+          createdAt: a.createdAt,
+        });
+        grouped.set(a.page.slug, entry);
+      }
+      return {
+        totalAnnotations: openAnns.length,
+        pageCount: grouped.size,
+        pages: [...grouped.values()],
+        instructions:
+          "For each page: read_page to get content + contentHash, apply 'edit'-kind annotations (replace target with replacement) and judge 'note'-kind feedback, write the page back, then update_annotation with status 'incorporated' (or 'ignored' with a reason annotation). See the 'Workflow — Process Annotations' page for the full procedure.",
+      };
+    }
+
+    case "flag_page": {
+      // Agent proposes, human disposes: flags queue a cleanup decision with
+      // evidence; nothing is archived or deleted until a human acts on the
+      // Cleanup view.
+      if (!args.slug) throw new Error("slug is required");
+      if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
+      const FLAG_ACTIONS = ["archive", "delete", "merge", "supersede"];
+      const FLAG_REASONS = ["shipped-not-closed", "superseded", "stale", "duplicate", "one-off-expired"];
+      const FLAG_CONFIDENCE = ["high", "medium", "low"];
+      if (!args.action || !FLAG_ACTIONS.includes(args.action)) {
+        throw new Error(`action must be one of: ${FLAG_ACTIONS.join(", ")}`);
+      }
+      if (!args.reason || !FLAG_REASONS.includes(args.reason)) {
+        throw new Error(`reason must be one of: ${FLAG_REASONS.join(", ")}`);
+      }
+      if (!args.evidence) throw new Error("evidence is required — cite what you checked (repo paths, dates, task state)");
+      if (args.confidence && !FLAG_CONFIDENCE.includes(args.confidence)) {
+        throw new Error("confidence must be high, medium, or low");
+      }
+      if (args.action === "supersede" && !args.superseded_by) {
+        throw new Error("superseded_by (slug of the replacing page) is required when action is supersede");
+      }
+      if (args.superseded_by && !SLUG_RE.test(args.superseded_by)) {
+        throw new Error("invalid superseded_by slug format");
+      }
+      const flagPage = await db.page.findUnique({
+        where: { orgId_slug: { orgId, slug: args.slug } },
+        select: { id: true, status: true },
+      });
+      if (!flagPage) throw new Error(`page not found: ${args.slug}`);
+      if (flagPage.status === "archived") throw new Error(`page is already archived: ${args.slug}`);
+      // A kept (dismissed) flag is a human decision — don't re-file the same
+      // proposal on a later sweep.
+      const dismissed = await db.pageFlag.findFirst({
+        where: { pageId: flagPage.id, status: "kept", reason: args.reason },
+        orderBy: { resolvedAt: "desc" },
+      });
+      if (dismissed) {
+        return {
+          ok: false,
+          skipped: true,
+          message: `A ${args.reason} flag on this page was dismissed by a human on ${dismissed.resolvedAt?.toISOString().slice(0, 10)} — not re-filing. Use a different reason with new evidence if circumstances changed.`,
+        };
+      }
+      const existingFlag = await db.pageFlag.findFirst({
+        where: { pageId: flagPage.id, status: "pending" },
+      });
+      const flag = await db.pageFlag.create({
+        data: {
+          pageId: flagPage.id,
+          action: args.action,
+          reason: args.reason,
+          evidence: args.evidence,
+          supersededBy: args.superseded_by ?? null,
+          confidence: args.confidence ?? "medium",
+          actorId,
+        },
+      });
+      await db.$executeRaw`UPDATE pages SET status = 'flagged' WHERE id = ${flagPage.id} AND status = 'active'`;
+      logAudit({ orgId, action: "page.flag", resourceType: "page", resourceId: args.slug, actorType: "apikey", actorId, metadata: { action: args.action, reason: args.reason, confidence: args.confidence } });
+      return { ok: true, flagId: flag.id, note: existingFlag ? "page already had a pending flag — both are queued, latest wins for display" : undefined };
+    }
+
+    case "list_flags": {
+      // Default: everything a future sweep needs to avoid duplicate work —
+      // pending flags plus human dispositions (kept/snoozed).
+      const flagStatus = args.status; // pending | kept | snoozed | resolved | all
+      const flagWhere: Record<string, unknown> = { page: { orgId } };
+      if (flagStatus && flagStatus !== "all") flagWhere.status = flagStatus;
+      const flags = await db.pageFlag.findMany({
+        where: flagWhere,
+        orderBy: { createdAt: "desc" },
+        include: { page: { select: { slug: true, title: true, status: true } } },
+      });
+      return flags.map((f) => ({
+        id: f.id,
+        slug: f.page.slug,
+        title: f.page.title,
+        pageStatus: f.page.status,
+        action: f.action,
+        reason: f.reason,
+        evidence: f.evidence,
+        supersededBy: f.supersededBy,
+        confidence: f.confidence,
+        flaggedBy: f.actorId,
+        flaggedAt: f.createdAt,
+        status: f.status,
+        snoozeUntil: f.snoozeUntil,
+        resolvedBy: f.resolvedBy,
+        resolvedAt: f.resolvedAt,
+      }));
     }
 
     case "get_component_reference": {
@@ -654,8 +797,17 @@ async function dispatch(
           const raw = p.versions[0]?.yamlContent ?? "";
           const parsed = yaml.load(raw) as Record<string, unknown>;
           const components = Array.isArray(parsed?.components) ? parsed.components as Record<string, unknown>[] : [];
+          // Triggers and descriptions usually live one level down, inside a
+          // section's components — scan both depths.
+          const flat: Record<string, unknown>[] = [];
           for (const comp of components) {
-            if (comp.type === "definition_list" && Array.isArray(comp.items)) {
+            flat.push(comp);
+            if (comp.type === "section" && Array.isArray(comp.components)) {
+              flat.push(...(comp.components as Record<string, unknown>[]));
+            }
+          }
+          for (const comp of flat) {
+            if (!trigger && comp.type === "definition_list" && Array.isArray(comp.items)) {
               const triggerItem = (comp.items as Record<string, unknown>[]).find(
                 (item) => typeof item.term === "string" && item.term.toLowerCase() === "trigger"
               );
@@ -663,11 +815,6 @@ async function dispatch(
             }
             if (!description && comp.type === "callout" && comp.body) {
               description = String(comp.body);
-            }
-            if (!description && comp.type === "section") {
-              const subComponents = Array.isArray(comp.components) ? comp.components as Record<string, unknown>[] : [];
-              const callout = subComponents.find((c) => c.type === "callout" && c.body);
-              if (callout) description = String(callout.body);
             }
           }
         } catch {

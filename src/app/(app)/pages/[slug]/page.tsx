@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { resolveOrg, AUTH_MODE } from "@/lib/auth";
-import { getAnnotations, getPageSections, readPage } from "@/lib/pages";
+import { getAnnotations, getPageSections, readPage, bumpViewCount } from "@/lib/pages";
 import { db } from "@/lib/db";
 import { PageRenderer } from "@/generated/kazam-renderer";
 import PageDetailClient from "@/components/page-detail-client";
@@ -38,10 +38,11 @@ export default async function PageDetailView({
   const pageData = await readPage(ctx.orgId, slug);
   if (!pageData) notFound();
 
-  db.page.update({
+  const pageRow = await db.page.findUnique({
     where: { orgId_slug: { orgId: ctx.orgId, slug } },
-    data: { viewCount: { increment: 1 } },
-  }).catch(() => {});
+    select: { id: true, status: true, supersededBy: true, updatedAt: true },
+  });
+  if (pageRow) bumpViewCount(pageRow.id).catch(() => {});
 
   const pageTitle = (pageData.json.title as string) || slug;
 
@@ -117,6 +118,9 @@ export default async function PageDetailView({
         autoConnect={slug === "getting-started"}
         authMode={AUTH_MODE}
         printFlow={(pageData.json.print_flow as string) || undefined}
+        archived={pageRow?.status === "archived"
+          ? { since: pageRow.updatedAt.toISOString().slice(0, 10), supersededBy: pageRow.supersededBy }
+          : undefined}
       >
         <div className="page-detail-content">
           <PageRenderer page={page} />

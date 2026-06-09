@@ -33,7 +33,7 @@ export function ViewToggle({ view, onChange }: ViewToggleProps) {
 }
 
 export function useDashView(): [DashView, (v: DashView) => void] {
-  const [view, setView] = useState<DashView>("table");
+  const [view, setView] = useState<DashView>("feed");
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as DashView | null;
