@@ -36,7 +36,6 @@ export function CleanupClient() {
   const [flags, setFlags] = useState<FlagRow[]>([]);
   const [lastSweepAt, setLastSweepAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [previewSlug, setPreviewSlug] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -87,11 +86,6 @@ export function CleanupClient() {
     return { clusters: [...clusters.entries()].filter(([, l]) => l.length > 0), singles };
   }, [rows]);
 
-  const highConfidence = useMemo(
-    () => rows.filter((r) => r.confidence === "high" && (r.action === "archive" || r.action === "supersede")),
-    [rows]
-  );
-
   async function disposition(flagIds: string[], d: "archive" | "delete" | "keep" | "snooze") {
     if (d === "delete" && !confirm(`Permanently delete ${flagIds.length} page${flagIds.length !== 1 ? "s" : ""}? Archive is reversible; this is not.`)) return;
     setBusy(true);
@@ -111,7 +105,6 @@ export function CleanupClient() {
       }
     }
     setBusy(false);
-    setSelected(new Set());
     setPreviewSlug(null);
     if (ok > 0) {
       const verb = d === "keep" ? "kept" : d === "snooze" ? "snoozed" : `${d}d`;
@@ -120,15 +113,6 @@ export function CleanupClient() {
     if (failed > 0) toast.error(`${failed} disposition${failed !== 1 ? "s" : ""} failed — retry from the queue.`);
     await load();
     router.refresh();
-  }
-
-  function toggleSelect(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
   }
 
   function copyAuditPrompt() {
@@ -141,13 +125,6 @@ export function CleanupClient() {
   function Row({ flag, inCluster = false }: { flag: FlagRow; inCluster?: boolean }) {
     return (
       <div className={`cleanup-row${inCluster ? " cleanup-row--cluster" : ""}${previewSlug === flag.slug ? " cleanup-row--previewing" : ""}`}>
-        <input
-          type="checkbox"
-          className="cleanup-check"
-          checked={selected.has(flag.id)}
-          onChange={() => toggleSelect(flag.id)}
-          aria-label={`Select ${flag.title}`}
-        />
         <button className="cleanup-row-main" onClick={() => setPreviewSlug(previewSlug === flag.slug ? null : flag.slug)}>
           <div className="cleanup-row-top">
             <span className="cleanup-title">{flag.title}</span>
@@ -162,10 +139,9 @@ export function CleanupClient() {
           </div>
         </button>
         <div className="cleanup-actions">
-          <button className="cleanup-btn cleanup-btn--archive" disabled={busy} onClick={() => disposition([flag.id], "archive")}>Archive</button>
-          <button className="cleanup-btn cleanup-btn--danger" disabled={busy} onClick={() => disposition([flag.id], "delete")}>Delete</button>
+          <button className="cleanup-btn" onClick={() => setPreviewSlug(previewSlug === flag.slug ? null : flag.slug)}>Review</button>
           <button className="cleanup-btn" disabled={busy} onClick={() => disposition([flag.id], "keep")}>Keep</button>
-          <button className="cleanup-btn" disabled={busy} onClick={() => disposition([flag.id], "snooze")} title="Hide for 30 days">Snooze</button>
+          <button className="cleanup-btn cleanup-btn--danger" disabled={busy} onClick={() => disposition([flag.id], "delete")}>Delete</button>
         </div>
       </div>
     );
@@ -186,24 +162,24 @@ export function CleanupClient() {
         <h1 className="cleanup-heading">Cleanup</h1>
         <span className="cleanup-count">{rows.length} flagged page{rows.length !== 1 ? "s" : ""}</span>
         <div className="dash-toolbar-spacer" style={{ flex: 1 }} />
-        {selected.size > 0 && (
+        {rows.length > 0 && (
           <>
-            <button className="cleanup-btn cleanup-btn--archive" disabled={busy} onClick={() => disposition([...selected], "archive")}>
-              Archive {selected.size} selected
+            <button
+              className="cleanup-btn cleanup-btn--archive"
+              disabled={busy}
+              onClick={() => disposition(rows.map((r) => r.id), "archive")}
+              title="Reversible — archived pages keep a restore button"
+            >
+              Archive all {rows.length}
             </button>
-            <button className="cleanup-btn" disabled={busy} onClick={() => disposition([...selected], "keep")}>
-              Keep {selected.size}
+            <button
+              className="cleanup-btn cleanup-btn--danger"
+              disabled={busy}
+              onClick={() => disposition(rows.map((r) => r.id), "delete")}
+            >
+              Delete all {rows.length}
             </button>
           </>
-        )}
-        {selected.size === 0 && highConfidence.length > 0 && (
-          <button
-            className="cleanup-btn cleanup-btn--archive"
-            disabled={busy}
-            onClick={() => disposition(highConfidence.map((r) => r.id), "archive")}
-          >
-            Archive all {highConfidence.length} high-confidence
-          </button>
         )}
       </div>
 
@@ -226,13 +202,6 @@ export function CleanupClient() {
                 <div className="cleanup-cluster-label">
                   {members.length} iteration{members.length !== 1 ? "s" : ""} superseded by{" "}
                   <Link href={`/pages/${target}`} className="cleanup-link">{target}</Link>
-                  <button
-                    className="cleanup-btn cleanup-btn--archive"
-                    disabled={busy}
-                    onClick={() => disposition(members.map((m) => m.id), "archive")}
-                  >
-                    Archive group
-                  </button>
                 </div>
                 {members.map((f) => <Row key={f.id} flag={f} inCluster />)}
               </div>
