@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   switch (body.action) {
     case "delete": {
       const deletable = pages.filter((p) =>
-        can(ctx.role, "page:delete", p.createdBy === ctx.userId)
+        can(ctx.role, "page:delete", p.createdBy === ctx.userId || p.createdBy === "default")
       );
       if (deletable.length === 0) {
         return NextResponse.json({ error: "forbidden" }, { status: 403 });

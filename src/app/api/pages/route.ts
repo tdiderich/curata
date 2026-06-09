@@ -103,7 +103,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "page not found" }, { status: 404 });
     }
 
-    if (!can(ctx.role, "page:delete", page.createdBy === ctx.userId)) {
+    const isOwner = page.createdBy === ctx.userId || page.createdBy === "default";
+    if (!can(ctx.role, "page:delete", isOwner)) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
 

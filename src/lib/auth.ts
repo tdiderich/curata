@@ -125,7 +125,12 @@ async function resolveOrgTailscale(): Promise<OrgContext | null> {
   const org = await db.organization.findFirst({ orderBy: { createdAt: "asc" } });
   if (!org) return null;
 
-  const member = await findOrCreateMember(org.id, email, "member");
+  const hasOwner = await db.orgMember.findFirst({
+    where: { orgId: org.id, role: { in: ["owner", "admin"] } },
+  });
+  const defaultRole: Role = hasOwner ? "member" : "owner";
+
+  const member = await findOrCreateMember(org.id, email, defaultRole);
   return {
     orgId: org.id,
     orgSlug: org.slug,
