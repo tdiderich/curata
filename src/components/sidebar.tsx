@@ -26,11 +26,13 @@ interface RecentEntry {
   ts: number;
 }
 
-const COLLAPSE_KEY = "curata-nav-collapsed";
+// Folders default collapsed; the store tracks what the user explicitly
+// expanded (so new folders also arrive collapsed).
+const EXPAND_KEY = "curata-nav-expanded";
 
-function readCollapsed(): Set<string> {
+function readExpanded(): Set<string> {
   try {
-    return new Set(JSON.parse(localStorage.getItem(COLLAPSE_KEY) ?? "[]") as string[]);
+    return new Set(JSON.parse(localStorage.getItem(EXPAND_KEY) ?? "[]") as string[]);
   } catch {
     return new Set();
   }
@@ -85,21 +87,21 @@ export function Sidebar({
   authControls?: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [recents, setRecents] = useState<RecentEntry[]>([]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCollapsed(readCollapsed());
+    setExpanded(readExpanded());
     setRecents(readRecents());
   }, [pathname]);
 
   const toggle = (id: string) => {
-    setCollapsed((prev) => {
+    setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...next]));
+      localStorage.setItem(EXPAND_KEY, JSON.stringify([...next]));
       return next;
     });
   };
@@ -137,8 +139,23 @@ export function Sidebar({
     ? decodeURIComponent(pathname.slice("/pages/".length).split("/")[0])
     : null;
 
+  // Auto-expand the active page's folder chain so the current page is never
+  // hidden behind a collapsed tree.
+  const autoExpanded = useMemo(() => {
+    const ids = new Set<string>();
+    if (!activeSlug) return ids;
+    const page = pages.find((p) => p.slug === activeSlug);
+    let folderId = page?.folderId ?? null;
+    const byId = new Map(folders.map((f) => [f.id, f]));
+    while (folderId) {
+      ids.add(folderId);
+      folderId = byId.get(folderId)?.parentId ?? null;
+    }
+    return ids;
+  }, [activeSlug, pages, folders]);
+
   function renderFolder(folder: SidebarFolder, depth: number) {
-    const isCollapsed = collapsed.has(folder.id);
+    const isCollapsed = !expanded.has(folder.id) && !autoExpanded.has(folder.id);
     const kids = childFolders.get(folder.id) ?? [];
     const folderPages = pagesByFolder.get(folder.id) ?? [];
     return (

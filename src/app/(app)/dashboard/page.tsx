@@ -34,6 +34,16 @@ export default async function DashboardPage() {
 
   const pages = await listPages(ctx.orgId, ctx.userId);
 
+  const cleanupCount = await db.pageFlag.count({
+    where: {
+      page: { orgId: ctx.orgId },
+      OR: [
+        { status: "pending" },
+        { status: "snoozed", snoozeUntil: { lte: new Date() } },
+      ],
+    },
+  });
+
   const rawFolders = await db.folder.findMany({
     where: {
       orgId: ctx.orgId,
@@ -88,6 +98,7 @@ export default async function DashboardPage() {
         pageCount={pages.length}
         orgName={orgName}
         allowPublic={AUTH_MODE === "clerk" || AUTH_MODE === "oauth"}
+        cleanupCount={cleanupCount}
       />
     </Suspense>
   );

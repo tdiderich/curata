@@ -273,12 +273,13 @@ interface DashboardClientProps {
   pageCount: number;
   orgName?: string;
   allowPublic?: boolean;
+  cleanupCount?: number;
 }
 
 // The dashboard is a landing surface: what needs attention, then recent
 // activity. The folder tree lives in the app sidebar; the table view here is
 // a flat, sortable index of everything.
-export function DashboardClient({ pages, folders, pageCount, orgName, allowPublic = true }: DashboardClientProps) {
+export function DashboardClient({ pages, folders, pageCount, orgName, allowPublic = true, cleanupCount = 0 }: DashboardClientProps) {
   const [view, setView] = useDashView();
   const [sortKey, setSortKey] = useSortKey();
   const [searchQuery, setSearchQuery] = useState("");
@@ -392,8 +393,14 @@ export function DashboardClient({ pages, folders, pageCount, orgName, allowPubli
         />
       </div>
 
-      {(pendingAnnPages.length > 0 || updatedPages.length > 0 || stalePages.length > 0) && (
+      {(pendingAnnPages.length > 0 || updatedPages.length > 0 || stalePages.length > 0 || cleanupCount > 0) && (
         <div className="dash-attention" aria-label="Needs attention">
+          {cleanupCount > 0 && (
+            <Link href="/cleanup" className="dash-attention-chip dash-attention-chip--cleanup">
+              <span className="dash-attention-num">{cleanupCount}</span>
+              page{cleanupCount !== 1 ? "s" : ""} queued for removal &rarr;
+            </Link>
+          )}
           {pendingAnnPages.length > 0 && (
             <button
               className={`dash-attention-chip${attentionFilter === "annotations" ? " dash-attention-chip--active" : ""}`}

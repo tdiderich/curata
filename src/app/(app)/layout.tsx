@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AUTH_MODE, resolveOrg, resolveCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { basePath } from "@/lib/api-fetch";
 import { Sidebar, type SidebarFolder, type SidebarPage } from "@/components/sidebar";
 
 function UserAvatar({ name, email }: { name: string; email: string }) {
@@ -58,8 +59,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         select: { name: true, logoUrl: true, logoMime: true, updatedAt: true },
       });
       if (org?.name) orgName = org.name;
+      // basePath matters when the app is mounted under a subpath
+      // (maze-apps serves curata at /ts-hub) — a root-relative src 404s there.
       logoUrl = org?.logoMime
-        ? `/api/org-logo?v=${org.updatedAt.getTime()}`
+        ? `${basePath}/api/org-logo?v=${org.updatedAt.getTime()}`
         : (org?.logoUrl ?? null);
 
       const rawFolders = await db.folder.findMany({

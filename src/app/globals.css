@@ -5520,3 +5520,6 @@ body .c-section.align-right > * { max-width: none !important; }
 }
 
 .archived-banner-restore:hover { background: rgba(228, 230, 195, 0.1); }
+
+.dash-attention-chip--cleanup { border-color: rgba(228, 230, 195, 0.3); }
+.dash-attention-chip--cleanup:hover { border-color: rgba(228, 230, 195, 0.6); }

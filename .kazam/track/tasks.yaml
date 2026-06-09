@@ -933,8 +933,11 @@ tasks:
   close_reason: list_open_annotations MCP tool (HTTP + stdio), OOTB Process Annotations workflow seeded + created in live org, list_workflows trigger extraction fixed for nested definition_lists, org logoUrl (schema+API+settings+sidebar), folder menu + Add page
 - id: kz-0ed0
   title: 'UX P4.8: page lifecycle & cleanup — flag tool, cleanup queue, archive semantics, timestamp split, staleness heuristics'
-  status: open
+  status: closed
   priority: 2
   task_type: task
+  assignee: claude
   created: 2026-06-09T15:23:00.000371-05:00
-  updated: 2026-06-09T15:23:00.000371-05:00
+  updated: 2026-06-09T15:45:54.840242-05:00
+  closed: 2026-06-09T15:45:54.840242-05:00
+  close_reason: 'timestamp split (raw-SQL view bumps), Page.status+supersededBy+lastViewedAt, PageFlag model, flag_page/list_flags MCP (HTTP+stdio) w/ dismissed-flag guard, Cleanup queue UI (clusters, preview, bulk, 4 dispositions), archived banner+restore, passive staleness heuristics, OOTB cleanup audit workflow. Full cycle verified live. Rolled out: curata 29602fa, curata-app 4a933b9, maze-apps PR #89 merged+deployed.'

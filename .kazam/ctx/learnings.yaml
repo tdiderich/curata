@@ -1,1 +1,5 @@
-learnings: []
+learnings:
+- id: kz-1ba3
+  text: Next dev server holds a stale Prisma client after schema changes — prisma db push + generate is not enough, the dev process must be restarted or API routes 500 with PrismaClientValidationError on new columns
+  category: correction
+  created: 2026-06-09T15:46:29.507123-05:00
