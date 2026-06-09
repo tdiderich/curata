@@ -128,9 +128,17 @@ async function resolveOrgTailscale(): Promise<OrgContext | null> {
   const hasOwner = await db.orgMember.findFirst({
     where: { orgId: org.id, role: { in: ["owner", "admin"] } },
   });
-  const defaultRole: Role = hasOwner ? "member" : "owner";
 
-  const member = await findOrCreateMember(org.id, email, defaultRole);
+  let member;
+  if (!hasOwner) {
+    member = await db.orgMember.upsert({
+      where: { orgId_userId: { orgId: org.id, userId: email } },
+      update: { role: "owner" },
+      create: { orgId: org.id, userId: email, role: "owner" },
+    });
+  } else {
+    member = await findOrCreateMember(org.id, email, "member");
+  }
   return {
     orgId: org.id,
     orgSlug: org.slug,
