@@ -11,16 +11,36 @@ import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { defaultKeymap, indentWithTab } from "@codemirror/commands";
 import { basePath } from "@/lib/api-fetch";
 
-export default function SourceEditor({ slug, onSaved }: { slug: string; onSaved?: () => void }) {
+export interface SourceEditorControls {
+  save: () => void;
+  discard: () => void;
+}
+
+export default function SourceEditor({
+  slug,
+  onSaved,
+  onStateChange,
+  controlsRef,
+}: {
+  slug: string;
+  onSaved?: () => void;
+  onStateChange?: (dirty: boolean, saving: boolean) => void;
+  controlsRef?: React.MutableRefObject<SourceEditorControls | null>;
+}) {
   const router = useRouter();
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const yamlRef = useRef("");
+  const savedRef = useRef("");
   const [hash, setHash] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    onStateChange?.(dirty, saving);
+  }, [dirty, saving, onStateChange]);
 
   useEffect(() => {
     fetch(`${basePath}/api/pages/yaml?slug=${encodeURIComponent(slug)}`)
@@ -30,6 +50,7 @@ export default function SourceEditor({ slug, onSaved }: { slug: string; onSaved?
           setError(data.error);
         } else {
           yamlRef.current = data.yaml;
+          savedRef.current = data.yaml;
           setHash(data.contentHash);
         }
         setLoading(false);
@@ -57,6 +78,7 @@ export default function SourceEditor({ slug, onSaved }: { slug: string; onSaved?
         if (res.ok) {
           const data = await res.json();
           setHash(data.contentHash);
+          savedRef.current = content;
           setDirty(false);
           setSaving(false);
           router.refresh();
@@ -156,6 +178,30 @@ export default function SourceEditor({ slug, onSaved }: { slug: string; onSaved?
     };
   }, [loading]);
 
+  // Expose save/discard to the page toolbar so the action buttons can live
+  // in the pinned toolbar instead of a second button row inside the editor.
+  useEffect(() => {
+    if (!controlsRef) return;
+    controlsRef.current = {
+      save: () => {
+        if (dirty && !saving) save();
+      },
+      discard: () => {
+        const view = viewRef.current;
+        if (!view) return;
+        view.dispatch({
+          changes: { from: 0, to: view.state.doc.length, insert: savedRef.current },
+        });
+        yamlRef.current = savedRef.current;
+        setDirty(false);
+        setError("");
+      },
+    };
+    return () => {
+      controlsRef.current = null;
+    };
+  }, [controlsRef, dirty, saving, save]);
+
   // Cmd+S handler (from CodeMirror dispatch or keyboard)
   useEffect(() => {
     function handleSave() {
@@ -185,14 +231,16 @@ export default function SourceEditor({ slug, onSaved }: { slug: string; onSaved?
         <span className="source-editor-label">YAML Source</span>
         {dirty && <span className="source-editor-dirty">unsaved</span>}
         <div className="source-editor-spacer" />
-        {error && <span className="source-editor-error">{error}</span>}
-        <button
-          className={`source-editor-save${dirty ? " source-editor-save--dirty" : ""}`}
-          disabled={!dirty || saving}
-          onClick={save}
-        >
-          {saving ? "Saving…" : "Save"}
-        </button>
+        {error && <span className="source-editor-error" role="alert">{error}</span>}
+        {!controlsRef && (
+          <button
+            className={`source-editor-save${dirty ? " source-editor-save--dirty" : ""}`}
+            disabled={!dirty || saving}
+            onClick={save}
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        )}
       </div>
       <div ref={editorRef} className="source-editor-cm" />
     </div>

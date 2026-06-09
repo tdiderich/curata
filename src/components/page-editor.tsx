@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageEditor as KazamPageEditor, type PageData } from "@/generated/kazam-renderer";
+import { toast } from "@/components/toast";
 import { basePath } from "@/lib/api-fetch";
 
 export default function PageEditorWrapper({
@@ -19,6 +20,8 @@ export default function PageEditorWrapper({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [currentHash, setCurrentHash] = useState(initialHash);
+  const [baseline, setBaseline] = useState(() => JSON.stringify(initial));
+  const dirty = useMemo(() => JSON.stringify(page) !== baseline, [page, baseline]);
 
   async function save() {
     setSaving(true);
@@ -50,6 +53,8 @@ export default function PageEditorWrapper({
 
         if (res.ok) {
           setSaving(false);
+          setBaseline(JSON.stringify(page));
+          toast.success("Page saved");
           router.push(`/pages/${slug}`);
           return;
         }
@@ -79,14 +84,27 @@ export default function PageEditorWrapper({
     <div>
       <KazamPageEditor page={page} onChange={setPage} />
       <div className="pe-footer">
+        {error && <span className="pe-error" role="alert">{error}</span>}
+        {dirty && !saving && (
+          <button
+            className="pe-discard-btn"
+            onClick={() => {
+              if (confirm("Discard unsaved changes?")) setPage(JSON.parse(baseline) as PageData);
+            }}
+          >
+            Discard
+          </button>
+        )}
         <button
           className="pe-save-btn"
-          onClick={save}
+          onClick={() => {
+            if (dirty) save();
+            else router.push(`/pages/${slug}`);
+          }}
           disabled={saving || !page.title?.trim()}
         >
-          {saving ? "Saving..." : "Save"}
+          {saving ? "Saving…" : dirty ? "Save" : "Done"}
         </button>
-        {error && <span className="pe-error">{error}</span>}
       </div>
     </div>
   );

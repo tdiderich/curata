@@ -7,6 +7,7 @@ import { NewFolderButton, FolderMenu, PageMenu } from "@/components/folder-actio
 import { NewPageButton } from "@/components/new-page-button";
 import { DashboardFeed } from "@/components/dashboard-feed";
 import { useDashView } from "@/components/view-toggle";
+import { toast } from "@/components/toast";
 import { TEMPLATES, PERSONAS } from "@/lib/templates";
 
 export interface SerializedPageMeta {
@@ -37,7 +38,7 @@ type SortKey = "sortOrder" | "lastActivity" | "title" | "views";
 const VALID_SORT_KEYS: SortKey[] = ["sortOrder", "lastActivity", "title", "views"];
 
 function useSortKey(): [SortKey, (k: SortKey) => void] {
-  const [key, setKey] = useState<SortKey>("sortOrder");
+  const [key, setKey] = useState<SortKey>("title");
   useEffect(() => {
     const stored = localStorage.getItem("curata-sort") as SortKey | null;
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -119,6 +120,17 @@ function DashActions({
     <div className="dash-actions-wrap" ref={ref}>
       <NewFolderButton />
       <NewPageButton />
+      <Link
+        href="/settings"
+        className="dash-actions-trigger"
+        aria-label="Settings"
+        title="Settings"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      </Link>
       <button
         className="dash-actions-trigger"
         onClick={() => setOpen((v) => !v)}
@@ -176,30 +188,42 @@ function EmptyWelcome({ orgName }: { orgName?: string }) {
 
   async function createFromTemplate(slug: string, title: string) {
     setCreating(slug);
-    const res = await fetch("/api/pages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, templateSlug: slug }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      router.push(`/pages/${data.slug}`);
-    } else {
+    try {
+      const res = await fetch("/api/pages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, templateSlug: slug }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        router.push(`/pages/${data.slug}`);
+      } else {
+        toast.error(`Couldn't create page: ${data.error ?? "unknown error"}`);
+        setCreating(null);
+      }
+    } catch {
+      toast.error("Couldn't create page — check your connection and try again.");
       setCreating(null);
     }
   }
 
   async function createBlank() {
     setCreating("__blank");
-    const res = await fetch("/api/pages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Untitled", shell: "standard" }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      router.push(`/pages/${data.slug}?edit=1`);
-    } else {
+    try {
+      const res = await fetch("/api/pages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Untitled", shell: "standard" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        router.push(`/pages/${data.slug}?edit=1`);
+      } else {
+        toast.error(`Couldn't create page: ${data.error ?? "unknown error"}`);
+        setCreating(null);
+      }
+    } catch {
+      toast.error("Couldn't create page — check your connection and try again.");
       setCreating(null);
     }
   }
@@ -258,9 +282,10 @@ interface DashboardClientProps {
   folders: FolderRow[];
   pageCount: number;
   orgName?: string;
+  allowPublic?: boolean;
 }
 
-function PageRow({ page, folders, indent = 1 }: { page: SerializedPageMeta; folders: FolderRow[]; indent?: number }) {
+function PageRow({ page, folders, indent = 1, allowPublic = true }: { page: SerializedPageMeta; folders: FolderRow[]; indent?: number; allowPublic?: boolean }) {
   const href = `/pages/${page.slug}`;
   return (
     <tr className={`dash-row dash-row--nested${indent > 1 ? " dash-row--deep" : ""}`}>
@@ -287,6 +312,7 @@ function PageRow({ page, folders, indent = 1 }: { page: SerializedPageMeta; fold
           visibility={page.visibility}
           folderId={page.folderId}
           folders={folders}
+          allowPublic={allowPublic}
         />
       </td>
     </tr>
@@ -300,12 +326,24 @@ function FolderContentsLabel({ folder }: { folder: FolderRow }) {
   return <span className="dash-folder-count">{parts.join(", ") || "empty"}</span>;
 }
 
-export function DashboardClient({ pages, folders, pageCount, orgName }: DashboardClientProps) {
+export function DashboardClient({ pages, folders, pageCount, orgName, allowPublic = true }: DashboardClientProps) {
   const [view, setView] = useDashView();
   const [sortKey, setSortKey] = useSortKey();
+  // First visit: top-level folders expanded, subfolders collapsed. After that,
+  // whatever the user shaped persists per browser.
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(
-    () => new Set(["__unfiled", ...folders.map((f) => f.id)])
+    () => new Set(folders.filter((f) => f.parentId).map((f) => f.id))
   );
+  useEffect(() => {
+    const stored = localStorage.getItem("curata-collapsed");
+    if (!stored) return;
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCollapsedFolders(new Set(JSON.parse(stored) as string[]));
+    } catch {
+      // corrupted state — fall back to defaults
+    }
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const searchParams = useSearchParams();
   const [rootFolderId, _setRootFolderId] = useState<string | null>(
@@ -354,9 +392,34 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
     return m;
   }, [folders]);
 
+  // Folder ordering: total page views rolled up through the subtree, busiest
+  // first; ties break alphabetically.
+  const folderViewTotals = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const p of pages) {
+      if (!p.folderId) continue;
+      let f = folderMap.get(p.folderId);
+      while (f) {
+        totals.set(f.id, (totals.get(f.id) ?? 0) + p.viewCount);
+        f = f.parentId ? folderMap.get(f.parentId) : undefined;
+      }
+    }
+    return totals;
+  }, [pages, folderMap]);
+
+  const byViews = useCallback(
+    (a: FolderRow, b: FolderRow) =>
+      (folderViewTotals.get(b.id) ?? 0) - (folderViewTotals.get(a.id) ?? 0) ||
+      a.name.localeCompare(b.name),
+    [folderViewTotals]
+  );
+
   const topFolders = useMemo(
-    () => folders.filter((f) => (rootFolderId ? f.parentId === rootFolderId : !f.parentId)),
-    [folders, rootFolderId]
+    () =>
+      folders
+        .filter((f) => (rootFolderId ? f.parentId === rootFolderId : !f.parentId))
+        .sort(byViews),
+    [folders, rootFolderId, byViews]
   );
   const childFoldersByParent = useMemo(() => {
     const map = new Map<string, FolderRow[]>();
@@ -367,8 +430,9 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
         map.set(f.parentId, list);
       }
     }
+    for (const list of map.values()) list.sort(byViews);
     return map;
-  }, [folders]);
+  }, [folders, byViews]);
 
   const rootBreadcrumb = useMemo(() => {
     const crumbs: { id: string | null; name: string }[] = [];
@@ -408,6 +472,7 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
       const next = new Set(prev);
       if (next.has(folderId)) next.delete(folderId);
       else next.add(folderId);
+      localStorage.setItem("curata-collapsed", JSON.stringify([...next]));
       return next;
     });
   }, []);
@@ -549,7 +614,7 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
                   </td>
                 </tr>
                 {!isCollapsed && unfiledPages.map((page) => (
-                  <PageRow key={page.slug} page={page} folders={folders} />
+                  <PageRow key={page.slug} page={page} folders={folders} allowPublic={allowPublic} />
                 ))}
               </tbody>
             );
@@ -601,13 +666,13 @@ export function DashboardClient({ pages, folders, pageCount, orgName }: Dashboar
                             </td>
                           </tr>
                           {!childCollapsed && childPages.map((page) => (
-                            <PageRow key={page.slug} page={page} folders={folders} indent={2} />
+                            <PageRow key={page.slug} page={page} folders={folders} indent={2} allowPublic={allowPublic} />
                           ))}
                         </React.Fragment>
                       );
                     })}
                     {directPages.map((page) => (
-                      <PageRow key={page.slug} page={page} folders={folders} />
+                      <PageRow key={page.slug} page={page} folders={folders} allowPublic={allowPublic} />
                     ))}
                   </>
                 )}

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
+import { toast } from "@/components/toast";
 
 interface Folder {
   id: string;
@@ -36,10 +37,10 @@ export function NewFolderButton() {
       });
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        console.error("[folder] create failed:", data.error);
+        toast.error(`Couldn't create folder: ${data.error ?? "unknown error"}`);
       }
-    } catch (err) {
-      console.error("[folder] create error:", err);
+    } catch {
+      toast.error("Couldn't create folder — check your connection and try again.");
     } finally {
       setBusy(false);
       setCreating(false);
@@ -73,7 +74,7 @@ export function NewFolderButton() {
           onClick={submit}
           disabled={busy || !name.trim()}
         >
-          {busy ? "..." : "Create"}
+          {busy ? "Creating…" : "Create"}
         </button>
         <button
           className="dash-new-folder-cancel"
@@ -103,9 +104,10 @@ interface PageMenuProps {
   visibility: string;
   folderId: string | null;
   folders: Folder[];
+  allowPublic?: boolean;
 }
 
-export function PageMenu({ slug, title, visibility, folderId, folders }: PageMenuProps) {
+export function PageMenu({ slug, title, visibility, folderId, folders, allowPublic = true }: PageMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -122,34 +124,33 @@ export function PageMenu({ slug, title, visibility, folderId, folders }: PageMen
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
 
-  async function setVisibility(v: string) {
+  async function patchPage(body: Record<string, unknown>, failMsg: string) {
     setBusy(true);
     setOpen(false);
     try {
-      await fetch(`${basePath}/api/pages`, {
+      const res = await fetch(`${basePath}/api/pages`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, visibility: v }),
+        body: JSON.stringify({ slug, ...body }),
       });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        toast.error(`${failMsg}: ${data.error ?? "unknown error"}`);
+      }
+    } catch {
+      toast.error(`${failMsg} — check your connection and try again.`);
     } finally {
       setBusy(false);
       router.refresh();
     }
   }
 
-  async function moveTo(targetFolderId: string | null) {
-    setBusy(true);
-    setOpen(false);
-    try {
-      await fetch(`${basePath}/api/pages`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, folderId: targetFolderId }),
-      });
-    } finally {
-      setBusy(false);
-      router.refresh();
-    }
+  function setVisibility(v: string) {
+    return patchPage({ visibility: v }, "Couldn't change visibility");
+  }
+
+  function moveTo(targetFolderId: string | null) {
+    return patchPage({ folderId: targetFolderId }, "Couldn't move page");
   }
 
   async function doDelete() {
@@ -157,17 +158,28 @@ export function PageMenu({ slug, title, visibility, folderId, folders }: PageMen
     if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
     setBusy(true);
     try {
-      await fetch(`${basePath}/api/pages?slug=${encodeURIComponent(slug)}`, { method: "DELETE" });
+      const res = await fetch(`${basePath}/api/pages?slug=${encodeURIComponent(slug)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(`Couldn't delete page: ${data.error ?? "unknown error"}`);
+      } else {
+        toast.success(`Deleted "${title}"`);
+      }
+    } catch {
+      toast.error("Couldn't delete page — check your connection and try again.");
     } finally {
       setBusy(false);
       router.refresh();
     }
   }
 
+  // "Public" only exists where auth gates access (clerk/oauth). In tailnet or
+  // no-auth deployments everyone on the network sees everything, so a public
+  // tier is meaningless noise.
   const visOptions = [
     { value: "personal", label: "Private" },
     { value: "shared", label: "Shared" },
-    { value: "public", label: "Public" },
+    ...(allowPublic ? [{ value: "public", label: "Public" }] : []),
   ];
 
   const viewingParent = browseParent === undefined ? "__root" : browseParent;
@@ -312,10 +324,10 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
       });
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        console.error("[folder] rename failed:", data.error);
+        toast.error(`Couldn't rename folder: ${data.error ?? "unknown error"}`);
       }
-    } catch (err) {
-      console.error("[folder] rename error:", err);
+    } catch {
+      toast.error("Couldn't rename folder — check your connection and try again.");
     } finally {
       setBusy(false);
       setRenaming(false);
@@ -334,10 +346,10 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
       });
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        console.error("[folder] move failed:", data.error);
+        toast.error(`Couldn't move folder: ${data.error ?? "unknown error"}`);
       }
-    } catch (err) {
-      console.error("[folder] move error:", err);
+    } catch {
+      toast.error("Couldn't move folder — check your connection and try again.");
     } finally {
       setBusy(false);
       router.refresh();
@@ -346,6 +358,7 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
 
   async function doDelete() {
     setOpen(false);
+    if (!confirm(`Delete folder "${folder.name}"? This cannot be undone.`)) return;
     setBusy(true);
     try {
       const res = await fetch(`${basePath}/api/folders`, {
@@ -355,10 +368,12 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
       });
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        console.error("[folder] delete failed:", data.error);
+        toast.error(`Couldn't delete folder: ${data.error ?? "unknown error"}`);
+      } else {
+        toast.success(`Deleted folder "${folder.name}"`);
       }
-    } catch (err) {
-      console.error("[folder] delete error:", err);
+    } catch {
+      toast.error("Couldn't delete folder — check your connection and try again.");
     } finally {
       setBusy(false);
       router.refresh();
@@ -389,10 +404,10 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
       });
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        console.error("[folder] create child failed:", data.error);
+        toast.error(`Couldn't create folder: ${data.error ?? "unknown error"}`);
       }
-    } catch (err) {
-      console.error("[folder] create child error:", err);
+    } catch {
+      toast.error("Couldn't create folder — check your connection and try again.");
     } finally {
       setBusy(false);
       setAddingChild(false);
@@ -418,7 +433,7 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
           onClick={doRename}
           disabled={busy}
         >
-          {busy ? "..." : "Save"}
+          {busy ? "Saving…" : "Save"}
         </button>
         <button
           className="dash-new-folder-cancel"
@@ -468,7 +483,7 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
                 disabled={busy}
               />
               <button className="dash-new-folder-submit" onClick={createChild} disabled={busy || !childName.trim()}>
-                {busy ? "..." : "Create"}
+                {busy ? "Creating…" : "Create"}
               </button>
             </div>
           ) : (

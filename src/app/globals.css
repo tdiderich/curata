@@ -4887,3 +4887,103 @@ body .c-section.align-right > * { max-width: none !important; }
   background: rgba(var(--text-rgb, 255 255 255), 0.06);
   border-radius: 3px;
 }
+
+/* ── Toasts ──────────────────────────────────────────────────────────────── */
+
+.toast-stack {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10000;
+  max-width: min(380px, calc(100vw - 48px));
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid rgba(var(--text-rgb), 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-size: 13px;
+  color: var(--snow);
+  animation: toast-in 0.18s ease-out;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.toast--error { border-color: rgba(244, 113, 113, 0.5); }
+.toast--error .toast-message { color: var(--red); }
+.toast--success { border-color: rgba(var(--accent-rgb), 0.5); }
+
+.toast-message { flex: 1; line-height: 1.45; }
+
+.toast-dismiss {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.toast-dismiss:hover { color: var(--snow); }
+
+/* ── Editor discard button ───────────────────────────────────────────────── */
+
+.pe-discard-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--text-rgb), 0.15);
+  background: none;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pe-discard-btn:hover { color: var(--snow); border-color: rgba(var(--text-rgb), 0.3); }
+
+/* ── Error page recovery actions ─────────────────────────────────────────── */
+
+.error-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.error-page-link {
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.error-page-link:hover { color: var(--snow); }
+
+.error-page-digest {
+  margin-top: 16px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'SF Mono', Menlo, monospace;
+}
+
+/* Command palette hits are <button>s (client nav), not <a>s like kazam's
+   static search — reset UA button chrome so kazam's hit styles apply. */
+.site-search-hit {
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+}

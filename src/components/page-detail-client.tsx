@@ -8,7 +8,8 @@ import { PageContent } from "./page-viewer";
 import { PublicToggle } from "./public-toggle";
 import { VersionHistoryPanel } from "./version-history";
 import AgentConnectModal from "./agent-connect-modal";
-import SourceEditor from "./source-editor";
+import SourceEditor, { type SourceEditorControls } from "./source-editor";
+import { toast } from "./toast";
 import { basePath } from "@/lib/api-fetch";
 
 interface Annotation {
@@ -135,6 +136,13 @@ export default function PageDetailClient({
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
   const [viewTab, setViewTab] = useState<"preview" | "source">("preview");
+  const [srcDirty, setSrcDirty] = useState(false);
+  const [srcSaving, setSrcSaving] = useState(false);
+  const srcControls = useRef<SourceEditorControls | null>(null);
+  const onSourceState = useCallback((dirty: boolean, saving: boolean) => {
+    setSrcDirty(dirty);
+    setSrcSaving(saving);
+  }, []);
 
   useEffect(() => {
     if (!printFlow) return;
@@ -234,11 +242,19 @@ export default function PageDetailClient({
 
   const updateStatus = useCallback(
     async (id: string, status: "approved" | "incorporated" | "ignored") => {
-      await fetch(`${basePath}/api/annotations`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, id, status }),
-      });
+      try {
+        const res = await fetch(`${basePath}/api/annotations`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug, id, status }),
+        });
+        if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as { error?: string };
+          toast.error(`Couldn't update annotation: ${data.error ?? "unknown error"}`);
+        }
+      } catch {
+        toast.error("Couldn't update annotation — check your connection and try again.");
+      }
       router.refresh();
     },
     [slug, router],
@@ -325,13 +341,38 @@ export default function PageDetailClient({
         {pageTitle && <span className="page-toolbar-title">{pageTitle}</span>}
         <div className="page-toolbar-spacer" />
         <div className="page-toolbar-right">
-          <button
-            className={`view-tab${viewTab === "source" ? " view-tab--active" : ""}`}
-            onClick={() => setViewTab(viewTab === "source" ? "preview" : "source")}
-          >
-            {viewTab === "source" ? "Exit" : "Edit"}
-          </button>
-          {authMode !== "none" && <PublicToggle slug={slug} orgSlug={orgSlug} isPublic={isPublic} />}
+          {viewTab === "source" ? (
+            <>
+              {srcDirty && (
+                <button
+                  className="view-tab"
+                  onClick={() => {
+                    if (confirm("Discard unsaved changes?")) srcControls.current?.discard();
+                  }}
+                >
+                  Discard
+                </button>
+              )}
+              <button
+                className="view-tab view-tab--active"
+                disabled={srcSaving}
+                onClick={() => {
+                  // One state-aware button: saves when dirty, exits when clean.
+                  if (srcDirty) srcControls.current?.save();
+                  else setViewTab("preview");
+                }}
+              >
+                {srcSaving ? "Saving…" : srcDirty ? "Save" : "Done"}
+              </button>
+            </>
+          ) : (
+            <button className="view-tab" onClick={() => setViewTab("source")}>
+              Edit
+            </button>
+          )}
+          {(authMode === "clerk" || authMode === "oauth") && (
+            <PublicToggle slug={slug} orgSlug={orgSlug} isPublic={isPublic} />
+          )}
           <div className="page-toolbar-divider" />
           <div className="page-actions-wrap" ref={actionsRef}>
             <button
@@ -364,7 +405,7 @@ export default function PageDetailClient({
                   className="page-actions-item"
                   onClick={() => setActionsOpen(false)}
                 >
-                  Edit page contents
+                  Form editor
                 </Link>
                 {annotations.length > 0 && (
                   <>
@@ -409,7 +450,15 @@ export default function PageDetailClient({
         )}
 
       {viewTab === "source" ? (
-        <SourceEditor slug={slug} onSaved={() => setViewTab("preview")} />
+        <SourceEditor
+          slug={slug}
+          onSaved={() => {
+            toast.success("Page saved");
+            setViewTab("preview");
+          }}
+          onStateChange={onSourceState}
+          controlsRef={srcControls}
+        />
       ) : (
       <div className="page-content-wrap">
         <PageContent

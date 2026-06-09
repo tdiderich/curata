@@ -83,6 +83,7 @@ export default async function DashboardPage() {
         folders={folders}
         pageCount={pages.length}
         orgName={orgName}
+        allowPublic={AUTH_MODE === "clerk" || AUTH_MODE === "oauth"}
       />
     </Suspense>
   );

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ThemeScript } from "@/components/theme-script";
+import { Toaster } from "@/components/toast";
+import { CommandPalette } from "@/components/command-palette";
 import "./kazam.css";
 import "./globals.css";
 
@@ -97,6 +99,8 @@ export default async function RootLayout({
     <>
       <ThemeScript theme={theme} mode={mode} texture={texture} glow={glow} />
       {children}
+      <CommandPalette />
+      <Toaster />
     </>
   );
 

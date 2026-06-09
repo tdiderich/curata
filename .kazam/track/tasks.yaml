@@ -885,3 +885,20 @@ tasks:
     Epic: kz-f001. Depends on: all other OSS tasks.
   created: 2026-05-12T10:30:00.000000-05:00
   updated: 2026-05-12T10:30:00.000000-05:00
+- id: kz-1a33
+  title: Add page ordering within folders — either default to alphabetical sort in table view or support drag-and-drop reordering
+  status: open
+  priority: 2
+  task_type: task
+  created: 2026-05-14T16:17:11.659049-05:00
+  updated: 2026-05-14T16:17:11.659049-05:00
+- id: kz-9cad
+  title: 'UX P4: feedback layer — toasts, error surfacing, busy buttons, cmd-K search overlay, empty states, validation, skeletons'
+  status: closed
+  priority: 2
+  task_type: task
+  assignee: claude
+  created: 2026-06-09T13:54:45.679838-05:00
+  updated: 2026-06-09T14:11:22.940050-05:00
+  closed: 2026-06-09T14:11:22.940050-05:00
+  close_reason: toast system, error surfacing on all mutations, cmd-K palette (kazam pattern), settings gear, allowPublic gating by auth mode, state-aware Save/Done/Discard editors, persisted folder state, error boundary recovery, concepts skeleton. Optimistic updates deferred.

@@ -59,3 +59,22 @@ events:
   severity: major
   source: claude
   task_id: kz-f110
+- date: 2026-05-14T16:17:11.659049-05:00
+  title: 'added kz-1a33: Add page ordering within folders — either default to alphabetical sort in table view or support drag-and-drop reordering'
+  severity: info
+  task_id: kz-1a33
+- date: 2026-06-09T13:54:45.679838-05:00
+  title: 'added kz-9cad: UX P4: feedback layer — toasts, error surfacing, busy buttons, cmd-K search overlay, empty states, validation, skeletons'
+  severity: info
+  task_id: kz-9cad
+- date: 2026-06-09T13:54:52.472213-05:00
+  title: 'claude claimed kz-9cad: UX P4: feedback layer — toasts, error surfacing, busy buttons, cmd-K search overlay, empty states, validation, skeletons'
+  severity: major
+  source: claude
+  task_id: kz-9cad
+- date: 2026-06-09T14:11:22.940050-05:00
+  title: 'closed kz-9cad: UX P4: feedback layer — toasts, error surfacing, busy buttons, cmd-K search overlay, empty states, validation, skeletons'
+  detail: toast system, error surfacing on all mutations, cmd-K palette (kazam pattern), settings gear, allowPublic gating by auth mode, state-aware Save/Done/Discard editors, persisted folder state, error boundary recovery, concepts skeleton. Optimistic updates deferred.
+  severity: major
+  source: claude
+  task_id: kz-9cad
