@@ -118,6 +118,15 @@ async function middlewareClerk(request: NextRequest) {
   );
 
   const handler = clerkMiddleware(async (auth, req) => {
+    // Signed-in users land on the dashboard; signed-out users get the root
+    // page (deployments overlay a marketing landing there).
+    if (req.nextUrl.pathname === "/") {
+      const { userId } = await auth();
+      if (userId) {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
+    }
+
     if (!isPublicRoute(req)) {
       await auth.protect();
     }
@@ -170,7 +179,9 @@ async function middlewareDefault(request: NextRequest) {
 }
 
 export default async function middleware(request: NextRequest) {
-  if (request.nextUrl.pathname === "/") {
+  // Clerk mode handles "/" inside middlewareClerk so signed-out visitors can
+  // see the marketing landing instead of bouncing through /dashboard → sign-in.
+  if (request.nextUrl.pathname === "/" && AUTH_MODE !== "clerk") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
   if (request.nextUrl.pathname === "/api/health") {
