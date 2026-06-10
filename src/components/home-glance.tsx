@@ -8,6 +8,59 @@ export interface GlanceStat {
   value: string;
 }
 
+export interface GlanceFolder {
+  name: string;
+  count: number;
+}
+
+function ActivityChart({ activity }: { activity: number[] }) {
+  const max = Math.max(...activity, 1);
+  const w = 8;
+  const gap = 3;
+  const height = 64;
+  return (
+    <svg
+      className="glance-activity-svg"
+      viewBox={`0 0 ${activity.length * (w + gap) - gap} ${height}`}
+      preserveAspectRatio="none"
+      role="img"
+      aria-label="Pages updated per day, last 30 days"
+    >
+      {activity.map((v, i) => {
+        const h = v === 0 ? 2 : Math.max((v / max) * height, 4);
+        return (
+          <rect
+            key={i}
+            x={i * (w + gap)}
+            y={height - h}
+            width={w}
+            height={h}
+            rx={1.5}
+            className={v === 0 ? "glance-activity-bar--zero" : "glance-activity-bar"}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function FolderBars({ folders }: { folders: GlanceFolder[] }) {
+  const max = Math.max(...folders.map((f) => f.count), 1);
+  return (
+    <div className="glance-folder-bars">
+      {folders.map((f) => (
+        <div className="glance-folder-row" key={f.name}>
+          <span className="glance-folder-name">{f.name}</span>
+          <span className="glance-folder-track">
+            <span className="glance-folder-fill" style={{ width: `${(f.count / max) * 100}%` }} />
+          </span>
+          <span className="glance-folder-count">{f.count}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // The orientation section ("What this workspace is") renders as prose; every
 // other section becomes an action card whose click copies a context-loaded
 // agent prompt. The glance is a launcher, not a report.
@@ -18,11 +71,15 @@ export function HomeGlance({
   updatedAt,
   origin,
   stats = [],
+  activity = [],
+  folders = [],
 }: {
   json: Record<string, unknown>;
   updatedAt: Date;
   origin?: string;
   stats?: GlanceStat[];
+  activity?: number[];
+  folders?: GlanceFolder[];
 }) {
   const components = (json.components ?? []) as Array<{ type: string; [key: string]: unknown }>;
   if (components.length === 0) return null;
@@ -70,6 +127,25 @@ export function HomeGlance({
         </>
       )}
       <GlanceCards cards={[...cards, ...customCards]} />
+      {(activity.some((v) => v > 0) || folders.length > 0) && (
+        <>
+          <div className="home-glance-divider" aria-hidden="true" />
+          <div className="home-glance-visuals">
+            {activity.length > 0 && (
+              <div className="glance-visual">
+                <div className="glance-visual-label">Activity — pages updated per day, last 30 days</div>
+                <ActivityChart activity={activity} />
+              </div>
+            )}
+            {folders.length > 0 && (
+              <div className="glance-visual">
+                <div className="glance-visual-label">Pages by folder</div>
+                <FolderBars folders={folders} />
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </section>
   );
 }

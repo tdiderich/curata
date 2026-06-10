@@ -36,11 +36,21 @@ export default async function DashboardPage() {
   const monthAgo = new Date();
   monthAgo.setDate(monthAgo.getDate() - 30);
   const pageScope = { orgId: ctx.orgId, status: { not: "archived" }, slug: { not: "home" } };
-  const [totalPages, updated30d, pendingAnnotations] = await Promise.all([
+  const [totalPages, recentPages, pendingAnnotations, folderRows] = await Promise.all([
     db.page.count({ where: pageScope }),
-    db.page.count({ where: { ...pageScope, updatedAt: { gte: monthAgo } } }),
+    db.page.findMany({
+      where: { ...pageScope, updatedAt: { gte: monthAgo } },
+      select: { updatedAt: true },
+    }),
     db.annotation.count({ where: { page: { orgId: ctx.orgId }, status: "pending" } }),
+    db.folder.findMany({
+      where: { orgId: ctx.orgId },
+      select: { name: true, _count: { select: { pages: true } } },
+      orderBy: { pages: { _count: "desc" } },
+      take: 6,
+    }),
   ]);
+  const updated30d = recentPages.length;
 
   const stats: GlanceStat[] = [
     { label: "pages", value: String(totalPages) },
@@ -48,6 +58,21 @@ export default async function DashboardPage() {
     { label: "untouched >30d", value: String(totalPages - updated30d) },
     { label: "open annotations", value: String(pendingAnnotations) },
   ];
+
+  // Edits-per-day buckets for the 30-day activity chart, oldest first.
+  const dayMs = 24 * 60 * 60 * 1000;
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const activity = new Array(30).fill(0) as number[];
+  for (const p of recentPages) {
+    const daysAgo = Math.floor((todayStart.getTime() + dayMs - p.updatedAt.getTime()) / dayMs);
+    const idx = 29 - Math.min(daysAgo, 29);
+    activity[idx] += 1;
+  }
+
+  const folders = folderRows
+    .filter((f) => f._count.pages > 0)
+    .map((f) => ({ name: f.name, count: f._count.pages }));
 
   if (!home) {
     // ensureHomePage only fails on a write/validation error; surface a plain
@@ -57,7 +82,14 @@ export default async function DashboardPage() {
 
   return (
     <Suspense>
-      <HomeGlance json={home.json} updatedAt={home.updatedAt} origin={origin} stats={stats} />
+      <HomeGlance
+        json={home.json}
+        updatedAt={home.updatedAt}
+        origin={origin}
+        stats={stats}
+        activity={activity}
+        folders={folders}
+      />
     </Suspense>
   );
 }

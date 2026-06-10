@@ -5786,6 +5786,71 @@ body .c-section.align-right > * { max-width: none !important; }
 .glance-restore:hover {
   color: var(--snow);
 }
+
+/* Bottom visuals: activity chart + folder breakdown */
+.home-glance-visuals {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 40px;
+}
+.glance-visual-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.glance-activity-svg {
+  width: 100%;
+  height: 84px;
+  display: block;
+}
+.glance-activity-bar {
+  fill: var(--teal);
+  opacity: 0.75;
+}
+.glance-activity-bar--zero {
+  fill: rgba(var(--text-rgb), 0.12);
+}
+.glance-folder-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.glance-folder-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 28px;
+  align-items: center;
+  gap: 12px;
+  font-size: 12.5px;
+}
+.glance-folder-name {
+  color: var(--light-muted, var(--snow));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.glance-folder-track {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(var(--text-rgb), 0.07);
+  overflow: hidden;
+}
+.glance-folder-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--teal);
+  opacity: 0.75;
+}
+.glance-folder-count {
+  color: var(--muted);
+  text-align: right;
+}
+@media (max-width: 900px) {
+  .home-glance-visuals { grid-template-columns: 1fr; }
+}
 .glance-card-top {
   display: flex;
   align-items: baseline;
