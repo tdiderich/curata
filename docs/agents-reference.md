@@ -74,7 +74,7 @@ Values: `human`, `auto`, `assisted`
 Values: `default`, `green`, `yellow`, `red`, `teal`
 
 ### Shell
-Values: `standard`, `document`, `deck`
+Values: `standard`, `document`, `deck`, `hub`
 
 ### Texture
 Values: `none`, `dots`, `grid`, `grain`, `topography`, `diagonal`
@@ -271,6 +271,21 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | ports | PortLabel[] | no |
 | shape | GraphShape | no |
 | width | number | no |
+
+### HubConfig
+| Field | Type | Required |
+|-------|------|----------|
+| eyebrow | string | no |
+| name | string | yes |
+| pages | HubLink[] | no |
+| status | string | no |
+| status_color | SemColor | no |
+
+### HubLink
+| Field | Type | Required |
+|-------|------|----------|
+| href | string | yes |
+| label | string | yes |
 
 ### Link
 | Field | Type | Required |

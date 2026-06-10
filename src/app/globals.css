@@ -337,7 +337,9 @@ body .c-section.align-right > * { max-width: none !important; }
 .ann-bubble-tooltip {
   display: none;
   position: absolute;
-  left: 36px;
+  /* Open leftward — the bubble sits at the wrap's right edge. */
+  left: auto;
+  right: 36px;
   top: 50%;
   transform: translateY(-50%);
   background: var(--bg);
@@ -386,7 +388,10 @@ body .c-section.align-right > * { max-width: none !important; }
 .ann-margin {
   position: absolute;
   top: 40px;
-  right: 8px;
+  /* Markers grow rightward from this zero-width rail, so the anchor must sit
+     one bubble-width (28px) plus a margin inside the wrap — the wrap has no
+     outer gutter since the sidebar shell. */
+  right: 36px;
   width: 0;
   z-index: 5;
 }

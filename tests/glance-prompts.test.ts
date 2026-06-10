@@ -25,19 +25,48 @@ describe("extractGlanceSections", () => {
   });
 });
 
-describe("applyFallbacks", () => {
-  it("substitutes live fallback body into empty-state sections only", async () => {
-    const { applyFallbacks } = await import("@/lib/glance-prompts");
-    const out = applyFallbacks(
+describe("buildGlanceSections", () => {
+  it("builds all three standard sections from fallbacks when the page has none", async () => {
+    const { buildGlanceSections } = await import("@/lib/glance-prompts");
+    const out = buildGlanceSections([], {
+      recently: "- Updated [Real](real) — 2h ago",
+      attention: '- [Page A](page-a) — open annotation: "fix"',
+      plans: "- [Plan B](plan-b) — active",
+    });
+    expect(out.map((s) => s.heading)).toEqual([
+      "What happened recently",
+      "Needs attention",
+      "Plans in motion",
+    ]);
+    expect(out[0].body).toContain("real");
+    expect(out[1].body).toContain("page-a");
+    expect(out[2].body).toContain("plan-b");
+  });
+
+  it("lets a non-empty page section override its live fallback; stub sections defer", async () => {
+    const { buildGlanceSections } = await import("@/lib/glance-prompts");
+    const out = buildGlanceSections(
       [
         { heading: "Needs attention", body: "- Nothing flagged.\n" },
-        { heading: "What happened recently", body: "- Updated [Real](real) — 2h ago\n" },
+        { heading: "What happened recently", body: "- Cohere slipped — blocked on [SSO](sso-config)\n" },
       ],
-      { attention: "- [Page A](page-a) — open annotation: \"fix\"", recently: "- should not be used" }
+      { attention: '- [Page A](page-a) — open annotation: "fix"', recently: "- should not be used" }
     );
-    expect(out[0].body).toContain("page-a");
-    expect(out[1].body).toContain("real");
-    expect(out[1].body).not.toContain("should not be used");
+    expect(out[0].body).toContain("sso-config");
+    expect(out[0].body).not.toContain("should not be used");
+    expect(out[1].body).toContain("page-a");
+  });
+
+  it("leaves a standard section empty when there is no fallback and appends extra sections", async () => {
+    const { buildGlanceSections } = await import("@/lib/glance-prompts");
+    const out = buildGlanceSections(
+      [{ heading: "Customer escalations", body: "- [Acme](acme-tsp) — angry\n" }],
+      {}
+    );
+    expect(out).toHaveLength(4);
+    expect(out[0].body).toBe("");
+    expect(out[3].heading).toBe("Customer escalations");
+    expect(out[3].body).toContain("acme-tsp");
   });
 });
 
@@ -55,7 +84,7 @@ describe("extractCustomPrompts", () => {
     expect(cards).toHaveLength(1);
     expect(cards[0].subtitle).toBe("custom");
     expect(cards[0].summary).toBe("Monthly newsletter.");
-    expect(cards[0].prompt).toContain("https://x.dev/api/mcp");
+    expect(cards[0].prompt).toContain("https://x.dev/api/mcp/stream");
     expect(cards[0].prompt).toContain("Do the chronicle.");
   });
 
@@ -90,7 +119,7 @@ describe("buildGlanceCard", () => {
       { heading: "Needs attention", body: SECTION.components[0].body },
       { origin: "https://curata.example.com" }
     );
-    expect(card.prompt).toContain("https://curata.example.com/api/mcp");
+    expect(card.prompt).toContain("https://curata.example.com/api/mcp/stream");
     expect(card.prompt).toContain("read_page");
     expect(card.prompt).toContain("patch_page");
   });

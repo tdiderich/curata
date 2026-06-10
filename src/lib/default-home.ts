@@ -1,10 +1,12 @@
-import { db } from "@/lib/db";
 import { readPage, writePage } from "@/lib/pages";
 
-// Every org gets a `home` page by default — the at-a-glance launcher exists
-// from the first dashboard visit and users/agents update it as they please.
-// Content is intentionally generic (OSS-safe); workflows overwrite the
-// sections, and the prompts: block is user-curated and preserved.
+// Every org gets a `home` page by default — it backs the at-a-glance
+// dashboard. The page is a stash, not a report: it holds the orientation
+// prose and the user-curated `prompts:` block (custom prompt cards). The
+// standard glance cards are computed live from the DB on every dashboard
+// load, so nothing here goes stale. An agent can still add sections with
+// the standard headings ("Needs attention", etc.) to override a live card
+// with written synthesis.
 const DEFAULT_HOME_YAML = `title: At a glance
 shell: standard
 prompts:
@@ -22,32 +24,14 @@ components:
         body: |
           Your agent-maintained knowledge base. Pages are written and updated by
           AI agents through the MCP API; humans read, annotate, and spot-check.
-          Edit this page to describe your workspace — agents keep the sections
-          below current as part of their workflows.
-  - type: section
-    heading: What happened recently
-    components:
-      - type: markdown
-        body: |
-          - Nothing yet — this section fills in as agents update pages.
-  - type: section
-    heading: Needs attention
-    components:
-      - type: markdown
-        body: |
-          - Nothing flagged.
-  - type: section
-    heading: Plans in motion
-    components:
-      - type: markdown
-        body: |
-          - No active plans yet.
+          Edit this page to describe your workspace and stash custom prompt
+          cards in the prompts block — they show up on the dashboard.
 `;
 
 export async function ensureHomePage(
   orgId: string,
   orgSlug: string
-): Promise<{ json: Record<string, unknown>; updatedAt: Date } | null> {
+): Promise<Record<string, unknown> | null> {
   let page = await readPage(orgId, "home");
   if (!page) {
     const result = await writePage(orgId, orgSlug, "home", DEFAULT_HOME_YAML, "system");
@@ -55,10 +39,5 @@ export async function ensureHomePage(
     page = await readPage(orgId, "home");
     if (!page) return null;
   }
-  const row = await db.page.findUnique({
-    where: { orgId_slug: { orgId, slug: "home" } },
-    select: { updatedAt: true },
-  });
-  if (!row) return null;
-  return { json: page.json, updatedAt: row.updatedAt };
+  return page.json;
 }

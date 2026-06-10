@@ -143,5 +143,6 @@ ${workflowSection}
 - If data sources conflict, use the most recent signal and note the discrepancy in an annotation.
 - Never fabricate metrics. If a data source is unavailable, annotate the gap rather than guessing.
 - Keep page structure intact — only change field values, not component types or layout.
+- Quote YAML scalar values that contain \`: \` (colon-space) or start with a YAML-significant character (\`-\`, \`#\`, \`[\`, \`{\`, \`>\`, \`|\`, \`&\`, \`*\`). An unquoted \`Status: blocked — owner: alice\` becomes a nested mapping or a parse error and can corrupt the page.
 `;
 }

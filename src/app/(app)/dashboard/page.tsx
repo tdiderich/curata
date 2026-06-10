@@ -47,7 +47,9 @@ export default async function DashboardPage() {
         select: { createdAt: true, pageId: true, page: { select: { slug: true, title: true } } },
         orderBy: { createdAt: "desc" },
       }),
-      db.annotation.count({ where: { page: { orgId: ctx.orgId }, status: "pending" } }),
+      // Same scope as the Needs-attention card — counting annotations on
+      // archived pages or home made the stat disagree with the card.
+      db.annotation.count({ where: { page: pageScope, status: "pending" } }),
       db.annotation.findMany({
         where: { page: { ...pageScope }, status: "pending" },
         take: 6,
@@ -61,10 +63,9 @@ export default async function DashboardPage() {
       db.page.findMany({
         where: {
           ...pageScope,
-          OR: [
-            { folder: { name: { contains: "plan", mode: "insensitive" } } },
-            { folder: { name: { contains: "workflow", mode: "insensitive" } } },
-          ],
+          // Plans folders only — workflow folders hold runbooks (procedures),
+          // not work in flight, and were inflating the card.
+          folder: { name: { contains: "plan", mode: "insensitive" } },
         },
         orderBy: { updatedAt: "desc" },
         take: 5,
@@ -133,8 +134,7 @@ export default async function DashboardPage() {
   return (
     <Suspense>
       <HomeGlance
-        json={home.json}
-        updatedAt={home.updatedAt}
+        json={home}
         origin={origin}
         stats={stats}
         activity={activity}

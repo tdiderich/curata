@@ -74,7 +74,7 @@ export interface GlanceContext {
 // guessing, no "which curata?" follow-up.
 function contextHeader(ctx: GlanceContext): string {
   const where = ctx.origin
-    ? `Curata instance: ${ctx.origin} (MCP endpoint: ${ctx.origin}/api/mcp).`
+    ? `Curata instance: ${ctx.origin} (MCP endpoint: ${ctx.origin}/api/mcp/stream).`
     : `Use my configured curata MCP server.`;
   return `${where} Tools: read_page (page content by slug), list_pages, search_pages, patch_page (targeted edits), write_page (full rewrite), annotate_page. Page references below are slugs — pass them to read_page; in the UI they live at ${ctx.origin ?? ""}/pages/<slug>.`;
 }
@@ -111,28 +111,36 @@ export function isEmptySection(section: GlanceSection): boolean {
   return isEmptyState(bulletLines(section.body));
 }
 
-// Render-time fallbacks: when a section is still in its empty/default state
-// (fresh install, no workflow refresh yet), substitute a live DB-derived body
-// so the cards work out of the box. Agent-written content always wins.
+// Live DB-derived bodies for the three standard cards, computed on every
+// dashboard load. The home page is a stash of orientation prose and custom
+// prompts, not a report — standard cards are live by default.
 export interface GlanceFallbacks {
   recently?: string;
   attention?: string;
   plans?: string;
 }
 
-const FALLBACK_MATCH: Array<{ key: keyof GlanceFallbacks; match: RegExp }> = [
-  { key: "attention", match: /attention/i },
-  { key: "plans", match: /plans? in motion|plans?$/i },
-  { key: "recently", match: /recent/i },
+// A home-page section with a matching heading overrides its live body only
+// when an agent has written real content there (synthesis beats mechanics);
+// missing or stub sections defer to the live body. Non-standard sections on
+// the home page become extra cards after the standard three.
+const STANDARD_CARDS: Array<{ heading: string; key: keyof GlanceFallbacks; match: RegExp }> = [
+  { heading: "What happened recently", key: "recently", match: /recent/i },
+  { heading: "Needs attention", key: "attention", match: /attention/i },
+  { heading: "Plans in motion", key: "plans", match: /plans? in motion|plans?$/i },
 ];
 
-export function applyFallbacks(sections: GlanceSection[], fallbacks: GlanceFallbacks): GlanceSection[] {
-  return sections.map((s) => {
-    if (!isEmptySection(s)) return s;
-    const fb = FALLBACK_MATCH.find((f) => f.match.test(s.heading));
-    const body = fb ? fallbacks[fb.key] : undefined;
-    return body && body.trim() ? { ...s, body } : s;
+export function buildGlanceSections(
+  pageSections: GlanceSection[],
+  fallbacks: GlanceFallbacks
+): GlanceSection[] {
+  const standard = STANDARD_CARDS.map(({ heading, key, match }) => {
+    const fromPage = pageSections.find((s) => match.test(s.heading));
+    if (fromPage && !isEmptySection(fromPage)) return fromPage;
+    return { heading: fromPage?.heading ?? heading, body: fallbacks[key] ?? "", prompt: fromPage?.prompt };
   });
+  const extras = pageSections.filter((s) => !STANDARD_CARDS.some((c) => c.match.test(s.heading)));
+  return [...standard, ...extras];
 }
 
 // User-curated custom prompt cards: a top-level `prompts:` block in the home
