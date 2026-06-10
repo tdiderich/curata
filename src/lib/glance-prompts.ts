@@ -107,6 +107,34 @@ function genericTemplate(heading: string, body: string): string {
   return `From my curata workspace's at-a-glance home, section "${heading}":\n\n${body.trim()}\n\nRead the linked pages with read_page and take the appropriate next steps. Confirm with me before writing any changes.`;
 }
 
+export function isEmptySection(section: GlanceSection): boolean {
+  return isEmptyState(bulletLines(section.body));
+}
+
+// Render-time fallbacks: when a section is still in its empty/default state
+// (fresh install, no workflow refresh yet), substitute a live DB-derived body
+// so the cards work out of the box. Agent-written content always wins.
+export interface GlanceFallbacks {
+  recently?: string;
+  attention?: string;
+  plans?: string;
+}
+
+const FALLBACK_MATCH: Array<{ key: keyof GlanceFallbacks; match: RegExp }> = [
+  { key: "attention", match: /attention/i },
+  { key: "plans", match: /plans? in motion|plans?$/i },
+  { key: "recently", match: /recent/i },
+];
+
+export function applyFallbacks(sections: GlanceSection[], fallbacks: GlanceFallbacks): GlanceSection[] {
+  return sections.map((s) => {
+    if (!isEmptySection(s)) return s;
+    const fb = FALLBACK_MATCH.find((f) => f.match.test(s.heading));
+    const body = fb ? fallbacks[fb.key] : undefined;
+    return body && body.trim() ? { ...s, body } : s;
+  });
+}
+
 // User-curated custom prompt cards: a top-level `prompts:` block in the home
 // page YAML. Not generated, not global — each instance/user adds their own
 // (e.g. "Draft the customer chronicle"). Workflow refreshes must preserve

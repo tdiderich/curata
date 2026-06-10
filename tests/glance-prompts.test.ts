@@ -25,6 +25,22 @@ describe("extractGlanceSections", () => {
   });
 });
 
+describe("applyFallbacks", () => {
+  it("substitutes live fallback body into empty-state sections only", async () => {
+    const { applyFallbacks } = await import("@/lib/glance-prompts");
+    const out = applyFallbacks(
+      [
+        { heading: "Needs attention", body: "- Nothing flagged.\n" },
+        { heading: "What happened recently", body: "- Updated [Real](real) — 2h ago\n" },
+      ],
+      { attention: "- [Page A](page-a) — open annotation: \"fix\"", recently: "- should not be used" }
+    );
+    expect(out[0].body).toContain("page-a");
+    expect(out[1].body).toContain("real");
+    expect(out[1].body).not.toContain("should not be used");
+  });
+});
+
 describe("extractCustomPrompts", () => {
   it("builds custom cards from the prompts block with context header", () => {
     const cards = extractCustomPrompts(

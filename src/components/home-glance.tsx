@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { formatRefreshAge } from "@/lib/home-glance";
-import { extractGlanceSections, buildGlanceCard, extractCustomPrompts } from "@/lib/glance-prompts";
+import {
+  extractGlanceSections,
+  buildGlanceCard,
+  extractCustomPrompts,
+  applyFallbacks,
+  type GlanceFallbacks,
+} from "@/lib/glance-prompts";
 import { GlanceCards } from "@/components/glance-cards";
 
 export interface GlanceStat {
@@ -73,6 +79,7 @@ export function HomeGlance({
   stats = [],
   activity = [],
   folders = [],
+  fallbacks = {},
 }: {
   json: Record<string, unknown>;
   updatedAt: Date;
@@ -80,6 +87,7 @@ export function HomeGlance({
   stats?: GlanceStat[];
   activity?: number[];
   folders?: GlanceFolder[];
+  fallbacks?: GlanceFallbacks;
 }) {
   const components = (json.components ?? []) as Array<{ type: string; [key: string]: unknown }>;
   if (components.length === 0) return null;
@@ -88,9 +96,10 @@ export function HomeGlance({
   if (sections.length === 0) return null;
 
   const orientation = sections.find((s) => ORIENTATION.test(s.heading));
-  const cards = sections
-    .filter((s) => !ORIENTATION.test(s.heading))
-    .map((s) => buildGlanceCard(s, { origin }));
+  const cards = applyFallbacks(
+    sections.filter((s) => !ORIENTATION.test(s.heading)),
+    fallbacks
+  ).map((s) => buildGlanceCard(s, { origin }));
   const customCards = extractCustomPrompts(json, { origin });
 
   const { label, stale } = formatRefreshAge(updatedAt);
