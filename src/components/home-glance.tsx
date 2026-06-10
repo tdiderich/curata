@@ -126,10 +126,8 @@ export function HomeGlance({
           <div className="home-glance-divider" aria-hidden="true" />
         </>
       )}
-      <GlanceCards cards={[...cards, ...customCards]} />
       {(activity.some((v) => v > 0) || folders.length > 0) && (
         <>
-          <div className="home-glance-divider" aria-hidden="true" />
           <div className="home-glance-visuals">
             {activity.length > 0 && (
               <div className="glance-visual">
@@ -144,8 +142,10 @@ export function HomeGlance({
               </div>
             )}
           </div>
+          <div className="home-glance-divider" aria-hidden="true" />
         </>
       )}
+      <GlanceCards cards={[...cards, ...customCards]} />
     </section>
   );
 }
