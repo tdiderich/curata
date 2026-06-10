@@ -28,6 +28,7 @@ import {
 import type { ConceptInput, LinkInput } from "@/lib/concepts";
 import { ensureComponentIds, applyPatchOperations } from "@/lib/component-ids";
 import type { PatchOperation } from "@/lib/component-ids";
+import { dispatch } from "@/lib/mcp-dispatch";
 import yaml from "js-yaml";
 import { createHash } from "crypto";
 import fs from "fs";
@@ -71,6 +72,23 @@ async function resolveAuth(request: Request) {
 
 function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpServer {
   const server = new McpServer({ name: "curata", version: "0.1.0" });
+
+  // Tools below that have no bespoke streaming handler delegate to the shared
+  // dispatch registry so this transport stays at parity with /api/mcp.
+  const viaDispatch = (tool: string) => async (rawArgs: Record<string, unknown>) => {
+    const args: Record<string, string> = {};
+    for (const [k, v] of Object.entries(rawArgs)) {
+      if (v !== undefined && v !== null) args[k] = String(v);
+    }
+    try {
+      const result = await dispatch(tool, args, orgId, orgSlug, actorId);
+      const text = typeof result === "string" ? result : JSON.stringify(result, null, 2);
+      return { content: [{ type: "text" as const, text }] };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: "text" as const, text: `Error: ${msg}` }], isError: true };
+    }
+  };
 
   server.tool("search_pages", "Search the knowledge base", { query: z.string() }, async ({ query }) => {
     const results = await searchPages(orgId, query);
@@ -396,6 +414,60 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
+  server.tool("get_config", "Get site configuration", {}, viaDispatch("get_config"));
+
+  server.tool("list_annotations", "List annotations on a page",
+    { slug: z.string() },
+    viaDispatch("list_annotations"));
+
+  server.tool("list_open_annotations", "Org-wide queue of annotations awaiting processing (pending/approved), grouped by page — entry point for the process-annotations workflow",
+    { status: z.enum(["pending", "approved"]).optional().describe("Filter to one status; omit for both") },
+    viaDispatch("list_open_annotations"));
+
+  server.tool("flag_page", "Queue a page for cleanup (archive/delete/merge/supersede). Agent proposes, human disposes on the Cleanup view — nothing is removed until a human acts.",
+    {
+      slug: z.string(),
+      action: z.enum(["archive", "delete", "merge", "supersede"]),
+      reason: z.enum(["shipped-not-closed", "superseded", "stale", "duplicate", "one-off-expired"]),
+      evidence: z.string().describe("Cite what you checked — repo paths, dates, task state"),
+      confidence: z.enum(["high", "medium", "low"]).optional(),
+      superseded_by: z.string().optional().describe("Slug of the replacing page — required when action is supersede"),
+    },
+    viaDispatch("flag_page"));
+
+  server.tool("list_flags", "List cleanup flags — pending plus human dispositions (kept/snoozed) so sweeps avoid duplicate work",
+    { status: z.enum(["pending", "kept", "snoozed", "resolved", "all"]).optional() },
+    viaDispatch("list_flags"));
+
+  server.tool("get_versions", "List version history for a page",
+    { slug: z.string(), limit: z.string().optional().describe("Max versions to return (default 10, max 50)") },
+    viaDispatch("get_versions"));
+
+  server.tool("validate_page", "Validate page YAML without writing it",
+    { slug: z.string(), content: z.string() },
+    viaDispatch("validate_page"));
+
+  server.tool("list_workflows", "List workflow pages with their trigger phrases and descriptions",
+    {},
+    viaDispatch("list_workflows"));
+
+  server.tool("list_templates", "List template pages with their {{variables}}",
+    {},
+    viaDispatch("list_templates"));
+
+  server.tool("create_from_template", "Create a page from a template, interpolating {{variables}}",
+    {
+      template_slug: z.string(),
+      target_slug: z.string(),
+      variables: z.string().optional().describe("JSON object of variable values, e.g. {\"company\": \"Acme\"}"),
+      folder_id: z.string().optional(),
+    },
+    viaDispatch("create_from_template"));
+
+  server.tool("delete_page", "Permanently delete a page. Prefer flag_page (action: delete) so a human confirms via the Cleanup queue.",
+    { slug: z.string() },
+    viaDispatch("delete_page"));
+
   return server;
 }
 
@@ -404,7 +476,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   const ctx = await resolveAuth(request);
   if (!ctx) {
-    return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message: "unauthorized" }, id: null }), {
+    return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message: "unauthorized — in tailscale auth mode, identity headers only exist on the https:// Tailscale-served URL (plain http:// always 401s); otherwise pass Authorization: Bearer <api key>" }, id: null }), {
       status: 401, headers: { "Content-Type": "application/json" },
     });
   }
@@ -418,7 +490,7 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const ctx = await resolveAuth(request);
   if (!ctx) {
-    return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message: "unauthorized" }, id: null }), {
+    return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message: "unauthorized — in tailscale auth mode, identity headers only exist on the https:// Tailscale-served URL (plain http:// always 401s); otherwise pass Authorization: Bearer <api key>" }, id: null }), {
       status: 401, headers: { "Content-Type": "application/json" },
     });
   }
