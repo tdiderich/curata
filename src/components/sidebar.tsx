@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { FolderMenu, PageMenu } from "@/components/folder-actions";
+import { usePathname, useRouter } from "next/navigation";
+import { basePath } from "@/lib/api-fetch";
+import { toast } from "@/components/toast";
+import { FolderMenu, PageMenu, NewFolderButton } from "@/components/folder-actions";
+import { NewPageButton } from "@/components/new-page-button";
 import { readPinsSeeded, PINS_CHANGED_EVENT } from "@/lib/pins";
 
 export interface SidebarFolder {
@@ -30,6 +33,9 @@ interface RecentEntry {
 // Folders default collapsed; the store tracks what the user explicitly
 // expanded (so new folders also arrive collapsed).
 const EXPAND_KEY = "curata-nav-expanded";
+const HIDDEN_KEY = "curata-nav-hidden";
+// dataTransfer payload type for page rows dragged onto folders.
+const DRAG_MIME = "application/x-curata-page";
 
 function readExpanded(): Set<string> {
   try {
@@ -49,7 +55,14 @@ function readRecents(): RecentEntry[] {
 
 function PageLink({ page, folders, active, pinned }: { page: SidebarPage; folders: SidebarFolder[]; active: boolean; pinned: boolean }) {
   return (
-    <div className={`nav-page-row${active ? " nav-page-row--active" : ""}`}>
+    <div
+      className={`nav-page-row${active ? " nav-page-row--active" : ""}`}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData(DRAG_MIME, JSON.stringify({ slug: page.slug, folderId: page.folderId, title: page.title }));
+        e.dataTransfer.effectAllowed = "move";
+      }}
+    >
       <Link href={`/pages/${page.slug}`} className="nav-page-link" title={page.title}>
         <svg className="nav-page-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -87,9 +100,13 @@ export function Sidebar({
   authControls?: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [recents, setRecents] = useState<RecentEntry[]>([]);
   const [pins, setPins] = useState<string[]>([]);
+  const [hidden, setHidden] = useState(false);
+  // Folder id (or "__root") currently hovered by a page drag.
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -103,6 +120,76 @@ export function Sidebar({
     window.addEventListener(PINS_CHANGED_EVENT, sync);
     return () => window.removeEventListener(PINS_CHANGED_EVENT, sync);
   }, [pages]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHidden(localStorage.getItem(HIDDEN_KEY) === "1");
+  }, []);
+
+  const toggleHidden = () =>
+    setHidden((h) => {
+      localStorage.setItem(HIDDEN_KEY, h ? "0" : "1");
+      return !h;
+    });
+
+  // ⌘\ / Ctrl+\ toggles the sidebar (Notion convention).
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
+        e.preventDefault();
+        setHidden((h) => {
+          localStorage.setItem(HIDDEN_KEY, h ? "0" : "1");
+          return !h;
+        });
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  async function dropPage(e: React.DragEvent, targetFolderId: string | null) {
+    e.preventDefault();
+    setDropTarget(null);
+    let payload: { slug: string; folderId: string | null; title: string };
+    try {
+      payload = JSON.parse(e.dataTransfer.getData(DRAG_MIME));
+    } catch {
+      return;
+    }
+    if (!payload?.slug || payload.folderId === targetFolderId) return;
+    try {
+      const res = await fetch(`${basePath}/api/pages`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: payload.slug, folderId: targetFolderId }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(`Couldn't move page: ${data.error ?? "unknown error"}`);
+      } else {
+        toast.success(`Moved "${payload.title}"`);
+      }
+    } catch {
+      toast.error("Couldn't move page — check your connection and try again.");
+    } finally {
+      router.refresh();
+    }
+  }
+
+  function dropProps(targetId: string | null): React.HTMLAttributes<HTMLDivElement> {
+    const key = targetId ?? "__root";
+    return {
+      onDragOver: (e) => {
+        if (e.dataTransfer.types.includes(DRAG_MIME)) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          setDropTarget(key);
+        }
+      },
+      onDragLeave: () => setDropTarget((cur) => (cur === key ? null : cur)),
+      onDrop: (e) => dropPage(e, targetId),
+    };
+  }
 
   const toggle = (id: string) => {
     setExpanded((prev) => {
@@ -158,7 +245,10 @@ export function Sidebar({
     const folderPages = pagesByFolder.get(folder.id) ?? [];
     return (
       <div key={folder.id} className="nav-folder" style={{ "--nav-depth": depth } as React.CSSProperties}>
-        <div className="nav-folder-row">
+        <div
+          className={`nav-folder-row${dropTarget === folder.id ? " nav-folder-row--dragover" : ""}`}
+          {...dropProps(folder.id)}
+        >
           <button
             className="nav-folder-toggle"
             onClick={() => toggle(folder.id)}
@@ -186,6 +276,22 @@ export function Sidebar({
   const rootFolders = childFolders.get(null) ?? [];
   const unfiled = pagesByFolder.get(null) ?? [];
 
+  if (hidden) {
+    return (
+      <button
+        className="nav-reveal"
+        onClick={toggleHidden}
+        aria-label="Show navigation"
+        title="Show navigation (⌘\)"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <line x1="9" y1="3" x2="9" y2="21" />
+        </svg>
+      </button>
+    );
+  }
+
   return (
     <aside className="app-sidebar" aria-label="Workspace navigation">
       <div className="nav-org">
@@ -197,6 +303,17 @@ export function Sidebar({
             orgName
           )}
         </Link>
+        <button
+          className="nav-hide-btn"
+          onClick={toggleHidden}
+          aria-label="Hide navigation"
+          title="Hide navigation (⌘\)"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="11 17 6 12 11 7" />
+            <polyline points="18 17 13 12 18 7" />
+          </svg>
+        </button>
       </div>
 
       <button
@@ -215,6 +332,8 @@ export function Sidebar({
         <Link href="/dashboard" className={`nav-link-item${pathname === "/dashboard" ? " nav-link-item--active" : ""}`}>
           Home
         </Link>
+        <NewPageButton className="nav-link-item nav-link-item--action" label="+ New page" />
+        <NewFolderButton className="nav-link-item nav-link-item--action" label="+ New folder" />
         {cleanupCount > 0 && (
           <Link href="/cleanup" className={`nav-link-item${pathname === "/cleanup" ? " nav-link-item--active" : ""}`}>
             Cleanup
@@ -247,7 +366,12 @@ export function Sidebar({
       )}
 
       <div className="nav-section nav-tree">
-        <div className="nav-section-label">Workspace</div>
+        <div
+          className={`nav-section-label${dropTarget === "__root" ? " nav-section-label--dragover" : ""}`}
+          {...dropProps(null)}
+        >
+          Workspace
+        </div>
         {rootFolders.map((f) => renderFolder(f, 0))}
         {unfiled.map((p) => (
           <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned={pinnedSet.has(p.slug)} />

@@ -1183,6 +1183,22 @@ body .c-section.align-right > * { max-width: none !important; }
   text-align: right;
 }
 
+/* Sortable column headers (replaces the old sort dropdown) */
+.dash-th-sort {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.dash-th-sort:hover { color: var(--snow); }
+.dash-th-sort--active { color: var(--snow); }
+
 .dash-row {
   border-bottom: 1px solid rgba(var(--text-rgb), 0.04);
   transition: background 0.1s;
@@ -5126,20 +5142,80 @@ body .c-section.align-right > * { max-width: none !important; }
   padding: 14px 10px;
   background: rgba(var(--text-rgb), 0.02);
   border-right: 1px solid rgba(var(--text-rgb), 0.08);
+  /* Thin themed scrollbar; thumb only appears while hovering the sidebar */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
+
+.app-sidebar:hover { scrollbar-color: rgba(var(--text-rgb), 0.18) transparent; }
+
+.app-sidebar::-webkit-scrollbar { width: 8px; }
+.app-sidebar::-webkit-scrollbar-track { background: transparent; }
+.app-sidebar::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+.app-sidebar:hover::-webkit-scrollbar-thumb { background: rgba(var(--text-rgb), 0.15); }
 
 .app-main {
   flex: 1;
   min-width: 0;
 }
 
-.nav-org { padding: 2px 8px; }
+.nav-org {
+  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 
 .nav-org-name {
   font-size: 14px;
   font-weight: 600;
   color: var(--snow);
+  min-width: 0;
 }
+
+/* Hide / reveal the sidebar (⌘\) */
+.nav-hide-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  color: var(--muted);
+  opacity: 0;
+  transition: all 0.12s;
+}
+
+.app-sidebar:hover .nav-hide-btn,
+.nav-hide-btn:focus-visible { opacity: 1; }
+.nav-hide-btn:hover { background: rgba(var(--text-rgb), 0.07); color: var(--snow); }
+
+.nav-reveal {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  font: inherit;
+  cursor: pointer;
+  color: var(--muted);
+  background: rgba(var(--bg-rgb), 0.85);
+  border: 1px solid rgba(var(--text-rgb), 0.1);
+  transition: all 0.12s;
+}
+
+.nav-reveal:hover { color: var(--snow); border-color: rgba(var(--text-rgb), 0.25); }
 
 .nav-search {
   display: flex;
@@ -5182,6 +5258,31 @@ body .c-section.align-right > * { max-width: none !important; }
 
 .nav-link-item:hover { background: rgba(var(--text-rgb), 0.05); color: var(--snow); }
 .nav-link-item--active { background: rgba(var(--accent-rgb), 0.12); color: var(--snow); }
+
+/* Create actions (New page / New folder) read quieter than nav links */
+.nav-link-item--action {
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12.5px;
+  width: 100%;
+  text-align: left;
+}
+.nav-link-item--action:hover { background: rgba(var(--text-rgb), 0.05); color: var(--snow); }
+
+/* Drag-and-drop target highlight */
+.nav-folder-row--dragover,
+.nav-section-label--dragover {
+  background: rgba(var(--accent-rgb), 0.14);
+  border-radius: 7px;
+  outline: 1px dashed rgba(var(--accent-rgb), 0.5);
+  outline-offset: -1px;
+}
+
+.nav-page-row[draggable="true"] { cursor: grab; }
+.nav-page-row[draggable="true"]:active { cursor: grabbing; }
 
 .nav-section { display: flex; flex-direction: column; gap: 1px; }
 .nav-tree { flex: 1; }
@@ -5284,6 +5385,7 @@ body .c-section.align-right > * { max-width: none !important; }
 
 @media (max-width: 900px) {
   .app-sidebar { display: none; }
+  .nav-reveal { display: none; }
 }
 
 .nav-auth { padding: 4px 12px 8px; }

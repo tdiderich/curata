@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { NewFolderButton, PageMenu } from "@/components/folder-actions";
+import { PageMenu } from "@/components/folder-actions";
 import { readPinsSeeded, PINS_CHANGED_EVENT } from "@/lib/pins";
-import { NewPageButton } from "@/components/new-page-button";
 import { DashboardFeed } from "@/components/dashboard-feed";
-import { useDashView } from "@/components/view-toggle";
 import { toast } from "@/components/toast";
 import { TEMPLATES, PERSONAS } from "@/lib/templates";
 
@@ -90,84 +88,28 @@ function formatDate(iso: string): string {
   });
 }
 
-const SORT_LABELS: Record<SortKey, string> = {
-  sortOrder: "Custom order",
-  lastActivity: "Last updated",
-  title: "Title",
-  views: "Most views",
-};
-
-function DashActions({
+// Clickable table header: sets the sort key, shows an arrow on the active one.
+function SortTh({
+  label,
+  k,
   sortKey,
   onSort,
-  view,
-  onViewChange,
+  className,
 }: {
+  label: string;
+  k: SortKey;
   sortKey: SortKey;
   onSort: (k: SortKey) => void;
-  view: "feed" | "table";
-  onViewChange: (v: "feed" | "table") => void;
+  className?: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, []);
-
+  const active = sortKey === k;
   return (
-    <div className="dash-actions-wrap" ref={ref}>
-      <NewFolderButton />
-      <NewPageButton />
-      <button
-        className="dash-actions-trigger"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="Dashboard actions"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <circle cx="8" cy="3" r="1.5" />
-          <circle cx="8" cy="8" r="1.5" />
-          <circle cx="8" cy="13" r="1.5" />
-        </svg>
+    <th className={className} aria-sort={active ? "ascending" : undefined}>
+      <button className={`dash-th-sort${active ? " dash-th-sort--active" : ""}`} onClick={() => onSort(k)}>
+        {label}
+        {active && <span aria-hidden="true"> &darr;</span>}
       </button>
-      {open && (
-        <div className="dash-actions-menu">
-          <div className="dash-actions-section-label">Sort</div>
-          {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
-            <button
-              key={k}
-              className={`dash-actions-item${sortKey === k ? " dash-actions-item--active" : ""}`}
-              onClick={() => { onSort(k); }}
-            >
-              {SORT_LABELS[k]}
-              {sortKey === k && <span className="dash-actions-check">&#10003;</span>}
-            </button>
-          ))}
-          <div className="dash-actions-divider" />
-          <div className="dash-actions-section-label">View</div>
-          <button
-            className={`dash-actions-item${view === "feed" ? " dash-actions-item--active" : ""}`}
-            onClick={() => { onViewChange("feed"); }}
-          >
-            Feed
-            {view === "feed" && <span className="dash-actions-check">&#10003;</span>}
-          </button>
-          <button
-            className={`dash-actions-item${view === "table" ? " dash-actions-item--active" : ""}`}
-            onClick={() => { onViewChange("table"); }}
-          >
-            Table
-            {view === "table" && <span className="dash-actions-check">&#10003;</span>}
-          </button>
-        </div>
-      )}
-    </div>
+    </th>
   );
 }
 
@@ -281,7 +223,6 @@ interface DashboardClientProps {
 // activity. The folder tree lives in the app sidebar; the table view here is
 // a flat, sortable index of everything.
 export function DashboardClient({ pages, folders, pageCount, orgName, allowPublic = true, cleanupCount = 0 }: DashboardClientProps) {
-  const [view, setView] = useDashView();
   const [sortKey, setSortKey] = useSortKey();
   const [searchQuery, setSearchQuery] = useState("");
   const [lastVisit, setLastVisit] = useState<number | null>(null);
@@ -370,7 +311,8 @@ export function DashboardClient({ pages, folders, pageCount, orgName, allowPubli
     );
   }
 
-  const showTable = view === "table" || Boolean(searchQuery.trim()) || attentionFilter !== null;
+  // Feed by default; filtering or chip selection pivots to the flat table.
+  const showTable = Boolean(searchQuery.trim()) || attentionFilter !== null;
 
   return (
     <div className="dash-root">
@@ -396,12 +338,6 @@ export function DashboardClient({ pages, folders, pageCount, orgName, allowPubli
             )}
           </div>
         </div>
-        <DashActions
-          sortKey={sortKey}
-          onSort={setSortKey}
-          view={view}
-          onViewChange={setView}
-        />
       </div>
 
       {(pendingAnnPages.length > 0 || updatedPages.length > 0 || stalePages.length > 0 || cleanupCount > 0) && (
@@ -446,10 +382,10 @@ export function DashboardClient({ pages, folders, pageCount, orgName, allowPubli
         <table className="dash-table">
           <thead>
             <tr>
-              <th className="dash-th dash-th-title">Title</th>
+              <SortTh label="Title" k="title" sortKey={sortKey} onSort={setSortKey} className="dash-th dash-th-title" />
               <th className="dash-th">Folder</th>
-              <th className="dash-th">Updated</th>
-              <th className="dash-th dash-th-right">Views</th>
+              <SortTh label="Updated" k="lastActivity" sortKey={sortKey} onSort={setSortKey} className="dash-th" />
+              <SortTh label="Views" k="views" sortKey={sortKey} onSort={setSortKey} className="dash-th dash-th-right" />
               <th className="dash-th dash-th-right">Annotations</th>
               <th className="dash-th dash-th-actions"></th>
             </tr>

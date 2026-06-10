@@ -7,7 +7,13 @@ import { basePath } from "@/lib/api-fetch";
 
 type Step = "template" | "details";
 
-export function NewPageButton() {
+export function NewPageButton({
+  className = "new-page-btn",
+  label = "+ New Page",
+}: {
+  className?: string;
+  label?: string;
+} = {}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("template");
@@ -79,8 +85,8 @@ export function NewPageButton() {
 
   if (!open) {
     return (
-      <button className="new-page-btn" onClick={openModal}>
-        + New Page
+      <button className={className} onClick={openModal}>
+        {label}
       </button>
     );
   }

@@ -81,7 +81,13 @@ function AnchoredMenu({
 
 // ── New folder inline input ───────────────────────────────────────────────────
 
-export function NewFolderButton() {
+export function NewFolderButton({
+  className = "dash-new-folder-btn",
+  label = "+ New folder",
+}: {
+  className?: string;
+  label?: string;
+} = {}) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
@@ -157,8 +163,8 @@ export function NewFolderButton() {
   }
 
   return (
-    <button className="dash-new-folder-btn" onClick={() => setCreating(true)}>
-      + New folder
+    <button className={className} onClick={() => setCreating(true)}>
+      {label}
     </button>
   );
 }
