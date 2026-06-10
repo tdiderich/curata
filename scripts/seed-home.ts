@@ -95,12 +95,6 @@ ${indent(attentionBullets)}
       - type: markdown
         body: |
 ${indent(planBullets)}
-  - type: section
-    heading: Open questions
-    components:
-      - type: markdown
-        body: |
-          - None carried forward yet.
 `;
 
   const result = await writePage(org.id, org.slug, "home", HOME_YAML, "seed-script");
