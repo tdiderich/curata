@@ -93,6 +93,9 @@ export default async function PageDetailView({
     title: pageTitle,
     subtitle: (pageData.json.subtitle as string) || undefined,
     shell: (pageData.json.shell as string) || "standard",
+    hub: pageData.json.hub as
+      | { name: string; eyebrow?: string; status?: string; status_color?: string; pages?: Array<{ label: string; href: string }> }
+      | undefined,
     components: (pageData.json.components ?? []) as Array<{
       type: string;
       [key: string]: unknown;
@@ -123,7 +126,9 @@ export default async function PageDetailView({
           : undefined}
       >
         <div className="page-detail-content">
-          <PageRenderer page={page} />
+          {/* Hub blocks in curata use page slugs as hrefs; relative links
+              resolve under /pages/ and the slug doubles as the active key. */}
+          <PageRenderer page={page} activeHubHref={slug} />
         </div>
       </PageDetailClient>
     </>
