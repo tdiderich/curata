@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildGlanceCard, extractGlanceSections } from "@/lib/glance-prompts";
+import { buildGlanceCard, extractGlanceSections, extractCustomPrompts } from "@/lib/glance-prompts";
 
 const SECTION = {
   type: "section",
@@ -22,6 +22,29 @@ describe("extractGlanceSections", () => {
 
   it("ignores non-section components", () => {
     expect(extractGlanceSections([{ type: "markdown", body: "x" }])).toHaveLength(0);
+  });
+});
+
+describe("extractCustomPrompts", () => {
+  it("builds custom cards from the prompts block with context header", () => {
+    const cards = extractCustomPrompts(
+      {
+        prompts: [
+          { title: "Draft the chronicle", description: "Monthly newsletter.", prompt: "Do the chronicle." },
+          { title: "missing prompt field" },
+        ],
+      },
+      { origin: "https://x.dev" }
+    );
+    expect(cards).toHaveLength(1);
+    expect(cards[0].subtitle).toBe("custom");
+    expect(cards[0].summary).toBe("Monthly newsletter.");
+    expect(cards[0].prompt).toContain("https://x.dev/api/mcp");
+    expect(cards[0].prompt).toContain("Do the chronicle.");
+  });
+
+  it("returns empty for pages without a prompts block", () => {
+    expect(extractCustomPrompts({})).toHaveLength(0);
   });
 });
 

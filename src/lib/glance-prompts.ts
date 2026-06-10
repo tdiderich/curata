@@ -107,6 +107,27 @@ function genericTemplate(heading: string, body: string): string {
   return `From my curata workspace's at-a-glance home, section "${heading}":\n\n${body.trim()}\n\nRead the linked pages with read_page and take the appropriate next steps. Confirm with me before writing any changes.`;
 }
 
+// User-curated custom prompt cards: a top-level `prompts:` block in the home
+// page YAML. Not generated, not global — each instance/user adds their own
+// (e.g. "Draft the customer chronicle"). Workflow refreshes must preserve
+// the block (see the home page contract).
+export function extractCustomPrompts(json: Record<string, unknown>, ctx: GlanceContext = {}): GlanceCard[] {
+  const raw = json.prompts;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(
+      (p): p is { title: string; prompt: string; description?: string } =>
+        !!p && typeof p === "object" && typeof (p as Record<string, unknown>).title === "string" &&
+        typeof (p as Record<string, unknown>).prompt === "string"
+    )
+    .map((p) => ({
+      title: p.title,
+      subtitle: "custom",
+      summary: typeof p.description === "string" ? p.description : "Custom prompt for this workspace.",
+      prompt: `${contextHeader(ctx)}\n\n${p.prompt.trim()}`,
+    }));
+}
+
 export function buildGlanceCard(section: GlanceSection, ctx: GlanceContext = {}): GlanceCard {
   const items = bulletLines(section.body);
   const empty = isEmptyState(items);

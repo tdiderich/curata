@@ -67,6 +67,15 @@ async function main() {
 
   const HOME_YAML = `title: Curata at a glance
 shell: standard
+prompts:
+  - title: Draft the customer chronicle
+    description: Builds this month's Customer Chronicle from recent activity across all customers.
+    prompt: |
+      Run the customer chronicle workflow: survey the last month of customer
+      pages in this workspace (priorities, deployments, meeting notes), pick
+      the highlights worth sharing, and draft the monthly Customer Chronicle
+      following the workflow-customer-chronicle runbook. Show me the draft
+      before publishing anywhere.
 components:
   - type: section
     heading: What this workspace is

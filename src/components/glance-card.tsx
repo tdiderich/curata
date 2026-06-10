@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { GlanceCard as GlanceCardData } from "@/lib/glance-prompts";
 
-export function GlanceCard({ card }: { card: GlanceCardData }) {
+export function GlanceCard({ card, onDismiss }: { card: GlanceCardData; onDismiss?: () => void }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -25,19 +25,34 @@ export function GlanceCard({ card }: { card: GlanceCardData }) {
   };
 
   return (
-    <button
-      type="button"
-      className={`glance-card${actionable ? "" : " glance-card--empty"}${copied ? " glance-card--copied" : ""}`}
-      onClick={copy}
-      disabled={!actionable}
-      title={actionable ? "Copy a ready-to-paste agent prompt with this context" : undefined}
-    >
-      <div className="glance-card-top">
-        <span className="glance-card-title">{card.title}</span>
-        <span className="glance-card-badge">{copied ? "Copied ✓" : card.subtitle}</span>
-      </div>
-      <p className="glance-card-summary">{card.summary}</p>
-      {actionable && <span className="glance-card-hint">{copied ? "Paste into your agent session" : "Click to copy agent prompt"}</span>}
-    </button>
+    <div className={`glance-card${actionable ? "" : " glance-card--empty"}${copied ? " glance-card--copied" : ""}`}>
+      {onDismiss && (
+        <button
+          type="button"
+          className="glance-card-dismiss"
+          aria-label={`Hide ${card.title} card`}
+          title="Hide this card (this browser only)"
+          onClick={onDismiss}
+        >
+          &times;
+        </button>
+      )}
+      <button
+        type="button"
+        className="glance-card-action"
+        onClick={copy}
+        disabled={!actionable}
+        title={actionable ? "Copy a ready-to-paste agent prompt with this context" : undefined}
+      >
+        <div className="glance-card-top">
+          <span className="glance-card-title">{card.title}</span>
+          <span className="glance-card-badge">{copied ? "Copied ✓" : card.subtitle}</span>
+        </div>
+        <p className="glance-card-summary">{card.summary}</p>
+        {actionable && (
+          <span className="glance-card-hint">{copied ? "Paste into your agent session" : "Click to copy agent prompt"}</span>
+        )}
+      </button>
+    </div>
   );
 }
