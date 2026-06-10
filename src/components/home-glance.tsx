@@ -11,9 +11,11 @@ const ORIENTATION = /what this workspace is/i;
 export function HomeGlance({
   json,
   updatedAt,
+  origin,
 }: {
   json: Record<string, unknown>;
   updatedAt: Date;
+  origin?: string;
 }) {
   const components = (json.components ?? []) as Array<{ type: string; [key: string]: unknown }>;
   if (components.length === 0) return null;
@@ -22,7 +24,9 @@ export function HomeGlance({
   if (sections.length === 0) return null;
 
   const orientation = sections.find((s) => ORIENTATION.test(s.heading));
-  const cards = sections.filter((s) => !ORIENTATION.test(s.heading)).map(buildGlanceCard);
+  const cards = sections
+    .filter((s) => !ORIENTATION.test(s.heading))
+    .map((s) => buildGlanceCard(s, { origin }));
 
   const { label, stale } = formatRefreshAge(updatedAt);
   const title = (json.title as string) || "Curata at a glance";

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { seedOrg } from "@/lib/seed";
@@ -45,6 +46,13 @@ export default async function DashboardPage() {
       })
     : null;
   const tablePages = pages.filter((p) => p.slug !== "home");
+
+  // Instance origin for copy-prompt cards, so pasted prompts name the exact
+  // curata deployment and MCP endpoint the agent should target.
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+  const origin = host ? `${proto}://${host}` : undefined;
 
   const cleanupCount = await db.pageFlag.count({
     where: {
@@ -105,7 +113,7 @@ export default async function DashboardPage() {
   return (
     <Suspense>
       {homePage && homeRow && (
-        <HomeGlance json={homePage.json} updatedAt={homeRow.updatedAt} />
+        <HomeGlance json={homePage.json} updatedAt={homeRow.updatedAt} origin={origin} />
       )}
       <DashboardClient
         pages={serialized}

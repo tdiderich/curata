@@ -64,43 +64,59 @@ interface Template {
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
+export interface GlanceContext {
+  /** Origin of this curata instance, e.g. https://curata.example.com */
+  origin?: string;
+}
+
+// Every copied prompt starts with this header so the receiving agent knows
+// exactly which instance to talk to and which tools to reach for — no
+// guessing, no "which curata?" follow-up.
+function contextHeader(ctx: GlanceContext): string {
+  const where = ctx.origin
+    ? `Curata instance: ${ctx.origin} (MCP endpoint: ${ctx.origin}/api/mcp).`
+    : `Use my configured curata MCP server.`;
+  return `${where} Tools: read_page (page content by slug), list_pages, search_pages, patch_page (targeted edits), write_page (full rewrite), annotate_page. Page references below are slugs — pass them to read_page; in the UI they live at ${ctx.origin ?? ""}/pages/<slug>.`;
+}
+
 const TEMPLATES: Template[] = [
   {
     match: /attention/i,
     build: (body) =>
-      `These items in my curata workspace need attention:\n\n${body.trim()}\n\nFor each item (highest impact first): read the linked page via the curata MCP tools, review the open annotation or issue, propose a fix, and apply it with patch_page after I approve. Resolve each annotation once handled.`,
+      `These items in my curata workspace need attention:\n\n${body.trim()}\n\nFor each item (highest impact first): read the linked page with read_page, review the open annotation or issue, propose a fix, and apply it with patch_page after I approve. Resolve each annotation once handled.`,
     summarize: (items, pages) =>
       `Works through ${plural(items, "open item")} across ${plural(pages, "page")} — proposes a fix for each and applies it after your approval.`,
   },
   {
     match: /plans? in motion|plans?$/i,
     build: (body) =>
-      `Read these active plan pages from my curata workspace via the curata MCP tools:\n\n${body.trim()}\n\nFor each plan, summarize: work completed, in flight, and remaining, plus any blockers. Then recommend what to tackle next and why.`,
+      `Read these active plan pages from my curata workspace:\n\n${body.trim()}\n\nFor each plan (read_page per slug), summarize: work completed, in flight, and remaining, plus any blockers. Then recommend what to tackle next and why.`,
     summarize: (items) =>
       `Reads ${plural(items, "active plan")} and reports completed, in-flight, and remaining work with blockers — then recommends what to tackle next.`,
   },
   {
     match: /recent/i,
     build: (body) =>
-      `These pages in my curata workspace changed recently:\n\n${body.trim()}\n\nRead them via the curata MCP tools and brief me: what changed, why it matters, and anything that needs follow-up from me.`,
+      `These pages in my curata workspace changed recently:\n\n${body.trim()}\n\nRead each with read_page and brief me: what changed, why it matters, and anything that needs follow-up from me.`,
     summarize: (items, pages) =>
       `Briefs you on ${plural(pages, "recently updated page")} — what changed, why it matters, and what needs follow-up.`,
   },
 ];
 
 function genericTemplate(heading: string, body: string): string {
-  return `From my curata workspace's at-a-glance home, section "${heading}":\n\n${body.trim()}\n\nRead the linked pages via the curata MCP tools and take the appropriate next steps. Confirm with me before writing any changes.`;
+  return `From my curata workspace's at-a-glance home, section "${heading}":\n\n${body.trim()}\n\nRead the linked pages with read_page and take the appropriate next steps. Confirm with me before writing any changes.`;
 }
 
-export function buildGlanceCard(section: GlanceSection): GlanceCard {
+export function buildGlanceCard(section: GlanceSection, ctx: GlanceContext = {}): GlanceCard {
   const items = bulletLines(section.body);
   const empty = isEmptyState(items);
   const template = TEMPLATES.find((t) => t.match.test(section.heading));
   const pages = Math.max(distinctPageCount(section.body), 1);
 
-  const prompt = empty
+  const action = empty
     ? ""
     : section.prompt ?? (template?.build(section.body) ?? genericTemplate(section.heading, section.body));
+  const prompt = action ? `${contextHeader(ctx)}\n\n${action}` : "";
 
   const summary = empty
     ? "Nothing here right now."

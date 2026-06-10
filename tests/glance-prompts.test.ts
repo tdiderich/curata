@@ -46,13 +46,24 @@ describe("buildGlanceCard", () => {
     expect(card.prompt).toContain("plan-a");
   });
 
-  it("honors an explicit prompt override", () => {
+  it("prefixes prompts with instance origin and tool guidance when origin given", () => {
+    const card = buildGlanceCard(
+      { heading: "Needs attention", body: SECTION.components[0].body },
+      { origin: "https://curata.example.com" }
+    );
+    expect(card.prompt).toContain("https://curata.example.com/api/mcp");
+    expect(card.prompt).toContain("read_page");
+    expect(card.prompt).toContain("patch_page");
+  });
+
+  it("honors an explicit prompt override (context header still prepended)", () => {
     const card = buildGlanceCard({
       heading: "Needs attention",
       body: "- item\n",
       prompt: "custom prompt text",
     });
-    expect(card.prompt).toBe("custom prompt text");
+    expect(card.prompt).toContain("custom prompt text");
+    expect(card.prompt).toContain("curata MCP");
   });
 
   it("returns no prompt for empty-state sections", () => {
