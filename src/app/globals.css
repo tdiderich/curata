@@ -5621,17 +5621,19 @@ body .c-section.align-right > * { max-width: none !important; }
 .dash-attention-chip--cleanup { border-color: rgba(228, 230, 195, 0.3); }
 .dash-attention-chip--cleanup:hover { border-color: rgba(228, 230, 195, 0.6); }
 
-/* --- Curata at a Glance (dashboard home narrative) --- */
+/* --- Curata at a Glance (dashboard home narrative) ---
+   Renders inside the dashboard above the table; horizontal padding matches
+   .dash-root (48px) so the glance aligns with the content below it. The
+   compact rules rescale kazam's document-size sections into a glance module. */
 .home-glance {
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--border);
+  padding: 32px 48px 24px;
+  border-bottom: 1px solid rgba(var(--text-rgb), 0.08);
 }
 .home-glance-header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 18px;
 }
 .home-glance-title {
   font-size: 15px;
@@ -5650,7 +5652,48 @@ body .c-section.align-right > * { max-width: none !important; }
   font-size: 12.5px;
   padding: 8px 12px;
   border-radius: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   background: rgba(228, 230, 195, 0.12);
   color: var(--yellow);
+}
+
+/* Two-column glance grid: the orientation section spans the full row,
+   the dynamic sections (recently / attention / plans / questions) flow 2-up. */
+.home-glance-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 56px;
+  max-width: 1100px;
+}
+.home-glance-body .c-section:first-child {
+  grid-column: 1 / -1;
+}
+.home-glance-body .c-section-header {
+  margin-bottom: 6px;
+}
+.home-glance-body .c-section-heading {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.home-glance-body .c-markdown {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--light-muted, var(--muted));
+}
+.home-glance-body .c-markdown p {
+  margin: 0 0 8px;
+}
+.home-glance-body .c-md-list {
+  margin: 0;
+  padding-left: 18px;
+}
+.home-glance-body .c-md-list li {
+  margin-bottom: 4px;
+}
+@media (max-width: 900px) {
+  .home-glance { padding: 24px 16px 20px; }
+  .home-glance-body { grid-template-columns: 1fr; }
 }

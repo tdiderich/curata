@@ -35,7 +35,9 @@ export function HomeGlance({
           Last refreshed {label} — sections may be outdated.
         </div>
       )}
-      <PageRenderer page={page} activeHubHref="home" />
+      <div className="home-glance-body">
+        <PageRenderer page={page} activeHubHref="home" />
+      </div>
     </section>
   );
 }
