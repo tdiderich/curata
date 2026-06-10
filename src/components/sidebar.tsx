@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FolderMenu, PageMenu } from "@/components/folder-actions";
+import { readPinsSeeded, PINS_CHANGED_EVENT } from "@/lib/pins";
 
 export interface SidebarFolder {
   id: string;
@@ -46,7 +47,7 @@ function readRecents(): RecentEntry[] {
   }
 }
 
-function PageLink({ page, folders, active }: { page: SidebarPage; folders: SidebarFolder[]; active: boolean }) {
+function PageLink({ page, folders, active, pinned }: { page: SidebarPage; folders: SidebarFolder[]; active: boolean; pinned: boolean }) {
   return (
     <div className={`nav-page-row${active ? " nav-page-row--active" : ""}`}>
       <Link href={`/pages/${page.slug}`} className="nav-page-link" title={page.title}>
@@ -55,7 +56,7 @@ function PageLink({ page, folders, active }: { page: SidebarPage; folders: Sideb
           <polyline points="14 2 14 8 20 8" />
         </svg>
         <span className="nav-page-title">{page.title}</span>
-        {page.pinned && <span className="nav-page-pin" aria-label="Pinned">&#9733;</span>}
+        {pinned && <span className="nav-page-pin" aria-label="Pinned">&#9733;</span>}
       </Link>
       <span className="nav-row-menu">
         <PageMenu
@@ -64,7 +65,6 @@ function PageLink({ page, folders, active }: { page: SidebarPage; folders: Sideb
           visibility={page.visibility}
           folderId={page.folderId}
           folders={folders}
-          pinned={page.pinned}
         />
       </span>
     </div>
@@ -89,12 +89,20 @@ export function Sidebar({
   const pathname = usePathname();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [recents, setRecents] = useState<RecentEntry[]>([]);
+  const [pins, setPins] = useState<string[]>([]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setExpanded(readExpanded());
     setRecents(readRecents());
   }, [pathname]);
+
+  useEffect(() => {
+    const sync = () => setPins(readPinsSeeded(pages.filter((p) => p.pinned).map((p) => p.slug)));
+    sync();
+    window.addEventListener(PINS_CHANGED_EVENT, sync);
+    return () => window.removeEventListener(PINS_CHANGED_EVENT, sync);
+  }, [pages]);
 
   const toggle = (id: string) => {
     setExpanded((prev) => {
@@ -128,7 +136,12 @@ export function Sidebar({
     return m;
   }, [pages]);
 
-  const pinned = useMemo(() => pages.filter((p) => p.pinned), [pages]);
+  // Per-user pins: order follows the pin list (oldest pin first).
+  const pinned = useMemo(() => {
+    const bySlug = new Map(pages.map((p) => [p.slug, p]));
+    return pins.map((s) => bySlug.get(s)).filter((p): p is SidebarPage => !!p);
+  }, [pages, pins]);
+  const pinnedSet = useMemo(() => new Set(pins), [pins]);
   const knownSlugs = useMemo(() => new Set(pages.map((p) => p.slug)), [pages]);
   const recentList = useMemo(
     () => recents.filter((r) => knownSlugs.has(r.slug) && !pinned.some((p) => p.slug === r.slug)).slice(0, 4),
@@ -162,7 +175,7 @@ export function Sidebar({
           <div className="nav-folder-children">
             {kids.map((k) => renderFolder(k, depth + 1))}
             {folderPages.map((p) => (
-              <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} />
+              <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned={pinnedSet.has(p.slug)} />
             ))}
           </div>
         )}
@@ -202,9 +215,6 @@ export function Sidebar({
         <Link href="/dashboard" className={`nav-link-item${pathname === "/dashboard" ? " nav-link-item--active" : ""}`}>
           Home
         </Link>
-        <Link href="/concepts" className={`nav-link-item${pathname === "/concepts" ? " nav-link-item--active" : ""}`}>
-          Concepts
-        </Link>
         {cleanupCount > 0 && (
           <Link href="/cleanup" className={`nav-link-item${pathname === "/cleanup" ? " nav-link-item--active" : ""}`}>
             Cleanup
@@ -219,7 +229,7 @@ export function Sidebar({
             <>
               <div className="nav-section-label">Pinned</div>
               {pinned.map((p) => (
-                <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} />
+                <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned />
               ))}
             </>
           )}
@@ -229,7 +239,7 @@ export function Sidebar({
               {recentList.map((r) => {
                 const page = pages.find((p) => p.slug === r.slug);
                 if (!page) return null;
-                return <PageLink key={r.slug} page={page} folders={folders} active={activeSlug === r.slug} />;
+                return <PageLink key={r.slug} page={page} folders={folders} active={activeSlug === r.slug} pinned={pinnedSet.has(r.slug)} />;
               })}
             </>
           )}
@@ -240,7 +250,7 @@ export function Sidebar({
         <div className="nav-section-label">Workspace</div>
         {rootFolders.map((f) => renderFolder(f, 0))}
         {unfiled.map((p) => (
-          <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} />
+          <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned={pinnedSet.has(p.slug)} />
         ))}
       </div>
 

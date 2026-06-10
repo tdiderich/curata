@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
 import { toast } from "@/components/toast";
+import { isPinned, togglePin } from "@/lib/pins";
 
 interface Folder {
   id: string;
@@ -171,10 +172,9 @@ interface PageMenuProps {
   folderId: string | null;
   folders: Folder[];
   allowPublic?: boolean;
-  pinned?: boolean;
 }
 
-export function PageMenu({ slug, title, visibility, folderId, folders, allowPublic = true, pinned = false }: PageMenuProps) {
+export function PageMenu({ slug, title, visibility, folderId, folders, allowPublic = true }: PageMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -278,11 +278,17 @@ export function PageMenu({ slug, title, visibility, folderId, folders, allowPubl
       </button>
       {open && (
         <AnchoredMenu anchorRef={btnRef} menuRef={portalRef} className="dash-page-actions-menu">
+          {/* Pins are per-user (localStorage), so no server round-trip. The
+              menu only mounts on click, so isPinned never runs during SSR. */}
           <button
             className="dash-page-actions-item"
-            onClick={() => patchPage({ pinned: !pinned }, pinned ? "Couldn't unpin page" : "Couldn't pin page")}
+            onClick={() => {
+              setOpen(false);
+              const nowPinned = togglePin(slug);
+              toast.success(nowPinned ? `Pinned "${title}"` : `Unpinned "${title}"`);
+            }}
           >
-            {pinned ? "Unpin from top" : "Pin to top"}
+            {isPinned(slug) ? "Unpin from top" : "Pin to top"}
           </button>
           <div className="dash-page-actions-divider" />
           <div className="dash-page-actions-section">Visibility</div>

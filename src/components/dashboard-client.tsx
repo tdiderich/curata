@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { NewFolderButton, PageMenu } from "@/components/folder-actions";
+import { readPinsSeeded, PINS_CHANGED_EVENT } from "@/lib/pins";
 import { NewPageButton } from "@/components/new-page-button";
 import { DashboardFeed } from "@/components/dashboard-feed";
 import { useDashView } from "@/components/view-toggle";
@@ -295,6 +296,16 @@ export function DashboardClient({ pages, folders, pageCount, orgName, allowPubli
     localStorage.setItem("curata-last-visit", String(Date.now()));
   }, []);
 
+  // Per-user pins drive the star badges; org-wide Page.pinned only seeds them.
+  const [pins, setPins] = useState<string[]>([]);
+  useEffect(() => {
+    const sync = () => setPins(readPinsSeeded(pages.filter((p) => p.pinned).map((p) => p.slug)));
+    sync();
+    window.addEventListener(PINS_CHANGED_EVENT, sync);
+    return () => window.removeEventListener(PINS_CHANGED_EVENT, sync);
+  }, [pages]);
+  const pinnedSet = useMemo(() => new Set(pins), [pins]);
+
   const pendingAnnPages = useMemo(
     () => pages.filter((p) => p.pendingAnnotationCount > 0),
     [pages]
@@ -454,7 +465,7 @@ export function DashboardClient({ pages, folders, pageCount, orgName, allowPubli
                     <Link href={`/pages/${page.slug}`} className="dash-page-link">
                       {page.title}
                     </Link>
-                    {page.pinned && (
+                    {pinnedSet.has(page.slug) && (
                       <span className="dash-badge dash-badge--pin" title="Pinned">&#9733;</span>
                     )}
                     {updatedSinceVisit && (
@@ -493,7 +504,6 @@ export function DashboardClient({ pages, folders, pageCount, orgName, allowPubli
                       folderId={page.folderId}
                       folders={folders}
                       allowPublic={allowPublic}
-                      pinned={page.pinned}
                     />
                   </td>
                 </tr>
