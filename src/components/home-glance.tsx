@@ -30,7 +30,7 @@ function ActivityChart({ activity }: { activity: number[] }) {
       viewBox={`0 0 ${activity.length * (w + gap) - gap} ${height}`}
       preserveAspectRatio="none"
       role="img"
-      aria-label="Pages updated per day, last 30 days"
+      aria-label="Page edits per day, last 30 days"
     >
       {activity.map((v, i) => {
         const h = v === 0 ? 2 : Math.max((v / max) * height, 4);
@@ -140,7 +140,7 @@ export function HomeGlance({
           <div className="home-glance-visuals">
             {activity.length > 0 && (
               <div className="glance-visual">
-                <div className="glance-visual-label">Activity — pages updated per day, last 30 days</div>
+                <div className="glance-visual-label">Activity — page edits per day, last 30 days</div>
                 <ActivityChart activity={activity} />
               </div>
             )}

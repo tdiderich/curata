@@ -77,7 +77,8 @@ export default async function DashboardPage() {
 
   const stats: GlanceStat[] = [
     { label: "pages", value: String(totalPages) },
-    { label: "updated last 30d", value: String(updated30d) },
+    { label: "edits last 30d", value: String(recentVersions.length) },
+    { label: "pages touched 30d", value: String(updated30d) },
     { label: "untouched >30d", value: String(Math.max(totalPages - updated30d, 0)) },
     { label: "open annotations", value: String(pendingAnnotationCount) },
   ];
