@@ -3,9 +3,10 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { seedOrg } from "@/lib/seed";
-import { listPages } from "@/lib/pages";
+import { listPages, readPage } from "@/lib/pages";
 import { db } from "@/lib/db";
 import { DashboardClient, SerializedPageMeta } from "@/components/dashboard-client";
+import { HomeGlance } from "@/components/home-glance";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
@@ -33,6 +34,17 @@ export default async function DashboardPage() {
   const orgName = org?.name ?? "curata";
 
   const pages = await listPages(ctx.orgId, ctx.userId);
+
+  // At-a-glance home: agent-written narrative page at reserved slug "home".
+  // Absent or empty page → dashboard falls back to the plain table (OSS fresh installs).
+  const homePage = await readPage(ctx.orgId, "home");
+  const homeRow = homePage
+    ? await db.page.findUnique({
+        where: { orgId_slug: { orgId: ctx.orgId, slug: "home" } },
+        select: { updatedAt: true },
+      })
+    : null;
+  const tablePages = pages.filter((p) => p.slug !== "home");
 
   const cleanupCount = await db.pageFlag.count({
     where: {
@@ -72,7 +84,7 @@ export default async function DashboardPage() {
   }));
 
 
-  const serialized: SerializedPageMeta[] = pages.map((p) => ({
+  const serialized: SerializedPageMeta[] = tablePages.map((p) => ({
     slug: p.slug,
     title: p.title,
     annotationCount: p.annotationCount,
@@ -92,10 +104,13 @@ export default async function DashboardPage() {
 
   return (
     <Suspense>
+      {homePage && homeRow && (
+        <HomeGlance json={homePage.json} updatedAt={homeRow.updatedAt} />
+      )}
       <DashboardClient
         pages={serialized}
         folders={folders}
-        pageCount={pages.length}
+        pageCount={tablePages.length}
         orgName={orgName}
         allowPublic={AUTH_MODE === "clerk" || AUTH_MODE === "oauth"}
         cleanupCount={cleanupCount}
