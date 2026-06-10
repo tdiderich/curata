@@ -5718,27 +5718,11 @@ body .c-section.align-right > * { max-width: none !important; }
   color: var(--teal);
   white-space: nowrap;
 }
-.glance-card-items {
+.glance-card-summary {
   margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--light-muted, var(--snow));
-}
-.glance-card-items li {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-.glance-card-more {
-  color: var(--muted);
-  font-size: 12px;
 }
 .glance-card-hint {
   margin-top: auto;

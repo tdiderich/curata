@@ -30,6 +30,9 @@ describe("buildGlanceCard", () => {
     const card = buildGlanceCard({ heading: "Needs attention", body: SECTION.components[0].body });
     expect(card.title).toBe("Needs attention");
     expect(card.subtitle).toBe("2 items");
+    expect(card.summary).toBe(
+      "Works through 2 open items across 2 pages — proposes a fix for each and applies it after your approval."
+    );
     expect(card.prompt).toContain("getting-started");
     expect(card.prompt.toLowerCase()).toContain("review");
   });

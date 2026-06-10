@@ -3,12 +3,6 @@
 import { useEffect, useState } from "react";
 import type { GlanceCard as GlanceCardData } from "@/lib/glance-prompts";
 
-// Strip markdown link syntax for the preview lines; the raw markdown (slugs
-// intact) stays in the copied prompt where the agent needs it.
-function previewText(line: string): string {
-  return line.replace(/^- /, "").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-}
-
 export function GlanceCard({ card }: { card: GlanceCardData }) {
   const [copied, setCopied] = useState(false);
 
@@ -42,12 +36,7 @@ export function GlanceCard({ card }: { card: GlanceCardData }) {
         <span className="glance-card-title">{card.title}</span>
         <span className="glance-card-badge">{copied ? "Copied ✓" : card.subtitle}</span>
       </div>
-      <ul className="glance-card-items">
-        {card.items.slice(0, 4).map((line, i) => (
-          <li key={i}>{previewText(line)}</li>
-        ))}
-        {card.items.length > 4 && <li className="glance-card-more">+{card.items.length - 4} more</li>}
-      </ul>
+      <p className="glance-card-summary">{card.summary}</p>
       {actionable && <span className="glance-card-hint">{copied ? "Paste into your agent session" : "Click to copy agent prompt"}</span>}
     </button>
   );
