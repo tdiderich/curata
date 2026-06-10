@@ -385,9 +385,6 @@ export default function PageDetailClient({
         </div>
       )}
       <div className="page-toolbar">
-        <Link className="page-toolbar-back" href="/dashboard">
-          &larr; Pages
-        </Link>
         {pageTitle && <span className="page-toolbar-title">{pageTitle}</span>}
         <div className="page-toolbar-spacer" />
         <div className="page-toolbar-right">

@@ -2,8 +2,11 @@
 
 /* ── Viewport-relative layout: override kazam's fixed pixel caps ── */
 
-body .container { max-width: calc(100vw - 80px) !important; }
-body .doc-root { max-width: calc(100vw - 80px) !important; }
+/* Parent-relative cap, not pure viewport: the app shell's sidebar sits next
+   to the content in a flex row, so 100vw-based caps overflow the main column
+   and push margin annotations off-screen. */
+body .container { max-width: min(calc(100vw - 80px), 100%) !important; }
+body .doc-root { max-width: min(calc(100vw - 80px), 100%) !important; }
 body .c-section.align-center > * { max-width: none !important; }
 body .c-section.align-right > * { max-width: none !important; }
 
@@ -46,24 +49,15 @@ body .c-section.align-right > * { max-width: none !important; }
 .page-toolbar {
   position: sticky;
   top: 0;
-  z-index: 30;
+  /* Above the hub masthead (z-40 in generated kazam.css) so the toolbar's
+     "..." dropdown isn't painted over by the sticky masthead */
+  z-index: 50;
   display: flex;
   align-items: center;
   padding: 8px 16px;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   gap: 12px;
-}
-
-.page-toolbar-back {
-  color: var(--light-muted);
-  text-decoration: none;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.page-toolbar-back:hover {
-  color: var(--snow);
 }
 
 .page-toolbar-title {
@@ -74,6 +68,11 @@ body .c-section.align-right > * { max-width: none !important; }
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  /* True center regardless of the right-side controls' width */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 45%;
 }
 
 .page-toolbar-spacer {
@@ -3996,10 +3995,6 @@ body .c-section.align-right > * { max-width: none !important; }
 }
 
 @media (max-width: 480px) {
-  .page-toolbar-back {
-    font-size: 12px;
-  }
-
   .dash-workspace-header {
     flex-wrap: wrap;
   }
