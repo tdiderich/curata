@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
@@ -53,17 +53,32 @@ function readRecents(): RecentEntry[] {
   }
 }
 
+function folderPath(folderId: string | null, folders: SidebarFolder[]): string {
+  if (!folderId) return "";
+  const byId = new Map(folders.map((f) => [f.id, f]));
+  const parts: string[] = [];
+  let cur = folderId;
+  while (cur) {
+    const f = byId.get(cur);
+    if (!f) break;
+    parts.unshift(f.name);
+    cur = f.parentId!;
+  }
+  return parts.join(" › ");
+}
+
 function PageLink({ page, folders, active, pinned }: { page: SidebarPage; folders: SidebarFolder[]; active: boolean; pinned: boolean }) {
   return (
     <div
       className={`nav-page-row${active ? " nav-page-row--active" : ""}`}
+      data-tip={(() => { const path = folderPath(page.folderId, folders); return path ? `${path} › ${page.title}` : page.title; })()}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData(DRAG_MIME, JSON.stringify({ slug: page.slug, folderId: page.folderId, title: page.title }));
         e.dataTransfer.effectAllowed = "move";
       }}
     >
-      <Link href={`/pages/${page.slug}`} className="nav-page-link" title={page.title}>
+      <Link href={`/pages/${page.slug}`} className="nav-page-link">
         <svg className="nav-page-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
           <polyline points="14 2 14 8 20 8" />
@@ -103,12 +118,43 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const sidebarRef = useRef<HTMLElement>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [recents, setRecents] = useState<RecentEntry[]>([]);
   const [pins, setPins] = useState<string[]>([]);
   const [hidden, setHidden] = useState(false);
   // Folder id (or "__root") currently hovered by a page drag.
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+
+  const [resizing, setResizing] = useState(false);
+
+  useEffect(() => {
+    const el = sidebarRef.current;
+    if (!el) return;
+    const saved = localStorage.getItem("curata-sidebar-width");
+    if (saved) el.style.width = saved + "px";
+  }, []);
+
+  const onResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setResizing(true);
+    const el = sidebarRef.current;
+    if (!el) return;
+    const startX = e.clientX;
+    const startW = el.offsetWidth;
+    function onMove(ev: MouseEvent) {
+      const w = Math.min(480, Math.max(200, startW + ev.clientX - startX));
+      el!.style.width = w + "px";
+    }
+    function onUp() {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      setResizing(false);
+      localStorage.setItem("curata-sidebar-width", String(el!.offsetWidth));
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -249,6 +295,7 @@ export function Sidebar({
       <div key={folder.id} className="nav-folder" style={{ "--nav-depth": depth } as React.CSSProperties}>
         <div
           className={`nav-folder-row${dropTarget === folder.id ? " nav-folder-row--dragover" : ""}`}
+          data-tip={(() => { const path = folderPath(folder.parentId, folders); return path ? `${path} › ${folder.name}` : folder.name; })()}
           {...dropProps(folder.id)}
         >
           <button
@@ -295,7 +342,11 @@ export function Sidebar({
   }
 
   return (
-    <aside className="app-sidebar" aria-label="Workspace navigation">
+    <aside className="app-sidebar" aria-label="Workspace navigation" ref={sidebarRef}>
+      <div
+        className={`sidebar-resize-handle${resizing ? " sidebar-resize-handle--active" : ""}`}
+        onMouseDown={onResizeStart}
+      />
       <div className="nav-org">
         <Link href="/dashboard" className="nav-org-name" title={orgName}>
           {logoUrl ? (
@@ -373,6 +424,19 @@ export function Sidebar({
           {...dropProps(null)}
         >
           Workspace
+          {expanded.size > 0 && (
+            <button
+              className="nav-collapse-all"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(new Set());
+                localStorage.setItem(EXPAND_KEY, "[]");
+              }}
+              title="Collapse all folders"
+            >
+              &#9652;&#9662;
+            </button>
+          )}
         </div>
         {rootFolders.map((f) => renderFolder(f, 0))}
         {unfiled.map((p) => (

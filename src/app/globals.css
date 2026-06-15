@@ -1787,6 +1787,8 @@ body .c-section.align-right > * { max-width: none !important; }
 }
 
 .dash-row:hover .dash-page-actions-btn,
+.nav-folder-row:hover .dash-page-actions-btn,
+.nav-page-row:hover .dash-page-actions-btn,
 .dash-page-actions-btn:focus {
   opacity: 1;
 }
@@ -5131,20 +5133,40 @@ body .c-section.align-right > * { max-width: none !important; }
 
 .app-sidebar {
   width: 260px;
+  min-width: 200px;
+  max-width: 480px;
   flex-shrink: 0;
   position: sticky;
   top: 0;
   height: 100vh;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 14px 10px;
+  position: relative;
   background: rgba(var(--text-rgb), 0.02);
   border-right: 1px solid rgba(var(--text-rgb), 0.08);
   /* Thin themed scrollbar; thumb only appears while hovering the sidebar */
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
+}
+
+.sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background 0.15s;
+}
+
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle--active {
+  background: rgba(var(--accent-rgb), 0.4);
 }
 
 .app-sidebar:hover { scrollbar-color: rgba(var(--text-rgb), 0.18) transparent; }
@@ -5294,7 +5316,25 @@ body .c-section.align-right > * { max-width: none !important; }
   letter-spacing: 1px;
   color: var(--muted);
   padding: 4px 12px 4px;
+  display: flex;
+  align-items: center;
 }
+
+.nav-collapse-all {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 9px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: -2px;
+  opacity: 0;
+  transition: all 0.12s;
+}
+.nav-section-label:hover .nav-collapse-all { opacity: 1; }
+.nav-collapse-all:hover { color: var(--snow); background: rgba(var(--text-rgb), 0.07); }
 
 .nav-folder-row, .nav-page-row {
   display: flex;
@@ -5306,7 +5346,7 @@ body .c-section.align-right > * { max-width: none !important; }
 .nav-folder-row:hover, .nav-page-row:hover { background: rgba(var(--text-rgb), 0.05); }
 .nav-page-row--active { background: rgba(var(--accent-rgb), 0.12); }
 
-.nav-folder { padding-left: calc(var(--nav-depth, 0) * 12px); }
+.nav-folder { padding-left: calc(var(--nav-depth, 0) * 8px); }
 
 .nav-folder-toggle {
   display: flex;
@@ -5342,7 +5382,24 @@ body .c-section.align-right > * { max-width: none !important; }
   text-overflow: ellipsis;
 }
 
-.nav-folder-children { padding-left: 14px; }
+.nav-folder-children {
+  padding-left: 10px;
+  position: relative;
+}
+
+.nav-folder-children::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(var(--text-rgb), 0.08);
+}
+
+.nav-folder-children:hover::before {
+  background: rgba(var(--text-rgb), 0.14);
+}
 
 .nav-page-link {
   display: flex;
@@ -5366,6 +5423,38 @@ body .c-section.align-right > * { max-width: none !important; }
 }
 
 .nav-page-pin { color: var(--yellow); font-size: 10px; flex-shrink: 0; }
+
+/* Custom sidebar tooltips — on the row, not the truncated span */
+.nav-page-row[data-tip],
+.nav-folder-row[data-tip] {
+  position: relative;
+}
+
+.nav-page-row[data-tip]::after,
+.nav-folder-row[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 12px;
+  bottom: calc(100% + 4px);
+  z-index: 100;
+  max-width: 300px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(var(--bg-rgb), 0.95);
+  border: 1px solid rgba(var(--text-rgb), 0.15);
+  color: var(--snow);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s 0.7s;
+}
+
+.nav-page-row[data-tip]:hover::after,
+.nav-folder-row[data-tip]:hover::after {
+  opacity: 1;
+}
 
 .nav-row-menu {
   opacity: 0;
