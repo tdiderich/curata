@@ -141,6 +141,7 @@ export function CleanupClient() {
         <div className="cleanup-actions">
           <button className="cleanup-btn" onClick={() => setPreviewSlug(previewSlug === flag.slug ? null : flag.slug)}>Review</button>
           <button className="cleanup-btn" disabled={busy} onClick={() => disposition([flag.id], "keep")}>Keep</button>
+          <button className="cleanup-btn cleanup-btn--archive" disabled={busy} onClick={() => disposition([flag.id], "archive")}>Archive</button>
           <button className="cleanup-btn cleanup-btn--danger" disabled={busy} onClick={() => disposition([flag.id], "delete")}>Delete</button>
         </div>
       </div>

@@ -87,6 +87,7 @@ function PageLink({ page, folders, active, pinned }: { page: SidebarPage; folder
 export function Sidebar({
   folders,
   pages,
+  archivedPages = [],
   orgName,
   logoUrl,
   cleanupCount = 0,
@@ -94,6 +95,7 @@ export function Sidebar({
 }: {
   folders: SidebarFolder[];
   pages: SidebarPage[];
+  archivedPages?: SidebarPage[];
   orgName: string;
   logoUrl?: string | null;
   cleanupCount?: number;
@@ -376,6 +378,28 @@ export function Sidebar({
         {unfiled.map((p) => (
           <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned={pinnedSet.has(p.slug)} />
         ))}
+        {archivedPages.length > 0 && (
+          <div className="nav-folder" style={{ "--nav-depth": 0 } as React.CSSProperties}>
+            <div className="nav-folder-row">
+              <button
+                className="nav-folder-toggle nav-folder-toggle--archived"
+                onClick={() => toggle("__archived")}
+                aria-expanded={expanded.has("__archived")}
+              >
+                <span className={`nav-folder-chevron${!expanded.has("__archived") ? " nav-folder-chevron--collapsed" : ""}`} aria-hidden="true">&#9662;</span>
+                <span className="nav-folder-name">Archived</span>
+                <span className="nav-count-badge">{archivedPages.length}</span>
+              </button>
+            </div>
+            {expanded.has("__archived") && (
+              <div className="nav-folder-children">
+                {archivedPages.map((p) => (
+                  <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned={false} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="nav-footer">

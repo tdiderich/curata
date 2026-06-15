@@ -5432,6 +5432,11 @@ body .c-section.align-right > * { max-width: none !important; }
 
 .org-logo-remove:hover { color: var(--red); }
 
+.nav-folder-toggle--archived .nav-folder-name {
+  color: var(--muted);
+  font-style: italic;
+}
+
 /* ── Cleanup queue ───────────────────────────────────────────────────────── */
 
 .nav-count-badge {

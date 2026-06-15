@@ -47,6 +47,7 @@ async function AuthControls() {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   let folders: SidebarFolder[] = [];
   let pages: SidebarPage[] = [];
+  let archivedPages: SidebarPage[] = [];
   let orgName = "curata";
   let logoUrl: string | null = null;
   let cleanupCount = 0;
@@ -93,6 +94,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       });
       pages = rawPages;
 
+      const rawArchived = await db.page.findMany({
+        where: {
+          orgId: ctx.orgId,
+          status: "archived",
+          OR: [
+            { visibility: "shared" },
+            { visibility: "public" },
+            { visibility: "personal", createdBy: ctx.userId },
+          ],
+        },
+        orderBy: { title: "asc" },
+        select: { slug: true, title: true, folderId: true, pinned: true, visibility: true },
+      });
+      archivedPages = rawArchived;
+
       cleanupCount = await db.pageFlag.count({
         where: {
           page: { orgId: ctx.orgId },
@@ -109,7 +125,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="app-shell">
-      <Sidebar folders={folders} pages={pages} orgName={orgName} logoUrl={logoUrl} cleanupCount={cleanupCount} authControls={<AuthControls />} />
+      <Sidebar folders={folders} pages={pages} archivedPages={archivedPages} orgName={orgName} logoUrl={logoUrl} cleanupCount={cleanupCount} authControls={<AuthControls />} />
       <main className="app-main">{children}</main>
     </div>
   );

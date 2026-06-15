@@ -72,7 +72,7 @@ function applyRateLimit(request: NextRequest): NextResponse | null {
 function applySecurityHeaders(request: NextRequest, response: NextResponse): void {
   if (process.env.NODE_ENV === "development") return;
   response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-Frame-Options", "SAMEORIGIN");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set(
     "Permissions-Policy",
@@ -105,7 +105,7 @@ function applySecurityHeaders(request: NextRequest, response: NextResponse): voi
       `img-src 'self' data: blob:${clerkImg}`,
       "font-src 'self' data:",
       `connect-src 'self'${clerkDomains}${AUTH_MODE === "clerk" ? " https://*.clerk.com" : ""} https://cloudflareinsights.com`,
-      `frame-src${clerkFrame} https://challenges.cloudflare.com`,
+      `frame-src 'self'${clerkFrame} https://challenges.cloudflare.com`,
       "worker-src 'self' blob:",
     ].join("; "),
   );
