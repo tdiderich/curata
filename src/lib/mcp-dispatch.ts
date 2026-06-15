@@ -58,6 +58,62 @@ export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 
+const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string, string> }> = {
+  list_pages: { known: new Set() },
+  read_page: { known: new Set(["slug"]) },
+  search: { known: new Set(["query"]) },
+  get_config: { known: new Set() },
+  list_annotations: { known: new Set(["slug"]) },
+  list_open_annotations: { known: new Set(["slug"]) },
+  flag_page: { known: new Set(["slug", "action", "reason", "evidence", "superseded_by", "confidence"]), aliases: { supersededBy: "superseded_by" } },
+  list_flags: { known: new Set(["status"]) },
+  get_component_reference: { known: new Set() },
+  list_folders: { known: new Set() },
+  get_folder_structure: { known: new Set() },
+  create_folder: { known: new Set(["name", "parent_id", "visibility"]), aliases: { parentId: "parent_id" } },
+  update_folder: { known: new Set(["id", "name", "parent_id", "visibility"]), aliases: { parentId: "parent_id" } },
+  delete_folder: { known: new Set(["id"]) },
+  get_versions: { known: new Set(["slug", "limit"]) },
+  validate_page: { known: new Set(["slug", "content"]) },
+  create_page: { known: new Set(["slug", "content", "folder_id"]), aliases: { folderId: "folder_id" } },
+  delete_page: { known: new Set(["slug"]) },
+  move_page: { known: new Set(["slug", "folder_id"]), aliases: { folderId: "folder_id" } },
+  write_page: { known: new Set(["slug", "content"]) },
+  annotate_page: { known: new Set(["slug", "text", "section", "kind", "replacement"]) },
+  update_annotation: { known: new Set(["slug", "annotation_id", "status"]), aliases: { annotationId: "annotation_id" } },
+  patch_page: { known: new Set(["slug", "operations"]) },
+  replace_in_page: { known: new Set(["slug", "target", "replacement"]) },
+  create_from_template: { known: new Set(["template_slug", "slug", "variables", "folder_id"]), aliases: { templateSlug: "template_slug", folderId: "folder_id" } },
+  list_workflows: { known: new Set() },
+  list_templates: { known: new Set() },
+  get_vocabulary: { known: new Set() },
+  get_related: { known: new Set(["slug"]) },
+  get_semantic_map: { known: new Set(["kind"]) },
+};
+
+function validateParams(tool: string, args: Record<string, string>): Record<string, string> {
+  const spec = TOOL_PARAMS[tool];
+  if (!spec) return args;
+  const corrected = { ...args };
+  if (spec.aliases) {
+    for (const [alias, canonical] of Object.entries(spec.aliases)) {
+      if (alias in corrected && !(canonical in corrected)) {
+        corrected[canonical] = corrected[alias];
+        delete corrected[alias];
+      }
+    }
+  }
+  const unknown = Object.keys(corrected).filter((k) => !spec.known.has(k));
+  if (unknown.length > 0) {
+    const suggestions = unknown.map((k) => {
+      const close = [...spec.known].find((p) => p.replace(/_/g, "") === k.replace(/[_-]/g, "").toLowerCase());
+      return close ? `"${k}" (did you mean "${close}"?)` : `"${k}"`;
+    });
+    throw new Error(`unknown parameter${unknown.length > 1 ? "s" : ""} for ${tool}: ${suggestions.join(", ")}. Valid: ${[...spec.known].join(", ")}`);
+  }
+  return corrected;
+}
+
 export async function dispatch(
   tool: string,
   args: Record<string, string>,
@@ -65,6 +121,7 @@ export async function dispatch(
   orgSlug: string,
   actorId: string
 ): Promise<unknown> {
+  args = validateParams(tool, args);
   switch (tool) {
     case "list_pages": {
       const [pages, folders] = await Promise.all([
@@ -308,15 +365,19 @@ export async function dispatch(
       if (cfVisibility !== "personal" && cfVisibility !== "shared") {
         throw new Error("visibility must be 'personal' or 'shared'");
       }
+      let parentName: string | null = null;
       if (args.parent_id) {
         const parent = await db.folder.findFirst({ where: { id: args.parent_id, orgId } });
         if (!parent) throw new Error(`parent folder not found: ${args.parent_id}`);
+        parentName = parent.name;
       }
+      const existingFolder = await db.folder.findFirst({ where: { orgId, name: args.name, parentId: args.parent_id ?? null } });
+      if (existingFolder) throw new Error(`folder "${args.name}" already exists${parentName ? ` under "${parentName}"` : " at root"}`);
       const newFolder = await db.folder.create({
         data: { orgId, name: args.name, visibility: cfVisibility, createdBy: actorId, parentId: args.parent_id ?? null },
       });
-      logAudit({ orgId, action: "folder.create", resourceType: "folder", resourceId: newFolder.id, actorType: "apikey", actorId, metadata: { name: args.name, parentId: args.parent_id } });
-      return { ok: true, id: newFolder.id, name: newFolder.name };
+      logAudit({ orgId, action: "folder.create", resourceType: "folder", resourceId: newFolder.id, actorType: "apikey", actorId, metadata: { name: args.name, parentId: args.parent_id, parentName } });
+      return { ok: true, id: newFolder.id, name: newFolder.name, parentId: args.parent_id ?? null, parentName, visibility: cfVisibility };
     }
 
     case "update_folder": {
@@ -397,6 +458,8 @@ export async function dispatch(
       const createResult = await writePage(orgId, orgSlug, args.slug, args.content, "agent");
       if (!createResult.ok) throw new Error(createResult.error);
       if (args.folder_id) {
+        const cpFolder = await db.folder.findFirst({ where: { id: args.folder_id, orgId } });
+        if (!cpFolder) throw new Error(`folder not found: ${args.folder_id}`);
         await db.page.update({
           where: { orgId_slug: { orgId, slug: args.slug } },
           data: { folderId: args.folder_id },
@@ -439,12 +502,20 @@ export async function dispatch(
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       const movePage = await db.page.findUnique({
         where: { orgId_slug: { orgId, slug: args.slug } },
+        include: { folder: { select: { name: true } } },
       });
       if (!movePage) throw new Error(`page not found: ${args.slug}`);
       const folderId = args.folder_id || null;
+      let targetFolderName: string | null = null;
       if (folderId) {
         const folder = await db.folder.findFirst({ where: { id: folderId, orgId } });
         if (!folder) throw new Error(`folder not found: ${folderId}`);
+        targetFolderName = folder.name;
+      }
+      const previousFolderId = movePage.folderId;
+      const previousFolderName = (movePage as unknown as { folder: { name: string } | null }).folder?.name ?? null;
+      if (previousFolderId === folderId) {
+        return { ok: true, slug: args.slug, folderId, folderName: targetFolderName, note: "page was already in this folder — no change" };
       }
       await db.page.update({
         where: { id: movePage.id },
@@ -457,9 +528,9 @@ export async function dispatch(
         resourceId: args.slug,
         actorType: "apikey",
         actorId,
-        metadata: { slug: args.slug, folderId },
+        metadata: { slug: args.slug, folderId, folderName: targetFolderName, previousFolderId, previousFolderName },
       });
-      return { ok: true, slug: args.slug, folderId };
+      return { ok: true, slug: args.slug, folderId, folderName: targetFolderName, previousFolderId, previousFolderName };
     }
 
     case "write_page": {
