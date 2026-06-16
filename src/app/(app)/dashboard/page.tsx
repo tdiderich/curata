@@ -183,6 +183,7 @@ export default async function DashboardPage() {
       const json = p.versions[0].jsonContent as Record<string, unknown>;
       const d = json.dashboard as Record<string, unknown>;
       return {
+        slug: p.slug,
         title: p.title,
         subtitle: (json.subtitle as string) ?? null,
         folderName: p.folder?.name ?? null,

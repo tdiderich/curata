@@ -261,18 +261,21 @@ describe("buildPageOptedCards", () => {
   it("builds cards from pages with dashboard blocks, sorted by folder then title", () => {
     const pages: DashboardPageInfo[] = [
       {
+        slug: "curata-call-prep-debrief",
         title: "Call Prep",
         subtitle: "Pre-call research",
         folderName: "Workflows",
         dashboard: { prompt: "Run the call prep workflow.", title: "Call prep", description: "Research + agenda" },
       },
       {
+        slug: "curata-weekly-highlights",
         title: "Weekly Highlights",
         subtitle: "Cross-account digest",
         folderName: "Workflows",
         dashboard: { prompt: "Run the weekly highlights workflow." },
       },
       {
+        slug: "custom-action",
         title: "Custom Action",
         subtitle: null,
         folderName: null,
@@ -283,6 +286,7 @@ describe("buildPageOptedCards", () => {
     expect(cards).toHaveLength(3);
     expect(cards[0].title).toBe("Custom Action");
     expect(cards[0].subtitle).toBe("custom");
+    expect(cards[0].prompt).toContain('read_page("custom-action")');
     expect(cards[1].title).toBe("Call prep");
     expect(cards[1].subtitle).toBe("Workflows");
     expect(cards[1].summary).toBe("Research + agenda");
@@ -290,6 +294,7 @@ describe("buildPageOptedCards", () => {
     expect(cards[2].subtitle).toBe("Workflows");
     expect(cards[2].prompt).toContain("https://x.dev/api/mcp/stream");
     expect(cards[2].prompt).toContain("Run the weekly highlights workflow.");
+    expect(cards[2].prompt).toContain('read_page("curata-weekly-highlights")');
   });
 
   it("returns empty for no pages", () => {

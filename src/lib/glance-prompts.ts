@@ -307,6 +307,7 @@ export interface DashboardBlock {
 }
 
 export interface DashboardPageInfo {
+  slug: string;
   title: string;
   subtitle: string | null;
   folderName: string | null;
@@ -327,6 +328,6 @@ export function buildPageOptedCards(pages: DashboardPageInfo[], ctx: GlanceConte
       title: p.dashboard.title ?? p.title,
       subtitle: p.folderName ?? "custom",
       summary: p.dashboard.description ?? p.subtitle ?? p.title,
-      prompt: `${contextHeader(ctx)}\n\n${p.dashboard.prompt.trim()}`,
+      prompt: `${contextHeader(ctx)}\n\nWorkflow page: read_page("${p.slug}") for full steps.\n\n${p.dashboard.prompt.trim()}`,
     }));
 }
