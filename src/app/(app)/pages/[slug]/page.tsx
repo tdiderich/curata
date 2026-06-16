@@ -104,7 +104,7 @@ export default async function PageDetailView({
   const page = {
     title: pageTitle,
     subtitle: (pageData.json.subtitle as string) || undefined,
-    shell: effectiveHub ? "hub" : (pageData.json.shell as string) || "standard",
+    shell: hubContext ? "hub" : (pageData.json.shell as string) || "standard",
     hub: effectiveHub,
     components: (pageData.json.components ?? []) as Array<{
       type: string;
