@@ -1,5 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { buildGlanceCard, extractGlanceSections, extractCustomPrompts } from "@/lib/glance-prompts";
+import {
+  buildGlanceCard,
+  extractGlanceSections,
+  extractCustomPrompts,
+  hasDashboardBlock,
+  buildStaleCard,
+  buildFlagCard,
+  buildRecentlyCard,
+  buildPageOptedCards,
+} from "@/lib/glance-prompts";
+import type { StalePageInfo, FlagInfo, RecentPageInfo, DashboardPageInfo } from "@/lib/glance-prompts";
 
 const SECTION = {
   type: "section",
@@ -141,5 +151,148 @@ describe("buildGlanceCard", () => {
     });
     expect(card.prompt).toBe("");
     expect(card.subtitle).toBe("all clear");
+  });
+});
+
+describe("hasDashboardBlock", () => {
+  it("returns true when dashboard has a prompt string", () => {
+    expect(hasDashboardBlock({ dashboard: { prompt: "Run this workflow." } })).toBe(true);
+  });
+
+  it("returns false when dashboard has no prompt", () => {
+    expect(hasDashboardBlock({ dashboard: { title: "No prompt" } })).toBe(false);
+  });
+
+  it("returns false when dashboard is not an object", () => {
+    expect(hasDashboardBlock({ dashboard: true })).toBe(false);
+    expect(hasDashboardBlock({})).toBe(false);
+  });
+});
+
+describe("buildStaleCard", () => {
+  it("builds a card with overdue pages and slugs in prompt", () => {
+    const pages: StalePageInfo[] = [
+      { slug: "halcyon-deploy", title: "Halcyon Deployment", staleness: "overdue", reason: "last updated 45d ago, review_every: monthly" },
+      { slug: "forge-priorities", title: "Forge Priorities", staleness: "due", reason: "last updated 28d ago" },
+    ];
+    const card = buildStaleCard(pages, { origin: "https://x.dev" });
+    expect(card.title).toBe("Stale page audit");
+    expect(card.subtitle).toBe("2 overdue");
+    expect(card.prompt).toContain("halcyon-deploy");
+    expect(card.prompt).toContain("forge-priorities");
+    expect(card.prompt).toContain("https://x.dev/api/mcp/stream");
+  });
+
+  it("returns empty prompt when no stale pages", () => {
+    const card = buildStaleCard([], {});
+    expect(card.subtitle).toBe("all clear");
+    expect(card.prompt).toBe("");
+    expect(card.summary).toBe("No stale pages to review.");
+  });
+});
+
+describe("buildFlagCard", () => {
+  it("builds a card with flagged pages and details in prompt", () => {
+    const flags: FlagInfo[] = [
+      { slug: "sunbit-tsp", title: "Sunbit TSP", action: "superseded", confidence: "high", reason: "New TSP written but old page not archived" },
+    ];
+    const card = buildFlagCard(flags, { origin: "https://x.dev" });
+    expect(card.title).toBe("Open flags");
+    expect(card.subtitle).toBe("1 flag");
+    expect(card.prompt).toContain("sunbit-tsp");
+    expect(card.prompt).toContain("superseded");
+  });
+
+  it("returns empty prompt when no flags", () => {
+    const card = buildFlagCard([], {});
+    expect(card.subtitle).toBe("all clear");
+    expect(card.prompt).toBe("");
+    expect(card.summary).toBe("No open flags.");
+  });
+});
+
+describe("buildRecentlyCard", () => {
+  it("shows normal list for 3-10 pages", () => {
+    const pages: RecentPageInfo[] = [
+      { slug: "page-a", title: "Page A", folderName: "Reports", updatedAt: new Date("2026-06-16T10:00:00Z") },
+      { slug: "page-b", title: "Page B", folderName: "Workflows", updatedAt: new Date("2026-06-16T08:00:00Z") },
+      { slug: "page-c", title: "Page C", folderName: "Reports", updatedAt: new Date("2026-06-16T06:00:00Z") },
+    ];
+    const card = buildRecentlyCard(pages, "today", { origin: "https://x.dev" });
+    expect(card.subtitle).toBe("3 pages today");
+    expect(card.prompt).toContain("page-a");
+    expect(card.prompt).toContain("page-b");
+    expect(card.prompt).toContain("page-c");
+    expect(card.prompt).toContain("read_page");
+  });
+
+  it("groups by folder for >10 pages", () => {
+    const pages: RecentPageInfo[] = Array.from({ length: 12 }, (_, i) => ({
+      slug: `page-${i}`,
+      title: `Page ${i}`,
+      folderName: i < 8 ? "Workflows" : "Reports",
+      updatedAt: new Date("2026-06-16T10:00:00Z"),
+    }));
+    const card = buildRecentlyCard(pages, "today", {});
+    expect(card.subtitle).toBe("12 pages · 2 folders");
+    expect(card.prompt).toContain("Workflows (8)");
+    expect(card.prompt).toContain("Reports (4)");
+  });
+
+  it("returns empty prompt when no recent pages", () => {
+    const card = buildRecentlyCard([], "30 days", {});
+    expect(card.subtitle).toBe("all clear");
+    expect(card.prompt).toBe("");
+    expect(card.summary).toBe("No recent changes.");
+  });
+
+  it("uses window label in subtitle", () => {
+    const pages: RecentPageInfo[] = [
+      { slug: "p", title: "P", folderName: null, updatedAt: new Date("2026-06-10T10:00:00Z") },
+      { slug: "q", title: "Q", folderName: null, updatedAt: new Date("2026-06-09T10:00:00Z") },
+      { slug: "r", title: "R", folderName: null, updatedAt: new Date("2026-06-08T10:00:00Z") },
+    ];
+    const card = buildRecentlyCard(pages, "this week", {});
+    expect(card.subtitle).toBe("3 pages this week");
+  });
+});
+
+describe("buildPageOptedCards", () => {
+  it("builds cards from pages with dashboard blocks, sorted by folder then title", () => {
+    const pages: DashboardPageInfo[] = [
+      {
+        title: "Call Prep",
+        subtitle: "Pre-call research",
+        folderName: "Workflows",
+        dashboard: { prompt: "Run the call prep workflow.", title: "Call prep", description: "Research + agenda" },
+      },
+      {
+        title: "Weekly Highlights",
+        subtitle: "Cross-account digest",
+        folderName: "Workflows",
+        dashboard: { prompt: "Run the weekly highlights workflow." },
+      },
+      {
+        title: "Custom Action",
+        subtitle: null,
+        folderName: null,
+        dashboard: { prompt: "Do something custom." },
+      },
+    ];
+    const cards = buildPageOptedCards(pages, { origin: "https://x.dev" });
+    expect(cards).toHaveLength(3);
+    expect(cards[0].title).toBe("Custom Action");
+    expect(cards[0].subtitle).toBe("custom");
+    expect(cards[1].title).toBe("Call prep");
+    expect(cards[1].subtitle).toBe("Workflows");
+    expect(cards[1].summary).toBe("Research + agenda");
+    expect(cards[2].title).toBe("Weekly Highlights");
+    expect(cards[2].subtitle).toBe("Workflows");
+    expect(cards[2].prompt).toContain("https://x.dev/api/mcp/stream");
+    expect(cards[2].prompt).toContain("Run the weekly highlights workflow.");
+  });
+
+  it("returns empty for no pages", () => {
+    expect(buildPageOptedCards([], {})).toHaveLength(0);
   });
 });

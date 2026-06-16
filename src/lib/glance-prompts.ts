@@ -111,6 +111,16 @@ export function isEmptySection(section: GlanceSection): boolean {
   return isEmptyState(bulletLines(section.body));
 }
 
+export function hasDashboardBlock(json: Record<string, unknown>): boolean {
+  const d = json.dashboard;
+  return (
+    !!d &&
+    typeof d === "object" &&
+    !Array.isArray(d) &&
+    typeof (d as Record<string, unknown>).prompt === "string"
+  );
+}
+
 // Live DB-derived bodies for the three standard cards, computed on every
 // dashboard load. The home page is a stash of orientation prose and custom
 // prompts, not a report — standard cards are live by default.
@@ -186,4 +196,137 @@ export function buildGlanceCard(section: GlanceSection, ctx: GlanceContext = {})
     summary,
     prompt,
   };
+}
+
+export interface StalePageInfo {
+  slug: string;
+  title: string;
+  staleness: "due" | "overdue";
+  reason: string | null;
+}
+
+export function buildStaleCard(pages: StalePageInfo[], ctx: GlanceContext = {}): GlanceCard {
+  if (pages.length === 0) {
+    return { title: "Stale page audit", subtitle: "all clear", summary: "No stale pages to review.", prompt: "" };
+  }
+  const body = pages
+    .map((p) => `- [${p.title}](${p.slug}) — ${p.staleness}${p.reason ? ` (${p.reason})` : ""}`)
+    .join("\n");
+  const prompt = `${contextHeader(ctx)}\n\nThese pages are past their review date:\n\n${body}\n\nRead each with read_page, check accuracy against current state, flag what's outdated, update or archive.`;
+  return {
+    title: "Stale page audit",
+    subtitle: `${pages.length} overdue`,
+    summary: `Reviews ${plural(pages.length, "stale page")} for accuracy — flags what's outdated and proposes updates or archival.`,
+    prompt,
+  };
+}
+
+export interface FlagInfo {
+  slug: string;
+  title: string;
+  action: string;
+  confidence: string;
+  reason: string;
+}
+
+export function buildFlagCard(flags: FlagInfo[], ctx: GlanceContext = {}): GlanceCard {
+  if (flags.length === 0) {
+    return { title: "Open flags", subtitle: "all clear", summary: "No open flags.", prompt: "" };
+  }
+  const body = flags
+    .map((f) => `- [${f.title}](${f.slug}) — flag: "${f.action}" (confidence: ${f.confidence}) — "${f.reason}"`)
+    .join("\n");
+  const prompt = `${contextHeader(ctx)}\n\nThese pages have been flagged:\n\n${body}\n\nReview each flag with read_page. Triage by confidence, take the flagged action (archive/merge/update), resolve each flag.`;
+  return {
+    title: "Open flags",
+    subtitle: plural(flags.length, "flag"),
+    summary: `Reviews ${plural(flags.length, "flagged page")} — triages by confidence and resolves each flag.`,
+    prompt,
+  };
+}
+
+export interface RecentPageInfo {
+  slug: string;
+  title: string;
+  folderName: string | null;
+  updatedAt: Date;
+}
+
+export function buildRecentlyCard(
+  pages: RecentPageInfo[],
+  windowLabel: string,
+  ctx: GlanceContext = {}
+): GlanceCard {
+  if (pages.length === 0) {
+    return { title: "What happened recently", subtitle: "all clear", summary: "No recent changes.", prompt: "" };
+  }
+
+  const FOLDER_THRESHOLD = 10;
+
+  if (pages.length > FOLDER_THRESHOLD) {
+    const byFolder = new Map<string, RecentPageInfo[]>();
+    for (const p of pages) {
+      const key = p.folderName ?? "Uncategorized";
+      const arr = byFolder.get(key) ?? [];
+      arr.push(p);
+      byFolder.set(key, arr);
+    }
+    const sorted = [...byFolder.entries()].sort((a, b) => b[1].length - a[1].length);
+    const folderSummary = sorted.map(([name, items]) => `${name} (${items.length})`).join(", ");
+    const folderDetail = sorted
+      .map(([name, items]) => {
+        const slugs = items.map((p) => `[${p.title}](${p.slug})`).join(", ");
+        return `- **${name}** (${items.length}): ${slugs}`;
+      })
+      .join("\n");
+    const prompt = `${contextHeader(ctx)}\n\n${pages.length} pages changed ${windowLabel} across ${folderSummary}.\n\n${folderDetail}\n\nSummarize what moved in each folder, starting with the busiest. For key changes, read_page to get details.`;
+    return {
+      title: "What happened recently",
+      subtitle: `${pages.length} pages · ${byFolder.size} folders`,
+      summary: `${pages.length} pages changed ${windowLabel} across ${byFolder.size} folders — summarizes what moved in each.`,
+      prompt,
+    };
+  }
+
+  const body = pages
+    .map((p) => `- [${p.title}](${p.slug})`)
+    .join("\n");
+  const prompt = `${contextHeader(ctx)}\n\nThese pages changed recently:\n\n${body}\n\nRead each with read_page and brief me: what changed, why it matters, and anything that needs follow-up from me.`;
+  return {
+    title: "What happened recently",
+    subtitle: `${pages.length} page${pages.length === 1 ? "" : "s"} ${windowLabel}`,
+    summary: `Briefs you on ${plural(pages.length, "recently updated page")} — what changed, why it matters, and what needs follow-up.`,
+    prompt,
+  };
+}
+
+export interface DashboardBlock {
+  prompt: string;
+  title?: string;
+  description?: string;
+}
+
+export interface DashboardPageInfo {
+  title: string;
+  subtitle: string | null;
+  folderName: string | null;
+  dashboard: DashboardBlock;
+}
+
+export function buildPageOptedCards(pages: DashboardPageInfo[], ctx: GlanceContext = {}): GlanceCard[] {
+  return pages
+    .sort((a, b) => {
+      const fa = a.folderName ?? "";
+      const fb = b.folderName ?? "";
+      if (fa !== fb) return fa.localeCompare(fb);
+      const ta = a.dashboard.title ?? a.title;
+      const tb = b.dashboard.title ?? b.title;
+      return ta.localeCompare(tb);
+    })
+    .map((p) => ({
+      title: p.dashboard.title ?? p.title,
+      subtitle: p.folderName ?? "custom",
+      summary: p.dashboard.description ?? p.subtitle ?? p.title,
+      prompt: `${contextHeader(ctx)}\n\n${p.dashboard.prompt.trim()}`,
+    }));
 }

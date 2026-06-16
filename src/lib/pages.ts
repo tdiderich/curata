@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import { db } from "./db";
 import type { Prisma } from "@/generated/prisma/client";
 import { ensureComponentIds } from "./component-ids";
+import { hasDashboardBlock } from "./glance-prompts";
 
 export interface PageMeta {
   slug: string;
@@ -321,6 +322,9 @@ async function _writePageInternal(
   sortOrder?: number | null
 ): Promise<{ ok: true; slug: string; contentHash: string } | { ok: false; error: string }> {
   const contentHash = createHash("sha256").update(yamlContent).digest("hex");
+  const dashboardEnabled = jsonContent
+    ? hasDashboardBlock(jsonContent as Record<string, unknown>)
+    : false;
 
   const existing = await db.page.findUnique({
     where: { orgId_slug: { orgId, slug } },
@@ -338,7 +342,7 @@ async function _writePageInternal(
       return { ok: true, slug, contentHash };
     }
 
-    const pageUpdateData: Record<string, unknown> = { title, updatedAt: new Date() };
+    const pageUpdateData: Record<string, unknown> = { title, updatedAt: new Date(), dashboardEnabled };
     if (sortOrder !== undefined) pageUpdateData.sortOrder = sortOrder;
 
     await db.$transaction([
@@ -356,6 +360,7 @@ async function _writePageInternal(
       slug,
       title,
       createdBy,
+      dashboardEnabled,
       versions: {
         create: { yamlContent, jsonContent, contentHash, createdBy },
       },
