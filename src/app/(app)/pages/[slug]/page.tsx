@@ -96,7 +96,14 @@ export default async function PageDetailView({
     const hubPageData = await readPage(ctx.orgId, hubSlug);
     const externalHub = hubPageData?.json.hub as HubShape | undefined;
     if (externalHub) {
-      effectiveHub = externalHub;
+      const hubParam = `hub=${encodeURIComponent(hubSlug)}`;
+      effectiveHub = {
+        ...externalHub,
+        pages: externalHub.pages?.map((p) => ({
+          ...p,
+          href: p.href.includes("hub=") ? p.href : `${p.href}${p.href.includes("?") ? "&" : "?"}${hubParam}`,
+        })),
+      };
       hubContext = hubSlug;
     }
   }
@@ -138,10 +145,7 @@ export default async function PageDetailView({
         <div className="page-detail-content">
           <PageRenderer
             page={page}
-            activeHubHref={slug}
-            resolveHubHref={hubContext
-              ? (href: string) => `${href}?hub=${encodeURIComponent(hubContext!)}`
-              : undefined}
+            activeHubHref={hubContext ? `${slug}?hub=${encodeURIComponent(hubContext)}` : slug}
           />
         </div>
       </PageDetailClient>
