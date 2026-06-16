@@ -26,13 +26,13 @@ export default async function PageDetailView({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ edit?: string }>;
+  searchParams: Promise<{ edit?: string; hub?: string }>;
 }) {
   const ctx = await resolveOrg();
   if (!ctx) redirect("/sign-in");
 
   const { slug } = await params;
-  const { edit } = await searchParams;
+  const { edit, hub: hubSlug } = await searchParams;
   const isEditing = edit === "1";
 
   const pageData = await readPage(ctx.orgId, slug);
@@ -89,13 +89,23 @@ export default async function PageDetailView({
   }));
   const sections = await getPageSections(ctx.orgId, slug);
 
+  type HubShape = { name: string; eyebrow?: string; status?: string; status_color?: string; pages?: Array<{ label: string; href: string }> };
+  let effectiveHub = pageData.json.hub as HubShape | undefined;
+  let hubContext: string | undefined;
+  if (hubSlug && hubSlug !== slug) {
+    const hubPageData = await readPage(ctx.orgId, hubSlug);
+    const externalHub = hubPageData?.json.hub as HubShape | undefined;
+    if (externalHub) {
+      effectiveHub = externalHub;
+      hubContext = hubSlug;
+    }
+  }
+
   const page = {
     title: pageTitle,
     subtitle: (pageData.json.subtitle as string) || undefined,
-    shell: (pageData.json.shell as string) || "standard",
-    hub: pageData.json.hub as
-      | { name: string; eyebrow?: string; status?: string; status_color?: string; pages?: Array<{ label: string; href: string }> }
-      | undefined,
+    shell: effectiveHub ? "hub" : (pageData.json.shell as string) || "standard",
+    hub: effectiveHub,
     components: (pageData.json.components ?? []) as Array<{
       type: string;
       [key: string]: unknown;
@@ -126,9 +136,13 @@ export default async function PageDetailView({
           : undefined}
       >
         <div className="page-detail-content">
-          {/* Hub blocks in curata use page slugs as hrefs; relative links
-              resolve under /pages/ and the slug doubles as the active key. */}
-          <PageRenderer page={page} activeHubHref={slug} />
+          <PageRenderer
+            page={page}
+            activeHubHref={slug}
+            resolveHubHref={hubContext
+              ? (href: string) => `${href}?hub=${encodeURIComponent(hubContext!)}`
+              : undefined}
+          />
         </div>
       </PageDetailClient>
     </>
