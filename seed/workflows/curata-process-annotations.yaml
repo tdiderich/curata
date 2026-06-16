@@ -1,6 +1,12 @@
 title: "Workflow — Process Annotations"
 subtitle: Work the org-wide queue of human feedback — incorporate edits, resolve notes, close the loop.
 shell: standard
+dashboard:
+  prompt: |
+    Run the Process Annotations workflow. Check for open annotations across all pages
+    and process them following the workflow steps on this page — propose fixes,
+    apply after approval, and resolve each annotation.
+  description: "Process open annotations across all pages"
 components:
   - type: section
     eyebrow: Overview

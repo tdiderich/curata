@@ -1,6 +1,12 @@
 title: "Workflow — Page Cleanup Audit"
 subtitle: Sweep the knowledge base for dead pages and file evidence-backed cleanup flags for human review.
 shell: standard
+dashboard:
+  prompt: |
+    Run the Page Cleanup Audit workflow. Sweep the entire knowledge base
+    following the workflow steps on this page — cross-reference every page
+    against reality and file evidence-backed flags for my review.
+  description: "Sweep for dead pages and file cleanup flags"
 components:
   - type: section
     eyebrow: Overview

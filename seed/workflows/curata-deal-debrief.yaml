@@ -1,6 +1,12 @@
 title: "Workflow — Deal Debrief"
 subtitle: Post-deal win/loss analysis — capture what was sold, what was promised, and what to do differently next time.
 shell: standard
+dashboard:
+  prompt: |
+    Run the Deal Debrief workflow. Ask me which deal to debrief,
+    then follow the workflow steps on this page to capture learnings,
+    analyze what worked and what didn't, and produce a debrief page.
+  description: "Post-deal analysis and learnings capture"
 components:
   - type: section
     eyebrow: Overview

@@ -1,6 +1,12 @@
 title: "Workflow — Assessment Builder"
 subtitle: Build a structured current-state assessment with findings, gap analysis, and recommendations.
 shell: standard
+dashboard:
+  prompt: |
+    Run the Assessment Builder workflow. Ask me which customer to assess,
+    then follow the workflow steps on this page to evaluate their program,
+    build findings, and produce an assessment report page.
+  description: "Build a security program assessment for a customer"
 components:
   - type: section
     eyebrow: Overview

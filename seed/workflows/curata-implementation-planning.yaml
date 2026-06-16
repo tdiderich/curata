@@ -1,6 +1,12 @@
 title: "Workflow — Implementation Planning"
 subtitle: Build a structured implementation plan as a curata page — from discovery questions to task breakdown.
 shell: standard
+dashboard:
+  prompt: |
+    Run the Implementation Planning workflow. Ask me which customer and what
+    implementation phase, then follow the workflow steps on this page to build
+    a phased deployment plan with milestones and dependencies.
+  description: "Build a phased deployment plan for a customer"
 components:
   - type: section
     eyebrow: Overview

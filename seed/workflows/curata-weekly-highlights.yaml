@@ -1,6 +1,12 @@
 title: "Workflow — Weekly Highlights"
 subtitle: Scan all customer pages for recent changes and produce a cross-account digest for standups.
 shell: standard
+dashboard:
+  prompt: |
+    Run the Weekly Highlights workflow. Follow the workflow steps on this page
+    to scan all customer pages for recent changes and produce a cross-account
+    digest for the team standup.
+  description: "Generate a weekly cross-account digest for standups"
 components:
   - type: section
     eyebrow: Overview

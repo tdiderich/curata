@@ -1,6 +1,12 @@
 title: "Workflow — Semantic Refresh"
 subtitle: Scan all pages for missing concept tags and backfill the knowledge graph.
 shell: standard
+dashboard:
+  prompt: |
+    Run the Semantic Refresh workflow. Follow the workflow steps on this page
+    to re-derive page links, concepts, and semantic relationships across
+    the knowledge base. Ask which scope — full refresh or specific folders.
+  description: "Refresh page links and semantic relationships"
 components:
   - type: section
     eyebrow: Overview

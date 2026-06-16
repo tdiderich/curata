@@ -1,6 +1,12 @@
 title: "Workflow — Customer Onboarding"
 subtitle: Create a full page set for a new customer at deal close — priorities, account plan, and deployment tracker.
 shell: standard
+dashboard:
+  prompt: |
+    Run the Customer Onboarding workflow. Ask me which customer just closed,
+    then follow the workflow steps on this page to create their initial pages,
+    set up tracking, and configure account structure.
+  description: "Set up a new customer at deal close"
 components:
   - type: section
     eyebrow: Overview

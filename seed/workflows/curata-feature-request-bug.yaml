@@ -1,6 +1,12 @@
 title: "Workflow — Feature Request & Bug Filing"
 subtitle: Identify, deduplicate, file, and track customer-reported issues and requests in your project tracker.
 shell: standard
+dashboard:
+  prompt: |
+    Run the Feature Request & Bug Filing workflow. Ask me what the issue or request is
+    and which customer reported it, then follow the workflow steps on this page
+    to file it in Linear with customer attribution and update the priorities page.
+  description: "File feature requests and bugs with customer attribution"
 components:
   - type: section
     eyebrow: Overview

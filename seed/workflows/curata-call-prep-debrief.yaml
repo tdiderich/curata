@@ -1,6 +1,11 @@
 title: "Workflow — Call Prep & Debrief"
 subtitle: Research before a customer call, capture notes after, and keep account pages current.
 shell: standard
+dashboard:
+  prompt: |
+    Run the Call Prep & Debrief workflow. Ask me which customer and whether this is
+    pre-call prep or post-call debrief, then follow the workflow steps on this page.
+  description: "Pre-call research and post-call debrief"
 components:
   - type: section
     eyebrow: Overview
