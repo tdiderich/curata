@@ -4,14 +4,17 @@ import {
   buildGlanceCard,
   extractCustomPrompts,
   buildGlanceSections,
+  buildRecentlyCard,
+  buildStaleCard,
+  buildFlagCard,
+  buildPageOptedCards,
   type GlanceFallbacks,
+  type RecentPageInfo,
+  type StalePageInfo,
+  type FlagInfo,
+  type DashboardPageInfo,
 } from "@/lib/glance-prompts";
 import { GlanceCards } from "@/components/glance-cards";
-
-export interface GlanceStat {
-  label: string;
-  value: string;
-}
 
 export interface GlanceFolder {
   name: string;
@@ -66,35 +69,61 @@ function FolderBars({ folders }: { folders: GlanceFolder[] }) {
   );
 }
 
-// The orientation section ("What this workspace is") renders as prose; every
-// other section becomes an action card whose click copies a context-loaded
-// agent prompt. The glance is a launcher, not a report.
 const ORIENTATION = /what this workspace is/i;
 
 export function HomeGlance({
   json,
   origin,
-  stats = [],
   activity = [],
   folders = [],
   fallbacks = {},
+  recentPages = [],
+  recentWindowLabel = "today",
+  stalePages = [],
+  flagInfos = [],
+  dashboardPageInfos = [],
 }: {
   json: Record<string, unknown>;
   origin?: string;
-  stats?: GlanceStat[];
   activity?: number[];
   folders?: GlanceFolder[];
   fallbacks?: GlanceFallbacks;
+  recentPages?: RecentPageInfo[];
+  recentWindowLabel?: string;
+  stalePages?: StalePageInfo[];
+  flagInfos?: FlagInfo[];
+  dashboardPageInfos?: DashboardPageInfo[];
 }) {
+  const ctx = { origin };
   const components = (json.components ?? []) as Array<{ type: string; [key: string]: unknown }>;
   const sections = extractGlanceSections(components);
 
   const orientation = sections.find((s) => ORIENTATION.test(s.heading));
-  const cards = buildGlanceSections(
+
+  // Stock computed cards
+  const recentlyCard = buildRecentlyCard(recentPages, recentWindowLabel, ctx);
+  const attentionSections = buildGlanceSections(
     sections.filter((s) => !ORIENTATION.test(s.heading)),
     fallbacks
-  ).map((s) => buildGlanceCard(s, { origin }));
-  const customCards = extractCustomPrompts(json, { origin });
+  );
+  const attentionCard = buildGlanceCard(
+    attentionSections.find((s) => /attention/i.test(s.heading)) ?? { heading: "Needs attention", body: fallbacks.attention ?? "" },
+    ctx
+  );
+  const plansCard = buildGlanceCard(
+    attentionSections.find((s) => /plans? in motion|plans?$/i.test(s.heading)) ?? { heading: "Plans in motion", body: fallbacks.plans ?? "" },
+    ctx
+  );
+  const staleCard = buildStaleCard(stalePages, ctx);
+  const flagCard = buildFlagCard(flagInfos, ctx);
+
+  // Page-opted cards
+  const pageOptedCards = buildPageOptedCards(dashboardPageInfos, ctx);
+
+  // Legacy home-page prompts block
+  const legacyCards = extractCustomPrompts(json, ctx);
+
+  const allCards = [recentlyCard, attentionCard, plansCard, staleCard, flagCard, ...pageOptedCards, ...legacyCards];
 
   const title = (json.title as string) || "Curata at a glance";
 
@@ -109,19 +138,6 @@ export function HomeGlance({
         </div>
         {orientation && <p className="home-glance-orientation">{orientation.body.trim()}</p>}
       </div>
-      {stats.length > 0 && (
-        <>
-          <div className="home-glance-stats">
-            {stats.map((s) => (
-              <div className="glance-stat" key={s.label}>
-                <span className="glance-stat-value">{s.value}</span>
-                <span className="glance-stat-label">{s.label}</span>
-              </div>
-            ))}
-          </div>
-          <div className="home-glance-divider" aria-hidden="true" />
-        </>
-      )}
       {(activity.some((v) => v > 0) || folders.length > 0) && (
         <>
           <div className="home-glance-visuals">
@@ -141,7 +157,7 @@ export function HomeGlance({
           <div className="home-glance-divider" aria-hidden="true" />
         </>
       )}
-      <GlanceCards cards={[...cards, ...customCards]} />
+      <GlanceCards cards={allCards} />
     </section>
   );
 }
