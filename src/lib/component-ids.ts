@@ -133,6 +133,14 @@ function resolveComponents(op: PatchOperation): Component[] {
   return [];
 }
 
+function requireId(op: PatchOperation, components: Component[]): string {
+  if (!op.id) {
+    const available = components.map((c) => c.id).filter(Boolean).join(", ");
+    throw new Error(`"${op.op}" requires an "id" field specifying which component to target. Available IDs: ${available}`);
+  }
+  return op.id;
+}
+
 export function applyPatchOperations(page: PageObject, operations: PatchOperation[]): PageObject {
   let result: PageObject = { ...page, components: [...page.components] };
 
@@ -141,7 +149,7 @@ export function applyPatchOperations(page: PageObject, operations: PatchOperatio
 
     switch (op.op) {
       case "replace": {
-        const idx = findIndex(result.components, op.id!);
+        const idx = findIndex(result.components, requireId(op, result.components));
         if (items.length === 0) throw new Error(`"${op.op}" requires components or value, but none were provided`);
         result.components = [
           ...result.components.slice(0, idx),
@@ -151,7 +159,7 @@ export function applyPatchOperations(page: PageObject, operations: PatchOperatio
         break;
       }
       case "insert_before": {
-        const idx = findIndex(result.components, op.id!);
+        const idx = findIndex(result.components, requireId(op, result.components));
         if (items.length === 0) throw new Error(`"${op.op}" requires components or value, but none were provided`);
         result.components = [
           ...result.components.slice(0, idx),
@@ -161,7 +169,7 @@ export function applyPatchOperations(page: PageObject, operations: PatchOperatio
         break;
       }
       case "insert_after": {
-        const idx = findIndex(result.components, op.id!);
+        const idx = findIndex(result.components, requireId(op, result.components));
         if (items.length === 0) throw new Error(`"${op.op}" requires components or value, but none were provided`);
         result.components = [
           ...result.components.slice(0, idx + 1),
@@ -171,7 +179,7 @@ export function applyPatchOperations(page: PageObject, operations: PatchOperatio
         break;
       }
       case "remove": {
-        const idx = findIndex(result.components, op.id!);
+        const idx = findIndex(result.components, requireId(op, result.components));
         result.components = [
           ...result.components.slice(0, idx),
           ...result.components.slice(idx + 1),

@@ -189,10 +189,28 @@ describe("applyPatchOperations", () => {
     expect(result.subtitle).toBe("May 2026");
   });
 
+  it("throws with actionable message when id is missing on replace", () => {
+    expect(() =>
+      applyPatchOperations(basePage, [{ op: "replace", components: [{ type: "callout", body: "x" }] }])
+    ).toThrow(/"replace" requires an "id" field/);
+  });
+
+  it("throws with actionable message when id is missing on insert_after", () => {
+    expect(() =>
+      applyPatchOperations(basePage, [{ op: "insert_after", components: [{ type: "divider" }] }])
+    ).toThrow(/"insert_after" requires an "id" field.*Available IDs/);
+  });
+
+  it("throws with actionable message when id is missing on remove", () => {
+    expect(() =>
+      applyPatchOperations(basePage, [{ op: "remove" }])
+    ).toThrow(/"remove" requires an "id" field/);
+  });
+
   it("throws for unknown component id", () => {
     expect(() =>
       applyPatchOperations(basePage, [{ op: "replace", id: "nonexistent", components: [] }])
-    ).toThrow(/not found.*available IDs/);
+    ).toThrow(/not found.*available IDs/i);
   });
 
   it("throws for unknown operation", () => {

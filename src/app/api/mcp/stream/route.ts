@@ -166,7 +166,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
     {
       slug: z.string().describe("Page slug"),
       expected_hash: z.string().describe("Content hash from last read_page — rejects if page was modified"),
-      operations: z.string().describe("JSON array of patch operations: replace, insert_before, insert_after, remove, prepend, append, set_field"),
+      operations: z.string().describe('JSON array of operations. Each operation has: "op" (required), "id" (required for replace/insert_before/insert_after/remove — the component ID to target), "components" or "value" (the new component(s) — required for all ops except remove and set_field), "field" (required for set_field). Example: [{"op":"insert_after","id":"intro-section","components":[{"type":"text","body":"New content"}]}]'),
     },
     async ({ slug, expected_hash, operations: opsJson }) => {
       validateSlug(slug);
