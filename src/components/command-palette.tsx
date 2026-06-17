@@ -8,14 +8,12 @@ interface SearchResult {
   slug: string;
   title: string;
   matches: string[];
+  type: "page" | "prompt";
+  prompt?: string;
 }
 
 type SearchState = "idle" | "loading" | "done" | "error";
 
-// Global ⌘K search overlay, mirroring the kazam site-search pattern (and
-// reusing its kazam.css classes for visual parity). Searches the full org
-// via /api/search, unlike the dashboard toolbar input which only filters
-// the visible page list.
 export function CommandPalette() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -23,6 +21,7 @@ export function CommandPalette() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selected, setSelected] = useState(-1);
   const [state, setState] = useState<SearchState>("idle");
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seqRef = useRef(0);
@@ -52,9 +51,16 @@ export function CommandPalette() {
       setResults([]);
       setSelected(-1);
       setState("idle");
+      setCopiedSlug(null);
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!copiedSlug) return;
+    const t = setTimeout(() => setCopiedSlug(null), 1600);
+    return () => clearTimeout(t);
+  }, [copiedSlug]);
 
   const search = useCallback(async (q: string) => {
     if (!q.trim()) {
@@ -86,9 +92,15 @@ export function CommandPalette() {
     debounceRef.current = setTimeout(() => search(val), 200);
   }
 
-  function navigate(slug: string) {
-    setOpen(false);
-    router.push(`/pages/${slug}`);
+  function activate(r: SearchResult) {
+    if (r.type === "prompt" && r.prompt) {
+      navigator.clipboard.writeText(r.prompt).then(() => {
+        setCopiedSlug(r.slug + ":" + r.title);
+      }).catch(() => {});
+    } else {
+      setOpen(false);
+      router.push(`/pages/${r.slug}`);
+    }
   }
 
   function onKeyDown(e: React.KeyboardEvent) {
@@ -103,7 +115,7 @@ export function CommandPalette() {
       setSelected((s) => Math.max(s - 1, 0));
     } else if (e.key === "Enter" && selected >= 0 && results[selected]) {
       e.preventDefault();
-      navigate(results[selected].slug);
+      activate(results[selected]);
     }
   }
 
@@ -145,8 +157,8 @@ export function CommandPalette() {
             ref={inputRef}
             type="search"
             className="site-search-input"
-            placeholder="Search pages..."
-            aria-label="Search pages"
+            placeholder="Search pages and prompts..."
+            aria-label="Search pages and prompts"
             autoComplete="off"
             value={query}
             onChange={onInput}
@@ -170,17 +182,26 @@ export function CommandPalette() {
               No results for &ldquo;{trimmed}&rdquo;. Try fewer or different words.
             </div>
           )}
-          {results.map((r, i) => (
-            <button
-              key={r.slug}
-              className={`site-search-hit${i === selected ? " site-search-hit-active" : ""}`}
-              onClick={() => navigate(r.slug)}
-              onMouseEnter={() => setSelected(i)}
-            >
-              <span className="site-search-hit-title">{r.title}</span>
-              {r.matches[0] && <span className="site-search-hit-desc">{r.matches[0]}</span>}
-            </button>
-          ))}
+          {results.map((r, i) => {
+            const key = r.slug + ":" + r.title;
+            const isCopied = copiedSlug === key;
+            return (
+              <button
+                key={key + i}
+                className={`site-search-hit${i === selected ? " site-search-hit-active" : ""}${r.type === "prompt" ? " site-search-hit--prompt" : ""}`}
+                onClick={() => activate(r)}
+                onMouseEnter={() => setSelected(i)}
+              >
+                <span className="site-search-hit-title">
+                  {r.title}
+                  <span className={`site-search-hit-type site-search-hit-type--${r.type}`}>
+                    {isCopied ? "Copied ✓" : r.type === "prompt" ? "Prompt" : "Page"}
+                  </span>
+                </span>
+                {r.matches[0] && <span className="site-search-hit-desc">{r.matches[0]}</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

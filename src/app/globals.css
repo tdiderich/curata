@@ -4995,8 +4995,6 @@ body .c-section.align-right > * { max-width: none !important; }
   font-family: 'SF Mono', Menlo, monospace;
 }
 
-/* Command palette hits are <button>s (client nav), not <a>s like kazam's
-   static search — reset UA button chrome so kazam's hit styles apply. */
 .site-search-hit {
   background: none;
   border: none;
@@ -5004,6 +5002,30 @@ body .c-section.align-right > * { max-width: none !important; }
   text-align: left;
   width: 100%;
   cursor: pointer;
+}
+.site-search-hit-type {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+.site-search-hit-type--page {
+  background: rgba(var(--text-rgb), 0.08);
+  color: var(--muted);
+}
+.site-search-hit-type--prompt {
+  background: rgba(var(--accent-rgb, 102, 204, 204), 0.15);
+  color: var(--teal);
+}
+.site-search-hit--prompt .site-search-hit-desc::before {
+  content: "Click to copy · ";
+  color: var(--teal);
+  font-size: 11px;
 }
 
 /* ── Dashboard landing: attention strip, quick rows, badges ──────────────── */
@@ -5802,7 +5824,40 @@ body .c-section.align-right > * { max-width: none !important; }
   color: var(--muted);
 }
 
-/* Action cards: each dynamic section is a click-to-copy prompt launcher. */
+/* Section groups for dashboard cards */
+.glance-section { margin-bottom: 8px; }
+.glance-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  color: var(--muted);
+}
+.glance-section-header:hover { color: var(--snow); }
+.glance-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.glance-section-count {
+  font-size: 11px;
+  color: var(--teal);
+}
+.glance-section-chevron {
+  margin-left: auto;
+  font-size: 12px;
+  transition: transform 0.15s;
+}
+.glance-section-chevron--collapsed {
+  transform: rotate(-90deg);
+}
+
 .home-glance-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

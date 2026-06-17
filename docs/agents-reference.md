@@ -308,6 +308,24 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | label | string | yes |
 | personas | string[] | no |
 
+### OrgChartPerson
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| email | string | no |
+| id | string | no |
+| linkedin | string | no |
+| name | string | yes |
+| reports | OrgChartPerson[] | no |
+| tags | OrgChartTag[] | no |
+| title | string | no |
+
+### OrgChartTag
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| label | string | yes |
+
 ### PipelineCapability
 | Field | Type | Required |
 |-------|------|----------|
@@ -877,6 +895,20 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 ```yaml
 - type: meta
   fields: []
+```
+
+### org_chart
+| Field | Type | Required |
+|-------|------|----------|
+| default_open_depth | number | no |
+| people | OrgChartPerson[] | yes |
+| title | string | no |
+
+```yaml
+- type: org_chart
+  default_open_depth: 0  # optional
+  people: []
+  title: "Example Title"  # optional
 ```
 
 ### pipeline

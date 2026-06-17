@@ -14,7 +14,7 @@ import {
   type FlagInfo,
   type DashboardPageInfo,
 } from "@/lib/glance-prompts";
-import { GlanceCards } from "@/components/glance-cards";
+import { GlanceCards, type CardSection } from "@/components/glance-cards";
 
 export interface GlanceFolder {
   name: string;
@@ -96,14 +96,14 @@ export function HomeGlance({
 }) {
   const ctx = { origin };
   const components = (json.components ?? []) as Array<{ type: string; [key: string]: unknown }>;
-  const sections = extractGlanceSections(components);
+  const glanceSections = extractGlanceSections(components);
 
-  const orientation = sections.find((s) => ORIENTATION.test(s.heading));
+  const orientation = glanceSections.find((s) => ORIENTATION.test(s.heading));
 
   // Stock computed cards
   const recentlyCard = buildRecentlyCard(recentPages, recentWindowLabel, ctx);
   const attentionSections = buildGlanceSections(
-    sections.filter((s) => !ORIENTATION.test(s.heading)),
+    glanceSections.filter((s) => !ORIENTATION.test(s.heading)),
     fallbacks
   );
   const attentionCard = buildGlanceCard(
@@ -123,7 +123,12 @@ export function HomeGlance({
   // Legacy home-page prompts block
   const legacyCards = extractCustomPrompts(json, ctx);
 
-  const allCards = [recentlyCard, attentionCard, plansCard, staleCard, flagCard, ...pageOptedCards, ...legacyCards];
+  const statusCards = [recentlyCard, attentionCard, plansCard, staleCard, flagCard];
+  const actionCards = [...pageOptedCards, ...legacyCards];
+
+  const cardSections: CardSection[] = [];
+  if (statusCards.length > 0) cardSections.push({ label: "Status", cards: statusCards });
+  if (actionCards.length > 0) cardSections.push({ label: "Actions", cards: actionCards });
 
   const title = (json.title as string) || "Curata at a glance";
 
@@ -157,7 +162,7 @@ export function HomeGlance({
           <div className="home-glance-divider" aria-hidden="true" />
         </>
       )}
-      <GlanceCards cards={allCards} />
+      <GlanceCards sections={cardSections} />
     </section>
   );
 }

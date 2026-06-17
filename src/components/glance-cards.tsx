@@ -4,10 +4,6 @@ import { useEffect, useState } from "react";
 import type { GlanceCard as GlanceCardData } from "@/lib/glance-prompts";
 import { GlanceCard } from "@/components/glance-card";
 
-// Per-browser card dismissal. Hiding is a view preference, not data: the
-// underlying home-page sections/prompts are untouched, and a workflow refresh
-// doesn't resurrect hidden cards on this browser. Custom cards can be removed
-// permanently by editing the prompts: block on /pages/home.
 const HIDDEN_KEY = "curata-glance-hidden";
 
 function readHidden(): Set<string> {
@@ -18,9 +14,15 @@ function readHidden(): Set<string> {
   }
 }
 
-export function GlanceCards({ cards }: { cards: GlanceCardData[] }) {
+export interface CardSection {
+  label: string;
+  cards: GlanceCardData[];
+}
+
+export function GlanceCards({ sections }: { sections: CardSection[] }) {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -36,18 +38,51 @@ export function GlanceCards({ cards }: { cards: GlanceCardData[] }) {
   const dismiss = (title: string) => persist(new Set([...hidden, title]));
   const restoreAll = () => persist(new Set());
 
+  const toggleSection = (label: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
+
   if (!loaded) return <div className="home-glance-cards" />;
 
-  const visible = cards.filter((c) => !hidden.has(c.title));
-  const hiddenCount = cards.length - visible.length;
+  const allCards = sections.flatMap((s) => s.cards);
+  const hiddenCount = allCards.filter((c) => hidden.has(c.title)).length;
 
   return (
     <>
-      <div className="home-glance-cards">
-        {visible.map((card) => (
-          <GlanceCard key={card.title} card={card} onDismiss={() => dismiss(card.title)} />
-        ))}
-      </div>
+      {sections.map((section) => {
+        const visible = section.cards.filter((c) => !hidden.has(c.title));
+        if (visible.length === 0) return null;
+        const isCollapsed = collapsed.has(section.label);
+        const emptyCount = visible.filter((c) => !c.prompt).length;
+        return (
+          <div key={section.label} className="glance-section">
+            <button
+              type="button"
+              className="glance-section-header"
+              onClick={() => toggleSection(section.label)}
+            >
+              <span className="glance-section-label">{section.label}</span>
+              <span className="glance-section-count">
+                {visible.length} card{visible.length === 1 ? "" : "s"}
+                {emptyCount > 0 && ` · ${emptyCount} clear`}
+              </span>
+              <span className={`glance-section-chevron${isCollapsed ? " glance-section-chevron--collapsed" : ""}`}>
+                &#x25BE;
+              </span>
+            </button>
+            {!isCollapsed && (
+              <div className="home-glance-cards">
+                {visible.map((card) => (
+                  <GlanceCard key={card.title} card={card} onDismiss={() => dismiss(card.title)} />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
       {hiddenCount > 0 && (
         <button type="button" className="glance-restore" onClick={restoreAll}>
           {hiddenCount} hidden card{hiddenCount === 1 ? "" : "s"} — restore

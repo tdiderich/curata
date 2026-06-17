@@ -259,11 +259,19 @@ export async function readPage(
   return { json, contentHash: v.contentHash, visibility: page.visibility };
 }
 
+export interface SearchResult {
+  slug: string;
+  title: string;
+  matches: string[];
+  type: "page" | "prompt";
+  prompt?: string;
+}
+
 export async function searchPages(
   orgId: string,
   query: string,
   userId?: string
-): Promise<Array<{ slug: string; title: string; matches: string[] }>> {
+): Promise<SearchResult[]> {
   const where = userId
     ? {
         orgId,
@@ -277,26 +285,62 @@ export async function searchPages(
 
   const pages = await db.page.findMany({
     where: { ...where, status: { not: "archived" } },
-    include: {
-      versions: { orderBy: { createdAt: "desc" }, take: 1 },
+    select: {
+      slug: true,
+      title: true,
+      dashboardEnabled: true,
+      versions: { orderBy: { createdAt: "desc" as const }, take: 1, select: { yamlContent: true, jsonContent: true } },
     },
   });
 
   const q = query.toLowerCase();
-  const results: Array<{ slug: string; title: string; matches: string[] }> = [];
+  const results: SearchResult[] = [];
 
   for (const page of pages) {
     if (page.versions.length === 0) continue;
     const content = page.versions[0].yamlContent;
-    const lower = content.toLowerCase();
-    if (!lower.includes(q)) continue;
+    const json = page.versions[0].jsonContent as Record<string, unknown> | null;
+
+    const titleMatch = page.title.toLowerCase().includes(q);
+    const contentMatch = content.toLowerCase().includes(q);
+    if (!titleMatch && !contentMatch) continue;
 
     const lines = content.split("\n");
     const matches = lines
       .filter((l) => l.toLowerCase().includes(q))
       .slice(0, 5)
       .map((l) => l.trim());
-    results.push({ slug: page.slug, title: page.title, matches });
+
+    const isDashboard = page.dashboardEnabled && json && hasDashboardBlock(json);
+    const dashBlock = isDashboard ? (json!.dashboard as { prompt: string; title?: string; description?: string }) : null;
+
+    results.push({
+      slug: page.slug,
+      title: dashBlock?.title ?? page.title,
+      matches: titleMatch && matches.length === 0 ? [dashBlock?.description ?? page.title] : matches,
+      type: isDashboard ? "prompt" : "page",
+      prompt: dashBlock?.prompt,
+    });
+
+    if (page.slug === "home" && json) {
+      const prompts = json.prompts as Array<{ title: string; prompt: string; description?: string }> | undefined;
+      if (Array.isArray(prompts)) {
+        for (const p of prompts) {
+          if (!p?.title || !p?.prompt) continue;
+          const pMatch = p.title.toLowerCase().includes(q) ||
+            (p.description ?? "").toLowerCase().includes(q) ||
+            p.prompt.toLowerCase().includes(q);
+          if (!pMatch) continue;
+          results.push({
+            slug: "home",
+            title: p.title,
+            matches: [p.description ?? "Custom prompt"],
+            type: "prompt",
+            prompt: p.prompt,
+          });
+        }
+      }
+    }
   }
 
   return results;
