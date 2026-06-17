@@ -302,13 +302,6 @@ export async function searchPages(
   return results;
 }
 
-function parseYamlToJson(content: string): Record<string, unknown> | null {
-  try {
-    return yaml.load(content) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
 
 async function _writePageInternal(
   orgId: string,
@@ -382,7 +375,13 @@ export async function writePage(
   expectedHash?: string,
   sortOrder?: number | null
 ): Promise<{ ok: true; slug: string; contentHash: string } | { ok: false; error: string }> {
-  let jsonContent = (parseYamlToJson(content) ?? undefined) as Record<string, unknown> | undefined;
+  let jsonContent: Record<string, unknown> | undefined;
+  try {
+    jsonContent = yaml.load(content) as Record<string, unknown>;
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: `Invalid YAML: ${msg}` };
+  }
   let yamlContent = content;
 
   if (jsonContent && Array.isArray(jsonContent.components)) {
