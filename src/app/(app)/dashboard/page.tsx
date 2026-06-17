@@ -191,6 +191,7 @@ export default async function DashboardPage() {
           prompt: d.prompt as string,
           title: typeof d.title === "string" ? d.title : undefined,
           description: typeof d.description === "string" ? d.description : undefined,
+          category: typeof d.category === "string" ? d.category : undefined,
         },
       };
     });

@@ -123,12 +123,33 @@ export function HomeGlance({
   // Legacy home-page prompts block
   const legacyCards = extractCustomPrompts(json, ctx);
 
-  const statusCards = [recentlyCard, attentionCard, plansCard, staleCard, flagCard];
-  const actionCards = [...pageOptedCards, ...legacyCards];
+  const statusCards = [recentlyCard, attentionCard, plansCard, staleCard, flagCard].map((c) => ({ ...c, category: "Status" }));
+
+  const categorized = new Map<string, typeof pageOptedCards>();
+  for (const card of pageOptedCards) {
+    const cat = card.category ?? "Other";
+    const arr = categorized.get(cat) ?? [];
+    arr.push(card);
+    categorized.set(cat, arr);
+  }
+  if (legacyCards.length > 0) {
+    const arr = categorized.get("Other") ?? [];
+    arr.push(...legacyCards);
+    categorized.set("Other", arr);
+  }
+
+  const sortedCategories = [...categorized.keys()].sort((a, b) => {
+    if (a === "Other") return 1;
+    if (b === "Other") return -1;
+    return a.localeCompare(b);
+  });
 
   const cardSections: CardSection[] = [];
   if (statusCards.length > 0) cardSections.push({ label: "Status", cards: statusCards });
-  if (actionCards.length > 0) cardSections.push({ label: "Actions", cards: actionCards });
+  for (const cat of sortedCategories) {
+    const cards = categorized.get(cat)!;
+    cardSections.push({ label: cat, cards });
+  }
 
   const title = (json.title as string) || "Curata at a glance";
 

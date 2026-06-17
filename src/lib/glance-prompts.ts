@@ -15,6 +15,7 @@ export interface GlanceCard {
   /** One sentence describing what the copied prompt will do. */
   summary: string;
   prompt: string;
+  category?: string;
 }
 
 interface RawComponent {
@@ -304,6 +305,7 @@ export interface DashboardBlock {
   prompt: string;
   title?: string;
   description?: string;
+  category?: string;
 }
 
 export interface DashboardPageInfo {
@@ -329,5 +331,6 @@ export function buildPageOptedCards(pages: DashboardPageInfo[], ctx: GlanceConte
       subtitle: p.folderName ?? "custom",
       summary: p.dashboard.description ?? p.subtitle ?? p.title,
       prompt: `${contextHeader(ctx)}\n\nWorkflow page: read_page("${p.slug}") for full steps.\n\n${p.dashboard.prompt.trim()}`,
+      category: p.dashboard.category,
     }));
 }
