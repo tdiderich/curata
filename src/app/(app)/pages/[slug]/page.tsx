@@ -146,6 +146,7 @@ export default async function PageDetailView({
           <PageRenderer
             page={page}
             activeHubHref={hubContext ? `${slug}?hub=${encodeURIComponent(hubContext)}` : slug}
+            resolveHubHref={!hubContext && effectiveHub ? (href) => href === slug ? `/pages/${href}` : `/pages/${href}?hub=${slug}` : undefined}
           />
         </div>
       </PageDetailClient>
