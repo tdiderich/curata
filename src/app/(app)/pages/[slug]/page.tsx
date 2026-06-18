@@ -108,6 +108,16 @@ export default async function PageDetailView({
     }
   }
 
+  if (!hubContext && effectiveHub?.pages) {
+    effectiveHub = {
+      ...effectiveHub,
+      pages: effectiveHub.pages.map((p) => ({
+        ...p,
+        href: p.href === slug ? p.href : `${p.href}?hub=${slug}`,
+      })),
+    };
+  }
+
   const page = {
     title: pageTitle,
     subtitle: (pageData.json.subtitle as string) || undefined,
@@ -146,7 +156,7 @@ export default async function PageDetailView({
           <PageRenderer
             page={page}
             activeHubHref={hubContext ? `${slug}?hub=${encodeURIComponent(hubContext)}` : slug}
-            resolveHubHref={!hubContext && effectiveHub ? (href) => href === slug ? `/pages/${href}` : `/pages/${href}?hub=${slug}` : undefined}
+            resolveHubHref={undefined}
           />
         </div>
       </PageDetailClient>
