@@ -3,7 +3,8 @@ import { createHash } from "crypto";
 import { db } from "./db";
 import type { Prisma } from "@/generated/prisma/client";
 import { ensureComponentIds } from "./component-ids";
-import { hasDashboardBlock } from "./glance-prompts";
+import { hasDashboardBlock, contextHeader } from "./glance-prompts";
+import type { GlanceContext } from "./glance-prompts";
 
 export interface PageMeta {
   slug: string;
@@ -270,7 +271,8 @@ export interface SearchResult {
 export async function searchPages(
   orgId: string,
   query: string,
-  userId?: string
+  userId?: string,
+  glanceCtx: GlanceContext = {}
 ): Promise<SearchResult[]> {
   const where = userId
     ? {
@@ -314,12 +316,17 @@ export async function searchPages(
     const isDashboard = page.dashboardEnabled && json && hasDashboardBlock(json);
     const dashBlock = isDashboard ? (json!.dashboard as { prompt: string; title?: string; description?: string }) : null;
 
+    const rawPrompt = dashBlock?.prompt;
+    const wrappedPrompt = rawPrompt
+      ? `${contextHeader(glanceCtx)}\n\nWorkflow page: read_page("${page.slug}") for full steps.\n\n${rawPrompt.trim()}`
+      : undefined;
+
     results.push({
       slug: page.slug,
       title: dashBlock?.title ?? page.title,
       matches: titleMatch && matches.length === 0 ? [dashBlock?.description ?? page.title] : matches,
       type: isDashboard ? "prompt" : "page",
-      prompt: dashBlock?.prompt,
+      prompt: wrappedPrompt,
     });
 
     if (page.slug === "home" && json) {
@@ -336,7 +343,7 @@ export async function searchPages(
             title: p.title,
             matches: [p.description ?? "Custom prompt"],
             type: "prompt",
-            prompt: p.prompt,
+            prompt: `${contextHeader(glanceCtx)}\n\n${p.prompt.trim()}`,
           });
         }
       }

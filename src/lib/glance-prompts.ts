@@ -73,7 +73,7 @@ export interface GlanceContext {
 // Every copied prompt starts with this header so the receiving agent knows
 // exactly which instance to talk to and which tools to reach for — no
 // guessing, no "which curata?" follow-up.
-function contextHeader(ctx: GlanceContext): string {
+export function contextHeader(ctx: GlanceContext): string {
   const where = ctx.origin
     ? `Curata instance: ${ctx.origin} (MCP endpoint: ${ctx.origin}/api/mcp/stream).`
     : `Use my configured curata MCP server.`;
