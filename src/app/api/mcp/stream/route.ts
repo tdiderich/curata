@@ -284,19 +284,6 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
       return { content: [{ type: "text", text: `Updated folder "${folder.name}"` }] };
     });
 
-  server.tool("delete_folder", "Delete a folder (pages are moved to no folder)",
-    { id: z.string() },
-    async ({ id }) => {
-      const folder = await db.folder.findFirst({ where: { id, orgId } });
-      if (!folder) return { content: [{ type: "text", text: `Error: folder not found: ${id}` }], isError: true };
-      await db.$transaction([
-        db.page.updateMany({ where: { folderId: id }, data: { folderId: null } }),
-        db.folder.delete({ where: { id } }),
-      ]);
-      logAudit({ orgId, action: "folder.delete", resourceType: "folder", resourceId: id, actorType: "apikey", actorId, metadata: { name: folder.name } });
-      return { content: [{ type: "text", text: `Deleted folder "${folder.name}". Pages moved to no folder.` }] };
-    });
-
   server.tool("restore_page_version", "Restore a page to a previous version",
     { slug: z.string(), version_id: z.string() },
     async ({ slug, version_id }) => {
@@ -463,10 +450,6 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
       folder_id: z.string().optional(),
     },
     viaDispatch("create_from_template"));
-
-  server.tool("delete_page", "Permanently delete a page. Prefer flag_page (action: delete) so a human confirms via the Cleanup queue.",
-    { slug: z.string() },
-    viaDispatch("delete_page"));
 
   return server;
 }

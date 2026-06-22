@@ -53,7 +53,7 @@ export const READ_TOOLS = [
   "get_related",
   "get_semantic_map",
 ];
-export const WRITE_TOOLS = ["write_page", "create_page", "delete_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "delete_folder", "create_from_template", "flag_page"];
+export const WRITE_TOOLS = ["write_page", "create_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page"];
 export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -72,11 +72,9 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_folder_structure: { known: new Set() },
   create_folder: { known: new Set(["name", "parent_id", "visibility"]), aliases: { parentId: "parent_id" } },
   update_folder: { known: new Set(["id", "name", "parent_id", "visibility"]), aliases: { parentId: "parent_id" } },
-  delete_folder: { known: new Set(["id"]) },
   get_versions: { known: new Set(["slug", "limit"]) },
   validate_page: { known: new Set(["slug", "content"]) },
   create_page: { known: new Set(["slug", "content", "folder_id"]), aliases: { folderId: "folder_id" } },
-  delete_page: { known: new Set(["slug"]) },
   move_page: { known: new Set(["slug", "folder_id"]), aliases: { folderId: "folder_id" } },
   write_page: { known: new Set(["slug", "content"]) },
   annotate_page: { known: new Set(["slug", "text", "section", "kind", "replacement"]) },
@@ -400,18 +398,6 @@ export async function dispatch(
       return { ok: true, id: args.id };
     }
 
-    case "delete_folder": {
-      if (!args.id) throw new Error("id is required");
-      const dfFolder = await db.folder.findFirst({ where: { id: args.id, orgId } });
-      if (!dfFolder) throw new Error(`folder not found: ${args.id}`);
-      await db.$transaction([
-        db.page.updateMany({ where: { folderId: args.id }, data: { folderId: null } }),
-        db.folder.delete({ where: { id: args.id } }),
-      ]);
-      logAudit({ orgId, action: "folder.delete", resourceType: "folder", resourceId: args.id, actorType: "apikey", actorId, metadata: { name: dfFolder.name } });
-      return { ok: true, id: args.id, name: dfFolder.name };
-    }
-
     case "get_versions": {
       if (!args.slug) throw new Error("slug is required");
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
@@ -475,26 +461,6 @@ export async function dispatch(
         metadata: { slug: args.slug, folderId: args.folder_id },
       });
       return createResult;
-    }
-
-    case "delete_page": {
-      if (!args.slug) throw new Error("slug is required");
-      if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
-      const delPage = await db.page.findUnique({
-        where: { orgId_slug: { orgId, slug: args.slug } },
-      });
-      if (!delPage) throw new Error(`page not found: ${args.slug}`);
-      await db.page.delete({ where: { id: delPage.id } });
-      logAudit({
-        orgId,
-        action: "page.delete",
-        resourceType: "page",
-        resourceId: args.slug,
-        actorType: "apikey",
-        actorId,
-        metadata: { slug: args.slug },
-      });
-      return { ok: true, slug: args.slug };
     }
 
     case "move_page": {
