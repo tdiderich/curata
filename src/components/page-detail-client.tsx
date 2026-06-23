@@ -370,6 +370,30 @@ export default function PageDetailClient({
     }
   }
 
+  async function handleExport(format: "png" | "pdf") {
+    toast.success(`Generating ${format.toUpperCase()}…`);
+    try {
+      const res = await fetch(`${basePath}/api/export?slug=${encodeURIComponent(slug)}&format=${format}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Export failed" }));
+        toast.error(data.error || "Export failed");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${slug}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`${format.toUpperCase()} downloaded`);
+    } catch {
+      toast.error("Export failed — check your connection and try again.");
+    }
+  }
+
   return (
     <div className="page-detail-layout">
       {archived && (
@@ -454,6 +478,19 @@ export default function PageDetailClient({
                 >
                   Form editor
                 </Link>
+                <div className="page-actions-divider" />
+                <button
+                  className="page-actions-item"
+                  onClick={() => { handleExport("png"); setActionsOpen(false); }}
+                >
+                  Export PNG
+                </button>
+                <button
+                  className="page-actions-item"
+                  onClick={() => { handleExport("pdf"); setActionsOpen(false); }}
+                >
+                  Export PDF
+                </button>
                 {annotations.length > 0 && (
                   <>
                     <div className="page-actions-divider" />

@@ -1,22 +1,33 @@
-# scanned: 2026-05-12T10:29:01.116763-05:00
+# scanned: 2026-06-23T15:22:44.741419-05:00
 # root_files
 path	tokens	reads	description
-Dockerfile	306	0	Docker container definition
-README.md	362	0	Project readme
+CONTRIBUTING.md	389	0	Markdown document
+Dockerfile	314	0	Docker container definition
+LICENSE	267	0	License file
+README.md	1352	0	Project readme
+dev.sh	524	0	Shell script
 docker-compose.test.yml	85	0	YAML configuration/data
-entrypoint.sh	97	0	Shell script
-eslint.config.mjs	108	0	
-next-env.d.ts	61	0	TypeScript source
-next.config.ts	39	0	TypeScript source
-package.json	224	0	Node.js package manifest
-pnpm-workspace.yaml	33	0	YAML configuration/data
-prisma.config.ts	93	0	TypeScript source
+docker-compose.yml	174	0	YAML configuration/data
+entrypoint.sh	92	0	Shell script
+eslint.config.mjs	114	0	
+next-env.d.ts	62	0	TypeScript source
+next.config.ts	26	0	TypeScript source
+package.json	489	0	Node.js package manifest
+pnpm-lock.yaml	54519	0	YAML configuration/data
+pnpm-workspace.yaml	39	0	YAML configuration/data
+prisma.config.ts	56	0	TypeScript source
 tsconfig.json	169	0	TypeScript configuration
+tsconfig.tsbuildinfo	83816	0	
 vitest.config.ts	113	0	TypeScript source
 
 # directories
 path	files	tokens	description
-packages	13	10859	
-prisma	1	1147	
-src	88	252779	
-tests	8	6202	tests
+demos	20	64339	
+docs	5	18959	
+packages	19	26982	
+prisma	2	1840	
+scripts	8	2879	
+seed	17	25408	
+skills	6	2191	
+src	124	516839	
+tests	9	10067	tests

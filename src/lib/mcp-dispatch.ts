@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import {
   listPages,
+  readPage,
   readPageYaml,
   writePage,
   getAnnotations,
@@ -17,6 +18,8 @@ import {
   getSiteConfig,
   bumpViewCount,
 } from "@/lib/pages";
+import { getOrgTheme } from "@/lib/theme";
+import { renderPageHtml, buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
 import {
   upsertConcepts,
@@ -52,6 +55,8 @@ export const READ_TOOLS = [
   "get_vocabulary",
   "get_related",
   "get_semantic_map",
+  "export_page",
+  "export_report",
 ];
 export const WRITE_TOOLS = ["write_page", "create_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page"];
 export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
@@ -87,6 +92,8 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_vocabulary: { known: new Set() },
   get_related: { known: new Set(["slug"]) },
   get_semantic_map: { known: new Set(["kind"]) },
+  export_page: { known: new Set(["slug", "format"]) },
+  export_report: { known: new Set(["slugs", "title", "subtitle"]) },
 };
 
 function validateParams(tool: string, args: Record<string, string>): Record<string, string> {
@@ -834,6 +841,163 @@ export async function dispatch(
 
     case "get_semantic_map": {
       return getSemanticMap(args.kind || undefined);
+    }
+
+    case "export_page": {
+      if (!args.slug) throw new Error("slug is required");
+      if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
+      const format = args.format ?? "png";
+      if (format !== "png" && format !== "pdf") throw new Error("format must be png or pdf");
+
+      const pageData = await readPage(orgId, args.slug);
+      if (!pageData) throw new Error(`page not found: ${args.slug}`);
+
+      const theme = await getOrgTheme(orgId);
+      const html = await renderPageHtml(pageData.json, theme);
+
+      let chromium: Awaited<typeof import("playwright")>["chromium"];
+      try {
+        chromium = (await import("playwright")).chromium;
+      } catch {
+        throw new Error("playwright is not installed — run: npx playwright install chromium");
+      }
+
+      const browser = await chromium.launch();
+      const browserPage = await browser.newPage({ viewport: { width: 1100, height: 800 } });
+      await browserPage.setContent(html, { waitUntil: "load" });
+      await browserPage.waitForTimeout(300);
+      const height = await browserPage.evaluate(() => {
+        const el = document.querySelector(".export-root");
+        if (!el) return 800;
+        return Math.ceil(el.getBoundingClientRect().bottom) + 48;
+      });
+      await browserPage.setViewportSize({ width: 1100, height });
+      const pngBuffer = Buffer.from(await browserPage.screenshot({ fullPage: true }));
+      await browserPage.close();
+      await browser.close();
+
+      if (format === "pdf") {
+        const { PDFDocument } = await import("pdf-lib");
+        const doc = await PDFDocument.create();
+        const img = await doc.embedPng(pngBuffer);
+        const { width: imgWidth, height: imgHeight } = img.scale(1);
+        const targetWidth = 612;
+        const scale = targetWidth / imgWidth;
+        const pdfPage = doc.addPage([targetWidth, imgHeight * scale]);
+        pdfPage.drawImage(img, { x: 0, y: 0, width: targetWidth, height: imgHeight * scale });
+        const pdfBytes = await doc.save();
+        return {
+          format: "pdf",
+          slug: args.slug,
+          mimeType: "application/pdf",
+          base64: Buffer.from(pdfBytes).toString("base64"),
+        };
+      }
+
+      return {
+        format: "png",
+        slug: args.slug,
+        mimeType: "image/png",
+        base64: pngBuffer.toString("base64"),
+      };
+    }
+
+    case "export_report": {
+      if (!args.slugs) throw new Error("slugs is required");
+      if (!args.title) throw new Error("title is required");
+
+      let slugList: string[];
+      try {
+        slugList = JSON.parse(args.slugs);
+      } catch {
+        throw new Error("slugs must be a valid JSON array of strings");
+      }
+      if (!Array.isArray(slugList) || slugList.length === 0) {
+        throw new Error("slugs must be a non-empty array");
+      }
+      for (const s of slugList) {
+        if (!SLUG_RE.test(s)) throw new Error(`invalid slug format: ${s}`);
+      }
+
+      let chromium: Awaited<typeof import("playwright")>["chromium"];
+      try {
+        chromium = (await import("playwright")).chromium;
+      } catch {
+        throw new Error("playwright is not installed — run: npx playwright install chromium");
+      }
+
+      const theme = await getOrgTheme(orgId);
+      const pages: Array<{ slug: string; html: string; pageTitle: string }> = [];
+      for (const slug of slugList) {
+        const pageData = await readPage(orgId, slug);
+        if (!pageData) throw new Error(`page not found: ${slug}`);
+        const pageTitle = ((pageData.json as { title?: string }).title) ?? slug;
+        pages.push({ slug, html: await renderPageHtml(pageData.json, theme), pageTitle });
+      }
+
+      const pageTitles = pages.map((p) => p.pageTitle);
+      const reportTitle = args.title;
+      const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      const titlePageHtml = buildTitlePageHtml(reportTitle, args.subtitle, date, pages.length, pageTitles, theme);
+      const appendixHtml = buildAppendixHtml(pageTitles, slugList, theme);
+
+      const browser = await chromium.launch();
+
+      async function renderToPng(html: string): Promise<Buffer> {
+        const bp = await browser.newPage({ viewport: { width: 1100, height: 800 } });
+        await bp.setContent(html, { waitUntil: "load" });
+        await bp.waitForTimeout(300);
+        const h = await bp.evaluate(() => {
+          const el = document.querySelector(".export-root");
+          if (!el) return document.body.scrollHeight;
+          return Math.ceil(el.getBoundingClientRect().bottom) + 48;
+        });
+        await bp.setViewportSize({ width: 1100, height: h });
+        const png = Buffer.from(await bp.screenshot({ fullPage: true }));
+        await bp.close();
+        return png;
+      }
+
+      try {
+        const { PDFDocument } = await import("pdf-lib");
+        const doc = await PDFDocument.create();
+        doc.setTitle(reportTitle);
+        if (args.subtitle) doc.setSubject(args.subtitle);
+
+        async function addPng(pngBuf: Buffer) {
+          const img = await doc.embedPng(pngBuf);
+          const { width: w, height: h } = img.scale(1);
+          const tw = 612;
+          const sc = tw / w;
+          const pdfPage = doc.addPage([tw, h * sc]);
+          pdfPage.drawImage(img, { x: 0, y: 0, width: tw, height: h * sc });
+        }
+
+        await addPng(await renderToPng(titlePageHtml));
+        for (const { html } of pages) {
+          await addPng(await renderToPng(html));
+        }
+        await addPng(await renderToPng(appendixHtml));
+
+        await browser.close();
+
+        const pdfBytes = await doc.save();
+        const reportName = reportTitle
+          .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+        return {
+          format: "pdf",
+          title: reportTitle,
+          pageCount: slugList.length,
+          filename: `${reportName}.pdf`,
+          mimeType: "application/pdf",
+          base64: Buffer.from(pdfBytes).toString("base64"),
+        };
+      } catch (err) {
+        await browser.close();
+        throw err;
+      }
     }
 
     default:

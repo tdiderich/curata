@@ -451,6 +451,21 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
     },
     viaDispatch("create_from_template"));
 
+  server.tool("export_page", "Export a single page as PNG or PDF",
+    {
+      slug: z.string().describe("Page slug to export"),
+      format: z.enum(["png", "pdf"]).describe("Output format"),
+    },
+    viaDispatch("export_page"));
+
+  server.tool("export_report", "Generate a grouped PDF report combining multiple pages with a title page and appendix",
+    {
+      slugs: z.string().describe("JSON array of page slugs to include, in order"),
+      title: z.string().describe("Report title for the cover page"),
+      subtitle: z.string().optional().describe("Subtitle for the cover page"),
+    },
+    viaDispatch("export_report"));
+
   return server;
 }
 

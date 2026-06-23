@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "pnpm generate && next build",
-    "generate": "prisma generate && .bin/kazam sdk emit > src/generated/kazam.ts && .bin/kazam sdk emit-react > src/generated/kazam-renderer.tsx && .bin/kazam sdk emit-agents > docs/agents-reference.md && .bin/kazam theme css --switchable > src/app/kazam.css",
+    "generate": "prisma generate && .bin/kazam sdk emit > src/generated/kazam.ts && .bin/kazam sdk emit-react > src/generated/kazam-renderer.tsx && tail -n +2 src/generated/kazam-renderer.tsx > src/generated/kazam-renderer-server.tsx && .bin/kazam sdk emit-agents > docs/agents-reference.md && .bin/kazam theme css --switchable > src/app/kazam.css",
     "start": "prisma db push && next start",
     "lint": "eslint",
     "test": "vitest run",
@@ -29,7 +29,9 @@
     "js-yaml": "^4.1.1",
     "next": "16.2.6",
     "next-auth": "^5.0.0-beta.28",
+    "pdf-lib": "^1.17.1",
     "pg": "^8.20.0",
+    "playwright": "^1.61.0",
     "prisma": "^7.8.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -37,6 +39,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20",
     "@types/pg": "^8.20.0",

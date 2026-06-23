@@ -7,6 +7,7 @@ import { basePath } from "@/lib/api-fetch";
 import { toast } from "@/components/toast";
 import { FolderMenu, PageMenu, NewFolderButton } from "@/components/folder-actions";
 import { NewPageButton } from "@/components/new-page-button";
+import ReportBuilder from "@/components/report-builder";
 import { readPinsSeeded, PINS_CHANGED_EVENT } from "@/lib/pins";
 
 export interface SidebarFolder {
@@ -125,6 +126,7 @@ export function Sidebar({
   const [hidden, setHidden] = useState(false);
   // Folder id (or "__root") currently hovered by a page drag.
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const [resizing, setResizing] = useState(false);
 
@@ -342,6 +344,7 @@ export function Sidebar({
   }
 
   return (
+    <>
     <aside className="app-sidebar" aria-label="Workspace navigation" ref={sidebarRef}>
       <div
         className={`sidebar-resize-handle${resizing ? " sidebar-resize-handle--active" : ""}`}
@@ -387,6 +390,7 @@ export function Sidebar({
         </Link>
         <NewPageButton className="nav-link-item nav-link-item--action" label="+ New page" />
         <NewFolderButton className="nav-link-item nav-link-item--action" label="+ New folder" />
+        <button className="nav-link-item nav-link-item--action" onClick={() => setReportOpen(true)}>+ Create report</button>
         {cleanupCount > 0 && (
           <Link href="/cleanup" className={`nav-link-item${pathname === "/cleanup" ? " nav-link-item--active" : ""}`}>
             Cleanup
@@ -477,5 +481,12 @@ export function Sidebar({
         </Link>
       </div>
     </aside>
+    {reportOpen && (
+      <ReportBuilder
+        onClose={() => setReportOpen(false)}
+        allPages={pages.map((p) => ({ slug: p.slug, title: p.title }))}
+      />
+    )}
+    </>
   );
 }
