@@ -2,66 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { readPage } from "@/lib/pages";
 import { getOrgTheme } from "@/lib/theme";
-import { renderPageHtml, buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
-
-class PlaywrightMissingError extends Error {
-  constructor() {
-    super("playwright is not installed — run: npx playwright install chromium");
-    this.name = "PlaywrightMissingError";
-  }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function getChromium(): Promise<any> {
-  try {
-    return (await import("playwright")).chromium;
-  } catch (e1) {
-    // Turbopack standalone builds use a custom module resolver that may
-    // fail to find external packages; fall back to Node's native require.
-    try {
-      const { createRequire } = await import("node:module");
-      const nativeRequire = createRequire(process.cwd() + "/package.json");
-      return nativeRequire("playwright").chromium;
-    } catch (e2) {
-      console.error("playwright dynamic import failed:", e1);
-      console.error("playwright createRequire fallback failed:", e2);
-      throw new PlaywrightMissingError();
-    }
-  }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function renderHtmlToPng(html: string, browser?: any): Promise<Buffer> {
-  const ownBrowser = !browser;
-  if (!browser) {
-    const chromium = await getChromium();
-    browser = await chromium.launch();
-  }
-
-  const page = await browser.newPage({ viewport: { width: 1100, height: 800 } });
-  await page.setContent(html, { waitUntil: "load" });
-  await page.waitForTimeout(300);
-
-  const height = await page.evaluate(() => {
-    const el = document.querySelector(".export-root");
-    if (!el) return document.body.scrollHeight;
-    return Math.ceil(el.getBoundingClientRect().bottom) + 48;
-  });
-  await page.setViewportSize({ width: 1100, height });
-  const pngBuffer = await page.screenshot({ fullPage: true });
-  await page.close();
-
-  if (ownBrowser) await browser.close();
-  return Buffer.from(pngBuffer);
-}
-
-async function pngToPdf(pngBuffer: Buffer, title?: string): Promise<Uint8Array> {
-  const { PDFDocument } = await import("pdf-lib");
-  const doc = await PDFDocument.create();
-  if (title) doc.setTitle(title);
-  await addPngPage(doc, pngBuffer);
-  return doc.save();
-}
+import { buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
+import {
+  getChromium,
+  previewUrl,
+  screenshotPage,
+  renderHtmlToPng,
+} from "@/lib/export-render";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function addPngPage(doc: any, pngBuffer: Buffer) {
@@ -80,6 +27,7 @@ export async function GET(request: NextRequest) {
 
   const slug = request.nextUrl.searchParams.get("slug");
   const format = request.nextUrl.searchParams.get("format") ?? "png";
+  const hub = request.nextUrl.searchParams.get("hub") ?? undefined;
 
   if (!slug) return NextResponse.json({ error: "slug is required" }, { status: 400 });
   if (format !== "png" && format !== "pdf") {
@@ -89,22 +37,31 @@ export async function GET(request: NextRequest) {
   const pageData = await readPage(ctx.orgId, slug);
   if (!pageData) return NextResponse.json({ error: "page not found" }, { status: 404 });
 
-  const theme = await getOrgTheme(ctx.orgId);
-  const html = await renderPageHtml(pageData.json, theme);
-
-  let pngBuffer: Buffer;
+  let chromium;
   try {
-    pngBuffer = await renderHtmlToPng(html);
+    chromium = await getChromium();
   } catch (err) {
-    if (err instanceof PlaywrightMissingError) {
-      return NextResponse.json({ error: err.message }, { status: 501 });
-    }
-    console.error("export render error:", err);
-    return NextResponse.json({ error: "render failed" }, { status: 500 });
+    return NextResponse.json({ error: (err as Error).message }, { status: 501 });
   }
 
+  const browser = await chromium.launch();
+  let pngBuffer: Buffer;
+  try {
+    const url = previewUrl(slug, ctx.orgId, hub);
+    pngBuffer = await screenshotPage(url, browser);
+  } catch (err) {
+    console.error("export render error:", err);
+    await browser.close();
+    return NextResponse.json({ error: "render failed" }, { status: 500 });
+  }
+  await browser.close();
+
   if (format === "pdf") {
-    const pdfBytes = await pngToPdf(pngBuffer, slug);
+    const { PDFDocument } = await import("pdf-lib");
+    const doc = await PDFDocument.create();
+    doc.setTitle(slug);
+    await addPngPage(doc, pngBuffer);
+    const pdfBytes = await doc.save();
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
@@ -130,22 +87,20 @@ export async function POST(request: NextRequest) {
     title?: string;
     subtitle?: string;
     generatedDate?: string;
+    hub?: string;
   };
 
-  const { slugs, title, subtitle } = body;
+  const { slugs, title, subtitle, hub } = body;
 
   if (!Array.isArray(slugs) || slugs.length === 0) {
     return NextResponse.json({ error: "slugs must be a non-empty array" }, { status: 400 });
   }
 
-  let chromium: Awaited<typeof import("playwright")>["chromium"];
+  let chromium;
   try {
     chromium = await getChromium();
   } catch (err) {
-    if (err instanceof PlaywrightMissingError) {
-      return NextResponse.json({ error: err.message }, { status: 501 });
-    }
-    throw err;
+    return NextResponse.json({ error: (err as Error).message }, { status: 501 });
   }
 
   const theme = await getOrgTheme(ctx.orgId);
@@ -154,19 +109,15 @@ export async function POST(request: NextRequest) {
     ? new Date(body.generatedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  const pages: Array<{ slug: string; html: string; pageTitle: string }> = [];
+  const pageTitles: string[] = [];
   for (const slug of slugs) {
     const pageData = await readPage(ctx.orgId, slug);
     if (!pageData) return NextResponse.json({ error: `page not found: ${slug}` }, { status: 404 });
-    const html = await renderPageHtml(pageData.json, theme);
-    const pageTitle = ((pageData.json as { title?: string }).title) ?? slug;
-    pages.push({ slug, html, pageTitle });
+    pageTitles.push(((pageData.json as { title?: string }).title) ?? slug);
   }
 
-  const pageTitles = pages.map((p) => p.pageTitle);
   const reportTitle = title ?? "Report";
-
-  const titlePageHtml = buildTitlePageHtml(reportTitle, subtitle, date, pages.length, pageTitles, theme);
+  const titlePageHtml = buildTitlePageHtml(reportTitle, subtitle, date, slugs.length, pageTitles, theme);
   const appendixHtml = buildAppendixHtml(pageTitles, slugs, theme);
 
   const browser = await chromium.launch();
@@ -175,17 +126,15 @@ export async function POST(request: NextRequest) {
     const doc = await PDFDocument.create();
     doc.setTitle(reportTitle);
 
-    // Title page
     const titlePng = await renderHtmlToPng(titlePageHtml, browser);
     await addPngPage(doc, titlePng);
 
-    // Content pages
-    for (const { html } of pages) {
-      const contentPng = await renderHtmlToPng(html, browser);
+    for (const slug of slugs) {
+      const url = previewUrl(slug, ctx.orgId, hub);
+      const contentPng = await screenshotPage(url, browser);
       await addPngPage(doc, contentPng);
     }
 
-    // Appendix
     const appendixPng = await renderHtmlToPng(appendixHtml, browser);
     await addPngPage(doc, appendixPng);
 

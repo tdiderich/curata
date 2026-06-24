@@ -1,7 +1,5 @@
 import { readFileSync } from "fs";
 import { join } from "path";
-import React from "react";
-import { PageRenderer } from "@/generated/kazam-renderer-server";
 
 const KAZAM_CSS = readFileSync(
   join(process.cwd(), "src/app/kazam.css"),
@@ -12,48 +10,6 @@ type Theme = { theme: string; mode: string; texture: string; glow: string };
 
 function themeAttrs(theme: Theme): string {
   return `data-theme="${theme.theme}" data-mode="${theme.mode}" data-texture="${theme.texture}" data-glow="${theme.glow}"`;
-}
-
-export async function renderPageHtml(
-  pageJson: Record<string, unknown>,
-  theme: Theme
-): Promise<string> {
-  const page = {
-    title: (pageJson.title as string) || "",
-    subtitle: (pageJson.subtitle as string) || undefined,
-    shell: (pageJson.shell as string) || "standard",
-    hub: pageJson.hub as
-      | { name: string; eyebrow?: string; status?: string; status_color?: string; pages?: Array<{ label: string; href: string }> }
-      | undefined,
-    components: (pageJson.components ?? []) as Array<{ type: string; [key: string]: unknown }>,
-    slides: (pageJson.slides as Array<{
-      label: string;
-      hide_label?: boolean;
-      cover?: boolean;
-      components?: Array<{ type: string; [key: string]: unknown }>;
-    }>) || undefined,
-  };
-
-  const { renderToStaticMarkup } = await import("react-dom/server");
-  const html = renderToStaticMarkup(
-    React.createElement(PageRenderer, { page, exportMode: true })
-  );
-
-  return `<!DOCTYPE html>
-<html ${themeAttrs(theme)}>
-<head>
-  <meta charset="utf-8">
-  <title>${page.title.replace(/</g, "&lt;")}</title>
-  <style>${KAZAM_CSS}</style>
-</head>
-<body class="shell-standard">
-  <div class="main-content">
-    <div class="page-detail-content">
-      ${html}
-    </div>
-  </div>
-</body>
-</html>`;
 }
 
 function esc(s: string): string {

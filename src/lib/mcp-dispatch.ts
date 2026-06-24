@@ -19,7 +19,8 @@ import {
   bumpViewCount,
 } from "@/lib/pages";
 import { getOrgTheme } from "@/lib/theme";
-import { renderPageHtml, buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
+import { buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
+import { getChromium, previewUrl, screenshotPage, renderHtmlToPng } from "@/lib/export-render";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
 import {
   upsertConcepts,
@@ -852,28 +853,10 @@ export async function dispatch(
       const pageData = await readPage(orgId, args.slug);
       if (!pageData) throw new Error(`page not found: ${args.slug}`);
 
-      const theme = await getOrgTheme(orgId);
-      const html = await renderPageHtml(pageData.json, theme);
-
-      let chromium: Awaited<typeof import("playwright")>["chromium"];
-      try {
-        chromium = (await import("playwright")).chromium;
-      } catch {
-        throw new Error("playwright is not installed — run: npx playwright install chromium");
-      }
-
+      const chromium = await getChromium();
       const browser = await chromium.launch();
-      const browserPage = await browser.newPage({ viewport: { width: 1100, height: 800 } });
-      await browserPage.setContent(html, { waitUntil: "load" });
-      await browserPage.waitForTimeout(300);
-      const height = await browserPage.evaluate(() => {
-        const el = document.querySelector(".export-root");
-        if (!el) return 800;
-        return Math.ceil(el.getBoundingClientRect().bottom) + 48;
-      });
-      await browserPage.setViewportSize({ width: 1100, height });
-      const pngBuffer = Buffer.from(await browserPage.screenshot({ fullPage: true }));
-      await browserPage.close();
+      const url = previewUrl(args.slug, orgId);
+      const pngBuffer = await screenshotPage(url, browser);
       await browser.close();
 
       if (format === "pdf") {
@@ -919,45 +902,23 @@ export async function dispatch(
         if (!SLUG_RE.test(s)) throw new Error(`invalid slug format: ${s}`);
       }
 
-      let chromium: Awaited<typeof import("playwright")>["chromium"];
-      try {
-        chromium = (await import("playwright")).chromium;
-      } catch {
-        throw new Error("playwright is not installed — run: npx playwright install chromium");
-      }
+      const chromium = await getChromium();
 
       const theme = await getOrgTheme(orgId);
-      const pages: Array<{ slug: string; html: string; pageTitle: string }> = [];
+      const pageTitles: string[] = [];
       for (const slug of slugList) {
         const pageData = await readPage(orgId, slug);
         if (!pageData) throw new Error(`page not found: ${slug}`);
-        const pageTitle = ((pageData.json as { title?: string }).title) ?? slug;
-        pages.push({ slug, html: await renderPageHtml(pageData.json, theme), pageTitle });
+        pageTitles.push(((pageData.json as { title?: string }).title) ?? slug);
       }
 
-      const pageTitles = pages.map((p) => p.pageTitle);
       const reportTitle = args.title;
       const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-      const titlePageHtml = buildTitlePageHtml(reportTitle, args.subtitle, date, pages.length, pageTitles, theme);
+      const titlePageHtml = buildTitlePageHtml(reportTitle, args.subtitle, date, slugList.length, pageTitles, theme);
       const appendixHtml = buildAppendixHtml(pageTitles, slugList, theme);
 
       const browser = await chromium.launch();
-
-      async function renderToPng(html: string): Promise<Buffer> {
-        const bp = await browser.newPage({ viewport: { width: 1100, height: 800 } });
-        await bp.setContent(html, { waitUntil: "load" });
-        await bp.waitForTimeout(300);
-        const h = await bp.evaluate(() => {
-          const el = document.querySelector(".export-root");
-          if (!el) return document.body.scrollHeight;
-          return Math.ceil(el.getBoundingClientRect().bottom) + 48;
-        });
-        await bp.setViewportSize({ width: 1100, height: h });
-        const png = Buffer.from(await bp.screenshot({ fullPage: true }));
-        await bp.close();
-        return png;
-      }
 
       try {
         const { PDFDocument } = await import("pdf-lib");
@@ -974,11 +935,12 @@ export async function dispatch(
           pdfPage.drawImage(img, { x: 0, y: 0, width: tw, height: h * sc });
         }
 
-        await addPng(await renderToPng(titlePageHtml));
-        for (const { html } of pages) {
-          await addPng(await renderToPng(html));
+        await addPng(await renderHtmlToPng(titlePageHtml, browser));
+        for (const slug of slugList) {
+          const url = previewUrl(slug, orgId);
+          await addPng(await screenshotPage(url, browser));
         }
-        await addPng(await renderToPng(appendixHtml));
+        await addPng(await renderHtmlToPng(appendixHtml, browser));
 
         await browser.close();
 
