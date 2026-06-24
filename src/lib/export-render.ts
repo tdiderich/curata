@@ -7,7 +7,9 @@ export function previewUrl(slug: string, orgId: string, hub?: string): string {
   const nonce = createExportNonce(orgId);
   const params = new URLSearchParams({ nonce });
   if (hub) params.set("hub", hub);
-  return `http://localhost:${PORT}${basePath}/export-preview/${encodeURIComponent(slug)}?${params}`;
+  const url = `http://localhost:${PORT}${basePath}/export-preview/${encodeURIComponent(slug)}?${params}`;
+  console.error("[export] preview URL:", url);
+  return url;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
