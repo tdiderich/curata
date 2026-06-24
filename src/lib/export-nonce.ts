@@ -1,6 +1,10 @@
 import { randomUUID } from "crypto";
 
-const store = new Map<string, { orgId: string; expires: number }>();
+type NonceEntry = { orgId: string; expires: number };
+
+const g = globalThis as unknown as { __exportNonces?: Map<string, NonceEntry> };
+if (!g.__exportNonces) g.__exportNonces = new Map();
+const store = g.__exportNonces;
 
 const TTL_MS = 30_000;
 
