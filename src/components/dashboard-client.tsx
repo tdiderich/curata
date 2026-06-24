@@ -215,14 +215,13 @@ interface DashboardClientProps {
   folders: FolderRow[];
   pageCount: number;
   orgName?: string;
-  allowPublic?: boolean;
   cleanupCount?: number;
 }
 
 // The dashboard is a landing surface: what needs attention, then recent
 // activity. The folder tree lives in the app sidebar; the table view here is
 // a flat, sortable index of everything.
-export function DashboardClient({ pages, folders, pageCount, orgName, allowPublic = true, cleanupCount = 0 }: DashboardClientProps) {
+export function DashboardClient({ pages, folders, pageCount, orgName, cleanupCount = 0 }: DashboardClientProps) {
   const [sortKey, setSortKey] = useSortKey();
   const [searchQuery, setSearchQuery] = useState("");
   const [lastVisit, setLastVisit] = useState<number | null>(null);
@@ -436,10 +435,8 @@ export function DashboardClient({ pages, folders, pageCount, orgName, allowPubli
                     <PageMenu
                       slug={page.slug}
                       title={page.title}
-                      visibility={page.visibility}
                       folderId={page.folderId}
                       folders={folders}
-                      allowPublic={allowPublic}
                     />
                   </td>
                 </tr>

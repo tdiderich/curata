@@ -91,7 +91,6 @@ function PageLink({ page, folders, active, pinned }: { page: SidebarPage; folder
         <PageMenu
           slug={page.slug}
           title={page.title}
-          visibility={page.visibility}
           folderId={page.folderId}
           folders={folders}
         />

@@ -174,16 +174,15 @@ export function NewFolderButton({
 interface PageMenuProps {
   slug: string;
   title: string;
-  visibility: string;
   folderId: string | null;
   folders: Folder[];
-  allowPublic?: boolean;
 }
 
-export function PageMenu({ slug, title, visibility, folderId, folders, allowPublic = true }: PageMenuProps) {
+export function PageMenu({ slug, title, folderId, folders }: PageMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
   const [browseParent, setBrowseParent] = useState<string | null | undefined>(undefined);
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -220,12 +219,15 @@ export function PageMenu({ slug, title, visibility, folderId, folders, allowPubl
     }
   }
 
-  function setVisibility(v: string) {
-    return patchPage({ visibility: v }, "Couldn't change visibility");
-  }
-
   function moveTo(targetFolderId: string | null) {
     return patchPage({ folderId: targetFolderId }, "Couldn't move page");
+  }
+
+  async function copyLink() {
+    const url = `${window.location.origin}${basePath}/pages/${encodeURIComponent(slug)}`;
+    await navigator.clipboard.writeText(url);
+    toast.success("Link copied");
+    setOpen(false);
   }
 
   async function doDelete() {
@@ -248,15 +250,6 @@ export function PageMenu({ slug, title, visibility, folderId, folders, allowPubl
     }
   }
 
-  // "Public" only exists where auth gates access (clerk/oauth). In tailnet or
-  // no-auth deployments everyone on the network sees everything, so a public
-  // tier is meaningless noise.
-  const visOptions = [
-    { value: "personal", label: "Private" },
-    { value: "shared", label: "Shared" },
-    ...(allowPublic ? [{ value: "public", label: "Public" }] : []),
-  ];
-
   const viewingParent = browseParent === undefined ? "__root" : browseParent;
   const visibleFolders = folders.filter((f) => {
     if (viewingParent === "__root") return !f.parentId;
@@ -272,7 +265,7 @@ export function PageMenu({ slug, title, visibility, folderId, folders, allowPubl
       <button
         ref={btnRef}
         className="dash-page-actions-btn"
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); setBrowseParent(undefined); }}
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); setMoveOpen(false); setBrowseParent(undefined); }}
         disabled={busy}
         aria-label="Page options"
       >
@@ -284,8 +277,65 @@ export function PageMenu({ slug, title, visibility, folderId, folders, allowPubl
       </button>
       {open && (
         <AnchoredMenu anchorRef={btnRef} menuRef={portalRef} className="dash-page-actions-menu">
-          {/* Pins are per-user (localStorage), so no server round-trip. The
-              menu only mounts on click, so isPinned never runs during SSR. */}
+          <button className="dash-page-actions-item" onClick={copyLink}>
+            Copy link
+          </button>
+          <div className="dash-page-actions-divider" />
+          {!moveOpen ? (
+            <button
+              className="dash-page-actions-item"
+              onClick={() => { setMoveOpen(true); setBrowseParent(undefined); }}
+            >
+              Move
+            </button>
+          ) : (
+            <>
+              <button
+                className="dash-page-actions-item dash-folder-actions-back"
+                onClick={() => {
+                  if (viewingParent !== "__root") {
+                    if (parentFolder?.parentId) setBrowseParent(parentFolder.parentId);
+                    else setBrowseParent(undefined);
+                  } else {
+                    setMoveOpen(false);
+                  }
+                }}
+              >
+                <span className="dash-folder-actions-arrow">&#8592;</span>
+                {viewingParent !== "__root" && parentFolder ? parentFolder.name : "Back"}
+              </button>
+              <button
+                className={`dash-page-actions-item${folderId === (viewingParent === "__root" ? null : viewingParent) ? " dash-page-actions-item--active" : ""}`}
+                onClick={() => moveTo(viewingParent === "__root" ? null : viewingParent!)}
+              >
+                {viewingParent === "__root" ? "No folder" : "Here"}
+                {folderId === (viewingParent === "__root" ? null : viewingParent) && (
+                  <span className="dash-page-actions-check">&#10003;</span>
+                )}
+              </button>
+              {visibleFolders.map((f) => (
+                <div key={f.id} className="dash-folder-actions-move-row">
+                  <button
+                    className={`dash-folder-actions-item dash-folder-actions-move-target${folderId === f.id ? " dash-folder-actions-item--active" : ""}`}
+                    onClick={() => moveTo(f.id)}
+                  >
+                    {f.name}
+                    {folderId === f.id && <span className="dash-page-actions-check">&#10003;</span>}
+                  </button>
+                  {hasChildren(f.id) && (
+                    <button
+                      className="dash-folder-actions-drill"
+                      onClick={() => setBrowseParent(f.id)}
+                      aria-label={`Browse ${f.name}`}
+                    >
+                      &#8250;
+                    </button>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
+          <div className="dash-page-actions-divider" />
           <button
             className="dash-page-actions-item"
             onClick={() => {
@@ -296,61 +346,6 @@ export function PageMenu({ slug, title, visibility, folderId, folders, allowPubl
           >
             {isPinned(slug) ? "Unpin from top" : "Pin to top"}
           </button>
-          <div className="dash-page-actions-divider" />
-          <div className="dash-page-actions-section">Visibility</div>
-          {visOptions.map((o) => (
-            <button
-              key={o.value}
-              className={`dash-page-actions-item${visibility === o.value ? " dash-page-actions-item--active" : ""}`}
-              onClick={() => setVisibility(o.value)}
-            >
-              {o.label}
-              {visibility === o.value && <span className="dash-page-actions-check">&#10003;</span>}
-            </button>
-          ))}
-          <div className="dash-page-actions-divider" />
-          <div className="dash-page-actions-section">Move to</div>
-          {viewingParent !== "__root" && (
-            <button
-              className="dash-folder-actions-item dash-folder-actions-back"
-              onClick={() => {
-                if (parentFolder?.parentId) setBrowseParent(parentFolder.parentId);
-                else setBrowseParent(undefined);
-              }}
-            >
-              <span className="dash-folder-actions-arrow">&#8592;</span>
-              {parentFolder ? parentFolder.name : "Back"}
-            </button>
-          )}
-          <button
-            className={`dash-page-actions-item${folderId === (viewingParent === "__root" ? null : viewingParent) ? " dash-page-actions-item--active" : ""}`}
-            onClick={() => moveTo(viewingParent === "__root" ? null : viewingParent!)}
-          >
-            {viewingParent === "__root" ? "No folder" : "Here"}
-            {folderId === (viewingParent === "__root" ? null : viewingParent) && (
-              <span className="dash-page-actions-check">&#10003;</span>
-            )}
-          </button>
-          {visibleFolders.map((f) => (
-            <div key={f.id} className="dash-folder-actions-move-row">
-              <button
-                className={`dash-folder-actions-item dash-folder-actions-move-target${folderId === f.id ? " dash-folder-actions-item--active" : ""}`}
-                onClick={() => moveTo(f.id)}
-              >
-                {f.name}
-                {folderId === f.id && <span className="dash-page-actions-check">&#10003;</span>}
-              </button>
-              {hasChildren(f.id) && (
-                <button
-                  className="dash-folder-actions-drill"
-                  onClick={() => setBrowseParent(f.id)}
-                  aria-label={`Browse ${f.name}`}
-                >
-                  &#8250;
-                </button>
-              )}
-            </div>
-          ))}
           <div className="dash-page-actions-divider" />
           <button
             className="dash-page-actions-item dash-page-actions-item--danger"
