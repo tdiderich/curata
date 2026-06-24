@@ -90,11 +90,14 @@ export default function ReportBuilder({ onClose, allPages, initialSlugs = [] }: 
         return;
       }
 
+      const cd = res.headers.get("Content-Disposition") ?? "";
+      const match = cd.match(/filename="?([^"]+)"?/);
+      const filename = match?.[1] ?? `${title.trim().replace(/\s+/g, "-").toLowerCase()}.pdf`;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${title.trim().replace(/\s+/g, "-").toLowerCase()}.pdf`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
