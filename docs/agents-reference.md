@@ -37,6 +37,9 @@ Values: `none`, `dots_line`, `arrow`
 ### EventFilter
 Values: `all`, `major`
 
+### EventGroupBy
+Values: `month`, `quarter`, `source`
+
 ### EventSeverity
 Values: `major`, `minor`, `info`
 
@@ -90,6 +93,9 @@ Values: `all`, `incomplete`, `blocked`, `priority`
 
 ### TreeStatus
 Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
+
+### Trend
+Values: `up`, `down`, `flat`
 
 ## Types
 
@@ -230,6 +236,7 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | severity | EventSeverity | no |
 | source | string | no |
 | summary | string | no |
+| tags | string[] | no |
 | title | string | yes |
 
 ### Freshness
@@ -241,6 +248,13 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | review_every | string | no |
 | sources_of_truth | (string | SourceOfTruth)[] | no |
 | updated | string | no |
+
+### GaugeItem
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| label | string | yes |
+| value | number | yes |
 
 ### GraphEdge
 | Field | Type | Required |
@@ -405,6 +419,13 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | id | string | yes |
 | label | string | yes |
 
+### RuleItem
+| Field | Type | Required |
+|-------|------|----------|
+| body | string | yes |
+| color | SemColor | no |
+| label | string | yes |
+
 ### SankeyFlow
 | Field | Type | Required |
 |-------|------|----------|
@@ -439,7 +460,10 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 |-------|------|----------|
 | color | SemColor | no |
 | detail | string | no |
+| history | number[] | no |
 | label | string | yes |
+| previous | string | no |
+| trend | Trend | no |
 | value | string | yes |
 
 ### Step
@@ -458,9 +482,16 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | Field | Type | Required |
 |-------|------|----------|
 | align | Align | no |
+| color_map | Record<string, SemColor> | no |
 | key | string | yes |
 | label | string | yes |
 | sortable | boolean | no |
+
+### TableSummary
+| Field | Type | Required |
+|-------|------|----------|
+| colors | Record<string, SemColor> | no |
+| group_by | string | yes |
 
 ### ThemeTokens
 | Field | Type | Required |
@@ -493,6 +524,7 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | children | TreeNode[] | no |
 | label | string | yes |
 | note | string | no |
+| owner | string | no |
 | status | TreeStatus | no |
 
 ### ValidationError
@@ -550,6 +582,16 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
   direction: "left_to_right"  # optional
   height: 300  # optional
   nodes: []
+```
+
+### aside
+| Field | Type | Required |
+|-------|------|----------|
+| body | string | yes |
+
+```yaml
+- type: aside
+  body: "Description text"
 ```
 
 ### avatar
@@ -779,6 +821,8 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 |-------|------|----------|
 | default_filter | EventFilter | no |
 | events | EventItem[] | yes |
+| filter_by | string[] | no |
+| group_by | EventGroupBy | no |
 | limit | number | no |
 | show_filter_toggle | boolean | no |
 
@@ -786,7 +830,22 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 - type: event_timeline
   default_filter: "all"  # optional
   events: []
-  limit: 3  # optional
+  filter_by: []  # optional
+```
+
+### gauge
+| Field | Type | Required |
+|-------|------|----------|
+| columns | number | no |
+| items | GaugeItem[] | yes |
+| max | number | no |
+| title | string | no |
+
+```yaml
+- type: gauge
+  columns: 3  # optional
+  items: []
+  max: 3  # optional
 ```
 
 ### graph
@@ -936,6 +995,8 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | color | SemColor | no |
 | detail | string | no |
 | label | string | no |
+| target | number | no |
+| thresholds | Record<string, SemColor> | no |
 | value | number | yes |
 
 ```yaml
@@ -1000,6 +1061,16 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 ```yaml
 - type: role_map
   title: "Example Title"  # optional
+```
+
+### rule_list
+| Field | Type | Required |
+|-------|------|----------|
+| items | RuleItem[] | yes |
+
+```yaml
+- type: rule_list
+  items: []
 ```
 
 ### sankey
@@ -1101,12 +1172,14 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | columns | TableColumn[] | yes |
 | filterable | boolean | no |
 | rows | Record<string, unknown>[] | yes |
+| summary | TableSummary | no |
 
 ```yaml
 - type: table
   columns: []
   filterable: false  # optional
   rows: []
+  summary: {}  # optional
 ```
 
 ### tabs
@@ -1145,14 +1218,16 @@ Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
 | Field | Type | Required |
 |-------|------|----------|
 | default_collapsed | boolean | no |
+| default_depth | number | no |
 | default_filter | TreeFilter | no |
 | nodes | TreeNode[] | yes |
+| show_counts | boolean | no |
 | show_filter_toggle | boolean | no |
 
 ```yaml
 - type: tree
   default_collapsed: false  # optional
-  default_filter: "all"  # optional
+  default_depth: 0  # optional
   nodes: []
 ```
 
