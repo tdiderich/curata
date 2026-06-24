@@ -11,6 +11,7 @@ import AgentConnectModal from "./agent-connect-modal";
 import SourceEditor, { type SourceEditorControls } from "./source-editor";
 import { toast } from "./toast";
 import { basePath } from "@/lib/api-fetch";
+import { highlightTarget, clearHighlights } from "@/lib/annotation-highlights";
 
 interface Annotation {
   id: string;
@@ -37,59 +38,6 @@ function daysAgo(dateStr: string): number {
   const d = new Date(dateStr);
   const now = new Date();
   return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function highlightTarget(
-  root: HTMLElement,
-  target: string,
-  annId: string,
-): HTMLElement | null {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  let textNode: Text | null;
-  while ((textNode = walker.nextNode() as Text | null)) {
-    const content = textNode.textContent || "";
-    const idx = content.indexOf(target);
-    if (idx === -1) continue;
-
-    const svgParent = textNode.parentElement?.closest("svg");
-    if (svgParent) {
-      const svgText = textNode.parentElement?.closest("text");
-      if (svgText) {
-        svgText.classList.add("ann-target-highlight-svg");
-        svgText.dataset.ann = annId;
-      }
-      const component = svgParent.closest("[data-kind]") ?? svgParent.parentElement;
-      return (component as HTMLElement) ?? null;
-    }
-
-    try {
-      const range = document.createRange();
-      range.setStart(textNode, idx);
-      range.setEnd(textNode, idx + target.length);
-      const mark = document.createElement("mark");
-      mark.className = "ann-target-highlight";
-      mark.dataset.ann = annId;
-      range.surroundContents(mark);
-      return mark;
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
-function clearHighlights(root: HTMLElement) {
-  root.querySelectorAll("mark.ann-target-highlight").forEach((mark) => {
-    const parent = mark.parentNode;
-    if (!parent) return;
-    while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
-    parent.removeChild(mark);
-  });
-  root.querySelectorAll(".ann-target-highlight-svg").forEach((el) => {
-    el.classList.remove("ann-target-highlight-svg");
-    delete (el as SVGElement).dataset.ann;
-  });
-  root.normalize();
 }
 
 function findSectionTop(
@@ -264,15 +212,41 @@ export default function PageDetailClient({
     setAnnPositions(positions);
   }, [activeAnns, expandAll]);
 
-  // Click outside closes expanded card
   useEffect(() => {
+    let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+    let hoveredAnn: string | null = null;
+
     function handleClick(e: MouseEvent) {
-      const target = e.target as HTMLElement;
-      if (target.closest(".ann-card") || target.closest(".ann-bubble")) return;
+      const el = e.target as HTMLElement;
+      if (el.closest(".ann-card") || el.closest(".ann-bubble")) return;
+      const highlight = el.closest("[data-ann]") as HTMLElement | null;
+      if (highlight?.dataset.ann) {
+        setExpandedId(highlight.dataset.ann);
+        return;
+      }
       setExpandedId(null);
     }
+
+    function handleMove(e: MouseEvent) {
+      const el = e.target as HTMLElement;
+      const highlight = el.closest("[data-ann]") as HTMLElement | null;
+      const annId = highlight?.dataset.ann ?? null;
+      if (annId === hoveredAnn) return;
+      if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
+      hoveredAnn = annId;
+      if (annId) {
+        hoverTimer = setTimeout(() => setExpandedId(annId), 400);
+      }
+    }
+
+    const root = contentRef.current;
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    root?.addEventListener("mousemove", handleMove);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      root?.removeEventListener("mousemove", handleMove);
+      if (hoverTimer) clearTimeout(hoverTimer);
+    };
   }, []);
 
   const updateStatus = useCallback(

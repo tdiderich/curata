@@ -374,8 +374,12 @@ body .c-section.align-right > * { max-width: none !important; }
 }
 
 .ann-target-highlight-svg {
-  fill: rgba(var(--accent-rgb), 1);
-  font-weight: 700;
+  fill: rgba(var(--accent-rgb), 0.18);
+  cursor: pointer;
+  transition: fill 0.15s;
+}
+.ann-target-highlight-svg:hover {
+  fill: rgba(var(--accent-rgb), 0.3);
 }
 
 /* ── Section highlight when annotation clicked ── */
