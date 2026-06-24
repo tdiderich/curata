@@ -15,8 +15,18 @@ class PlaywrightMissingError extends Error {
 async function getChromium(): Promise<any> {
   try {
     return (await import("playwright")).chromium;
-  } catch {
-    throw new PlaywrightMissingError();
+  } catch (e1) {
+    // Turbopack standalone builds use a custom module resolver that may
+    // fail to find external packages; fall back to Node's native require.
+    try {
+      const { createRequire } = await import("node:module");
+      const nativeRequire = createRequire(process.cwd() + "/package.json");
+      return nativeRequire("playwright").chromium;
+    } catch (e2) {
+      console.error("playwright dynamic import failed:", e1);
+      console.error("playwright createRequire fallback failed:", e2);
+      throw new PlaywrightMissingError();
+    }
   }
 }
 
