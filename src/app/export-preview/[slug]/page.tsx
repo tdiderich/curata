@@ -74,6 +74,13 @@ export default async function ExportPreview({
 
   return (
     <div className="main-content">
+      <style>{`
+        /* Export overrides: show all interactive content */
+        .c-tabs .tab-panel { display: block !important; }
+        .c-tabs .tab-btn-active { border-color: transparent !important; }
+        .c-tabs .tab-btn { opacity: 0.5; }
+        .c-tabs .tab-panel + .tab-panel { border-top: 1px solid rgba(255,255,255,0.08); margin-top: 16px; padding-top: 16px; }
+      `}</style>
       <div className="page-detail-content export-root">
         <PageRenderer page={page} exportMode={true} />
       </div>
