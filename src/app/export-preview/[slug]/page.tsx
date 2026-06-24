@@ -75,12 +75,39 @@ export default async function ExportPreview({
   return (
     <div className="main-content">
       <style>{`
-        /* Export overrides: show all interactive content */
-        .c-tabs .tab-panel { display: block !important; }
-        .c-tabs .tab-btn-active { border-color: transparent !important; }
-        .c-tabs .tab-btn { opacity: 0.5; }
-        .c-tabs .tab-panel + .tab-panel { border-top: 1px solid rgba(255,255,255,0.08); margin-top: 16px; padding-top: 16px; }
+        .export-tab-section { margin-bottom: 24px; }
+        .export-tab-heading {
+          font-size: 15px; font-weight: 600; letter-spacing: 0.5px;
+          text-transform: uppercase; color: rgba(255,255,255,0.5);
+          padding: 10px 0; margin-bottom: 8px;
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
       `}</style>
+      <script dangerouslySetInnerHTML={{ __html: `
+        document.addEventListener('DOMContentLoaded', function() {
+          document.querySelectorAll('.c-tabs').forEach(function(tabs) {
+            var buttons = tabs.querySelectorAll('.tab-btn');
+            var panels = tabs.querySelectorAll('.tab-panel');
+            var frag = document.createDocumentFragment();
+            buttons.forEach(function(btn, i) {
+              var section = document.createElement('div');
+              section.className = 'export-tab-section';
+              var h = document.createElement('div');
+              h.className = 'export-tab-heading';
+              h.textContent = btn.textContent;
+              section.appendChild(h);
+              if (panels[i]) {
+                var panel = panels[i].cloneNode(true);
+                panel.style.display = 'block';
+                section.appendChild(panel);
+              }
+              frag.appendChild(section);
+            });
+            tabs.innerHTML = '';
+            tabs.appendChild(frag);
+          });
+        });
+      `}} />
       <div className="page-detail-content export-root">
         <PageRenderer page={page} exportMode={true} />
       </div>
