@@ -13,21 +13,12 @@ export default async function ExportPreview({
   const { slug } = await params;
   const { nonce, hub: hubSlug } = await searchParams;
 
-  if (!nonce) {
-    console.error("[export-preview] no nonce param", { slug });
-    notFound();
-  }
+  if (!nonce) notFound();
   const orgId = consumeExportNonce(nonce);
-  if (!orgId) {
-    console.error("[export-preview] nonce invalid/expired", { slug, nonce: nonce.slice(0, 8) });
-    notFound();
-  }
+  if (!orgId) notFound();
 
   const pageData = await readPage(orgId, slug);
-  if (!pageData) {
-    console.error("[export-preview] page not found", { orgId, slug });
-    notFound();
-  }
+  if (!pageData) notFound();
 
   type HubShape = {
     name: string;
