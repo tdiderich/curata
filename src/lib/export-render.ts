@@ -18,6 +18,30 @@ export async function screenshotPage(url: string, browser: any): Promise<Buffer>
   await page.goto(url, { waitUntil: "networkidle" });
   await page.waitForTimeout(500);
 
+  await page.evaluate(() => {
+    document.querySelectorAll(".c-tabs").forEach((tabs) => {
+      const buttons = tabs.querySelectorAll(".tab-btn");
+      const panels = tabs.querySelectorAll(".tab-panel");
+      const frag = document.createDocumentFragment();
+      buttons.forEach((btn, i) => {
+        const section = document.createElement("div");
+        section.className = "export-tab-section";
+        const h = document.createElement("div");
+        h.className = "export-tab-heading";
+        h.textContent = btn.textContent;
+        section.appendChild(h);
+        if (panels[i]) {
+          const panel = panels[i].cloneNode(true) as HTMLElement;
+          panel.style.display = "block";
+          section.appendChild(panel);
+        }
+        frag.appendChild(section);
+      });
+      tabs.innerHTML = "";
+      tabs.appendChild(frag);
+    });
+  });
+
   const height = await page.evaluate(() => {
     const el = document.querySelector(".export-root");
     if (!el) return document.body.scrollHeight;

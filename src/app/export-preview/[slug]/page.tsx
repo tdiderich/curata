@@ -83,31 +83,6 @@ export default async function ExportPreview({
           border-bottom: 1px solid rgba(255,255,255,0.08);
         }
       `}</style>
-      <script dangerouslySetInnerHTML={{ __html: `
-        document.addEventListener('DOMContentLoaded', function() {
-          document.querySelectorAll('.c-tabs').forEach(function(tabs) {
-            var buttons = tabs.querySelectorAll('.tab-btn');
-            var panels = tabs.querySelectorAll('.tab-panel');
-            var frag = document.createDocumentFragment();
-            buttons.forEach(function(btn, i) {
-              var section = document.createElement('div');
-              section.className = 'export-tab-section';
-              var h = document.createElement('div');
-              h.className = 'export-tab-heading';
-              h.textContent = btn.textContent;
-              section.appendChild(h);
-              if (panels[i]) {
-                var panel = panels[i].cloneNode(true);
-                panel.style.display = 'block';
-                section.appendChild(panel);
-              }
-              frag.appendChild(section);
-            });
-            tabs.innerHTML = '';
-            tabs.appendChild(frag);
-          });
-        });
-      `}} />
       <div className="page-detail-content export-root">
         <PageRenderer page={page} exportMode={true} />
       </div>

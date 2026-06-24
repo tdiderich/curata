@@ -10,6 +10,11 @@ import {
   renderHtmlToPng,
 } from "@/lib/export-render";
 
+function ts(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function addPngPage(doc: any, pngBuffer: Buffer) {
   const img = await doc.embedPng(pngBuffer);
@@ -65,7 +70,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${slug}.pdf"`,
+        "Content-Disposition": `attachment; filename="${slug}_${ts()}.pdf"`,
       },
     });
   }
@@ -73,7 +78,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(new Uint8Array(pngBuffer), {
     headers: {
       "Content-Type": "image/png",
-      "Content-Disposition": `attachment; filename="${slug}.png"`,
+      "Content-Disposition": `attachment; filename="${slug}_${ts()}.png"`,
     },
   });
 }
@@ -147,7 +152,7 @@ export async function POST(request: NextRequest) {
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${reportName}.pdf"`,
+        "Content-Disposition": `attachment; filename="${reportName}_${ts()}.pdf"`,
       },
     });
   } catch (err) {
