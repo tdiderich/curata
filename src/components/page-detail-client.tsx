@@ -50,6 +50,18 @@ function highlightTarget(
     const content = textNode.textContent || "";
     const idx = content.indexOf(target);
     if (idx === -1) continue;
+
+    const svgParent = textNode.parentElement?.closest("svg");
+    if (svgParent) {
+      const svgText = textNode.parentElement?.closest("text");
+      if (svgText) {
+        svgText.classList.add("ann-target-highlight-svg");
+        svgText.dataset.ann = annId;
+      }
+      const component = svgParent.closest("[data-kind]") ?? svgParent.parentElement;
+      return (component as HTMLElement) ?? null;
+    }
+
     try {
       const range = document.createRange();
       range.setStart(textNode, idx);
@@ -72,6 +84,10 @@ function clearHighlights(root: HTMLElement) {
     if (!parent) return;
     while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
     parent.removeChild(mark);
+  });
+  root.querySelectorAll(".ann-target-highlight-svg").forEach((el) => {
+    el.classList.remove("ann-target-highlight-svg");
+    delete (el as SVGElement).dataset.ann;
   });
   root.normalize();
 }

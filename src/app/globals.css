@@ -373,6 +373,11 @@ body .c-section.align-right > * { max-width: none !important; }
   background: rgba(var(--accent-rgb), 0.25);
 }
 
+.ann-target-highlight-svg {
+  fill: rgba(var(--accent-rgb), 1);
+  font-weight: 700;
+}
+
 /* ── Section highlight when annotation clicked ── */
 
 .c-section--highlighted {
