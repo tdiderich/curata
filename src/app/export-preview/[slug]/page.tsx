@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { consumeExportNonce } from "@/lib/export-nonce";
 import { readPage } from "@/lib/pages";
+import { getOrgTheme } from "@/lib/theme";
+import { ThemeScript } from "@/components/theme-script";
 import { PageRenderer } from "@/generated/kazam-renderer";
 
 export default async function ExportPreview({
@@ -17,7 +19,10 @@ export default async function ExportPreview({
   const orgId = consumeExportNonce(nonce);
   if (!orgId) notFound();
 
-  const pageData = await readPage(orgId, slug);
+  const [pageData, theme] = await Promise.all([
+    readPage(orgId, slug),
+    getOrgTheme(orgId),
+  ]);
   if (!pageData) notFound();
 
   type HubShape = {
@@ -65,6 +70,7 @@ export default async function ExportPreview({
 
   return (
     <div className="main-content">
+      <ThemeScript theme={theme.theme} mode={theme.mode} texture={theme.texture} glow={theme.glow} />
       <style>{`
         .export-tab-section { margin-bottom: 24px; }
         .export-tab-heading {
