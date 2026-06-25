@@ -1,10 +1,16 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 
-const KAZAM_CSS = readFileSync(
-  join(process.cwd(), "src/app/kazam.css"),
-  "utf8"
-);
+let _kazamCss: string | null = null;
+function getKazamCss(): string {
+  if (!_kazamCss) {
+    _kazamCss = readFileSync(
+      join(process.cwd(), "src/app/kazam.css"),
+      "utf8"
+    );
+  }
+  return _kazamCss;
+}
 
 type Theme = { theme: string; mode: string; texture: string; glow: string };
 
@@ -33,7 +39,7 @@ export function buildTitlePageHtml(
 
   return `<!DOCTYPE html>
 <html ${themeAttrs(theme)}>
-<head><meta charset="utf-8"><style>${KAZAM_CSS}</style></head>
+<head><meta charset="utf-8"><style>${getKazamCss()}</style></head>
 <body class="shell-standard" style="margin:0;min-height:100vh;">
   <div style="max-width:1000px;margin:0 auto;padding:120px 56px 80px;min-height:100vh;box-sizing:border-box;display:flex;flex-direction:column;">
     <div style="flex:1;">
@@ -70,7 +76,7 @@ export function buildAppendixHtml(
 
   return `<!DOCTYPE html>
 <html ${themeAttrs(theme)}>
-<head><meta charset="utf-8"><style>${KAZAM_CSS}</style></head>
+<head><meta charset="utf-8"><style>${getKazamCss()}</style></head>
 <body class="shell-standard" style="margin:0;">
   <div style="max-width:1000px;margin:0 auto;padding:80px 56px;">
     <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.4);margin-bottom:24px;">Appendix</div>
