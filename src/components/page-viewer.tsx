@@ -25,7 +25,7 @@ export const PageContent = forwardRef<
     componentId: string;
   } | null>(null);
   const [showCopied, setShowCopied] = useState(false);
-  const copiedTimer = useRef<ReturnType<typeof setTimeout>>();
+  const copiedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const hasActions = selectionActions ? selectionActions.length > 0 : !!selectionAction;
 
