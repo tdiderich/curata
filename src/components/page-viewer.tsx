@@ -24,6 +24,8 @@ export const PageContent = forwardRef<
     section: string;
     componentId: string;
   } | null>(null);
+  const [showCopied, setShowCopied] = useState(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const hasActions = selectionActions ? selectionActions.length > 0 : !!selectionAction;
 
@@ -39,13 +41,20 @@ export const PageContent = forwardRef<
   );
 
   const handleMouseUp = useCallback(() => {
-    if (!hasActions) return;
     const sel = window.getSelection();
     const container = localRef.current;
     if (!sel || sel.isCollapsed || !container) return;
 
     const text = sel.toString().trim();
     if (!text) return;
+
+    navigator.clipboard.writeText(text).catch(() => {});
+
+    if (!hasActions) return;
+
+    clearTimeout(copiedTimer.current);
+    setShowCopied(true);
+    copiedTimer.current = setTimeout(() => setShowCopied(false), 600);
 
     const range = sel.getRangeAt(0);
     let node: Node | null = range.startContainer;
@@ -117,20 +126,24 @@ export const PageContent = forwardRef<
           }}
         >
           <span className="selection-popup-inner">
-            {actions.map((action) => (
-              <button
-                key={action.label}
-                className="selection-popup-btn"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  action.onSelect(selectionPopup.section, selectedTextRef.current, selectionPopup.componentId);
-                  setSelectionPopup(null);
-                }}
-              >
-                {action.label}
-              </button>
-            ))}
+            {showCopied ? (
+              <span className="selection-popup-copied">Copied!</span>
+            ) : (
+              actions.map((action) => (
+                <button
+                  key={action.label}
+                  className="selection-popup-btn"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    action.onSelect(selectionPopup.section, selectedTextRef.current, selectionPopup.componentId);
+                    setSelectionPopup(null);
+                  }}
+                >
+                  {action.label}
+                </button>
+              ))
+            )}
           </span>
         </div>
       )}

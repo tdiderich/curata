@@ -754,6 +754,14 @@ body .c-section.align-right > * { max-width: none !important; }
   border-left: 1px solid rgba(0, 0, 0, 0.2);
 }
 
+.selection-popup-copied {
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
 .selection-popup-inner::after {
   content: "";
   position: absolute;
