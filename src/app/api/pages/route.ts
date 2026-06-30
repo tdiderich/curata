@@ -5,7 +5,7 @@ import { can, VALID_PAGE_VISIBILITY } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { writePageJson } from "@/lib/pages";
 import { getTemplateContent } from "@/lib/templates-server";
-import { getPageOrThrow, PageAccessError } from "@/lib/access";
+import { getPageOrThrow, PageAccessError, checkFolderBoundary } from "@/lib/access";
 
 export async function POST(request: NextRequest) {
   const ctx = await resolveOrg();
@@ -159,6 +159,26 @@ export async function PATCH(request: NextRequest) {
           { error: `visibility must be one of: ${VALID_PAGE_VISIBILITY.join(", ")}` },
           { status: 400 }
         );
+      }
+    }
+
+    const effectiveVis = body.visibility ?? pageWithAccess.visibility ?? "org";
+    if (body.folderId) {
+      const folder = await db.folder.findFirst({ where: { id: body.folderId, orgId: ctx.orgId } });
+      if (folder) {
+        try { checkFolderBoundary(effectiveVis, folder.visibility); } catch (e) {
+          return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+        }
+      }
+    } else if (body.visibility !== undefined) {
+      const currentPage = await db.page.findUnique({
+        where: { id: pageWithAccess.id },
+        select: { folderId: true, folder: { select: { visibility: true } } },
+      });
+      if (currentPage?.folder) {
+        try { checkFolderBoundary(body.visibility, currentPage.folder.visibility); } catch (e) {
+          return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+        }
       }
     }
 

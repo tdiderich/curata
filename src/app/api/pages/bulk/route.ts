@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
+import { checkFolderBoundary } from "@/lib/access";
 
 export async function POST(request: NextRequest) {
   const ctx = await resolveOrg();
@@ -53,6 +54,18 @@ export async function POST(request: NextRequest) {
       if (editable.length === 0) {
         return NextResponse.json({ error: "forbidden" }, { status: 403 });
       }
+      if (body.folderId) {
+        const folder = await db.folder.findFirst({ where: { id: body.folderId, orgId: ctx.orgId } });
+        if (!folder) return NextResponse.json({ error: "folder not found" }, { status: 404 });
+        const violating = editable.filter((p) => {
+          try { checkFolderBoundary(p.visibility ?? "org", folder.visibility); return false; } catch { return true; }
+        });
+        if (violating.length > 0) {
+          return NextResponse.json({
+            error: `${violating.length} page(s) have visibility below folder minimum "${folder.visibility}": ${violating.map((p) => p.slug).join(", ")}`,
+          }, { status: 400 });
+        }
+      }
       await db.page.updateMany({
         where: { id: { in: editable.map((p) => p.id) } },
         data: { folderId: body.folderId ?? null },
@@ -73,6 +86,18 @@ export async function POST(request: NextRequest) {
       );
       if (editable.length === 0) {
         return NextResponse.json({ error: "forbidden" }, { status: 403 });
+      }
+      const inFolders = await db.page.findMany({
+        where: { id: { in: editable.map((p) => p.id) }, folderId: { not: null } },
+        select: { slug: true, folder: { select: { visibility: true } } },
+      });
+      const violating = inFolders.filter((p) => {
+        try { checkFolderBoundary(body.visibility!, p.folder!.visibility); return false; } catch { return true; }
+      });
+      if (violating.length > 0) {
+        return NextResponse.json({
+          error: `${violating.length} page(s) are in folders with higher minimum visibility: ${violating.map((p) => p.slug).join(", ")}`,
+        }, { status: 400 });
       }
       await db.page.updateMany({
         where: { id: { in: editable.map((p) => p.id) } },

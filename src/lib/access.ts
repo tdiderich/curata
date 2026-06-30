@@ -146,6 +146,23 @@ export function defaultPageVisibility(): "private" | "org" {
   return AUTH_MODE === "clerk" || AUTH_MODE === "oauth" ? "private" : "org";
 }
 
+export function mcpDefaultVisibility(): "private" | "org" {
+  return AUTH_MODE === "none" ? "org" : "private";
+}
+
+const VIS_RANK: Record<string, number> = { private: 0, org: 1, shared: 1, public: 2 };
+
+export function checkFolderBoundary(pageVis: string, folderVis: string | null | undefined): void {
+  if (!folderVis) return;
+  const pageRank = VIS_RANK[pageVis] ?? 0;
+  const folderRank = VIS_RANK[folderVis] ?? 0;
+  if (pageRank < folderRank) {
+    throw new Error(
+      `visibility "${pageVis}" is below folder minimum "${folderVis}" — pages in this folder must be "${folderVis}" or higher`
+    );
+  }
+}
+
 export function isShareFeatureEnabled(): boolean {
   return AUTH_MODE !== "none" && AUTH_MODE !== "tailscale";
 }

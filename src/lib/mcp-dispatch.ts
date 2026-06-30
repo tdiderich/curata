@@ -22,6 +22,7 @@ import { getOrgTheme } from "@/lib/theme";
 import { buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
 import { getChromium, previewUrl, screenshotPage, renderHtmlToPng } from "@/lib/export-render";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
+import { checkFolderBoundary, mcpDefaultVisibility } from "@/lib/access";
 import {
   upsertConcepts,
   upsertLinks,
@@ -80,9 +81,9 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   update_folder: { known: new Set(["id", "name", "parent_id", "visibility"]), aliases: { parentId: "parent_id" } },
   get_versions: { known: new Set(["slug", "limit"]) },
   validate_page: { known: new Set(["slug", "content"]) },
-  create_page: { known: new Set(["slug", "content", "folder_id"]), aliases: { folderId: "folder_id" } },
+  create_page: { known: new Set(["slug", "content", "folder_id", "visibility"]), aliases: { folderId: "folder_id" } },
   move_page: { known: new Set(["slug", "folder_id"]), aliases: { folderId: "folder_id" } },
-  write_page: { known: new Set(["slug", "content"]) },
+  write_page: { known: new Set(["slug", "content", "expected_hash", "visibility", "folder_id", "concepts", "links"]), aliases: { folderId: "folder_id" } },
   annotate_page: { known: new Set(["slug", "text", "section", "kind", "replacement"]) },
   update_annotation: { known: new Set(["slug", "annotation_id", "status"]), aliases: { annotationId: "annotation_id" } },
   patch_page: { known: new Set(["slug", "operations"]) },
@@ -398,6 +399,20 @@ export async function dispatch(
       if (args.visibility && args.visibility !== "private" && args.visibility !== "org") {
         throw new Error("visibility must be 'private' or 'org'");
       }
+      if (args.visibility) {
+        const pagesInFolder = await db.page.findMany({
+          where: { folderId: args.id },
+          select: { slug: true, visibility: true },
+        });
+        const violating = pagesInFolder.filter((p) => {
+          try { checkFolderBoundary(p.visibility ?? "org", args.visibility); return false; } catch { return true; }
+        });
+        if (violating.length > 0) {
+          throw new Error(
+            `cannot set folder to "${args.visibility}" — ${violating.length} page(s) have lower visibility: ${violating.map((p) => p.slug).join(", ")}`
+          );
+        }
+      }
       const ufData: Record<string, unknown> = {};
       if (args.name !== undefined) ufData.name = args.name;
       if (args.parent_id !== undefined) ufData.parentId = args.parent_id || null;
@@ -450,11 +465,16 @@ export async function dispatch(
         const messages = createValidation.map((e) => e.message).join("; ");
         throw new Error(`invalid YAML: ${messages}`);
       }
-      const createResult = await writePage(orgId, orgSlug, args.slug, args.content, userId || "agent", undefined, undefined, "org");
-      if (!createResult.ok) throw new Error(createResult.error);
+      const cpVis = args.visibility ?? mcpDefaultVisibility();
+      if (!["private", "org", "public"].includes(cpVis)) throw new Error("visibility must be private, org, or public");
       if (args.folder_id) {
         const cpFolder = await db.folder.findFirst({ where: { id: args.folder_id, orgId } });
         if (!cpFolder) throw new Error(`folder not found: ${args.folder_id}`);
+        checkFolderBoundary(cpVis, cpFolder.visibility);
+      }
+      const createResult = await writePage(orgId, orgSlug, args.slug, args.content, userId || "agent", undefined, undefined, cpVis);
+      if (!createResult.ok) throw new Error(createResult.error);
+      if (args.folder_id) {
         await db.page.update({
           where: { orgId_slug: { orgId, slug: args.slug } },
           data: { folderId: args.folder_id },
@@ -486,6 +506,7 @@ export async function dispatch(
         const folder = await db.folder.findFirst({ where: { id: folderId, orgId } });
         if (!folder) throw new Error(`folder not found: ${folderId}`);
         targetFolderName = folder.name;
+        checkFolderBoundary(movePage.visibility ?? "org", folder.visibility);
       }
       const previousFolderId = movePage.folderId;
       const previousFolderName = (movePage as unknown as { folder: { name: string } | null }).folder?.name ?? null;
@@ -521,6 +542,19 @@ export async function dispatch(
         const messages = validationErrors.map((e) => e.message).join("; ");
         throw new Error(`invalid YAML: ${messages}`);
       }
+      const wpVis = args.visibility ?? mcpDefaultVisibility();
+      if (!["private", "org", "public"].includes(wpVis)) throw new Error("visibility must be private, org, or public");
+      const wpExisting = await db.page.findUnique({
+        where: { orgId_slug: { orgId, slug: args.slug } },
+        select: { folderId: true, folder: { select: { visibility: true } } },
+      });
+      if (args.folder_id) {
+        const folder = await db.folder.findFirst({ where: { id: args.folder_id, orgId } });
+        if (!folder) throw new Error(`folder not found: ${args.folder_id}`);
+        checkFolderBoundary(wpVis, folder.visibility);
+      } else if (wpExisting?.folder && args.visibility) {
+        checkFolderBoundary(args.visibility, wpExisting.folder.visibility);
+      }
       const writeResult = await writePage(
         orgId,
         orgSlug,
@@ -529,22 +563,18 @@ export async function dispatch(
         userId || "agent",
         args.expected_hash,
         undefined,
-        "org"
+        wpVis
       );
       if (!writeResult.ok) {
         throw new Error(writeResult.error);
       }
       if (args.visibility) {
-        const validVis = ["private", "org", "public"];
-        if (!validVis.includes(args.visibility)) throw new Error(`invalid visibility: ${args.visibility}`);
         await db.page.update({
           where: { orgId_slug: { orgId, slug: args.slug } },
           data: { visibility: args.visibility },
         });
       }
       if (args.folder_id) {
-        const folder = await db.folder.findFirst({ where: { id: args.folder_id, orgId } });
-        if (!folder) throw new Error(`folder not found: ${args.folder_id}`);
         await db.page.update({
           where: { orgId_slug: { orgId, slug: args.slug } },
           data: { folderId: args.folder_id },

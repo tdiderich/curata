@@ -16,6 +16,7 @@ import {
   bumpViewCount,
 } from "@/lib/pages";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
+import { checkFolderBoundary, mcpDefaultVisibility } from "@/lib/access";
 import {
   upsertConcepts,
   upsertLinks,
@@ -133,15 +134,33 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   });
 
   server.tool("write_page", "Create or update a page",
-    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe("JSON array of concept objects: [{term, kind?, section?}]"), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]") },
-    async ({ slug, content, folder_id, sort_order, concepts: conceptsJson, links: linksJson }) => {
+    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe("JSON array of concept objects: [{term, kind?, section?}]"), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]") },
+    async ({ slug, content, folder_id, visibility, sort_order, concepts: conceptsJson, links: linksJson }) => {
       validateSlug(slug);
       const unsupported = checkUnsupportedComponents(content);
       if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
       const validationErrors = await validateContent(orgSlug, slug, content);
       if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: invalid YAML: ${validationErrors.map((e) => e.message).join("; ")}` }], isError: true };
-      const result = await writePage(orgId, orgSlug, slug, content, userId || "agent", undefined, sort_order, "org");
+      const wpVis = visibility ?? mcpDefaultVisibility();
+      const wpExisting = await db.page.findUnique({
+        where: { orgId_slug: { orgId, slug } },
+        select: { folderId: true, folder: { select: { visibility: true } } },
+      });
+      try {
+        if (folder_id) {
+          const folder = await db.folder.findFirst({ where: { id: folder_id, orgId } });
+          if (folder) checkFolderBoundary(wpVis, folder.visibility);
+        } else if (wpExisting?.folder && visibility) {
+          checkFolderBoundary(visibility, wpExisting.folder.visibility);
+        }
+      } catch (e) {
+        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+      const result = await writePage(orgId, orgSlug, slug, content, userId || "agent", undefined, sort_order, wpVis);
       if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
+      if (visibility) {
+        await db.page.update({ where: { orgId_slug: { orgId, slug } }, data: { visibility } });
+      }
       if (folder_id) {
         await db.page.update({ where: { orgId_slug: { orgId, slug } }, data: { folderId: folder_id } });
       }
@@ -217,8 +236,8 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     });
 
   server.tool("create_page", "Create a new page",
-    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages.") },
-    async ({ slug, content, folder_id, sort_order }) => {
+    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages.") },
+    async ({ slug, content, folder_id, visibility, sort_order }) => {
       validateSlug(slug);
       const existing = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
       if (existing) return { content: [{ type: "text", text: `Error: page already exists: ${slug}` }], isError: true };
@@ -226,7 +245,16 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
       const validationErrors = await validateContent(orgSlug, slug, content);
       if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: invalid YAML: ${validationErrors.map((e) => e.message).join("; ")}` }], isError: true };
-      const result = await writePage(orgId, orgSlug, slug, content, userId || "agent", undefined, sort_order, "org");
+      const cpVis = visibility ?? mcpDefaultVisibility();
+      if (folder_id) {
+        const folder = await db.folder.findFirst({ where: { id: folder_id, orgId } });
+        if (folder) {
+          try { checkFolderBoundary(cpVis, folder.visibility); } catch (e) {
+            return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+          }
+        }
+      }
+      const result = await writePage(orgId, orgSlug, slug, content, userId || "agent", undefined, sort_order, cpVis);
       if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
       if (folder_id) {
         await db.page.update({ where: { orgId_slug: { orgId, slug } }, data: { folderId: folder_id } });
@@ -274,6 +302,18 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       if (parent_id) {
         const parent = await db.folder.findFirst({ where: { id: parent_id, orgId } });
         if (!parent) return { content: [{ type: "text", text: `Error: parent folder not found: ${parent_id}` }], isError: true };
+      }
+      if (visibility) {
+        const pagesInFolder = await db.page.findMany({
+          where: { folderId: id },
+          select: { slug: true, visibility: true },
+        });
+        const violating = pagesInFolder.filter((p) => {
+          try { checkFolderBoundary(p.visibility ?? "org", visibility); return false; } catch { return true; }
+        });
+        if (violating.length > 0) {
+          return { content: [{ type: "text", text: `Error: cannot set folder to "${visibility}" — ${violating.length} page(s) have lower visibility: ${violating.map((p) => p.slug).join(", ")}` }], isError: true };
+        }
       }
       const data: Record<string, unknown> = {};
       if (name !== undefined) data.name = name;
@@ -349,6 +389,9 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       if (folderId) {
         const folder = await db.folder.findFirst({ where: { id: folderId, orgId } });
         if (!folder) return { content: [{ type: "text", text: `Error: folder not found: ${folderId}` }], isError: true };
+        try { checkFolderBoundary(page.visibility ?? "org", folder.visibility); } catch (e) {
+          return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        }
       }
       await db.page.update({ where: { id: page.id }, data: { folderId } });
       logAudit({ orgId, action: "page.move", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug, folderId } });

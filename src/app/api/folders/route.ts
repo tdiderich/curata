@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
+import { checkFolderBoundary } from "@/lib/access";
 
 export async function POST(request: NextRequest) {
   const ctx = await resolveOrg();
@@ -129,6 +130,19 @@ export async function PATCH(request: NextRequest) {
       if (body.visibility !== "private" && body.visibility !== "org") {
         return NextResponse.json(
           { error: "visibility must be 'private' or 'org'" },
+          { status: 400 }
+        );
+      }
+      const pagesInFolder = await db.page.findMany({
+        where: { folderId: body.id },
+        select: { slug: true, visibility: true },
+      });
+      const violating = pagesInFolder.filter((p) => {
+        try { checkFolderBoundary(p.visibility ?? "org", body.visibility!); return false; } catch { return true; }
+      });
+      if (violating.length > 0) {
+        return NextResponse.json(
+          { error: `cannot set folder to "${body.visibility}" — ${violating.length} page(s) have lower visibility: ${violating.map((p) => p.slug).join(", ")}` },
           { status: 400 }
         );
       }
