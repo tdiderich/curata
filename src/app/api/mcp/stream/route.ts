@@ -140,7 +140,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
       const validationErrors = await validateContent(orgSlug, slug, content);
       if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: invalid YAML: ${validationErrors.map((e) => e.message).join("; ")}` }], isError: true };
-      const result = await writePage(orgId, orgSlug, slug, content, "agent", undefined, sort_order);
+      const result = await writePage(orgId, orgSlug, slug, content, userId || "agent", undefined, sort_order, "org");
       if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
       if (folder_id) {
         await db.page.update({ where: { orgId_slug: { orgId, slug } }, data: { folderId: folder_id } });
@@ -205,7 +205,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
         const validationErrors = await validateContent(orgSlug, slug, newYaml);
         if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: invalid after patch: ${validationErrors.map((e) => e.message).join("; ")}` }], isError: true };
 
-        const result = await writePage(orgId, orgSlug, slug, newYaml, "agent", current.contentHash);
+        const result = await writePage(orgId, orgSlug, slug, newYaml, userId || "agent", current.contentHash);
         if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
 
         logAudit({ orgId, action: "page.patch", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug, operationCount: operations.length } });
@@ -226,7 +226,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
       const validationErrors = await validateContent(orgSlug, slug, content);
       if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: invalid YAML: ${validationErrors.map((e) => e.message).join("; ")}` }], isError: true };
-      const result = await writePage(orgId, orgSlug, slug, content, "agent", undefined, sort_order);
+      const result = await writePage(orgId, orgSlug, slug, content, userId || "agent", undefined, sort_order, "org");
       if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
       if (folder_id) {
         await db.page.update({ where: { orgId_slug: { orgId, slug } }, data: { folderId: folder_id } });
@@ -333,7 +333,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       const occurrences = page.yaml.split(yamlTarget).length - 1;
       if (occurrences > 1) return { content: [{ type: "text", text: `Error: target text is ambiguous — found ${occurrences} occurrences` }], isError: true };
       const newContent = page.yaml.replace(yamlTarget, replacement);
-      const result = await writePage(orgId, orgSlug, slug, newContent, "agent", page.contentHash);
+      const result = await writePage(orgId, orgSlug, slug, newContent, userId || "agent", page.contentHash);
       if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
       logAudit({ orgId, action: "page.replace", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug } });
       return { content: [{ type: "text", text: `Replaced text in "${slug}"` }] };

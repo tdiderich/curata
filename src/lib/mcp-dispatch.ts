@@ -450,7 +450,7 @@ export async function dispatch(
         const messages = createValidation.map((e) => e.message).join("; ");
         throw new Error(`invalid YAML: ${messages}`);
       }
-      const createResult = await writePage(orgId, orgSlug, args.slug, args.content, "agent");
+      const createResult = await writePage(orgId, orgSlug, args.slug, args.content, userId || "agent", undefined, undefined, "org");
       if (!createResult.ok) throw new Error(createResult.error);
       if (args.folder_id) {
         const cpFolder = await db.folder.findFirst({ where: { id: args.folder_id, orgId } });
@@ -526,8 +526,10 @@ export async function dispatch(
         orgSlug,
         args.slug,
         args.content,
-        "agent",
-        args.expected_hash
+        userId || "agent",
+        args.expected_hash,
+        undefined,
+        "org"
       );
       if (!writeResult.ok) {
         throw new Error(writeResult.error);

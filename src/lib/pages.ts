@@ -345,7 +345,8 @@ async function _writePageInternal(
   title: string,
   createdBy: string,
   expectedHash?: string,
-  sortOrder?: number | null
+  sortOrder?: number | null,
+  visibility?: string
 ): Promise<{ ok: true; slug: string; contentHash: string } | { ok: false; error: string }> {
   const contentHash = createHash("sha256").update(yamlContent).digest("hex");
   const dashboardEnabled = jsonContent
@@ -386,7 +387,7 @@ async function _writePageInternal(
       slug,
       title,
       createdBy,
-      visibility: defaultPageVisibility(),
+      visibility: visibility ?? defaultPageVisibility(),
       dashboardEnabled,
       versions: {
         create: { yamlContent, jsonContent, contentHash, createdBy },
@@ -407,7 +408,8 @@ export async function writePage(
   content: string,
   createdBy: string,
   expectedHash?: string,
-  sortOrder?: number | null
+  sortOrder?: number | null,
+  visibility?: string
 ): Promise<{ ok: true; slug: string; contentHash: string } | { ok: false; error: string }> {
   let jsonContent: Record<string, unknown> | undefined;
   try {
@@ -424,7 +426,7 @@ export async function writePage(
   }
 
   const title = (jsonContent?.title as string) || extractTitle(content, slug);
-  return _writePageInternal(orgId, orgSlug, slug, yamlContent, jsonContent as Prisma.InputJsonValue | undefined, title, createdBy, expectedHash, sortOrder);
+  return _writePageInternal(orgId, orgSlug, slug, yamlContent, jsonContent as Prisma.InputJsonValue | undefined, title, createdBy, expectedHash, sortOrder, visibility);
 }
 
 export async function writePageJson(
