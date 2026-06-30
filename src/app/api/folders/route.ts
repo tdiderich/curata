@@ -20,16 +20,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "name is required" }, { status: 400 });
     }
 
-    const visibility = body.visibility ?? "shared";
-    if (visibility !== "personal" && visibility !== "shared") {
+    const visibility = body.visibility ?? "org";
+    if (visibility !== "private" && visibility !== "org") {
       return NextResponse.json(
-        { error: "visibility must be 'personal' or 'shared'" },
+        { error: "visibility must be 'private' or 'org'" },
         { status: 400 }
       );
     }
 
-    if (visibility === "shared" && !can(ctx.role, "folder:manage")) {
-      return NextResponse.json({ error: "forbidden: only owner/admin can create shared folders" }, { status: 403 });
+    if (visibility === "org" && !can(ctx.role, "folder:manage")) {
+      return NextResponse.json({ error: "forbidden: only owner/admin can create org-visible folders" }, { status: 403 });
     }
 
     const folder = await db.folder.create({
@@ -60,8 +60,8 @@ export async function GET() {
       where: {
         orgId: ctx.orgId,
         OR: [
-          { visibility: "shared" },
-          { visibility: "personal", createdBy: ctx.userId },
+          { visibility: "org" },
+          { visibility: "private", createdBy: ctx.userId },
         ],
       },
       orderBy: { name: "asc" },
@@ -126,9 +126,9 @@ export async function PATCH(request: NextRequest) {
           { status: 403 }
         );
       }
-      if (body.visibility !== "personal" && body.visibility !== "shared") {
+      if (body.visibility !== "private" && body.visibility !== "org") {
         return NextResponse.json(
-          { error: "visibility must be 'personal' or 'shared'" },
+          { error: "visibility must be 'private' or 'org'" },
           { status: 400 }
         );
       }
@@ -175,16 +175,16 @@ export async function DELETE(request: NextRequest) {
     const isCreator = folder.createdBy === ctx.userId;
     const isPrivileged = ctx.role === "owner" || ctx.role === "admin";
 
-    if (folder.visibility === "shared" && !isPrivileged) {
+    if (folder.visibility === "org" && !isPrivileged) {
       return NextResponse.json(
-        { error: "forbidden: only owner/admin can delete shared folders" },
+        { error: "forbidden: only owner/admin can delete org-visible folders" },
         { status: 403 }
       );
     }
 
-    if (folder.visibility === "personal" && !isCreator && !isPrivileged) {
+    if (folder.visibility === "private" && !isCreator && !isPrivileged) {
       return NextResponse.json(
-        { error: "forbidden: only creator can delete personal folders" },
+        { error: "forbidden: only creator can delete private folders" },
         { status: 403 }
       );
     }

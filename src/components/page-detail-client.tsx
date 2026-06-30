@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { PageContent } from "./page-viewer";
-import { PublicToggle } from "./public-toggle";
+import { VisibilityPicker } from "./visibility-picker";
 import { VersionHistoryPanel } from "./version-history";
 import AgentConnectModal from "./agent-connect-modal";
 import SourceEditor, { type SourceEditorControls } from "./source-editor";
@@ -64,7 +64,7 @@ export default function PageDetailClient({
   annotations,
   pageTitle,
   orgSlug,
-  isPublic,
+  visibility,
   autoConnect,
   authMode = "none",
   printFlow,
@@ -76,7 +76,7 @@ export default function PageDetailClient({
   sections?: string[];
   pageTitle?: string;
   orgSlug: string;
-  isPublic: boolean;
+  visibility: string;
   autoConnect: boolean;
   authMode?: string;
   printFlow?: string;
@@ -434,9 +434,7 @@ export default function PageDetailClient({
               Edit
             </button>
           )}
-          {(authMode === "clerk" || authMode === "oauth") && (
-            <PublicToggle slug={slug} orgSlug={orgSlug} isPublic={isPublic} />
-          )}
+          <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} />
           <div className="page-toolbar-divider" />
           <div className="page-actions-wrap" ref={actionsRef}>
             <button

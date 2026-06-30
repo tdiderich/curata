@@ -3714,6 +3714,116 @@ body .c-section.align-right > * { max-width: none !important; }
   background: var(--surface);
 }
 
+/* ── Visibility picker ── */
+
+.vis-picker {
+  position: relative;
+}
+
+.vis-picker-trigger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--light-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.vis-picker-trigger:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+
+.vis-picker-trigger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.vis-picker-trigger--private { color: var(--light-muted); }
+.vis-picker-trigger--org { color: var(--teal); border-color: rgba(var(--teal-rgb, 94, 234, 212), 0.3); }
+.vis-picker-trigger--public { color: var(--accent); border-color: rgba(var(--accent-rgb), 0.3); }
+
+.vis-picker-label {
+  font-weight: 500;
+}
+
+.vis-picker-chevron {
+  font-size: 9px;
+  opacity: 0.6;
+}
+
+.vis-icon {
+  flex-shrink: 0;
+}
+
+.vis-picker-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 200px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.vis-picker-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.vis-picker-option:hover {
+  background: var(--surface);
+}
+
+.vis-picker-option--active {
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
+.vis-picker-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+
+.vis-picker-option-label {
+  font-weight: 500;
+}
+
+.vis-picker-option-desc {
+  font-size: 11px;
+  color: var(--light-muted);
+}
+
+.vis-picker-check {
+  color: var(--teal);
+  font-size: 14px;
+}
+
+.vis-picker-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
 /* ── Skeleton loading states ── */
 
 @keyframes skel-shimmer {

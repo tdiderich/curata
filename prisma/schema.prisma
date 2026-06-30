@@ -49,7 +49,7 @@ model Folder {
   orgId      String   @map("org_id")
   parentId   String?  @map("parent_id")
   name       String
-  visibility String   @default("shared")
+  visibility String   @default("org")
   createdBy  String   @map("created_by")
   createdAt  DateTime @default(now()) @map("created_at")
 
@@ -68,7 +68,7 @@ model Page {
   folderId   String?   @map("folder_id")
   slug       String
   title      String
-  visibility String    @default("shared")
+  visibility String    @default("org")
   createdBy  String    @map("created_by")
   viewCount  Int       @default(0) @map("view_count")
   sortOrder  Int?      @map("sort_order")
@@ -88,6 +88,8 @@ model Page {
   concepts    PageConcept[]
   linksFrom   PageLink[]    @relation("PageLinksFrom")
   linksTo     PageLink[]    @relation("PageLinksTo")
+  shares      PageShare[]
+  shareLinks  ShareLink[]
 
   @@unique([orgId, slug])
   @@index([orgId, visibility])
@@ -235,4 +237,35 @@ model PageLink {
   @@index([fromPageId])
   @@index([toPageId])
   @@map("page_links")
+}
+
+model PageShare {
+  id        String   @id @default(cuid())
+  pageId    String   @map("page_id")
+  userId    String   @map("user_id")
+  role      String   @default("viewer")
+  invitedBy String   @map("invited_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@index([userId])
+  @@map("page_shares")
+}
+
+model ShareLink {
+  id        String    @id @default(cuid())
+  pageId    String    @map("page_id")
+  token     String    @unique
+  role      String    @default("viewer")
+  expiresAt DateTime? @map("expires_at")
+  createdBy String    @map("created_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@map("share_links")
 }

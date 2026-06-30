@@ -11,7 +11,7 @@ async function findOrCreateFolder(orgId: string, name: string): Promise<string> 
   const existing = await db.folder.findFirst({ where: { orgId, name } });
   if (existing) return existing.id;
   const created = await db.folder.create({
-    data: { orgId, name, visibility: "shared", createdBy: "system" },
+    data: { orgId, name, visibility: "org", createdBy: "system" },
   });
   return created.id;
 }

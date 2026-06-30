@@ -144,7 +144,7 @@ export default async function PageDetailView({
         sections={sections}
         pageTitle={pageTitle}
         orgSlug={ctx.orgSlug}
-        isPublic={pageData.visibility === "public"}
+        visibility={pageData.visibility}
         autoConnect={slug === "getting-started"}
         authMode={AUTH_MODE}
         printFlow={(pageData.json.print_flow as string) || undefined}

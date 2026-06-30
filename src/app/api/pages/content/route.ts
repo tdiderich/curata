@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { writePageJson } from "@/lib/pages";
-import { db } from "@/lib/db";
+import { getPageOrThrow, canEditPage, PageAccessError } from "@/lib/access";
 
 export async function GET(request: NextRequest) {
   const ctx = await resolveOrg();
@@ -15,6 +15,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "slug is required" }, { status: 400 });
   }
 
+  try {
+    await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+  } catch (e) {
+    if (e instanceof PageAccessError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
+    throw e;
+  }
+
+  const { db } = await import("@/lib/db");
   const version = await db.pageVersion.findFirst({
     where: { page: { orgId: ctx.orgId, slug } },
     orderBy: { createdAt: "desc" },
@@ -48,13 +58,17 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const page = await db.page.findUnique({
-      where: { orgId_slug: { orgId: ctx.orgId, slug: body.slug } },
-      select: { createdBy: true },
-    });
+    let pageWithAccess;
+    try {
+      pageWithAccess = await getPageOrThrow(ctx.orgId, body.slug, ctx.userId, ctx.role);
+    } catch (e) {
+      if (e instanceof PageAccessError) {
+        return NextResponse.json({ error: e.message }, { status: e.status });
+      }
+      throw e;
+    }
 
-    const isOwner = page?.createdBy === ctx.userId;
-    if (!can(ctx.role, "page:edit", isOwner)) {
+    if (!canEditPage(pageWithAccess.access) && !can(ctx.role, "page:edit", pageWithAccess.createdBy === ctx.userId)) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
 

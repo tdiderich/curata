@@ -6,8 +6,10 @@ src/generated/prisma/models/Concept.ts	12439	0	Concept model
 src/generated/prisma/models/Folder.ts	17581	0	Folder model
 src/generated/prisma/models/OrgMember.ts	11989	0	OrgMember model
 src/generated/prisma/models/Organization.ts	22536	0	Organization model
-src/generated/prisma/models/Page.ts	31381	0	Page model
+src/generated/prisma/models/Page.ts	36684	0	Page model
 src/generated/prisma/models/PageConcept.ts	14922	0	PageConcept model
 src/generated/prisma/models/PageFlag.ts	15098	0	PageFlag model
 src/generated/prisma/models/PageLink.ts	14929	0	PageLink model
+src/generated/prisma/models/PageShare.ts	12661	0	PageShare model
 src/generated/prisma/models/PageVersion.ts	13432	0	PageVersion model
+src/generated/prisma/models/ShareLink.ts	13453	0	ShareLink model

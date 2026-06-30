@@ -48,8 +48,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function PublicPageView({ params }: Props) {
+export default async function PublicPageView({ params, searchParams }: Props & { searchParams: Promise<{ token?: string }> }) {
   const { orgSlug, pageSlug } = await params;
+  const { token: shareToken } = await searchParams;
 
   const org = await db.organization.findUnique({
     where: { slug: orgSlug },
@@ -60,7 +61,14 @@ export default async function PublicPageView({ params }: Props) {
   const page = await db.page.findUnique({
     where: { orgId_slug: { orgId: org.id, slug: pageSlug } },
   });
-  if (!page || page.visibility !== "public") notFound();
+  if (!page) notFound();
+
+  if (page.visibility !== "public") {
+    if (!shareToken) notFound();
+    const { resolvePageAccess } = await import("@/lib/access");
+    const access = await resolvePageAccess(page, null, null, shareToken);
+    if (!access) notFound();
+  }
 
   const pageData = await readPage(org.id, pageSlug);
   if (!pageData) notFound();

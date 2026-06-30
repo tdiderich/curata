@@ -61,10 +61,10 @@ export async function POST(request: NextRequest) {
     }
 
     case "visibility": {
-      const allowed = ["personal", "shared", "public"];
+      const allowed = ["private", "org", "public"];
       if (!body.visibility || !allowed.includes(body.visibility)) {
         return NextResponse.json(
-          { error: "visibility must be personal, shared, or public" },
+          { error: "visibility must be private, org, or public" },
           { status: 400 }
         );
       }

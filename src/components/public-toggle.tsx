@@ -21,7 +21,7 @@ export function PublicToggle({
     : "";
 
   async function toggle() {
-    const next = on ? "shared" : "public";
+    const next = on ? "org" : "public";
     setBusy(true);
     try {
       const res = await fetch("/api/pages", {

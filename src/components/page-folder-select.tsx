@@ -65,9 +65,9 @@ export function PageFolderSelect({
 // ── Visibility toggle ─────────────────────────────────────────────────────────
 
 const VISIBILITY_CYCLE: Record<string, string> = {
-  personal: "shared",
-  shared: "public",
-  public: "personal",
+  private: "org",
+  org: "public",
+  public: "private",
 };
 
 interface VisibilityBadgeProps {
@@ -81,7 +81,7 @@ export function VisibilityBadge({ slug, visibility }: VisibilityBadgeProps) {
   const [busy, setBusy] = useState(false);
 
   async function cycle() {
-    const next = VISIBILITY_CYCLE[current] ?? "personal";
+    const next = VISIBILITY_CYCLE[current] ?? "private";
     setBusy(true);
     try {
       const res = await fetch("/api/pages", {
@@ -103,8 +103,7 @@ export function VisibilityBadge({ slug, visibility }: VisibilityBadgeProps) {
     }
   }
 
-  const label =
-    current === "personal" ? "private" : current === "shared" ? "shared" : "public";
+  const label = current;
 
   return (
     <button

@@ -14,6 +14,8 @@ export interface OrgContext {
 export interface ApiKeyContext {
   orgId: string;
   orgSlug: string;
+  userId: string;
+  role: Role;
   scopes: string[];
   keyPrefix: string;
 }
@@ -256,9 +258,25 @@ export async function resolveOrgFromApiKey(
   if (!apiKey || apiKey.revokedAt) return null;
   if (apiKey.expiresAt && apiKey.expiresAt < new Date()) return null;
 
+  const userId = apiKey.createdBy;
+  let role: Role = "member";
+
+  if (userId && userId !== "system" && userId !== "web" && userId !== "migration") {
+    const member = await db.orgMember.findUnique({
+      where: { orgId_userId: { orgId: apiKey.orgId, userId } },
+    });
+    if (member) {
+      role = member.role as Role;
+    }
+  } else {
+    role = "owner";
+  }
+
   return {
     orgId: apiKey.orgId,
     orgSlug: apiKey.org.slug,
+    userId,
+    role,
     scopes: apiKey.scopes,
     keyPrefix: apiKey.prefix,
   };

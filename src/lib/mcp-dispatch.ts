@@ -125,13 +125,14 @@ export async function dispatch(
   args: Record<string, string>,
   orgId: string,
   orgSlug: string,
-  actorId: string
+  actorId: string,
+  userId?: string
 ): Promise<unknown> {
   args = validateParams(tool, args);
   switch (tool) {
     case "list_pages": {
       const [pages, folders] = await Promise.all([
-        listPages(orgId),
+        listPages(orgId, userId),
         db.folder.findMany({ where: { orgId }, select: { id: true, name: true } }),
       ]);
       const folderMap = new Map(folders.map((f) => [f.id, f.name]));
@@ -177,7 +178,7 @@ export async function dispatch(
 
     case "search": {
       if (!args.query) throw new Error("query is required");
-      return searchPages(orgId, args.query);
+      return searchPages(orgId, args.query, userId);
     }
 
     case "get_config":
@@ -357,7 +358,7 @@ export async function dispatch(
     case "get_folder_structure": {
       const [gfsFolders, gfsPages] = await Promise.all([
         db.folder.findMany({ where: { orgId }, orderBy: { name: "asc" }, include: { _count: { select: { pages: true } } } }),
-        listPages(orgId),
+        listPages(orgId, userId),
       ]);
       return {
         folders: gfsFolders.map((f) => ({ id: f.id, name: f.name, parentId: f.parentId, pageCount: f._count.pages })),
@@ -367,9 +368,9 @@ export async function dispatch(
 
     case "create_folder": {
       if (!args.name) throw new Error("name is required");
-      const cfVisibility = args.visibility ?? "shared";
-      if (cfVisibility !== "personal" && cfVisibility !== "shared") {
-        throw new Error("visibility must be 'personal' or 'shared'");
+      const cfVisibility = args.visibility ?? "org";
+      if (cfVisibility !== "private" && cfVisibility !== "org") {
+        throw new Error("visibility must be 'private' or 'org'");
       }
       let parentName: string | null = null;
       if (args.parent_id) {
@@ -394,8 +395,8 @@ export async function dispatch(
         const parent = await db.folder.findFirst({ where: { id: args.parent_id, orgId } });
         if (!parent) throw new Error(`parent folder not found: ${args.parent_id}`);
       }
-      if (args.visibility && args.visibility !== "personal" && args.visibility !== "shared") {
-        throw new Error("visibility must be 'personal' or 'shared'");
+      if (args.visibility && args.visibility !== "private" && args.visibility !== "org") {
+        throw new Error("visibility must be 'private' or 'org'");
       }
       const ufData: Record<string, unknown> = {};
       if (args.name !== undefined) ufData.name = args.name;
@@ -532,7 +533,7 @@ export async function dispatch(
         throw new Error(writeResult.error);
       }
       if (args.visibility) {
-        const validVis = ["personal", "shared", "public"];
+        const validVis = ["private", "org", "public"];
         if (!validVis.includes(args.visibility)) throw new Error(`invalid visibility: ${args.visibility}`);
         await db.page.update({
           where: { orgId_slug: { orgId, slug: args.slug } },

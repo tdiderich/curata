@@ -68,7 +68,7 @@ function folderPath(folderId: string | null, folders: SidebarFolder[]): string {
   return parts.join(" › ");
 }
 
-function PageLink({ page, folders, active, pinned }: { page: SidebarPage; folders: SidebarFolder[]; active: boolean; pinned: boolean }) {
+function PageLink({ page, folders, active, pinned, orgSlug, authMode }: { page: SidebarPage; folders: SidebarFolder[]; active: boolean; pinned: boolean; orgSlug: string; authMode: string }) {
   return (
     <div
       className={`nav-page-row${active ? " nav-page-row--active" : ""}`}
@@ -93,6 +93,9 @@ function PageLink({ page, folders, active, pinned }: { page: SidebarPage; folder
           title={page.title}
           folderId={page.folderId}
           folders={folders}
+          visibility={page.visibility}
+          orgSlug={orgSlug}
+          authMode={authMode}
         />
       </span>
     </div>
@@ -104,6 +107,8 @@ export function Sidebar({
   pages,
   archivedPages = [],
   orgName,
+  orgSlug = "default",
+  authMode = "none",
   logoUrl,
   cleanupCount = 0,
   authControls,
@@ -112,6 +117,8 @@ export function Sidebar({
   pages: SidebarPage[];
   archivedPages?: SidebarPage[];
   orgName: string;
+  orgSlug?: string;
+  authMode?: string;
   logoUrl?: string | null;
   cleanupCount?: number;
   authControls?: React.ReactNode;
@@ -315,7 +322,7 @@ export function Sidebar({
           <div className="nav-folder-children">
             {kids.map((k) => renderFolder(k, depth + 1))}
             {folderPages.map((p) => (
-              <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned={pinnedSet.has(p.slug)} />
+              <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned={pinnedSet.has(p.slug)} orgSlug={orgSlug} authMode={authMode} />
             ))}
           </div>
         )}
@@ -404,7 +411,7 @@ export function Sidebar({
             <>
               <div className="nav-section-label">Pinned</div>
               {pinned.map((p) => (
-                <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned />
+                <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned orgSlug={orgSlug} authMode={authMode} />
               ))}
             </>
           )}
@@ -414,7 +421,7 @@ export function Sidebar({
               {recentList.map((r) => {
                 const page = pages.find((p) => p.slug === r.slug);
                 if (!page) return null;
-                return <PageLink key={r.slug} page={page} folders={folders} active={activeSlug === r.slug} pinned={pinnedSet.has(r.slug)} />;
+                return <PageLink key={r.slug} page={page} folders={folders} active={activeSlug === r.slug} pinned={pinnedSet.has(r.slug)} orgSlug={orgSlug} authMode={authMode} />;
               })}
             </>
           )}
@@ -443,7 +450,7 @@ export function Sidebar({
         </div>
         {rootFolders.map((f) => renderFolder(f, 0))}
         {unfiled.map((p) => (
-          <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned={pinnedSet.has(p.slug)} />
+          <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned={pinnedSet.has(p.slug)} orgSlug={orgSlug} authMode={authMode} />
         ))}
         {archivedPages.length > 0 && (
           <div className="nav-folder" style={{ "--nav-depth": 0 } as React.CSSProperties}>
@@ -461,7 +468,7 @@ export function Sidebar({
             {expanded.has("__archived") && (
               <div className="nav-folder-children">
                 {archivedPages.map((p) => (
-                  <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned={false} />
+                  <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned={false} orgSlug={orgSlug} authMode={authMode} />
                 ))}
               </div>
             )}

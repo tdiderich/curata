@@ -5,6 +5,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { ensureComponentIds } from "./component-ids";
 import { hasDashboardBlock, contextHeader } from "./glance-prompts";
 import type { GlanceContext } from "./glance-prompts";
+import { listPagesWhere, defaultPageVisibility } from "./access";
 
 export interface PageMeta {
   slug: string;
@@ -47,17 +48,7 @@ export interface AnnotationRow {
 }
 
 export async function listPages(orgId: string, userId?: string): Promise<PageMeta[]> {
-  const where = userId
-    ? {
-        orgId,
-        status: { not: "archived" },
-        OR: [
-          { visibility: "shared" },
-          { visibility: "public" },
-          { visibility: "personal", createdBy: userId },
-        ],
-      }
-    : { orgId, status: { not: "archived" } };
+  const where = listPagesWhere(orgId, userId ?? null);
 
   const pages = await db.page.findMany({
     where,
@@ -274,19 +265,10 @@ export async function searchPages(
   userId?: string,
   glanceCtx: GlanceContext = {}
 ): Promise<SearchResult[]> {
-  const where = userId
-    ? {
-        orgId,
-        OR: [
-          { visibility: "shared" },
-          { visibility: "public" },
-          { visibility: "personal", createdBy: userId },
-        ],
-      }
-    : { orgId };
+  const where = listPagesWhere(orgId, userId ?? null);
 
   const pages = await db.page.findMany({
-    where: { ...where, status: { not: "archived" } },
+    where,
     select: {
       slug: true,
       title: true,
@@ -404,6 +386,7 @@ async function _writePageInternal(
       slug,
       title,
       createdBy,
+      visibility: defaultPageVisibility(),
       dashboardEnabled,
       versions: {
         create: { yamlContent, jsonContent, contentHash, createdBy },

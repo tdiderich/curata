@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import yaml from "js-yaml";
 import { resolveOrg } from "@/lib/auth";
-import { can } from "@/lib/permissions";
+import { can, VALID_PAGE_VISIBILITY } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { writePageJson } from "@/lib/pages";
 import { getTemplateContent } from "@/lib/templates-server";
+import { getPageOrThrow, PageAccessError } from "@/lib/access";
 
 export async function POST(request: NextRequest) {
   const ctx = await resolveOrg();
@@ -95,20 +96,22 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "slug is required" }, { status: 400 });
     }
 
-    const page = await db.page.findUnique({
-      where: { orgId_slug: { orgId: ctx.orgId, slug } },
-    });
-
-    if (!page) {
-      return NextResponse.json({ error: "page not found" }, { status: 404 });
+    let pageWithAccess;
+    try {
+      pageWithAccess = await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+    } catch (e) {
+      if (e instanceof PageAccessError) {
+        return NextResponse.json({ error: e.message }, { status: e.status });
+      }
+      throw e;
     }
 
-    const isOwner = page.createdBy === ctx.userId || page.createdBy === "default";
+    const isOwner = pageWithAccess.createdBy === ctx.userId || pageWithAccess.createdBy === "default";
     if (!can(ctx.role, "page:delete", isOwner)) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
 
-    await db.page.delete({ where: { id: page.id } });
+    await db.page.delete({ where: { id: pageWithAccess.id } });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
@@ -136,23 +139,24 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "slug is required" }, { status: 400 });
     }
 
-    const page = await db.page.findUnique({
-      where: { orgId_slug: { orgId: ctx.orgId, slug: body.slug } },
-    });
-
-    if (!page) {
-      return NextResponse.json({ error: "page not found" }, { status: 404 });
+    let pageWithAccess;
+    try {
+      pageWithAccess = await getPageOrThrow(ctx.orgId, body.slug, ctx.userId, ctx.role);
+    } catch (e) {
+      if (e instanceof PageAccessError) {
+        return NextResponse.json({ error: e.message }, { status: e.status });
+      }
+      throw e;
     }
 
-    if (!can(ctx.role, "page:edit", page.createdBy === ctx.userId)) {
+    if (!can(ctx.role, "page:edit", pageWithAccess.createdBy === ctx.userId)) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
 
     if (body.visibility !== undefined) {
-      const allowed = ["personal", "shared", "public"];
-      if (!allowed.includes(body.visibility)) {
+      if (!(VALID_PAGE_VISIBILITY as readonly string[]).includes(body.visibility)) {
         return NextResponse.json(
-          { error: "visibility must be personal, shared, or public" },
+          { error: `visibility must be one of: ${VALID_PAGE_VISIBILITY.join(", ")}` },
           { status: 400 }
         );
       }
@@ -163,7 +167,6 @@ export async function PATCH(request: NextRequest) {
     if (body.visibility !== undefined) data.visibility = body.visibility;
     if (body.pinned !== undefined) data.pinned = body.pinned;
     if (body.status !== undefined) {
-      // Humans archive/restore; "flagged" is set by the flag pipeline only.
       if (body.status !== "active" && body.status !== "archived") {
         return NextResponse.json(
           { error: "status must be 'active' or 'archived'" },
@@ -175,7 +178,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const updated = await db.page.update({
-      where: { id: page.id },
+      where: { id: pageWithAccess.id },
       data,
     });
 

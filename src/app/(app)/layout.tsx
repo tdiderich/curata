@@ -49,6 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let pages: SidebarPage[] = [];
   let archivedPages: SidebarPage[] = [];
   let orgName = "curata";
+  let orgSlug = "default";
   let logoUrl: string | null = null;
   let cleanupCount = 0;
 
@@ -60,50 +61,62 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         select: { name: true, logoUrl: true, logoMime: true, updatedAt: true },
       });
       if (org?.name) orgName = org.name;
+      orgSlug = ctx.orgSlug;
       // basePath matters when the app is mounted under a subpath
       // (maze-apps serves curata at /ts-hub) — a root-relative src 404s there.
       logoUrl = org?.logoMime
         ? `${basePath}/api/org-logo?v=${org.updatedAt.getTime()}`
         : (org?.logoUrl ?? null);
 
+      const folderVisFilter = AUTH_MODE === "none"
+        ? { orgId: ctx.orgId }
+        : {
+            orgId: ctx.orgId,
+            OR: [
+              { visibility: "org" },
+              { visibility: "private", createdBy: ctx.userId },
+            ],
+          };
       const rawFolders = await db.folder.findMany({
-        where: {
-          orgId: ctx.orgId,
-          OR: [
-            { visibility: "shared" },
-            { visibility: "personal", createdBy: ctx.userId },
-          ],
-        },
+        where: folderVisFilter,
         orderBy: { name: "asc" },
         select: { id: true, name: true, parentId: true, visibility: true },
       });
       folders = rawFolders;
 
+      const pageVisFilter = AUTH_MODE === "none"
+        ? { orgId: ctx.orgId, status: { not: "archived" } }
+        : {
+            orgId: ctx.orgId,
+            status: { not: "archived" },
+            OR: [
+              { createdBy: ctx.userId },
+              { shares: { some: { userId: ctx.userId } } },
+              { visibility: "org" },
+              { visibility: "public" },
+            ],
+          };
       const rawPages = await db.page.findMany({
-        where: {
-          orgId: ctx.orgId,
-          status: { not: "archived" },
-          OR: [
-            { visibility: "shared" },
-            { visibility: "public" },
-            { visibility: "personal", createdBy: ctx.userId },
-          ],
-        },
+        where: pageVisFilter,
         orderBy: { title: "asc" },
         select: { slug: true, title: true, folderId: true, pinned: true, visibility: true },
       });
       pages = rawPages;
 
+      const archivedVisFilter = AUTH_MODE === "none"
+        ? { orgId: ctx.orgId, status: "archived" }
+        : {
+            orgId: ctx.orgId,
+            status: "archived",
+            OR: [
+              { createdBy: ctx.userId },
+              { shares: { some: { userId: ctx.userId } } },
+              { visibility: "org" },
+              { visibility: "public" },
+            ],
+          };
       const rawArchived = await db.page.findMany({
-        where: {
-          orgId: ctx.orgId,
-          status: "archived",
-          OR: [
-            { visibility: "shared" },
-            { visibility: "public" },
-            { visibility: "personal", createdBy: ctx.userId },
-          ],
-        },
+        where: archivedVisFilter,
         orderBy: { title: "asc" },
         select: { slug: true, title: true, folderId: true, pinned: true, visibility: true },
       });
@@ -125,7 +138,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="app-shell">
-      <Sidebar folders={folders} pages={pages} archivedPages={archivedPages} orgName={orgName} logoUrl={logoUrl} cleanupCount={cleanupCount} authControls={<AuthControls />} />
+      <Sidebar folders={folders} pages={pages} archivedPages={archivedPages} orgName={orgName} orgSlug={orgSlug} authMode={AUTH_MODE} logoUrl={logoUrl} cleanupCount={cleanupCount} authControls={<AuthControls />} />
       <main className="app-main">{children}</main>
     </div>
   );

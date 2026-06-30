@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  if (!can(ctx.role, "key:manage")) {
+  if (ctx.role === "viewer") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         keyHash: hash,
         prefix,
         scopes,
-        createdBy: "web",
+        createdBy: ctx.userId,
         ...(expiresAt ? { expiresAt } : {}),
       },
     });
@@ -69,22 +69,20 @@ export async function GET() {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  if (!can(ctx.role, "key:manage")) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
-
   try {
+    const isAdmin = can(ctx.role, "key:manage");
     const keys = await db.apiKey.findMany({
       where: {
         orgId: ctx.orgId,
         revokedAt: null,
+        ...(!isAdmin ? { createdBy: ctx.userId } : {}),
         OR: [
           { expiresAt: null },
           { expiresAt: { gt: new Date() } },
         ],
       },
       orderBy: { createdAt: "desc" },
-      select: { id: true, name: true, prefix: true, scopes: true, createdAt: true, expiresAt: true },
+      select: { id: true, name: true, prefix: true, scopes: true, createdAt: true, expiresAt: true, createdBy: true },
     });
 
     return NextResponse.json(keys);
@@ -100,10 +98,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  if (!can(ctx.role, "key:manage")) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
-
   try {
     const body = (await request.json()) as { id: string };
     if (!body.id) {
@@ -116,6 +110,10 @@ export async function DELETE(request: NextRequest) {
 
     if (!key) {
       return NextResponse.json({ error: "key not found" }, { status: 404 });
+    }
+
+    if (!can(ctx.role, "key:manage") && key.createdBy !== ctx.userId) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
 
     await db.apiKey.update({

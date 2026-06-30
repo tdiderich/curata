@@ -5,13 +5,13 @@ import { dispatch, READ_TOOLS, WRITE_TOOLS, ALL_TOOLS } from "@/lib/mcp-dispatch
 
 async function resolveAuth(request: NextRequest) {
   if (process.env.CURATA_DEV === "1" && process.env.NODE_ENV === "development") {
-    return { orgId: "dev", orgSlug: "dev", scopes: ["read", "write"] };
+    return { orgId: "dev", orgSlug: "dev", scopes: ["read", "write"], userId: "dev" };
   }
 
   if ((process.env.AUTH_MODE ?? "none") === "none") {
     const org = await db.organization.findFirst({ orderBy: { createdAt: "asc" } });
     if (!org) return null;
-    return { orgId: org.id, orgSlug: org.slug, scopes: ["read", "write"], keyPrefix: "noauth" };
+    return { orgId: org.id, orgSlug: org.slug, scopes: ["read", "write"], keyPrefix: "noauth", userId: "default" };
   }
 
   if (process.env.AUTH_MODE === "tailscale") {
@@ -21,7 +21,7 @@ async function resolveAuth(request: NextRequest) {
       const { resolveOrg } = await import("@/lib/auth");
       const orgCtx = await resolveOrg();
       if (orgCtx) {
-        return { orgId: orgCtx.orgId, orgSlug: orgCtx.orgSlug, scopes: ["read", "write"], keyPrefix: `ts:${tsLogin || devUser}` };
+        return { orgId: orgCtx.orgId, orgSlug: orgCtx.orgSlug, scopes: ["read", "write"], keyPrefix: `ts:${tsLogin || devUser}`, userId: orgCtx.userId };
       }
     }
   }
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const actorId = ("keyPrefix" in ctx && ctx.keyPrefix) ? ctx.keyPrefix : "dev";
-    const result = await dispatch(tool, args || {}, ctx.orgId, ctx.orgSlug ?? "", actorId);
+    const result = await dispatch(tool, args || {}, ctx.orgId, ctx.orgSlug ?? "", actorId, ctx.userId);
     return NextResponse.json({ result });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

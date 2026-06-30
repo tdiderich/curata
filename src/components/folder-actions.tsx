@@ -176,13 +176,18 @@ interface PageMenuProps {
   title: string;
   folderId: string | null;
   folders: Folder[];
+  visibility?: string;
+  orgSlug?: string;
+  authMode?: string;
 }
 
-export function PageMenu({ slug, title, folderId, folders }: PageMenuProps) {
+export function PageMenu({ slug, title, folderId, folders, visibility = "org", orgSlug = "default", authMode = "none" }: PageMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [visOpen, setVisOpen] = useState(false);
+  const [currentVis, setCurrentVis] = useState(visibility);
   const [browseParent, setBrowseParent] = useState<string | null | undefined>(undefined);
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -224,9 +229,11 @@ export function PageMenu({ slug, title, folderId, folders }: PageMenuProps) {
   }
 
   async function copyLink() {
-    const url = `${window.location.origin}${basePath}/pages/${encodeURIComponent(slug)}`;
+    const url = currentVis === "public"
+      ? `${window.location.origin}${basePath.replace(/\/$/, "")}/p/${orgSlug}/${slug}`
+      : `${window.location.origin}${basePath}/pages/${encodeURIComponent(slug)}`;
     await navigator.clipboard.writeText(url);
-    toast.success("Link copied");
+    toast.success(currentVis === "public" ? "Public link copied" : "Link copied");
     setOpen(false);
   }
 
@@ -265,7 +272,7 @@ export function PageMenu({ slug, title, folderId, folders }: PageMenuProps) {
       <button
         ref={btnRef}
         className="dash-page-actions-btn"
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); setMoveOpen(false); setBrowseParent(undefined); }}
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); setMoveOpen(false); setVisOpen(false); setBrowseParent(undefined); }}
         disabled={busy}
         aria-label="Page options"
       >
@@ -346,6 +353,58 @@ export function PageMenu({ slug, title, folderId, folders }: PageMenuProps) {
           >
             {isPinned(slug) ? "Unpin from top" : "Pin to top"}
           </button>
+          <div className="dash-page-actions-divider" />
+          {!visOpen ? (
+            <button
+              className="dash-page-actions-item"
+              onClick={() => { setVisOpen(true); setMoveOpen(false); }}
+            >
+              Visibility
+            </button>
+          ) : (
+            <>
+              <button
+                className="dash-page-actions-item dash-folder-actions-back"
+                onClick={() => setVisOpen(false)}
+              >
+                <span className="dash-folder-actions-arrow">&#8592;</span>
+                Back
+              </button>
+              {(["private", "org", "public"] as const).filter((v) => v !== "private" || authMode !== "none").map((v) => (
+                <button
+                  key={v}
+                  className={`dash-page-actions-item${v === currentVis ? " dash-page-actions-item--active" : ""}`}
+                  onClick={async () => {
+                    if (v === currentVis) return;
+                    setBusy(true);
+                    setOpen(false);
+                    setVisOpen(false);
+                    try {
+                      const res = await fetch(`${basePath}/api/pages`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ slug, visibility: v }),
+                      });
+                      if (res.ok) {
+                        setCurrentVis(v);
+                      } else {
+                        const data = (await res.json().catch(() => ({}))) as { error?: string };
+                        toast.error(`Couldn't update visibility: ${data.error ?? "unknown error"}`);
+                      }
+                    } catch {
+                      toast.error("Couldn't update visibility — check your connection and try again.");
+                    } finally {
+                      setBusy(false);
+                      router.refresh();
+                    }
+                  }}
+                >
+                  {v === "private" ? "Private" : v === "org" ? "Org" : "Public"}
+                  {v === currentVis && <span className="dash-page-actions-check">&#10003;</span>}
+                </button>
+              ))}
+            </>
+          )}
           <div className="dash-page-actions-divider" />
           <button
             className="dash-page-actions-item dash-page-actions-item--danger"

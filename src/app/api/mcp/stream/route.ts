@@ -46,7 +46,7 @@ async function resolveAuth(request: Request) {
   if ((process.env.AUTH_MODE ?? "none") === "none") {
     const org = await db.organization.findFirst({ orderBy: { createdAt: "asc" } });
     if (!org) return null;
-    return { orgId: org.id, orgSlug: org.slug, actorId: "noauth" };
+    return { orgId: org.id, orgSlug: org.slug, actorId: "noauth", userId: "default" };
   }
 
   if (process.env.AUTH_MODE === "tailscale") {
@@ -56,7 +56,7 @@ async function resolveAuth(request: Request) {
       const { resolveOrg } = await import("@/lib/auth");
       const orgCtx = await resolveOrg();
       if (orgCtx) {
-        return { orgId: orgCtx.orgId, orgSlug: orgCtx.orgSlug, actorId: `ts:${tsLogin || devUser}` };
+        return { orgId: orgCtx.orgId, orgSlug: orgCtx.orgSlug, actorId: `ts:${tsLogin || devUser}`, userId: orgCtx.userId };
       }
     }
   }
@@ -67,10 +67,10 @@ async function resolveAuth(request: Request) {
   if (!token) return null;
   const result = await resolveOrgFromApiKey(token);
   if (!result) return null;
-  return { orgId: result.orgId, orgSlug: result.orgSlug, actorId: result.keyPrefix || "apikey" };
+  return { orgId: result.orgId, orgSlug: result.orgSlug, actorId: result.keyPrefix || "apikey", userId: result.userId };
 }
 
-function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpServer {
+function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId?: string): McpServer {
   const server = new McpServer({ name: "curata", version: "0.1.0" });
 
   // Tools below that have no bespoke streaming handler delegate to the shared
@@ -81,7 +81,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
       if (v !== undefined && v !== null) args[k] = String(v);
     }
     try {
-      const result = await dispatch(tool, args, orgId, orgSlug, actorId);
+      const result = await dispatch(tool, args, orgId, orgSlug, actorId, userId);
       const text = typeof result === "string" ? result : JSON.stringify(result, null, 2);
       return { content: [{ type: "text" as const, text }] };
     } catch (err) {
@@ -91,13 +91,13 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
   };
 
   server.tool("search_pages", "Search the knowledge base", { query: z.string() }, async ({ query }) => {
-    const results = await searchPages(orgId, query);
+    const results = await searchPages(orgId, query, userId);
     return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
   });
 
   server.tool("list_pages", "List all pages", {}, async () => {
     const [pages, folders] = await Promise.all([
-      listPages(orgId),
+      listPages(orgId, userId),
       db.folder.findMany({ where: { orgId }, select: { id: true, name: true } }),
     ]);
     const folderMap = new Map(folders.map((f) => [f.id, f.name]));
@@ -253,21 +253,21 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string): McpSe
   });
 
   server.tool("create_folder", "Create a new folder",
-    { name: z.string(), parent_id: z.string().optional(), visibility: z.enum(["shared", "personal"]).optional() },
+    { name: z.string(), parent_id: z.string().optional(), visibility: z.enum(["org", "private"]).optional() },
     async ({ name, parent_id, visibility }) => {
       if (parent_id) {
         const parent = await db.folder.findFirst({ where: { id: parent_id, orgId } });
         if (!parent) return { content: [{ type: "text", text: `Error: parent folder not found: ${parent_id}` }], isError: true };
       }
       const folder = await db.folder.create({
-        data: { orgId, name, visibility: visibility ?? "shared", createdBy: actorId, parentId: parent_id ?? null },
+        data: { orgId, name, visibility: visibility ?? "org", createdBy: actorId, parentId: parent_id ?? null },
       });
       logAudit({ orgId, action: "folder.create", resourceType: "folder", resourceId: folder.id, actorType: "apikey", actorId, metadata: { name, parentId: parent_id } });
       return { content: [{ type: "text", text: `Created folder "${name}" (id: ${folder.id})` }] };
     });
 
   server.tool("update_folder", "Rename, reparent, or change visibility of a folder",
-    { id: z.string(), name: z.string().optional(), parent_id: z.string().nullable().optional(), visibility: z.enum(["shared", "personal"]).optional() },
+    { id: z.string(), name: z.string().optional(), parent_id: z.string().nullable().optional(), visibility: z.enum(["org", "private"]).optional() },
     async ({ id, name, parent_id, visibility }) => {
       const folder = await db.folder.findFirst({ where: { id, orgId } });
       if (!folder) return { content: [{ type: "text", text: `Error: folder not found: ${id}` }], isError: true };
@@ -479,7 +479,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const server = createMcpServer(ctx.orgId, ctx.orgSlug, ctx.actorId);
+  const server = createMcpServer(ctx.orgId, ctx.orgSlug, ctx.actorId, ctx.userId);
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   await server.connect(transport);
   return transport.handleRequest(request);
@@ -493,7 +493,7 @@ export async function GET(request: Request) {
     });
   }
 
-  const server = createMcpServer(ctx.orgId, ctx.orgSlug, ctx.actorId);
+  const server = createMcpServer(ctx.orgId, ctx.orgSlug, ctx.actorId, ctx.userId);
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   await server.connect(transport);
   return transport.handleRequest(request);

@@ -1,8 +1,8 @@
-# scanned: 2026-06-23T15:22:44.741419-05:00
+# scanned: 2026-06-30T10:56:41.688678-05:00
 # root_files
 path	tokens	reads	description
 CONTRIBUTING.md	389	0	Markdown document
-Dockerfile	314	0	Docker container definition
+Dockerfile	330	0	Docker container definition
 LICENSE	267	0	License file
 README.md	1352	0	Project readme
 dev.sh	524	0	Shell script
@@ -17,17 +17,17 @@ pnpm-lock.yaml	54519	0	YAML configuration/data
 pnpm-workspace.yaml	39	0	YAML configuration/data
 prisma.config.ts	56	0	TypeScript source
 tsconfig.json	169	0	TypeScript configuration
-tsconfig.tsbuildinfo	83816	0	
+tsconfig.tsbuildinfo	83323	0	
 vitest.config.ts	113	0	TypeScript source
 
 # directories
 path	files	tokens	description
 demos	20	64339	
-docs	5	18959	
+docs	5	19335	
 packages	19	26982	
-prisma	2	1840	
-scripts	8	2879	
+prisma	2	2076	
+scripts	9	3019	
 seed	17	25408	
-skills	6	2191	
-src	124	516839	
+skills	7	2801	
+src	134	569749	
 tests	9	10067	tests
