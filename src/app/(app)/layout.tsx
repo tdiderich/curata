@@ -73,7 +73,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         : {
             orgId: ctx.orgId,
             OR: [
-              { visibility: "org" },
+              { visibility: { in: ["org", "shared"] } },
               { visibility: "private", createdBy: ctx.userId },
             ],
           };
@@ -92,8 +92,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             OR: [
               { createdBy: ctx.userId },
               { shares: { some: { userId: ctx.userId } } },
-              { visibility: "org" },
-              { visibility: "public" },
+              { visibility: { in: ["org", "public", "shared"] } },
             ],
           };
       const rawPages = await db.page.findMany({
@@ -111,8 +110,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             OR: [
               { createdBy: ctx.userId },
               { shares: { some: { userId: ctx.userId } } },
-              { visibility: "org" },
-              { visibility: "public" },
+              { visibility: { in: ["org", "public", "shared"] } },
             ],
           };
       const rawArchived = await db.page.findMany({

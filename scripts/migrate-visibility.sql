@@ -4,6 +4,10 @@
 
 BEGIN;
 
+-- Backfill NULLs to 'org' (pre-RBAC pages had no visibility column)
+UPDATE pages SET visibility = 'org' WHERE visibility IS NULL;
+UPDATE folders SET visibility = 'org' WHERE visibility IS NULL;
+
 -- Pages: personal → private, shared → org
 UPDATE pages SET visibility = 'private' WHERE visibility = 'personal';
 UPDATE pages SET visibility = 'org' WHERE visibility = 'shared';

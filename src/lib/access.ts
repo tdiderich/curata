@@ -43,11 +43,13 @@ export async function resolvePageAccess(
     }
   }
 
-  if (page.visibility === "org" && orgMemberRole) {
+  const vis = page.visibility ?? "org";
+
+  if ((vis === "org" || vis === "shared") && orgMemberRole) {
     return { allowed: true, pageId: page.id, role: "viewer", via: "org" };
   }
 
-  if (page.visibility === "public") {
+  if (vis === "public") {
     return { allowed: true, pageId: page.id, role: "viewer", via: "public" };
   }
 
@@ -122,8 +124,7 @@ export function listPagesWhere(
     OR: [
       { createdBy: userId },
       { shares: { some: { userId } } },
-      { visibility: "org" },
-      { visibility: "public" },
+      { visibility: { in: ["org", "public", "shared"] } },
     ],
   };
 }
