@@ -79,9 +79,12 @@ export default async function ExportPreview({
           padding: 10px 0; margin-bottom: 8px;
           border-bottom: 1px solid rgba(255,255,255,0.08);
         }
-        body::before {
+        body::before, body::after {
           position: absolute !important;
           min-height: 100% !important;
+        }
+        .export-root {
+          background: transparent !important;
         }
       `}</style>
       <div className="page-detail-content export-root">
