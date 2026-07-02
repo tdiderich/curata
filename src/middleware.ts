@@ -33,8 +33,9 @@ function isProtected(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
-function isPublic(pathname: string): boolean {
+function isPublic(pathname: string, searchParams?: URLSearchParams): boolean {
   if (pathname === "/" || pathname === "/sign-in") return true;
+  if (pathname.startsWith("/export-preview/") && searchParams?.has("nonce")) return true;
   const prefixes = AUTH_MODE === "clerk" ? PUBLIC_PREFIXES_CLERK : PUBLIC_PREFIXES_BASE;
   return prefixes.some((p) => pathname.startsWith(p));
 }
@@ -127,7 +128,8 @@ async function middlewareClerk(request: NextRequest) {
       }
     }
 
-    if (!isPublicRoute(req)) {
+    const isNonceExport = req.nextUrl.pathname.startsWith("/export-preview/") && req.nextUrl.searchParams.has("nonce");
+    if (!isPublicRoute(req) && !isNonceExport) {
       await auth.protect();
     }
 
