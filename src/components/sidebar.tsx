@@ -135,6 +135,7 @@ export function Sidebar({
   const [reportOpen, setReportOpen] = useState(false);
 
   const [resizing, setResizing] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     const el = sidebarRef.current;
@@ -168,6 +169,7 @@ export function Sidebar({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setExpanded(readExpanded());
     setRecents(readRecents());
+    setMobileOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -335,23 +337,58 @@ export function Sidebar({
 
   if (hidden) {
     return (
-      <button
-        className="nav-reveal"
-        onClick={toggleHidden}
-        aria-label="Show navigation"
-        title="Show navigation (⌘\)"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <line x1="9" y1="3" x2="9" y2="21" />
-        </svg>
-      </button>
+      <>
+        <button
+          className="nav-mobile-toggle"
+          onClick={() => { toggleHidden(); setMobileOpen(true); }}
+          aria-label="Open navigation"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <button
+          className="nav-reveal"
+          onClick={toggleHidden}
+          aria-label="Show navigation"
+          title="Show navigation (⌘\)"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="9" y1="3" x2="9" y2="21" />
+          </svg>
+        </button>
+      </>
     );
   }
 
   return (
     <>
-    <aside className="app-sidebar" aria-label="Workspace navigation" ref={sidebarRef}>
+    <button
+      className={`nav-mobile-toggle${mobileOpen ? " nav-mobile-toggle--open" : ""}`}
+      onClick={() => setMobileOpen((v) => !v)}
+      aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+    >
+      {mobileOpen ? (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      ) : (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      )}
+    </button>
+    <div
+      className={`nav-mobile-backdrop${mobileOpen ? " nav-mobile-backdrop--visible" : ""}`}
+      onClick={() => setMobileOpen(false)}
+    />
+    <aside className={`app-sidebar${mobileOpen ? " app-sidebar--mobile-open" : ""}`} aria-label="Workspace navigation" ref={sidebarRef}>
       <div
         className={`sidebar-resize-handle${resizing ? " sidebar-resize-handle--active" : ""}`}
         onMouseDown={onResizeStart}
