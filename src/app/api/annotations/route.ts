@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { slug, text, section, target, kind, replacement } = body;
+    const { slug, text, section, target, kind, replacement, slide, visibility } = body;
 
     if (!slug || !text) {
       return NextResponse.json(
@@ -37,7 +37,10 @@ export async function POST(request: NextRequest) {
       section || undefined,
       target || undefined,
       kind || undefined,
-      replacement || undefined
+      replacement || undefined,
+      "web",
+      slide || undefined,
+      visibility || undefined,
     );
     logAudit({
       orgId: ctx.orgId,

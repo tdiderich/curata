@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { orgSlug, pageSlug, text, section, target } = body;
+    const { orgSlug, pageSlug, text, section, target, slide, kind, visibility } = body;
 
     if (!orgSlug || !pageSlug || !text) {
       return NextResponse.json(
@@ -50,9 +50,11 @@ export async function POST(request: NextRequest) {
       authorName,
       section || undefined,
       target || undefined,
-      undefined,
+      kind || undefined,
       undefined,
       "web",
+      slide || undefined,
+      visibility || undefined,
     );
 
     return NextResponse.json(ann, { status: 201 });

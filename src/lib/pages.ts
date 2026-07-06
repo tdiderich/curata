@@ -44,6 +44,8 @@ export interface AnnotationRow {
   replacement: string | null;
   status: string;
   source: string;
+  slide: string | null;
+  visibility: string | null;
   createdAt: Date;
 }
 
@@ -455,9 +457,11 @@ export async function saveAnnotation(
   author: string,
   section?: string,
   target?: string,
-  kind?: "note" | "edit",
+  kind?: "note" | "edit" | "talking_point",
   replacement?: string,
-  source: "web" | "agent" | "cli" = "web"
+  source: "web" | "agent" | "cli" = "web",
+  slide?: string,
+  visibility?: "visible" | "presenter",
 ): Promise<AnnotationRow> {
   const page = await db.page.findUnique({
     where: { orgId_slug: { orgId, slug } },
@@ -475,6 +479,8 @@ export async function saveAnnotation(
       kind: kind ?? "note",
       replacement: replacement ?? null,
       source,
+      slide: slide ?? null,
+      visibility: visibility ?? null,
     },
   });
 

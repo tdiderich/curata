@@ -19,15 +19,16 @@ interface Annotation {
   author: string;
   section?: string;
   target?: string;
-  kind?: "note" | "edit";
+  kind?: "note" | "edit" | "talking_point";
   replacement?: string;
   added: string;
   status: string;
   source: string;
+  slide?: string;
 }
 
 interface FormState {
-  mode: "note" | "edit";
+  mode: "note" | "edit" | "talking_point";
   section: string;
   target: string;
   componentId: string;
@@ -68,6 +69,7 @@ export default function PageDetailClient({
   autoConnect,
   authMode = "none",
   printFlow,
+  shell,
   archived,
 }: {
   slug: string;
@@ -80,6 +82,7 @@ export default function PageDetailClient({
   autoConnect: boolean;
   authMode?: string;
   printFlow?: string;
+  shell?: string;
   archived?: { since: string; supersededBy: string | null };
 }) {
   const router = useRouter();
@@ -95,6 +98,7 @@ export default function PageDetailClient({
   const [formState, setFormState] = useState<FormState | null>(null);
   const [formText, setFormText] = useState("");
   const [formReplacement, setFormReplacement] = useState("");
+  const [showTalkingPoints, setShowTalkingPoints] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [agentOpen, setAgentOpen] = useState(false);
@@ -109,6 +113,20 @@ export default function PageDetailClient({
     setSrcDirty(dirty);
     setSrcSaving(saving);
   }, []);
+
+  const [currentSlide, setCurrentSlide] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (shell !== "deck") return;
+    const handler = (e: Event) => {
+      const label = (e as CustomEvent).detail?.label ?? null;
+      setCurrentSlide(label);
+    };
+    document.addEventListener("deckslidechange", handler);
+    const navLabel = document.querySelector(".deck-nav-label");
+    if (navLabel?.textContent) setCurrentSlide(navLabel.textContent);
+    return () => document.removeEventListener("deckslidechange", handler);
+  }, [shell]);
 
   useEffect(() => {
     if (!printFlow) return;
@@ -158,10 +176,23 @@ export default function PageDetailClient({
     () =>
       annotations.filter(
         (a) =>
-          showResolved ||
-          (a.status !== "incorporated" && a.status !== "ignored"),
+          a.kind !== "talking_point" &&
+          (showResolved ||
+          (a.status !== "incorporated" && a.status !== "ignored")) &&
+          (shell !== "deck" || !currentSlide || !a.slide || a.slide === currentSlide),
       ),
-    [annotations, showResolved],
+    [annotations, showResolved, shell, currentSlide],
+  );
+
+  const talkingPoints = useMemo(
+    () =>
+      annotations.filter(
+        (a) =>
+          a.kind === "talking_point" &&
+          a.status !== "incorporated" && a.status !== "ignored" &&
+          (shell !== "deck" || !currentSlide || !a.slide || a.slide === currentSlide),
+      ),
+    [annotations, shell, currentSlide],
   );
 
   const resolvedCount = useMemo(
@@ -172,15 +203,19 @@ export default function PageDetailClient({
     [annotations],
   );
 
-  // Highlight annotation targets in the DOM and compute Y positions
+  const [tpPositions, setTpPositions] = useState(new Map<string, { x: number; y: number; width: number }>());
+
   useEffect(() => {
     const root = contentRef.current;
     if (!root) return;
 
     clearHighlights(root);
     const positions = new Map<string, number>();
+    const tpPos = new Map<string, { x: number; y: number; width: number }>();
 
-    for (const ann of activeAnns) {
+    const allHighlightable = [...activeAnns, ...talkingPoints];
+
+    for (const ann of allHighlightable) {
       let y: number | null = null;
 
       if (ann.target) {
@@ -189,17 +224,25 @@ export default function PageDetailClient({
           const rootRect = root.getBoundingClientRect();
           const markRect = mark.getBoundingClientRect();
           y = markRect.top - rootRect.top;
+
+          if (ann.kind === "talking_point") {
+            tpPos.set(ann.id, {
+              x: markRect.left - rootRect.left,
+              y: markRect.bottom - rootRect.top + 4,
+              width: markRect.width,
+            });
+          }
         }
       }
 
-      if (y === null && ann.section) {
-        y = findSectionTop(root, ann.section);
+      if (ann.kind !== "talking_point") {
+        if (y === null && ann.section) {
+          y = findSectionTop(root, ann.section);
+        }
+        positions.set(ann.id, y ?? 40);
       }
-
-      positions.set(ann.id, y ?? 40);
     }
 
-    // De-overlap: push bubbles apart when they're too close
     const sorted = [...positions.entries()].sort((a, b) => a[1] - b[1]);
     const MIN_GAP = expandAll ? 120 : 36;
     for (let i = 1; i < sorted.length; i++) {
@@ -210,7 +253,8 @@ export default function PageDetailClient({
     }
 
     setAnnPositions(positions);
-  }, [activeAnns, expandAll]);
+    setTpPositions(tpPos);
+  }, [activeAnns, talkingPoints, expandAll]);
 
   useEffect(() => {
     let hoverTimer: ReturnType<typeof setTimeout> | null = null;
@@ -249,6 +293,17 @@ export default function PageDetailClient({
     };
   }, []);
 
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "t" || e.key === "T") {
+        setShowTalkingPoints((v) => !v);
+      }
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
+
   const updateStatus = useCallback(
     async (id: string, status: "approved" | "incorporated" | "ignored") => {
       try {
@@ -270,7 +325,7 @@ export default function PageDetailClient({
   );
 
   const openForm = useCallback(
-    (mode: "note" | "edit", section: string, target: string, componentId: string = "") => {
+    (mode: "note" | "edit" | "talking_point", section: string, target: string, componentId: string = "") => {
       const root = contentRef.current;
       if (!root) return;
       const sel = window.getSelection();
@@ -319,6 +374,8 @@ export default function PageDetailClient({
               text: formText.trim(),
               section: formState.section || undefined,
               target: formState.target || undefined,
+              slide: shell === "deck" ? currentSlide || undefined : undefined,
+              kind: formState.mode === "talking_point" ? "talking_point" : undefined,
             }),
           });
 
@@ -430,9 +487,23 @@ export default function PageDetailClient({
               </button>
             </>
           ) : (
-            <button className="view-tab" onClick={() => setViewTab("source")}>
-              Edit
-            </button>
+            <>
+              {shell === "deck" && (
+                <button
+                  className="deck-present-btn"
+                  onClick={() => {
+                    const root = document.querySelector(".deck-root") as HTMLElement | null;
+                    if (root?.requestFullscreen) root.requestFullscreen();
+                    else if ((root as any)?.webkitRequestFullscreen) (root as any).webkitRequestFullscreen();
+                  }}
+                >
+                  Present
+                </button>
+              )}
+              <button className="view-tab" onClick={() => setViewTab("source")}>
+                Edit
+              </button>
+            </>
           )}
           <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} />
           <div className="page-toolbar-divider" />
@@ -540,11 +611,40 @@ export default function PageDetailClient({
           ref={contentRef}
           selectionActions={[
             { label: "Annotate", onSelect: (section, target, componentId) => openForm("note", section, target, componentId) },
+            { label: "Talking Point", onSelect: (section, target, componentId) => openForm("talking_point", section, target, componentId) },
             { label: "Replace", onSelect: (section, target, componentId) => openForm("edit", section, target, componentId) },
           ]}
         >
           {children}
         </PageContent>
+
+        {showTalkingPoints && contentRef.current && (() => {
+          const container = contentRef.current!;
+          return talkingPoints.map((tp) => {
+            const pos = tpPositions.get(tp.id);
+            if (!pos) return null;
+            return createPortal(
+              <div
+                key={tp.id}
+                className="tp-bubble"
+                style={{
+                  position: "absolute",
+                  left: pos.x,
+                  top: pos.y,
+                  maxWidth: Math.max(pos.width, 200),
+                }}
+              >
+                <div className="tp-bubble-tail" />
+                <div className="tp-bubble-content">
+                  <span className="tp-bubble-text">{tp.text}</span>
+                  <span className="tp-bubble-author">{tp.author}</span>
+                </div>
+              </div>,
+              container,
+              tp.id,
+            );
+          });
+        })()}
 
         <div className="ann-margin" aria-label="Annotations">
           <div className="ann-marker" style={{ top: 0 }}>
@@ -670,7 +770,9 @@ export default function PageDetailClient({
                   placeholder={
                     formState.mode === "edit"
                       ? "Type the corrected text…"
-                      : "Add your note…"
+                      : formState.mode === "talking_point"
+                        ? "Add talking point…"
+                        : "Add your note…"
                   }
                   value={
                     formState.mode === "edit" ? formReplacement : formText
@@ -680,7 +782,7 @@ export default function PageDetailClient({
                       ? setFormReplacement(e.target.value)
                       : setFormText(e.target.value)
                   }
-                  rows={3}
+                  rows={formState.mode === "talking_point" ? 2 : 3}
                   onKeyDown={(e) => {
                     if (e.key === "Escape") setFormState(null);
                     if (e.key === "Enter" && e.metaKey) submitForm();
@@ -692,7 +794,9 @@ export default function PageDetailClient({
                   </div>
                 )}
                 <div className="ann-form-footer">
-                  <span className="ann-form-mode">{formState.mode}</span>
+                  <span className="ann-form-mode">
+                    {formState.mode === "talking_point" ? "talking point" : formState.mode}
+                  </span>
                   <div className="ann-form-btns">
                     <button
                       className="ann-form-cancel"
@@ -715,7 +819,9 @@ export default function PageDetailClient({
                         ? "…"
                         : formState.mode === "edit"
                           ? "Save edit"
-                          : "Add"}
+                          : formState.mode === "talking_point"
+                            ? "Add point"
+                            : "Add"}
                     </button>
                   </div>
                 </div>

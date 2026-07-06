@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageContent } from "./page-viewer";
@@ -13,14 +14,17 @@ interface Annotation {
   author: string;
   section?: string;
   target?: string;
+  kind?: string;
   added: string;
   status: string;
+  slide?: string;
 }
 
 interface FormState {
   section: string;
   target: string;
   y: number;
+  mode: "note" | "talking_point";
 }
 
 function daysAgo(dateStr: string): number {
@@ -36,6 +40,7 @@ export default function PublicAnnotationClient({
   annotations,
   isSignedIn,
   printFlow,
+  shell,
 }: {
   orgSlug: string;
   pageSlug: string;
@@ -43,6 +48,7 @@ export default function PublicAnnotationClient({
   annotations: Annotation[];
   isSignedIn: boolean;
   printFlow?: string;
+  shell?: string;
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -53,10 +59,38 @@ export default function PublicAnnotationClient({
   const [formState, setFormState] = useState<FormState | null>(null);
   const [formText, setFormText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showTalkingPoints, setShowTalkingPoints] = useState(true);
+
+  const [currentSlide, setCurrentSlide] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (shell !== "deck") return;
+    const handler = (e: Event) => {
+      const label = (e as CustomEvent).detail?.label ?? null;
+      setCurrentSlide(label);
+    };
+    document.addEventListener("deckslidechange", handler);
+    const navLabel = document.querySelector(".deck-nav-label");
+    if (navLabel?.textContent) setCurrentSlide(navLabel.textContent);
+    return () => document.removeEventListener("deckslidechange", handler);
+  }, [shell]);
 
   const activeAnns = useMemo(
-    () => annotations.filter((a) => a.status !== "incorporated" && a.status !== "ignored"),
-    [annotations],
+    () => annotations.filter((a) =>
+      a.kind !== "talking_point" &&
+      (a.status !== "incorporated" && a.status !== "ignored") &&
+      (shell !== "deck" || !currentSlide || !a.slide || a.slide === currentSlide),
+    ),
+    [annotations, shell, currentSlide],
+  );
+
+  const talkingPoints = useMemo(
+    () => annotations.filter((a) =>
+      a.kind === "talking_point" &&
+      a.status !== "incorporated" && a.status !== "ignored" &&
+      (shell !== "deck" || !currentSlide || !a.slide || a.slide === currentSlide),
+    ),
+    [annotations, shell, currentSlide],
   );
 
   useEffect(() => {
@@ -66,14 +100,19 @@ export default function PublicAnnotationClient({
     return () => { document.body.classList.remove(cls); };
   }, [printFlow]);
 
+  const [tpPositions, setTpPositions] = useState(new Map<string, { x: number; y: number; width: number }>());
+
   useEffect(() => {
     const root = contentRef.current;
     if (!root) return;
 
     clearHighlights(root);
     const positions = new Map<string, number>();
+    const tpPos = new Map<string, { x: number; y: number; width: number }>();
 
-    for (const ann of activeAnns) {
+    const allHighlightable = [...activeAnns, ...talkingPoints];
+
+    for (const ann of allHighlightable) {
       let y: number | null = null;
 
       if (ann.target) {
@@ -82,10 +121,20 @@ export default function PublicAnnotationClient({
           const rootRect = root.getBoundingClientRect();
           const markRect = mark.getBoundingClientRect();
           y = markRect.top - rootRect.top;
+
+          if (ann.kind === "talking_point") {
+            tpPos.set(ann.id, {
+              x: markRect.left - rootRect.left,
+              y: markRect.bottom - rootRect.top + 4,
+              width: markRect.width,
+            });
+          }
         }
       }
 
-      positions.set(ann.id, y ?? 40);
+      if (ann.kind !== "talking_point") {
+        positions.set(ann.id, y ?? 40);
+      }
     }
 
     const sorted = [...positions.entries()].sort((a, b) => a[1] - b[1]);
@@ -98,7 +147,19 @@ export default function PublicAnnotationClient({
     }
 
     setAnnPositions(positions);
-  }, [activeAnns]);
+    setTpPositions(tpPos);
+  }, [activeAnns, talkingPoints]);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "t" || e.key === "T") {
+        setShowTalkingPoints((v) => !v);
+      }
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
 
   useEffect(() => {
     let hoverTimer: ReturnType<typeof setTimeout> | null = null;
@@ -138,7 +199,7 @@ export default function PublicAnnotationClient({
   }, []);
 
   const openForm = useCallback(
-    (_section: string, target: string) => {
+    (_section: string, target: string, mode: "note" | "talking_point" = "note") => {
       if (!isSignedIn) return;
       const root = contentRef.current;
       if (!root) return;
@@ -150,7 +211,7 @@ export default function PublicAnnotationClient({
         const rootRect = root.getBoundingClientRect();
         y = rect.top - rootRect.top;
       }
-      setFormState({ section: _section, target, y });
+      setFormState({ section: _section, target, y, mode });
       setFormText("");
       setExpandedId(null);
       window.getSelection()?.removeAllRanges();
@@ -171,6 +232,8 @@ export default function PublicAnnotationClient({
         text: formText.trim(),
         section: formState.section || undefined,
         target: formState.target || undefined,
+        slide: shell === "deck" ? currentSlide || undefined : undefined,
+        kind: formState.mode === "talking_point" ? "talking_point" : undefined,
       }),
     });
 
@@ -185,11 +248,41 @@ export default function PublicAnnotationClient({
       <div className="page-content-wrap">
         <PageContent
           ref={contentRef}
-          selectionAction={isSignedIn ? "Annotate" : undefined}
-          onTextSelect={isSignedIn ? (section, target) => openForm(section, target) : undefined}
+          selectionActions={isSignedIn ? [
+            { label: "Annotate", onSelect: (section, target) => openForm(section, target) },
+            { label: "Talking Point", onSelect: (section, target) => openForm(section, target, "talking_point") },
+          ] : undefined}
         >
           {children}
         </PageContent>
+
+        {showTalkingPoints && contentRef.current && (() => {
+          const container = contentRef.current!;
+          return talkingPoints.map((tp) => {
+            const pos = tpPositions.get(tp.id);
+            if (!pos) return null;
+            return createPortal(
+              <div
+                key={tp.id}
+                className="tp-bubble"
+                style={{
+                  position: "absolute",
+                  left: pos.x,
+                  top: pos.y,
+                  maxWidth: Math.max(pos.width, 200),
+                }}
+              >
+                <div className="tp-bubble-tail" />
+                <div className="tp-bubble-content">
+                  <span className="tp-bubble-text">{tp.text}</span>
+                  <span className="tp-bubble-author">{tp.author}</span>
+                </div>
+              </div>,
+              container,
+              tp.id,
+            );
+          });
+        })()}
 
         <div className="ann-margin" aria-label="Annotations">
           {isSignedIn && (
@@ -197,7 +290,7 @@ export default function PublicAnnotationClient({
               <button
                 className="ann-bubble ann-bubble--add"
                 onClick={() => {
-                  setFormState({ section: "", target: "", y: 0 });
+                  setFormState({ section: "", target: "", y: 0, mode: "note" });
                   setFormText("");
                   setExpandedId(null);
                 }}
@@ -279,17 +372,19 @@ export default function PublicAnnotationClient({
                 <textarea
                   className="ann-form-input"
                   autoFocus
-                  placeholder="Add your note…"
+                  placeholder={formState.mode === "talking_point" ? "Add talking point…" : "Add your note…"}
                   value={formText}
                   onChange={(e) => setFormText(e.target.value)}
-                  rows={3}
+                  rows={formState.mode === "talking_point" ? 2 : 3}
                   onKeyDown={(e) => {
                     if (e.key === "Escape") setFormState(null);
                     if (e.key === "Enter" && e.metaKey) submitForm();
                   }}
                 />
                 <div className="ann-form-footer">
-                  <span className="ann-form-mode">note</span>
+                  <span className="ann-form-mode">
+                    {formState.mode === "talking_point" ? "talking point" : "note"}
+                  </span>
                   <div className="ann-form-btns">
                     <button className="ann-form-cancel" onClick={() => setFormState(null)}>
                       Cancel
@@ -299,7 +394,7 @@ export default function PublicAnnotationClient({
                       disabled={submitting || !formText.trim()}
                       onClick={submitForm}
                     >
-                      {submitting ? "…" : "Add"}
+                      {submitting ? "…" : formState.mode === "talking_point" ? "Add point" : "Add"}
                     </button>
                   </div>
                 </div>

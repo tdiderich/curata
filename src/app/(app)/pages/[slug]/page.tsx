@@ -78,14 +78,16 @@ export default async function PageDetailView({
     author: a.author,
     section: a.section ?? undefined,
     target: a.target ?? undefined,
-    kind: (a.kind === "edit" ? "edit" : a.kind === "note" ? "note" : undefined) as
+    kind: (a.kind === "edit" ? "edit" : a.kind === "talking_point" ? "talking_point" : "note") as
       | "note"
       | "edit"
-      | undefined,
+      | "talking_point",
     replacement: a.replacement ?? undefined,
     added: a.createdAt.toISOString().slice(0, 10),
     status: a.status,
     source: a.source,
+    slide: a.slide ?? undefined,
+    visibility: a.visibility ?? undefined,
   }));
   const sections = await getPageSections(ctx.orgId, slug);
 
@@ -148,6 +150,7 @@ export default async function PageDetailView({
         autoConnect={slug === "getting-started"}
         authMode={AUTH_MODE}
         printFlow={(pageData.json.print_flow as string) || undefined}
+        shell={(pageData.json.shell as string) || "standard"}
         archived={pageRow?.status === "archived"
           ? { since: pageRow.updatedAt.toISOString().slice(0, 10), supersededBy: pageRow.supersededBy }
           : undefined}

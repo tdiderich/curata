@@ -144,6 +144,8 @@ model Annotation {
   replacement String?
   status      String   @default("pending")
   source      String   @default("web")
+  slide       String?
+  visibility  String?
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

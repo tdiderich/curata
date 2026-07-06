@@ -85,8 +85,11 @@ export default async function PublicPageView({ params, searchParams }: Props & {
     author: a.author,
     section: a.section ?? undefined,
     target: a.target ?? undefined,
+    kind: a.kind,
     added: a.createdAt.toISOString().slice(0, 10),
     status: a.status,
+    slide: a.slide ?? undefined,
+    visibility: a.visibility ?? undefined,
   }));
 
   const pageTitle = (pageData.json.title as string) || pageSlug;
@@ -101,6 +104,7 @@ export default async function PublicPageView({ params, searchParams }: Props & {
           annotations={annotations}
           isSignedIn={isSignedIn}
           printFlow={(pageData.json.print_flow as string) || undefined}
+          shell={(pageData.json.shell as string) || "standard"}
         >
           <div className="page-detail-content">
             {(pageData.json.shell as string) !== "deck" && (
