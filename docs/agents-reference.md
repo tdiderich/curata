@@ -445,9 +445,15 @@ Values: `up`, `down`, `flat`
 ### Slide
 | Field | Type | Required |
 |-------|------|----------|
+| align | Align | no |
 | components | Component[] | yes |
+| cover | boolean | no |
+| eyebrow | string | no |
 | hide_label | boolean | no |
 | label | string | yes |
+| subtitle | string | no |
+| title | string | no |
+| valign | string | no |
 
 ### SourceOfTruth
 | Field | Type | Required |
