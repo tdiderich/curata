@@ -52,6 +52,11 @@ export default function PublicAnnotationClient({
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
+  const [contentNode, setContentNode] = useState<HTMLDivElement | null>(null);
+  const mergedContentRef = useCallback((node: HTMLDivElement | null) => {
+    contentRef.current = node;
+    setContentNode(node);
+  }, []);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -71,7 +76,10 @@ export default function PublicAnnotationClient({
     };
     document.addEventListener("deckslidechange", handler);
     const navLabel = document.querySelector(".deck-nav-label");
-    if (navLabel?.textContent) setCurrentSlide(navLabel.textContent);
+    if (navLabel?.textContent) {
+      const text = navLabel.textContent;
+      queueMicrotask(() => setCurrentSlide(text));
+    }
     return () => document.removeEventListener("deckslidechange", handler);
   }, [shell]);
 
@@ -247,7 +255,7 @@ export default function PublicAnnotationClient({
     <div className="page-detail-layout public-annotation-layout">
       <div className="page-content-wrap">
         <PageContent
-          ref={contentRef}
+          ref={mergedContentRef}
           selectionActions={isSignedIn ? [
             { label: "Annotate", onSelect: (section, target) => openForm(section, target) },
             { label: "Talking Point", onSelect: (section, target) => openForm(section, target, "talking_point") },
@@ -256,8 +264,8 @@ export default function PublicAnnotationClient({
           {children}
         </PageContent>
 
-        {showTalkingPoints && contentRef.current && (() => {
-          const container = contentRef.current!;
+        {showTalkingPoints && contentNode && (() => {
+          const container = contentNode;
           return talkingPoints.map((tp) => {
             const pos = tpPositions.get(tp.id);
             if (!pos) return null;

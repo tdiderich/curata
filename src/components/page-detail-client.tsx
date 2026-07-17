@@ -87,6 +87,11 @@ export default function PageDetailClient({
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
+  const [contentNode, setContentNode] = useState<HTMLDivElement | null>(null);
+  const mergedContentRef = useCallback((node: HTMLDivElement | null) => {
+    contentRef.current = node;
+    setContentNode(node);
+  }, []);
   const [showResolved, setShowResolved] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -124,7 +129,10 @@ export default function PageDetailClient({
     };
     document.addEventListener("deckslidechange", handler);
     const navLabel = document.querySelector(".deck-nav-label");
-    if (navLabel?.textContent) setCurrentSlide(navLabel.textContent);
+    if (navLabel?.textContent) {
+      const text = navLabel.textContent;
+      queueMicrotask(() => setCurrentSlide(text));
+    }
     return () => document.removeEventListener("deckslidechange", handler);
   }, [shell]);
 
@@ -494,7 +502,10 @@ export default function PageDetailClient({
                   onClick={() => {
                     const root = document.querySelector(".deck-root") as HTMLElement | null;
                     if (root?.requestFullscreen) root.requestFullscreen();
-                    else if ((root as any)?.webkitRequestFullscreen) (root as any).webkitRequestFullscreen();
+                    else {
+                      const wk = root as HTMLElement & { webkitRequestFullscreen?: () => void };
+                      if (wk.webkitRequestFullscreen) wk.webkitRequestFullscreen();
+                    }
                   }}
                 >
                   Present
@@ -608,7 +619,7 @@ export default function PageDetailClient({
       ) : (
       <div className="page-content-wrap">
         <PageContent
-          ref={contentRef}
+          ref={mergedContentRef}
           selectionActions={[
             { label: "Annotate", onSelect: (section, target, componentId) => openForm("note", section, target, componentId) },
             { label: "Talking Point", onSelect: (section, target, componentId) => openForm("talking_point", section, target, componentId) },
@@ -618,8 +629,8 @@ export default function PageDetailClient({
           {children}
         </PageContent>
 
-        {showTalkingPoints && contentRef.current && (() => {
-          const container = contentRef.current!;
+        {showTalkingPoints && contentNode && (() => {
+          const container = contentNode;
           return talkingPoints.map((tp) => {
             const pos = tpPositions.get(tp.id);
             if (!pos) return null;
