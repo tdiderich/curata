@@ -20,6 +20,7 @@ model Organization {
   mode      String   @default("dark")
   texture   String   @default("none")
   glow      String   @default("none")
+  rules     Json?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -50,6 +51,7 @@ model Folder {
   parentId   String?  @map("parent_id")
   name       String
   visibility String   @default("org")
+  rules      Json?
   createdBy  String   @map("created_by")
   createdAt  DateTime @default(now()) @map("created_at")
 
@@ -59,6 +61,7 @@ model Folder {
   pages    Page[]
 
   @@index([orgId])
+  @@index([parentId])
   @@map("folders")
 }
 
@@ -76,6 +79,7 @@ model Page {
   status           String    @default("active")
   dashboardEnabled Boolean   @default(false) @map("dashboard_enabled")
   supersededBy String? @map("superseded_by")
+  rules        Json?
   lastViewedAt DateTime? @map("last_viewed_at")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")

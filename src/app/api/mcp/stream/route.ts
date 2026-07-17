@@ -17,6 +17,7 @@ import {
 } from "@/lib/pages";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
 import { checkFolderBoundary, mcpDefaultVisibility } from "@/lib/access";
+import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
 import {
   upsertConcepts,
   upsertLinks,
@@ -117,20 +118,30 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       result.yaml = yaml.dump(parsed, { lineWidth: -1, noRefs: true });
     }
 
-    const sections = await getPageSections(orgId, slug);
-    const annotations = await getAnnotations(orgId, slug);
-
     const page = await db.page.findUnique({
       where: { orgId_slug: { orgId, slug } },
-      select: { id: true },
+      select: { id: true, folderId: true, rules: true },
     });
+
+    const [sections, annotations] = await Promise.all([
+      getPageSections(orgId, slug),
+      getAnnotations(orgId, slug),
+    ]);
+
     const concepts = page ? await getPageConcepts(page.id) : [];
     const links = page ? await getPageLinks(orgId, page.id) : [];
     if (page) {
       bumpViewCount(page.id).catch(() => {});
     }
 
-    return { content: [{ type: "text", text: JSON.stringify({ slug, yaml: result.yaml, contentHash: result.contentHash, sections, annotations, concepts, links }, null, 2) }] };
+    const rules = await resolveRules(orgId, page?.folderId ?? null, page?.rules);
+    const allRules = [...rules.inherited, ...rules.page];
+    const response: Record<string, unknown> = { slug, yaml: result.yaml, contentHash: result.contentHash, sections, annotations, concepts, links };
+    if (allRules.length > 0) {
+      response.contentRules = allRules.map((r) => ({ id: r.id, text: r.text, mode: r.mode, scope: r.scope }));
+    }
+
+    return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
   });
 
   server.tool("write_page", "Create or update a page",
@@ -144,7 +155,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       const wpVis = visibility ?? mcpDefaultVisibility();
       const wpExisting = await db.page.findUnique({
         where: { orgId_slug: { orgId, slug } },
-        select: { folderId: true, folder: { select: { visibility: true } } },
+        select: { folderId: true, rules: true, folder: { select: { visibility: true } } },
       });
       try {
         if (folder_id) {
@@ -155,6 +166,13 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
         }
       } catch (e) {
         return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+      const wpFolderId = folder_id ?? wpExisting?.folderId ?? null;
+      const wpRules = await resolveRules(orgId, wpFolderId, wpExisting?.rules);
+      const wpAllRules = [...wpRules.inherited, ...wpRules.page];
+      const wpRuleCheck = validateContentRules(content, wpAllRules);
+      if (wpRuleCheck.violations.length > 0) {
+        return { content: [{ type: "text", text: `Error: content rule violation: ${wpRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}` }], isError: true };
       }
       const result = await writePage(orgId, orgSlug, slug, content, userId || "agent", undefined, sort_order, wpVis);
       if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
@@ -178,7 +196,11 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
         }
       }
       logAudit({ orgId, action: "page.write", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug } });
-      return { content: [{ type: "text", text: `Updated page "${slug}"` }] };
+      const wpResponse: Record<string, unknown> = { message: `Updated page "${slug}"` };
+      if (wpRuleCheck.warnings.length > 0) {
+        wpResponse.contentWarnings = wpRuleCheck.warnings.map((w) => ({ scope: w.scope, message: w.message, matches: w.matches }));
+      }
+      return { content: [{ type: "text", text: JSON.stringify(wpResponse) }] };
     });
 
   server.tool("patch_page", "Apply targeted operations to a page without rewriting full YAML. Requires component IDs from read_page.",
@@ -224,11 +246,26 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
         const validationErrors = await validateContent(orgSlug, slug, newYaml);
         if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: invalid after patch: ${validationErrors.map((e) => e.message).join("; ")}` }], isError: true };
 
+        const ppPage = await db.page.findUnique({
+          where: { orgId_slug: { orgId, slug } },
+          select: { folderId: true, rules: true },
+        });
+        const ppRules = await resolveRules(orgId, ppPage?.folderId ?? null, ppPage?.rules);
+        const ppAllRules = [...ppRules.inherited, ...ppRules.page];
+        const ppRuleCheck = validateContentRules(newYaml, ppAllRules);
+        if (ppRuleCheck.violations.length > 0) {
+          return { content: [{ type: "text", text: `Error: content rule violation: ${ppRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}` }], isError: true };
+        }
+
         const result = await writePage(orgId, orgSlug, slug, newYaml, userId || "agent", current.contentHash);
         if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
 
         logAudit({ orgId, action: "page.patch", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug, operationCount: operations.length } });
-        return { content: [{ type: "text", text: `Patched "${slug}" (${operations.length} operations applied)` }] };
+        const ppResponse: Record<string, unknown> = { message: `Patched "${slug}" (${operations.length} operations applied)` };
+        if (ppRuleCheck.warnings.length > 0) {
+          ppResponse.contentWarnings = ppRuleCheck.warnings.map((w) => ({ scope: w.scope, message: w.message, matches: w.matches }));
+        }
+        return { content: [{ type: "text", text: JSON.stringify(ppResponse) }] };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         return { content: [{ type: "text", text: `Error: ${msg}` }], isError: true };
@@ -254,13 +291,23 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
           }
         }
       }
+      const cpRules = await resolveRules(orgId, folder_id ?? null, null);
+      const cpAllRules = [...cpRules.inherited, ...cpRules.page];
+      const cpRuleCheck = validateContentRules(content, cpAllRules);
+      if (cpRuleCheck.violations.length > 0) {
+        return { content: [{ type: "text", text: `Error: content rule violation: ${cpRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}` }], isError: true };
+      }
       const result = await writePage(orgId, orgSlug, slug, content, userId || "agent", undefined, sort_order, cpVis);
       if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
       if (folder_id) {
         await db.page.update({ where: { orgId_slug: { orgId, slug } }, data: { folderId: folder_id } });
       }
       logAudit({ orgId, action: "page.create", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug, folderId: folder_id } });
-      return { content: [{ type: "text", text: `Created page "${slug}"` }] };
+      const cpResponse: Record<string, unknown> = { message: `Created page "${slug}"` };
+      if (cpRuleCheck.warnings.length > 0) {
+        cpResponse.contentWarnings = cpRuleCheck.warnings.map((w) => ({ scope: w.scope, message: w.message, matches: w.matches }));
+      }
+      return { content: [{ type: "text", text: JSON.stringify(cpResponse) }] };
     });
 
   server.tool("list_folders", "List all folders", {}, async () => {
@@ -302,6 +349,8 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       if (parent_id) {
         const parent = await db.folder.findFirst({ where: { id: parent_id, orgId } });
         if (!parent) return { content: [{ type: "text", text: `Error: parent folder not found: ${parent_id}` }], isError: true };
+        const wouldCycle = await detectFolderCycle(orgId, id, parent_id);
+        if (wouldCycle) return { content: [{ type: "text", text: "Error: cannot reparent: would create a cycle" }], isError: true };
       }
       if (visibility) {
         const pagesInFolder = await db.page.findMany({
@@ -508,6 +557,18 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       subtitle: z.string().optional().describe("Subtitle for the cover page"),
     },
     viaDispatch("export_report"));
+
+  server.tool("list_rules", "List content rules for a page (cascaded from global + folder + page) or global rules if no slug",
+    { slug: z.string().optional().describe("Page slug to resolve cascaded rules for; omit for global rules only") },
+    viaDispatch("list_rules"));
+
+  server.tool("set_rules", "Set content rules at a scope (global, folder, or page). Rules are JSON arrays of {id, text, mode, patterns?}",
+    {
+      scope: z.enum(["global", "folder", "page"]).describe("Where to set rules"),
+      scope_id: z.string().optional().describe("Folder ID (scope=folder) or page slug (scope=page); omit for global"),
+      rules: z.string().describe("JSON array of rule objects: [{id, text, mode: 'warn'|'block', patterns?: string[]}]"),
+    },
+    viaDispatch("set_rules"));
 
   return server;
 }

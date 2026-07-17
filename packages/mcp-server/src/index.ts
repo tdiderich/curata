@@ -476,6 +476,42 @@ server.tool(
   }
 );
 
+server.tool(
+  "list_rules",
+  "List content rules that apply to a page (cascaded from global, folder, and page scopes) or just global rules if no slug given. Rules are natural-language content policies that agents should follow when writing.",
+  {
+    slug: z.string().optional().describe("Page slug to resolve cascaded rules for. Omit to see global rules only."),
+  },
+  async ({ slug }) => {
+    const args: Record<string, string> = {};
+    if (slug) args.slug = slug;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "list_rules", args);
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    return { content: [{ type: "text" as const, text: JSON.stringify(result.result, null, 2) }] };
+  }
+);
+
+server.tool(
+  "set_rules",
+  "Set content rules at a given scope. Rules are validated on every write/patch and shown on every read. Use mode 'block' for hard enforcement (write rejected) or 'warn' for soft guidance (write allowed with warnings).",
+  {
+    scope: z.enum(["global", "folder", "page"]).describe("Scope to set rules at"),
+    scope_id: z.string().optional().describe("Folder ID (for scope=folder) or page slug (for scope=page). Omit for global."),
+    rules: z.string().describe("JSON array of rule objects: [{id: string, text: string, mode: 'warn'|'block', patterns?: string[]}]"),
+  },
+  async ({ scope, scope_id, rules }) => {
+    const args: Record<string, string> = { scope, rules };
+    if (scope_id) args.scope_id = scope_id;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "set_rules", args);
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    return { content: [{ type: "text" as const, text: JSON.stringify(result.result, null, 2) }] };
+  }
+);
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);

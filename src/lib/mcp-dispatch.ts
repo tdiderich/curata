@@ -23,6 +23,8 @@ import { buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
 import { getChromium, previewUrl, screenshotPage, renderHtmlToPng } from "@/lib/export-render";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
 import { checkFolderBoundary, mcpDefaultVisibility } from "@/lib/access";
+import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
+import type { Prisma } from "@/generated/prisma/client";
 import {
   upsertConcepts,
   upsertLinks,
@@ -59,8 +61,9 @@ export const READ_TOOLS = [
   "get_semantic_map",
   "export_page",
   "export_report",
+  "list_rules",
 ];
-export const WRITE_TOOLS = ["write_page", "create_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page"];
+export const WRITE_TOOLS = ["write_page", "create_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules"];
 export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -77,16 +80,16 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_component_reference: { known: new Set() },
   list_folders: { known: new Set() },
   get_folder_structure: { known: new Set() },
-  create_folder: { known: new Set(["name", "parent_id", "visibility"]), aliases: { parentId: "parent_id" } },
-  update_folder: { known: new Set(["id", "name", "parent_id", "visibility"]), aliases: { parentId: "parent_id" } },
+  create_folder: { known: new Set(["name", "parent_id", "visibility", "rules"]), aliases: { parentId: "parent_id" } },
+  update_folder: { known: new Set(["id", "name", "parent_id", "visibility", "rules"]), aliases: { parentId: "parent_id" } },
   get_versions: { known: new Set(["slug", "limit"]) },
   validate_page: { known: new Set(["slug", "content"]) },
-  create_page: { known: new Set(["slug", "content", "folder_id", "visibility"]), aliases: { folderId: "folder_id" } },
+  create_page: { known: new Set(["slug", "content", "folder_id", "visibility", "rules"]), aliases: { folderId: "folder_id" } },
   move_page: { known: new Set(["slug", "folder_id"]), aliases: { folderId: "folder_id" } },
-  write_page: { known: new Set(["slug", "content", "expected_hash", "visibility", "folder_id", "concepts", "links"]), aliases: { folderId: "folder_id" } },
+  write_page: { known: new Set(["slug", "content", "expected_hash", "visibility", "folder_id", "concepts", "links", "rules"]), aliases: { folderId: "folder_id" } },
   annotate_page: { known: new Set(["slug", "text", "section", "kind", "replacement"]) },
   update_annotation: { known: new Set(["slug", "annotation_id", "status"]), aliases: { annotationId: "annotation_id" } },
-  patch_page: { known: new Set(["slug", "operations"]) },
+  patch_page: { known: new Set(["slug", "expected_hash", "operations", "concepts", "links"]) },
   replace_in_page: { known: new Set(["slug", "target", "replacement"]) },
   create_from_template: { known: new Set(["template_slug", "slug", "variables", "folder_id"]), aliases: { templateSlug: "template_slug", folderId: "folder_id" } },
   list_workflows: { known: new Set() },
@@ -96,6 +99,8 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_semantic_map: { known: new Set(["kind"]) },
   export_page: { known: new Set(["slug", "format"]) },
   export_report: { known: new Set(["slugs", "title", "subtitle"]) },
+  list_rules: { known: new Set(["slug"]) },
+  set_rules: { known: new Set(["scope", "scope_id", "rules"]) },
 };
 
 function validateParams(tool: string, args: Record<string, string>): Record<string, string> {
@@ -152,21 +157,25 @@ export async function dispatch(
         result.yaml = yaml.dump(parsed, { lineWidth: -1, noRefs: true });
       }
 
-      const sections = await getPageSections(orgId, args.slug);
-      const annotations = await getAnnotations(orgId, args.slug);
-
       const page = await db.page.findUnique({
         where: { orgId_slug: { orgId, slug: args.slug } },
-        select: { id: true },
+        select: { id: true, folderId: true, rules: true },
       });
+
+      const [sections, annotations] = await Promise.all([
+        getPageSections(orgId, args.slug),
+        getAnnotations(orgId, args.slug),
+      ]);
+
       if (page) {
         bumpViewCount(page.id).catch(() => {});
       }
 
       const concepts = page ? await getPageConcepts(page.id) : [];
       const links = page ? await getPageLinks(orgId, page.id) : [];
+      const rules = await resolveRules(orgId, page?.folderId ?? null, page?.rules);
 
-      return {
+      const response: Record<string, unknown> = {
         slug: args.slug,
         yaml: result.yaml,
         contentHash: result.contentHash,
@@ -175,6 +184,18 @@ export async function dispatch(
         concepts,
         links,
       };
+
+      const allRules = [...rules.inherited, ...rules.page];
+      if (allRules.length > 0) {
+        response.contentRules = allRules.map((r) => ({
+          id: r.id,
+          text: r.text,
+          mode: r.mode,
+          scope: r.scope,
+        }));
+      }
+
+      return response;
     }
 
     case "search": {
@@ -381,8 +402,12 @@ export async function dispatch(
       }
       const existingFolder = await db.folder.findFirst({ where: { orgId, name: args.name, parentId: args.parent_id ?? null } });
       if (existingFolder) throw new Error(`folder "${args.name}" already exists${parentName ? ` under "${parentName}"` : " at root"}`);
+      let cfRules: Prisma.InputJsonValue | undefined;
+      if (args.rules) {
+        try { cfRules = JSON.parse(args.rules) as Prisma.InputJsonValue; } catch { throw new Error("rules must be valid JSON"); }
+      }
       const newFolder = await db.folder.create({
-        data: { orgId, name: args.name, visibility: cfVisibility, createdBy: actorId, parentId: args.parent_id ?? null },
+        data: { orgId, name: args.name, visibility: cfVisibility, createdBy: actorId, parentId: args.parent_id ?? null, ...(cfRules !== undefined ? { rules: cfRules } : {}) },
       });
       logAudit({ orgId, action: "folder.create", resourceType: "folder", resourceId: newFolder.id, actorType: "apikey", actorId, metadata: { name: args.name, parentId: args.parent_id, parentName } });
       return { ok: true, id: newFolder.id, name: newFolder.name, parentId: args.parent_id ?? null, parentName, visibility: cfVisibility };
@@ -395,6 +420,8 @@ export async function dispatch(
       if (args.parent_id) {
         const parent = await db.folder.findFirst({ where: { id: args.parent_id, orgId } });
         if (!parent) throw new Error(`parent folder not found: ${args.parent_id}`);
+        const wouldCycle = await detectFolderCycle(orgId, args.id, args.parent_id);
+        if (wouldCycle) throw new Error("cannot reparent: would create a cycle");
       }
       if (args.visibility && args.visibility !== "private" && args.visibility !== "org") {
         throw new Error("visibility must be 'private' or 'org'");
@@ -413,12 +440,17 @@ export async function dispatch(
           );
         }
       }
+      let ufRulesParsed: Prisma.InputJsonValue | undefined;
+      if (args.rules !== undefined) {
+        try { ufRulesParsed = JSON.parse(args.rules) as Prisma.InputJsonValue; } catch { throw new Error("rules must be valid JSON"); }
+      }
       const ufData: Record<string, unknown> = {};
       if (args.name !== undefined) ufData.name = args.name;
       if (args.parent_id !== undefined) ufData.parentId = args.parent_id || null;
       if (args.visibility !== undefined) ufData.visibility = args.visibility;
+      if (ufRulesParsed !== undefined) ufData.rules = ufRulesParsed;
       await db.folder.update({ where: { id: args.id }, data: ufData });
-      logAudit({ orgId, action: "folder.update", resourceType: "folder", resourceId: args.id, actorType: "apikey", actorId, metadata: { name: args.name, parentId: args.parent_id, visibility: args.visibility } });
+      logAudit({ orgId, action: "folder.update", resourceType: "folder", resourceId: args.id, actorType: "apikey", actorId, metadata: { name: args.name, parentId: args.parent_id, visibility: args.visibility, hasRules: !!ufRulesParsed } });
       return { ok: true, id: args.id };
     }
 
@@ -472,13 +504,34 @@ export async function dispatch(
         if (!cpFolder) throw new Error(`folder not found: ${args.folder_id}`);
         checkFolderBoundary(cpVis, cpFolder.visibility);
       }
+      let cpPageRules: unknown;
+      if (args.rules) {
+        try { cpPageRules = JSON.parse(args.rules); } catch { throw new Error("rules must be valid JSON"); }
+      }
+      const cpRules = await resolveRules(orgId, args.folder_id ?? null, cpPageRules);
+      const cpAllRules = [...cpRules.inherited, ...cpRules.page];
+      const cpRuleCheck = validateContentRules(args.content, cpAllRules);
+      if (cpRuleCheck.violations.length > 0) {
+        throw new Error(`content rule violation: ${cpRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}`);
+      }
       const createResult = await writePage(orgId, orgSlug, args.slug, args.content, userId || "agent", undefined, undefined, cpVis);
       if (!createResult.ok) throw new Error(createResult.error);
-      if (args.folder_id) {
+      if (args.folder_id || cpPageRules !== undefined) {
+        const cpUpdate: Record<string, unknown> = {};
+        if (args.folder_id) cpUpdate.folderId = args.folder_id;
+        if (cpPageRules !== undefined) cpUpdate.rules = cpPageRules;
         await db.page.update({
           where: { orgId_slug: { orgId, slug: args.slug } },
-          data: { folderId: args.folder_id },
+          data: cpUpdate,
         });
+      }
+      const cpResult: Record<string, unknown> = { ...createResult };
+      if (cpRuleCheck.warnings.length > 0) {
+        cpResult.contentWarnings = cpRuleCheck.warnings.map((w) => ({
+          scope: w.scope,
+          message: w.message,
+          matches: w.matches,
+        }));
       }
       logAudit({
         orgId,
@@ -489,7 +542,7 @@ export async function dispatch(
         actorId,
         metadata: { slug: args.slug, folderId: args.folder_id },
       });
-      return createResult;
+      return cpResult;
     }
 
     case "move_page": {
@@ -546,7 +599,7 @@ export async function dispatch(
       if (!["private", "org", "public"].includes(wpVis)) throw new Error("visibility must be private, org, or public");
       const wpExisting = await db.page.findUnique({
         where: { orgId_slug: { orgId, slug: args.slug } },
-        select: { folderId: true, folder: { select: { visibility: true } } },
+        select: { folderId: true, rules: true, folder: { select: { visibility: true } } },
       });
       if (args.folder_id) {
         const folder = await db.folder.findFirst({ where: { id: args.folder_id, orgId } });
@@ -554,6 +607,18 @@ export async function dispatch(
         checkFolderBoundary(wpVis, folder.visibility);
       } else if (wpExisting?.folder && args.visibility) {
         checkFolderBoundary(args.visibility, wpExisting.folder.visibility);
+      }
+      let wpPageRules: unknown;
+      if (args.rules !== undefined) {
+        try { wpPageRules = JSON.parse(args.rules); } catch { throw new Error("rules must be valid JSON"); }
+      }
+      const wpFolderId = args.folder_id ?? wpExisting?.folderId ?? null;
+      const wpRulesJson = wpPageRules !== undefined ? wpPageRules : wpExisting?.rules;
+      const wpRules = await resolveRules(orgId, wpFolderId, wpRulesJson);
+      const wpAllRules = [...wpRules.inherited, ...wpRules.page];
+      const wpRuleCheck = validateContentRules(args.content, wpAllRules);
+      if (wpRuleCheck.violations.length > 0) {
+        throw new Error(`content rule violation: ${wpRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}`);
       }
       const writeResult = await writePage(
         orgId,
@@ -568,16 +633,14 @@ export async function dispatch(
       if (!writeResult.ok) {
         throw new Error(writeResult.error);
       }
-      if (args.visibility) {
+      const wpUpdate: Record<string, unknown> = {};
+      if (args.visibility) wpUpdate.visibility = args.visibility;
+      if (args.folder_id) wpUpdate.folderId = args.folder_id;
+      if (wpPageRules !== undefined) wpUpdate.rules = wpPageRules;
+      if (Object.keys(wpUpdate).length > 0) {
         await db.page.update({
           where: { orgId_slug: { orgId, slug: args.slug } },
-          data: { visibility: args.visibility },
-        });
-      }
-      if (args.folder_id) {
-        await db.page.update({
-          where: { orgId_slug: { orgId, slug: args.slug } },
-          data: { folderId: args.folder_id },
+          data: wpUpdate,
         });
       }
       if (args.concepts || args.links) {
@@ -605,7 +668,15 @@ export async function dispatch(
         actorId,
         metadata: { slug: args.slug },
       });
-      return writeResult;
+      const wpResult: Record<string, unknown> = { ...writeResult };
+      if (wpRuleCheck.warnings.length > 0) {
+        wpResult.contentWarnings = wpRuleCheck.warnings.map((w) => ({
+          scope: w.scope,
+          message: w.message,
+          matches: w.matches,
+        }));
+      }
+      return wpResult;
     }
 
     case "annotate_page": {
@@ -711,22 +782,29 @@ export async function dispatch(
         throw new Error(`invalid after patch: ${patchValidation.map((e) => e.message).join("; ")}`);
       }
 
+      const ppExisting = await db.page.findUnique({
+        where: { orgId_slug: { orgId, slug: args.slug } },
+        select: { id: true, folderId: true, rules: true },
+      });
+      const ppRules = await resolveRules(orgId, ppExisting?.folderId ?? null, ppExisting?.rules);
+      const ppAllRules = [...ppRules.inherited, ...ppRules.page];
+      const ppRuleCheck = validateContentRules(newYaml, ppAllRules);
+      if (ppRuleCheck.violations.length > 0) {
+        throw new Error(`content rule violation: ${ppRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}`);
+      }
+
       const patchResult = await writePage(orgId, orgSlug, args.slug, newYaml, "agent", current.contentHash);
       if (!patchResult.ok) throw new Error(patchResult.error);
 
       if (args.concepts || args.links) {
-        const ppPage = await db.page.findUnique({
-          where: { orgId_slug: { orgId, slug: args.slug } },
-          select: { id: true },
-        });
-        if (ppPage) {
+        if (ppExisting) {
           if (args.concepts) {
             const conceptInputs: ConceptInput[] = JSON.parse(args.concepts);
-            await upsertConcepts(ppPage.id, conceptInputs, actorId);
+            await upsertConcepts(ppExisting.id, conceptInputs, actorId);
           }
           if (args.links) {
             const linkInputs: LinkInput[] = JSON.parse(args.links);
-            await upsertLinks(orgId, ppPage.id, linkInputs, actorId);
+            await upsertLinks(orgId, ppExisting.id, linkInputs, actorId);
           }
         }
       }
@@ -739,7 +817,15 @@ export async function dispatch(
         actorId,
         metadata: { slug: args.slug, operationCount: operations.length },
       });
-      return patchResult;
+      const ppResult: Record<string, unknown> = { ...patchResult };
+      if (ppRuleCheck.warnings.length > 0) {
+        ppResult.contentWarnings = ppRuleCheck.warnings.map((w) => ({
+          scope: w.scope,
+          message: w.message,
+          matches: w.matches,
+        }));
+      }
+      return ppResult;
     }
 
     case "list_workflows": {
@@ -992,6 +1078,74 @@ export async function dispatch(
       } catch (err) {
         await browser.close();
         throw err;
+      }
+    }
+
+    case "list_rules": {
+      if (args.slug) {
+        if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
+        const lrPage = await db.page.findUnique({
+          where: { orgId_slug: { orgId, slug: args.slug } },
+          select: { folderId: true, rules: true },
+        });
+        if (!lrPage) throw new Error(`page not found: ${args.slug}`);
+        const lrRules = await resolveRules(orgId, lrPage.folderId, lrPage.rules);
+        return {
+          slug: args.slug,
+          inherited: lrRules.inherited,
+          page: lrRules.page,
+        };
+      }
+      const lrOrg = await db.organization.findUnique({
+        where: { id: orgId },
+        select: { rules: true },
+      });
+      return {
+        scope: "global",
+        rules: lrOrg?.rules ?? [],
+      };
+    }
+
+    case "set_rules": {
+      if (!args.scope) throw new Error("scope is required (global, folder, page)");
+      let parsedRules: unknown;
+      try { parsedRules = JSON.parse(args.rules ?? "[]"); } catch { throw new Error("rules must be valid JSON array"); }
+      if (!Array.isArray(parsedRules)) throw new Error("rules must be an array");
+
+      switch (args.scope) {
+        case "global": {
+          await db.organization.update({
+            where: { id: orgId },
+            data: { rules: parsedRules },
+          });
+          logAudit({ orgId, action: "rules.set", resourceType: "organization", resourceId: orgId, actorType: "apikey", actorId, metadata: { scope: "global", ruleCount: parsedRules.length } });
+          return { ok: true, scope: "global", ruleCount: parsedRules.length };
+        }
+        case "folder": {
+          if (!args.scope_id) throw new Error("scope_id (folder ID) is required");
+          const srFolder = await db.folder.findFirst({ where: { id: args.scope_id, orgId } });
+          if (!srFolder) throw new Error(`folder not found: ${args.scope_id}`);
+          await db.folder.update({
+            where: { id: args.scope_id },
+            data: { rules: parsedRules },
+          });
+          logAudit({ orgId, action: "rules.set", resourceType: "folder", resourceId: args.scope_id, actorType: "apikey", actorId, metadata: { scope: "folder", folderName: srFolder.name, ruleCount: parsedRules.length } });
+          return { ok: true, scope: "folder", folderId: args.scope_id, folderName: srFolder.name, ruleCount: parsedRules.length };
+        }
+        case "page": {
+          if (!args.scope_id) throw new Error("scope_id (page slug) is required");
+          if (!SLUG_RE.test(args.scope_id)) throw new Error("invalid slug format for scope_id");
+          const srPage = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: args.scope_id } } });
+          if (!srPage) throw new Error(`page not found: ${args.scope_id}`);
+          await db.page.update({
+            where: { id: srPage.id },
+            data: { rules: parsedRules },
+          });
+          logAudit({ orgId, action: "rules.set", resourceType: "page", resourceId: args.scope_id, actorType: "apikey", actorId, metadata: { scope: "page", slug: args.scope_id, ruleCount: parsedRules.length } });
+          return { ok: true, scope: "page", slug: args.scope_id, ruleCount: parsedRules.length };
+        }
+        default:
+          throw new Error(`invalid scope: ${args.scope} (must be global, folder, or page)`);
       }
     }
 

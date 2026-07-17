@@ -137,6 +137,18 @@ export function formatPageDetail(page: Record<string, unknown>): string {
     lines.push("");
   }
 
+  const contentRules = page.contentRules as Array<Record<string, unknown>> | undefined;
+  if (contentRules && contentRules.length > 0) {
+    lines.push("## Content Rules");
+    lines.push("The following rules apply to this page. Follow them when writing or editing content.");
+    lines.push("");
+    for (const r of contentRules) {
+      const mode = r.mode === "block" ? "BLOCK" : "WARN";
+      lines.push(`- [${mode}] (${r.scope}) ${r.text}`);
+    }
+    lines.push("");
+  }
+
   const annotations = page.annotations as Array<Record<string, unknown>> | undefined;
   if (annotations && annotations.length > 0) {
     lines.push("## Annotations");
