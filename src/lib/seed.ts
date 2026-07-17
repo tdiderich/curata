@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { seedGettingStartedPage } from "./seed-page";
 import { generateFunSlug } from "./slug-words";
+import { DEFAULT_CONTENT_RULES } from "./content-rules";
 import yaml from "js-yaml";
 import { createHash } from "crypto";
 import fs from "fs";
@@ -80,7 +81,11 @@ export async function seedOrg(name: string, slug?: string): Promise<{ id: string
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       org = await db.organization.create({
-        data: { name, slug: currentSlug },
+        data: {
+          name,
+          slug: currentSlug,
+          rules: DEFAULT_CONTENT_RULES as unknown as Prisma.InputJsonValue,
+        },
       });
       break;
     } catch (err: unknown) {

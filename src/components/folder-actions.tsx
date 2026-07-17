@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
 import { toast } from "@/components/toast";
 import { isPinned, togglePin } from "@/lib/pins";
+import { ContentRulesEditor } from "@/components/content-rules-editor";
 
 interface Folder {
   id: string;
@@ -423,9 +424,10 @@ export function PageMenu({ slug, title, folderId, folders, visibility = "org", o
 interface FolderMenuProps {
   folder: Folder;
   allFolders?: Folder[];
+  canManageRules?: boolean;
 }
 
-export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
+export function FolderMenu({ folder, allFolders = [], canManageRules = false }: FolderMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -434,6 +436,9 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
   const [browseParent, setBrowseParent] = useState<string | null | undefined>(undefined);
   const [addingChild, setAddingChild] = useState(false);
   const [childName, setChildName] = useState("");
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [folderRules, setFolderRules] = useState<Array<{ id: string; text: string; mode: "warn" | "block"; patterns?: string[] }>>([]);
+  const [rulesLoaded, setRulesLoaded] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
@@ -536,6 +541,21 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
   useEffect(() => {
     if (addingChild) childInputRef.current?.focus();
   }, [addingChild]);
+
+  async function openFolderRules() {
+    setOpen(false);
+    if (!rulesLoaded) {
+      try {
+        const res = await fetch(`${basePath}/api/rules?scope=folder:${folder.id}`);
+        if (res.ok) {
+          const data = await res.json() as { rules: Array<{ id: string; text: string; mode: "warn" | "block"; patterns?: string[] }> };
+          setFolderRules(data.rules);
+        }
+      } catch { /* ignore */ }
+      setRulesLoaded(true);
+    }
+    setRulesOpen(true);
+  }
 
   async function createPageHere() {
     setBusy(true);
@@ -677,6 +697,14 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
               + Add folder
             </button>
           )}
+          {canManageRules && (
+            <button
+              className="dash-folder-actions-item"
+              onClick={openFolderRules}
+            >
+              Content rules
+            </button>
+          )}
           {allFolders.length > 0 && (() => {
             const viewingParent = browseParent === undefined ? "__root" : browseParent;
             const visibleFolders = allFolders.filter((f) => {
@@ -744,6 +772,24 @@ export function FolderMenu({ folder, allFolders = [] }: FolderMenuProps) {
             Delete
           </button>
         </AnchoredMenu>
+      )}
+      {rulesOpen && typeof document !== "undefined" && createPortal(
+        <div className="rules-panel-overlay" onClick={() => { setRulesOpen(false); setRulesLoaded(false); }}>
+          <div className="rules-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="rules-panel-header">
+              <span className="rules-panel-title">Content Rules: {folder.name}</span>
+              <button className="rules-panel-close" onClick={() => { setRulesOpen(false); setRulesLoaded(false); }}>&times;</button>
+            </div>
+            <div className="rules-panel-body" style={{ padding: "12px 20px" }}>
+              <ContentRulesEditor
+                scopeParam={`scope=folder:${folder.id}`}
+                initialRules={folderRules}
+                canManage={canManageRules}
+              />
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

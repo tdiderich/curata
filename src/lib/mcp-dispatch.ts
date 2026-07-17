@@ -159,7 +159,7 @@ export async function dispatch(
 
       const page = await db.page.findUnique({
         where: { orgId_slug: { orgId, slug: args.slug } },
-        select: { id: true, folderId: true, rules: true },
+        select: { id: true, folderId: true, rules: true, visibility: true },
       });
 
       const [sections, annotations] = await Promise.all([
@@ -185,9 +185,11 @@ export async function dispatch(
         links,
       };
 
-      const allRules = [...rules.inherited, ...rules.page];
-      if (allRules.length > 0) {
-        response.contentRules = allRules.map((r) => ({
+      const visibleRules = page?.visibility === "public"
+        ? rules.page
+        : [...rules.inherited, ...rules.page];
+      if (visibleRules.length > 0) {
+        response.contentRules = visibleRules.map((r) => ({
           id: r.id,
           text: r.text,
           mode: r.mode,

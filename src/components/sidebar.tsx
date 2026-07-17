@@ -111,6 +111,7 @@ export function Sidebar({
   authMode = "none",
   logoUrl,
   cleanupCount = 0,
+  canManageRules = false,
   authControls,
 }: {
   folders: SidebarFolder[];
@@ -121,6 +122,7 @@ export function Sidebar({
   authMode?: string;
   logoUrl?: string | null;
   cleanupCount?: number;
+  canManageRules?: boolean;
   authControls?: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -317,7 +319,7 @@ export function Sidebar({
             <span className="nav-folder-name">{folder.name}</span>
           </button>
           <span className="nav-row-menu">
-            <FolderMenu folder={folder} allFolders={folders} />
+            <FolderMenu folder={folder} allFolders={folders} canManageRules={canManageRules} />
           </span>
         </div>
         {!isCollapsed && (

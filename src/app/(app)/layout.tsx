@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AUTH_MODE, resolveOrg, resolveCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { basePath } from "@/lib/api-fetch";
+import { can } from "@/lib/permissions";
 import { Sidebar, type SidebarFolder, type SidebarPage } from "@/components/sidebar";
 
 function UserAvatar({ name, email }: { name: string; email: string }) {
@@ -52,10 +53,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let orgSlug = "default";
   let logoUrl: string | null = null;
   let cleanupCount = 0;
+  let canManageRules = false;
 
   try {
     const ctx = await resolveOrg();
     if (ctx) {
+      canManageRules = can(ctx.role, "rules:manage");
       const org = await db.organization.findUnique({
         where: { id: ctx.orgId },
         select: { name: true, logoUrl: true, logoMime: true, updatedAt: true },
@@ -136,7 +139,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="app-shell">
-      <Sidebar folders={folders} pages={pages} archivedPages={archivedPages} orgName={orgName} orgSlug={orgSlug} authMode={AUTH_MODE} logoUrl={logoUrl} cleanupCount={cleanupCount} authControls={<AuthControls />} />
+      <Sidebar folders={folders} pages={pages} archivedPages={archivedPages} orgName={orgName} orgSlug={orgSlug} authMode={AUTH_MODE} logoUrl={logoUrl} cleanupCount={cleanupCount} canManageRules={canManageRules} authControls={<AuthControls />} />
       <main className="app-main">{children}</main>
     </div>
   );

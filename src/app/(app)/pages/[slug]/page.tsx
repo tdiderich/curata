@@ -4,6 +4,9 @@ import Link from "next/link";
 import { resolveOrg, AUTH_MODE } from "@/lib/auth";
 import { getAnnotations, getPageSections, readPage, bumpViewCount } from "@/lib/pages";
 import { db } from "@/lib/db";
+import { can } from "@/lib/permissions";
+import { resolveRules } from "@/lib/content-rules";
+import type { ResolvedRule } from "@/lib/content-rules";
 import { PageRenderer } from "@/generated/kazam-renderer";
 import PageDetailClient from "@/components/page-detail-client";
 import PageEditor from "@/components/page-editor";
@@ -40,9 +43,19 @@ export default async function PageDetailView({
 
   const pageRow = await db.page.findUnique({
     where: { orgId_slug: { orgId: ctx.orgId, slug } },
-    select: { id: true, status: true, supersededBy: true, updatedAt: true },
+    select: { id: true, status: true, supersededBy: true, updatedAt: true, folderId: true, rules: true },
   });
   if (pageRow) bumpViewCount(pageRow.id).catch(() => {});
+
+  const canManageRules = can(ctx.role, "rules:manage");
+  const canEditPage = can(ctx.role, "page:edit");
+  let inheritedRules: ResolvedRule[] = [];
+  let pageRules: ResolvedRule[] = [];
+  if (pageRow) {
+    const resolved = await resolveRules(ctx.orgId, pageRow.folderId, pageRow.rules);
+    inheritedRules = resolved.inherited;
+    pageRules = resolved.page;
+  }
 
   const pageTitle = (pageData.json.title as string) || slug;
 
@@ -151,6 +164,11 @@ export default async function PageDetailView({
         authMode={AUTH_MODE}
         printFlow={(pageData.json.print_flow as string) || undefined}
         shell={(pageData.json.shell as string) || "standard"}
+        inheritedRules={inheritedRules}
+        pageRules={pageRules}
+        pageSlug={slug}
+        canManageRules={canManageRules}
+        canEditPageRules={canEditPage}
         archived={pageRow?.status === "archived"
           ? { since: pageRow.updatedAt.toISOString().slice(0, 10), supersededBy: pageRow.supersededBy }
           : undefined}

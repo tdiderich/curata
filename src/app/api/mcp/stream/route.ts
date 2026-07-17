@@ -120,7 +120,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
 
     const page = await db.page.findUnique({
       where: { orgId_slug: { orgId, slug } },
-      select: { id: true, folderId: true, rules: true },
+      select: { id: true, folderId: true, rules: true, visibility: true },
     });
 
     const [sections, annotations] = await Promise.all([
@@ -135,10 +135,12 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     }
 
     const rules = await resolveRules(orgId, page?.folderId ?? null, page?.rules);
-    const allRules = [...rules.inherited, ...rules.page];
+    const visibleRules = page?.visibility === "public"
+      ? rules.page
+      : [...rules.inherited, ...rules.page];
     const response: Record<string, unknown> = { slug, yaml: result.yaml, contentHash: result.contentHash, sections, annotations, concepts, links };
-    if (allRules.length > 0) {
-      response.contentRules = allRules.map((r) => ({ id: r.id, text: r.text, mode: r.mode, scope: r.scope }));
+    if (visibleRules.length > 0) {
+      response.contentRules = visibleRules.map((r) => ({ id: r.id, text: r.text, mode: r.mode, scope: r.scope }));
     }
 
     return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };

@@ -12,6 +12,7 @@ import SourceEditor, { type SourceEditorControls } from "./source-editor";
 import { toast } from "./toast";
 import { basePath } from "@/lib/api-fetch";
 import { highlightTarget, clearHighlights } from "@/lib/annotation-highlights";
+import { ContentRulesEditor } from "@/components/content-rules-editor";
 
 interface Annotation {
   id: string;
@@ -59,6 +60,14 @@ function findSectionTop(
   return null;
 }
 
+interface ContentRuleDisplay {
+  id: string;
+  text: string;
+  mode: "warn" | "block";
+  scope: string;
+  patterns?: string[];
+}
+
 export default function PageDetailClient({
   slug,
   children,
@@ -71,6 +80,11 @@ export default function PageDetailClient({
   printFlow,
   shell,
   archived,
+  inheritedRules = [],
+  pageRules = [],
+  pageSlug,
+  canManageRules = false,
+  canEditPageRules = false,
 }: {
   slug: string;
   children?: React.ReactNode;
@@ -84,6 +98,11 @@ export default function PageDetailClient({
   printFlow?: string;
   shell?: string;
   archived?: { since: string; supersededBy: string | null };
+  inheritedRules?: ContentRuleDisplay[];
+  pageRules?: ContentRuleDisplay[];
+  pageSlug?: string;
+  canManageRules?: boolean;
+  canEditPageRules?: boolean;
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -108,6 +127,7 @@ export default function PageDetailClient({
   const [editError, setEditError] = useState<string | null>(null);
   const [agentOpen, setAgentOpen] = useState(false);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
   const [viewTab, setViewTab] = useState<"preview" | "source">("preview");
@@ -544,6 +564,14 @@ export default function PageDetailClient({
                 >
                   Revert to past version
                 </button>
+                {(inheritedRules.length > 0 || pageRules.length > 0 || canEditPageRules) && (
+                  <button
+                    className="page-actions-item"
+                    onClick={() => { setRulesOpen(true); setActionsOpen(false); }}
+                  >
+                    Content rules ({inheritedRules.length + pageRules.length})
+                  </button>
+                )}
                 <Link
                   href={`/pages/${slug}?edit=1`}
                   className="page-actions-item"
@@ -603,6 +631,66 @@ export default function PageDetailClient({
       {versionHistoryOpen &&
         createPortal(
           <VersionHistoryPanel slug={slug} onClose={() => setVersionHistoryOpen(false)} />,
+          document.body,
+        )}
+      {rulesOpen &&
+        createPortal(
+          <div className="rules-panel-overlay" onClick={() => setRulesOpen(false)}>
+            <div className="rules-panel" onClick={(e) => e.stopPropagation()}>
+              <div className="rules-panel-header">
+                <span className="rules-panel-title">Content Rules</span>
+                <button className="rules-panel-close" onClick={() => setRulesOpen(false)}>&times;</button>
+              </div>
+              <div className="rules-panel-body">
+                {inheritedRules.length > 0 && (
+                  <div className="rules-panel-section">
+                    <div className="rules-panel-section-label">Inherited</div>
+                    {inheritedRules.map((rule) => (
+                      <div key={rule.id} className="rules-panel-row">
+                        <span className={`cr-dot cr-dot--${rule.mode}`} />
+                        <div className="rules-panel-row-content">
+                          <span className="rules-panel-row-text">{rule.text}</span>
+                          <span className="rules-panel-row-scope">{rule.scope}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="rules-panel-section">
+                  <div className="rules-panel-section-label">Page</div>
+                  {canEditPageRules && pageSlug ? (
+                    <div style={{ padding: "4px 20px 8px" }}>
+                      <ContentRulesEditor
+                        scopeParam={`scope=page:${pageSlug}`}
+                        initialRules={pageRules.map(({ id, text, mode, patterns }) => ({ id, text, mode, patterns }))}
+                        canManage={canEditPageRules}
+                      />
+                    </div>
+                  ) : pageRules.length > 0 ? (
+                    pageRules.map((rule) => (
+                      <div key={rule.id} className="rules-panel-row">
+                        <span className={`cr-dot cr-dot--${rule.mode}`} />
+                        <div className="rules-panel-row-content">
+                          <span className="rules-panel-row-text">{rule.text}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rules-panel-row" style={{ color: "var(--text-muted)", fontSize: 13, padding: "8px 20px" }}>
+                      No page-level rules
+                    </div>
+                  )}
+                </div>
+              </div>
+              {canManageRules && (
+                <div className="rules-panel-footer">
+                  <Link href="/settings?tab=content-rules" className="rules-panel-manage">
+                    Manage global rules
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>,
           document.body,
         )}
 
