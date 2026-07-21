@@ -2,11 +2,12 @@
 set -euo pipefail
 
 # Download the latest kazam release binary into .bin/kazam
-# This ensures local builds use the same binary as CI.
+# Checks the release tag_name to skip re-downloads when unchanged.
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN_DIR="$REPO_ROOT/.bin"
 KAZAM="$BIN_DIR/kazam"
+VERSION_FILE="$BIN_DIR/.kazam-version"
 
 mkdir -p "$BIN_DIR"
 
@@ -20,15 +21,20 @@ esac
 
 LATEST_URL="https://github.com/tdiderich/kazam/releases/latest/download/$ASSET"
 
-# Skip if binary exists and is less than 1 day old
-if [ -f "$KAZAM" ]; then
-  if find "$KAZAM" -mmin -1440 -print -quit 2>/dev/null | grep -q .; then
-    echo "kazam binary is fresh (< 1 day old), skipping download"
+# Check if release has changed by comparing published_at timestamp
+REMOTE_TS=$(curl -fsSL "https://api.github.com/repos/tdiderich/kazam/releases/latest" 2>/dev/null \
+  | grep '"published_at"' | head -1 | sed 's/.*: "//;s/".*//' || true)
+
+if [ -f "$KAZAM" ] && [ -f "$VERSION_FILE" ] && [ -n "$REMOTE_TS" ]; then
+  LOCAL_TS=$(cat "$VERSION_FILE")
+  if [ "$REMOTE_TS" = "$LOCAL_TS" ]; then
+    echo "kazam binary matches latest release ($REMOTE_TS), skipping download"
     exit 0
   fi
 fi
 
 echo "downloading kazam from $LATEST_URL"
-curl -fL "$LATEST_URL" -o "$KAZAM"
+curl -fSL "$LATEST_URL" -o "$KAZAM"
 chmod +x "$KAZAM"
+[ -n "$REMOTE_TS" ] && echo "$REMOTE_TS" > "$VERSION_FILE"
 echo "installed kazam to $KAZAM"
