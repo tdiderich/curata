@@ -360,26 +360,18 @@ body .c-section.align-right > * { max-width: none !important; }
 
 /* ── Target text highlights ── */
 
-.ann-target-highlight {
+::highlight(ann-highlight) {
   background: rgba(var(--accent-rgb), 0.15);
-  border-bottom: 2px solid rgba(var(--accent-rgb), 0.5);
+}
+
+.ann-highlight-overlay {
+  background: rgba(var(--accent-rgb), 0.15);
   border-radius: 2px;
-  padding: 1px 0;
   cursor: pointer;
   transition: background 0.15s;
 }
-
-.ann-target-highlight:hover {
+.ann-highlight-overlay:hover {
   background: rgba(var(--accent-rgb), 0.25);
-}
-
-.ann-target-highlight-svg {
-  fill: rgba(var(--accent-rgb), 0.18);
-  cursor: pointer;
-  transition: fill 0.15s;
-}
-.ann-target-highlight-svg:hover {
-  fill: rgba(var(--accent-rgb), 0.3);
 }
 
 /* ── Section highlight when annotation clicked ── */
@@ -4642,7 +4634,7 @@ body .c-section.align-right > * { max-width: none !important; }
   .ann-bubble--add,
   .ann-card,
   .ann-mode-toggle,
-  .ann-target-highlight,
+  .ann-highlight-overlay,
   .page-detail-nav,
   .page-detail-actions,
   .page-chrome,
