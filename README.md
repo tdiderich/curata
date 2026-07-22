@@ -102,6 +102,7 @@ The curation layer is the key differentiator: humans annotate agent output, flag
 - **Search** — full-text search across all pages and YAML content
 - **API key auth** — scoped read/write keys for agent access
 - **Theme system** — 7 accent colors, light/dark mode, texture overlays
+- **AI tool packs**: pages marked with a `pack:` block install into repos via `kazam install`, compiling into CLAUDE.md / .cursorrules
 - **Templates** — 20 pre-built page structures for common use cases
 
 ---

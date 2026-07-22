@@ -35,6 +35,9 @@ function isProtected(pathname: string): boolean {
 
 function isPublic(pathname: string, searchParams?: URLSearchParams): boolean {
   if (pathname === "/" || pathname === "/sign-in") return true;
+  // Bare /api/mcp (the REST shim) — the "/api/mcp/" prefix below only matches
+  // subroutes, which left the shim auth-walled on clerk deployments.
+  if (pathname === "/api/mcp") return true;
   if (pathname.startsWith("/export-preview/") && searchParams?.has("nonce")) return true;
   const prefixes = AUTH_MODE === "clerk" ? PUBLIC_PREFIXES_CLERK : PUBLIC_PREFIXES_BASE;
   return prefixes.some((p) => pathname.startsWith(p));
