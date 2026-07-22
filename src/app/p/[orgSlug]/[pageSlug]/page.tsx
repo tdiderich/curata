@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { resolveCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -94,6 +95,20 @@ export default async function PublicPageView({ params, searchParams }: Props & {
 
   const pageTitle = (pageData.json.title as string) || pageSlug;
 
+  // Pack pages get a "try it" install banner: the pack: marker means this page
+  // is installable with one kazam command against its public /p/ URL.
+  const isPack =
+    page.visibility === "public" &&
+    !!pageData.json.pack &&
+    typeof pageData.json.pack === "object";
+  let installCmd: string | null = null;
+  if (isPack) {
+    const h = await headers();
+    const host = h.get("host") ?? "";
+    const proto = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
+    installCmd = `kazam install ${proto}://${host}/p/${orgSlug}/${pageSlug}`;
+  }
+
   return (
     <>
       <ThemeScript theme={org.theme} mode={org.mode} texture={org.texture} glow={org.glow} />
@@ -113,6 +128,12 @@ export default async function PublicPageView({ params, searchParams }: Props & {
                 {typeof pageData.json.subtitle === "string" && (
                   <p className="c-header-subtitle">{pageData.json.subtitle}</p>
                 )}
+              </div>
+            )}
+            {installCmd && (
+              <div className="pack-install-banner">
+                <span className="pack-install-label">Install this pack</span>
+                <code className="pack-install-cmd">{installCmd}</code>
               </div>
             )}
             <PageRenderer

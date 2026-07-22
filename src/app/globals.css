@@ -3915,6 +3915,40 @@ body .c-section.align-right > * { max-width: none !important; }
   color: var(--muted);
 }
 
+.pack-install-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+}
+
+.pack-install-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pack-install-cmd {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  overflow-x: auto;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
 .public-page-footer-link {
   color: var(--teal);
   font-weight: 600;

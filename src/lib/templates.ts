@@ -38,6 +38,13 @@ export const TEMPLATES: Template[] = [
     previewUrl: "/p/curata-internal/template-agent-skills-workflows",
   },
   {
+    slug: "ai-tool-pack",
+    title: "AI Tool Pack",
+    description: "Rules and guardrails that install into CLAUDE.md, AGENTS.md, and .cursorrules with kazam install",
+    persona: "Engineering",
+    previewUrl: "/p/curata-internal/template-ai-tool-pack",
+  },
+  {
     slug: "architecture-decision-record",
     title: "Architecture Decision Record",
     description: "Document key decisions, alternatives considered, and trade-offs",

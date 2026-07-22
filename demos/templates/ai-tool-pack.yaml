@@ -1,0 +1,31 @@
+title: "{{pack_name}}"
+subtitle: "AI tool pack for {{one_line_description}}"
+shell: standard
+pack:
+  targets: [claude, cursor, agents]
+components:
+  - type: callout
+    variant: info
+    title: This page is an AI tool pack.
+    body: "Install it into a repo with `kazam install <instance-url>/p/<org>/<this-page-slug>`. Every markdown component compiles, in order, into the target config files (CLAUDE.md, AGENTS.md, .cursorrules) inside a managed block. The installer adds its own pack header, so don't start the markdown with a top-level heading. Non-markdown components like this callout are page metadata only and are never installed."
+
+  - type: section
+    eyebrow: Pack Info
+    heading: About this pack
+    components:
+      - type: definition_list
+        items:
+          - term: Maintainer
+            definition: "{{maintainer}}"
+          - term: Audience
+            definition: "{{audience}}"
+          - term: Scope
+            definition: "{{scope}}"
+
+  - type: section
+    eyebrow: Rules
+    heading: "{{pack_name}} rules"
+    components:
+      - type: markdown
+        body: |
+          {{rules_markdown}}
