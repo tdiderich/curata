@@ -7,8 +7,8 @@ import { readPage, getAnnotations, bumpViewCount } from "@/lib/pages";
 import { PageRenderer } from "@/generated/kazam-renderer";
 import { ThemeScript } from "@/components/theme-script";
 import PublicAnnotationClient from "@/components/public-annotation-client";
-import CopyPagePrompt from "@/components/copy-page-prompt";
-import { agentPreamble } from "@/lib/page-markdown";
+import PagePromptDialog from "@/components/page-prompt-dialog";
+import { buildPagePrompt, opensPromptOnLoad } from "@/lib/share-prompt";
 import type { Metadata } from "next";
 
 interface Props {
@@ -110,9 +110,15 @@ export default async function PublicPageView({ params, searchParams }: Props & {
     typeof pageData.json.pack === "object";
   const installCmd = isPack ? `kazam install ${pageUrl}` : null;
 
-  // Preamble only. The client fetches the markdown body from the .md route on
-  // click, so a long page is not serialized into the HTML twice.
-  const promptPreamble = agentPreamble(pageTitle, { url: pageUrl, org: org.name });
+  const pack = pageData.json.pack as Record<string, unknown> | undefined;
+  const agentPrompt = buildPagePrompt({
+    baseUrl: `${proto}://${host}`,
+    orgSlug,
+    pageSlug,
+    title: pageTitle,
+    description: (pageData.json.subtitle as string) || undefined,
+    packName: isPack ? (typeof pack?.name === "string" ? pack.name : pageSlug) : undefined,
+  });
   const shell = (pageData.json.shell as string) || "standard";
 
   return (
@@ -130,9 +136,12 @@ export default async function PublicPageView({ params, searchParams }: Props & {
           <div className="page-detail-content">
             {shell !== "deck" && (
               <>
-                <CopyPagePrompt
+                <PagePromptDialog
+                  title={pageTitle}
+                  description={(pageData.json.subtitle as string) || undefined}
+                  prompt={agentPrompt}
                   markdownUrl={`/p/${orgSlug}/${pageSlug}.md${shareToken ? `?token=${encodeURIComponent(shareToken)}` : ""}`}
-                  preamble={promptPreamble}
+                  openByDefault={opensPromptOnLoad(pageData.json)}
                 />
                 <div className="c-header">
                   <h1 className="c-header-title">{pageTitle}</h1>

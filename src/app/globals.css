@@ -3956,6 +3956,24 @@ body .c-section.align-right > * { max-width: none !important; }
   margin: 0 0 16px;
 }
 
+.page-prompt-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.page-prompt-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.page-prompt-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .page-agent-action {
   font-size: 12px;
   font-weight: 600;
