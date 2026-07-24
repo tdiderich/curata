@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PUBLIC_PAGE_PATH, negotiateTarget } from "@/lib/content-negotiation";
 
 const AUTH_MODE = process.env.AUTH_MODE ?? "none";
 
@@ -15,6 +16,15 @@ const PUBLIC_PREFIXES_BASE = [
   "/api/og/",
   "/api/public-annotations/",
   "/p/",
+  // Agent-discovery surfaces. These describe only public content and must stay
+  // reachable without auth in every AUTH_MODE, the same way robots.txt is.
+  "/robots.txt",
+  "/sitemap.xml",
+  "/llms.txt",
+  "/llms-full.txt",
+  "/.well-known/",
+  "/api/well-known/",
+  "/mcp",
 ];
 
 const PUBLIC_PREFIXES_CLERK = [
@@ -44,7 +54,50 @@ function isPublic(pathname: string, searchParams?: URLSearchParams): boolean {
 }
 
 function isAgentApi(pathname: string): boolean {
-  return pathname.startsWith("/api/mcp");
+  // /mcp is the short alias rewritten to /api/mcp; it must be rate limited too.
+  return pathname.startsWith("/api/mcp") || pathname === "/mcp" || pathname.startsWith("/mcp/");
+}
+
+/**
+ * Serves the agent-readable representations of a public page from its own URL:
+ * a `.md` / `.yaml` suffix, or `Accept: text/markdown` / `Accept:
+ * application/yaml` on the page path itself. HTML stays the default for
+ * browsers, and the auth gate is unchanged — both targets re-check visibility.
+ */
+function negotiatedRewrite(request: NextRequest): URL | null {
+  const target = negotiateTarget(request.nextUrl.pathname, request.headers.get("accept"));
+  if (!target) return null;
+  const url = request.nextUrl.clone();
+  url.pathname = target;
+  return url;
+}
+
+/**
+ * Advertises the alternate representations on the HTML page response, and marks
+ * it as varying by Accept so a cache never serves markdown to a browser.
+ */
+function applyAgentHeaders(request: NextRequest, response: NextResponse): void {
+  const { pathname } = request.nextUrl;
+  if (pathname === "/") {
+    response.headers.set(
+      "Link",
+      [
+        '</.well-known/api-catalog>; rel="api-catalog"',
+        '</llms.txt>; rel="alternate"; type="text/plain"',
+        '</.well-known/mcp/server-card.json>; rel="service-desc"',
+      ].join(", "),
+    );
+    return;
+  }
+  if (!PUBLIC_PAGE_PATH.test(pathname)) return;
+  // Vary: Accept is set in next.config.ts — Next overwrites it here.
+  response.headers.set(
+    "Link",
+    [
+      `<${pathname}.md>; rel="alternate"; type="text/markdown"`,
+      `<${pathname}.yaml>; rel="alternate"; type="application/yaml"`,
+    ].join(", "),
+  );
 }
 
 function applyRateLimit(request: NextRequest): NextResponse | null {
@@ -143,6 +196,7 @@ async function middlewareClerk(request: NextRequest) {
 
     const response = NextResponse.next();
     applySecurityHeaders(req, response);
+    applyAgentHeaders(req, response);
     return response;
   });
 
@@ -180,6 +234,7 @@ async function middlewareDefault(request: NextRequest) {
 
   const response = NextResponse.next();
   applySecurityHeaders(request, response);
+  applyAgentHeaders(request, response);
   return response;
 }
 
@@ -192,6 +247,16 @@ export default async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === "/api/health") {
     return NextResponse.next();
   }
+
+  // Content negotiation runs before the auth branches: /p/ is public in every
+  // mode, and both rewrite targets re-check page visibility themselves.
+  const rewriteTo = negotiatedRewrite(request);
+  if (rewriteTo) {
+    const rewritten = NextResponse.rewrite(rewriteTo);
+    applySecurityHeaders(request, rewritten);
+    return rewritten;
+  }
+
   if (AUTH_MODE === "clerk") return middlewareClerk(request);
   return middlewareDefault(request);
 }

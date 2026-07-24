@@ -3949,6 +3949,30 @@ body .c-section.align-right > * { max-width: none !important; }
   min-width: 0;
 }
 
+.page-agent-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.page-agent-action {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.page-agent-action:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
 .public-page-footer-link {
   color: var(--teal);
   font-weight: 600;

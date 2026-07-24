@@ -7,6 +7,8 @@ import { readPage, getAnnotations, bumpViewCount } from "@/lib/pages";
 import { PageRenderer } from "@/generated/kazam-renderer";
 import { ThemeScript } from "@/components/theme-script";
 import PublicAnnotationClient from "@/components/public-annotation-client";
+import CopyPagePrompt from "@/components/copy-page-prompt";
+import { agentPreamble } from "@/lib/page-markdown";
 import type { Metadata } from "next";
 
 interface Props {
@@ -95,19 +97,23 @@ export default async function PublicPageView({ params, searchParams }: Props & {
 
   const pageTitle = (pageData.json.title as string) || pageSlug;
 
+  const h = await headers();
+  const host = h.get("host") ?? "";
+  const proto = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
+  const pageUrl = `${proto}://${host}/p/${orgSlug}/${pageSlug}`;
+
   // Pack pages get a "try it" install banner: the pack: marker means this page
   // is installable with one kazam command against its public /p/ URL.
   const isPack =
     page.visibility === "public" &&
     !!pageData.json.pack &&
     typeof pageData.json.pack === "object";
-  let installCmd: string | null = null;
-  if (isPack) {
-    const h = await headers();
-    const host = h.get("host") ?? "";
-    const proto = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
-    installCmd = `kazam install ${proto}://${host}/p/${orgSlug}/${pageSlug}`;
-  }
+  const installCmd = isPack ? `kazam install ${pageUrl}` : null;
+
+  // Preamble only. The client fetches the markdown body from the .md route on
+  // click, so a long page is not serialized into the HTML twice.
+  const promptPreamble = agentPreamble(pageTitle, { url: pageUrl, org: org.name });
+  const shell = (pageData.json.shell as string) || "standard";
 
   return (
     <>
@@ -119,16 +125,22 @@ export default async function PublicPageView({ params, searchParams }: Props & {
           annotations={annotations}
           isSignedIn={isSignedIn}
           printFlow={(pageData.json.print_flow as string) || undefined}
-          shell={(pageData.json.shell as string) || "standard"}
+          shell={shell}
         >
           <div className="page-detail-content">
-            {(pageData.json.shell as string) !== "deck" && (
-              <div className="c-header">
-                <h1 className="c-header-title">{pageTitle}</h1>
-                {typeof pageData.json.subtitle === "string" && (
-                  <p className="c-header-subtitle">{pageData.json.subtitle}</p>
-                )}
-              </div>
+            {shell !== "deck" && (
+              <>
+                <CopyPagePrompt
+                  markdownUrl={`/p/${orgSlug}/${pageSlug}.md${shareToken ? `?token=${encodeURIComponent(shareToken)}` : ""}`}
+                  preamble={promptPreamble}
+                />
+                <div className="c-header">
+                  <h1 className="c-header-title">{pageTitle}</h1>
+                  {typeof pageData.json.subtitle === "string" && (
+                    <p className="c-header-subtitle">{pageData.json.subtitle}</p>
+                  )}
+                </div>
+              </>
             )}
             {installCmd && (
               <div className="pack-install-banner">
@@ -140,7 +152,7 @@ export default async function PublicPageView({ params, searchParams }: Props & {
               page={{
                 title: pageTitle,
                 subtitle: (pageData.json.subtitle as string) || undefined,
-                shell: (pageData.json.shell as string) || "standard",
+                shell,
                 components: (pageData.json.components ?? []) as Array<{
                   type: string;
                   [key: string]: unknown;
