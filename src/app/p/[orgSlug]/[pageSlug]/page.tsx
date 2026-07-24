@@ -8,7 +8,7 @@ import { PageRenderer } from "@/generated/kazam-renderer";
 import { ThemeScript } from "@/components/theme-script";
 import PublicAnnotationClient from "@/components/public-annotation-client";
 import PagePromptDialog from "@/components/page-prompt-dialog";
-import { buildPagePrompt, opensPromptOnLoad } from "@/lib/share-prompt";
+import { buildPagePrompt, opensPromptOnLoad, promptNote } from "@/lib/share-prompt";
 import type { Metadata } from "next";
 
 interface Props {
@@ -118,6 +118,7 @@ export default async function PublicPageView({ params, searchParams }: Props & {
     title: pageTitle,
     description: (pageData.json.subtitle as string) || undefined,
     packName: isPack ? (typeof pack?.name === "string" ? pack.name : pageSlug) : undefined,
+    note: promptNote(pageData.json),
   });
   const shell = (pageData.json.shell as string) || "standard";
 

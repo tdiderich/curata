@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readPage } from "@/lib/pages";
 import { resolvePublicPage } from "@/lib/public-page";
-import { buildPagePrompt } from "@/lib/share-prompt";
+import { buildPagePrompt, promptNote } from "@/lib/share-prompt";
 import { siteOrigin } from "@/lib/public-catalog";
 
 // The share prompt as plain text, so it can be curled or linked, not only copied
@@ -36,6 +36,7 @@ export async function GET(request: Request, { params }: Ctx) {
     title: (data.json.title as string) || pageSlug,
     description: (data.json.subtitle as string) || undefined,
     packName,
+    note: promptNote(data.json),
   });
 
   return new NextResponse(prompt, {

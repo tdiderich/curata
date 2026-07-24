@@ -96,6 +96,28 @@ describe("pageToMarkdown", () => {
     expect(md).toContain("```bash\nkazam install .\n```");
   });
 
+  it("lengthens the fence when the code contains its own fences", () => {
+    // A page that ships a SKILL.md inside a code component carries ``` fences of
+    // its own; a bare three-backtick wrapper would be closed by the first one.
+    const inner = "# Skill\n\n```bash\nuv run tool.py\n```\n";
+    const md = pageToMarkdown({
+      title: "T",
+      components: [{ type: "code", language: "markdown", code: inner }],
+    });
+    expect(md).toContain("````markdown");
+    expect(md).toContain("```bash");
+    const fences = md.match(/^`{4,}/gm) ?? [];
+    expect(fences).toHaveLength(2);
+  });
+
+  it("goes longer still for four-backtick content", () => {
+    const md = pageToMarkdown({
+      title: "T",
+      components: [{ type: "code", code: "````\nnested\n````" }],
+    });
+    expect(md).toContain("`````");
+  });
+
   it("renders trees as nested lists with status markers", () => {
     const md = pageToMarkdown({
       title: "T",

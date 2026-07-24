@@ -16,6 +16,8 @@ export interface PagePromptSource {
   description?: string;
   /** Pages with a `pack:` block are installable with one kazam command. */
   packName?: string;
+  /** Page-authored line, from `agent_prompt.note`. */
+  note?: string;
 }
 
 export function buildPagePrompt({
@@ -25,8 +27,10 @@ export function buildPagePrompt({
   title,
   description,
   packName,
+  note,
 }: PagePromptSource): string {
   const pageUrl = `${baseUrl}/p/${orgSlug}/${pageSlug}`;
+  const noteLine = note ? `\nFrom the author of this page: ${note.trim()}\n` : "";
 
   const packSection = packName
     ? `
@@ -51,6 +55,7 @@ cargo install --git https://github.com/tdiderich/kazam
   return `# ${title}
 ${description ? `\n${description}\n` : ""}
 Source: ${pageUrl}
+${noteLine}
 
 ## Fetch it
 
@@ -80,14 +85,39 @@ ${packSection}
 `;
 }
 
+// The `agent_prompt` page key takes three shapes:
+//
+//   agent_prompt: open          # dialog opens on load
+//   agent_prompt: true          # same
+//   agent_prompt:               # object form, for adding a note
+//     open: true
+//     note: Tell it where your brand colors live.
+//
+// The note is appended to the prompt, which is how a page asks for the one piece
+// of context the generic prompt cannot know.
+
+function promptConfig(json: Record<string, unknown>): Record<string, unknown> | null {
+  const flag = json.agent_prompt;
+  return flag && typeof flag === "object" && !Array.isArray(flag)
+    ? (flag as Record<string, unknown>)
+    : null;
+}
+
 /**
- * Reads the page-level flag that makes the share dialog open on load.
- *
- * `agent_prompt: open` (or `true`) is for pages whose whole point is being
- * handed to an agent: skills, workflows, packs. Anything else keeps the dialog
- * behind its button.
+ * Whether the share dialog opens on load. True for pages whose whole point is
+ * being handed to an agent: skills, workflows, packs. Anything else keeps the
+ * dialog behind its button.
  */
 export function opensPromptOnLoad(json: Record<string, unknown>): boolean {
   const flag = json.agent_prompt;
-  return flag === "open" || flag === true;
+  if (flag === "open" || flag === true) return true;
+  const config = promptConfig(json);
+  if (!config) return false;
+  return config.open === true || config.open === "open";
+}
+
+/** The page-authored line appended to the prompt, if the page set one. */
+export function promptNote(json: Record<string, unknown>): string | undefined {
+  const note = promptConfig(json)?.note;
+  return typeof note === "string" && note.trim() ? note.trim() : undefined;
 }

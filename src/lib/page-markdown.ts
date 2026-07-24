@@ -32,6 +32,17 @@ const cell = (v: unknown): string => {
 const heading = (depth: number, text: string): string =>
   `${"#".repeat(Math.min(depth, 6))} ${text}`;
 
+/**
+ * Opening and closing fence for a code block, long enough to survive backticks
+ * in the code itself. A page that ships a SKILL.md or a README inside a `code`
+ * component contains its own fences, and a bare three-backtick wrapper would be
+ * closed by the first of them.
+ */
+function fenceFor(code: string): string {
+  const longest = Math.max(0, ...[...code.matchAll(/`+/g)].map((m) => m[0].length));
+  return "`".repeat(Math.max(3, longest + 1));
+}
+
 const bullets = (items: string[]): string => items.map((i) => `- ${i}`).join("\n");
 
 /** GFM table from explicit headers plus already-stringified rows. */
@@ -183,7 +194,7 @@ function componentBlocks(c: Node, depth: number): string[] {
 
     case "code": {
       const code = str(c.code);
-      if (code) out.push(`\`\`\`${str(c.language) ?? ""}\n${code}\n\`\`\``);
+      if (code) out.push(`${fenceFor(code)}${str(c.language) ?? ""}\n${code}\n${fenceFor(code)}`);
       break;
     }
 

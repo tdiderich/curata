@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPagePrompt, opensPromptOnLoad } from "@/lib/share-prompt";
+import { buildPagePrompt, opensPromptOnLoad, promptNote } from "@/lib/share-prompt";
 
 const base = {
   baseUrl: "https://curata.ai",
@@ -63,10 +63,31 @@ describe("buildPagePrompt", () => {
   });
 });
 
+describe("buildPagePrompt note", () => {
+  it("includes the page-authored note above the fetch instructions", () => {
+    const prompt = buildPagePrompt({ ...base, note: "Tell it where your brand colors live." });
+    expect(prompt).toContain("From the author of this page: Tell it where your brand colors live.");
+    expect(prompt.indexOf("From the author")).toBeLessThan(prompt.indexOf("## Fetch it"));
+  });
+
+  it("trims the note and omits the line when there is none", () => {
+    expect(buildPagePrompt({ ...base, note: "  spaced  " })).toContain(
+      "From the author of this page: spaced\n",
+    );
+    expect(buildPagePrompt(base)).not.toContain("From the author");
+  });
+});
+
 describe("opensPromptOnLoad", () => {
   it("opens on agent_prompt: open or true", () => {
     expect(opensPromptOnLoad({ agent_prompt: "open" })).toBe(true);
     expect(opensPromptOnLoad({ agent_prompt: true })).toBe(true);
+  });
+
+  it("opens on the object form", () => {
+    expect(opensPromptOnLoad({ agent_prompt: { open: true } })).toBe(true);
+    expect(opensPromptOnLoad({ agent_prompt: { open: "open" } })).toBe(true);
+    expect(opensPromptOnLoad({ agent_prompt: { open: true, note: "hi" } })).toBe(true);
   });
 
   it("stays closed otherwise", () => {
@@ -74,5 +95,28 @@ describe("opensPromptOnLoad", () => {
     expect(opensPromptOnLoad({ agent_prompt: false })).toBe(false);
     expect(opensPromptOnLoad({ agent_prompt: "closed" })).toBe(false);
     expect(opensPromptOnLoad({ agent_prompt: "yes" })).toBe(false);
+    expect(opensPromptOnLoad({ agent_prompt: { open: false } })).toBe(false);
+    expect(opensPromptOnLoad({ agent_prompt: { note: "no open key" } })).toBe(false);
+    expect(opensPromptOnLoad({ agent_prompt: ["open"] })).toBe(false);
+  });
+});
+
+describe("promptNote", () => {
+  it("reads the note from the object form", () => {
+    expect(promptNote({ agent_prompt: { open: true, note: " a note " } })).toBe("a note");
+  });
+
+  it("returns undefined when there is no note", () => {
+    expect(promptNote({})).toBeUndefined();
+    expect(promptNote({ agent_prompt: "open" })).toBeUndefined();
+    expect(promptNote({ agent_prompt: { open: true } })).toBeUndefined();
+    expect(promptNote({ agent_prompt: { note: "   " } })).toBeUndefined();
+    expect(promptNote({ agent_prompt: { note: 42 } })).toBeUndefined();
+  });
+
+  it("carries a note even when the dialog stays closed", () => {
+    const json = { agent_prompt: { open: false, note: "still useful" } };
+    expect(opensPromptOnLoad(json)).toBe(false);
+    expect(promptNote(json)).toBe("still useful");
   });
 });

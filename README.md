@@ -103,7 +103,45 @@ The curation layer is the key differentiator: humans annotate agent output, flag
 - **API key auth** — scoped read/write keys for agent access
 - **Theme system** — 7 accent colors, light/dark mode, texture overlays
 - **AI tool packs**: pages marked with a `pack:` block install into repos via `kazam install`, compiling into CLAUDE.md / .cursorrules
+- **Agent-readable public pages**: markdown, YAML, and a paste-ready prompt for any public page, plus the standard discovery documents
 - **Templates** — 20 pre-built page structures for common use cases
+
+---
+
+## Public pages for agents
+
+Every page with `visibility: public` is readable without a key or a login, in
+whichever form the caller wants:
+
+| URL | Returns |
+|-----|---------|
+| `/p/<org>/<slug>` | HTML, or markdown/YAML if `Accept` asks for it |
+| `/p/<org>/<slug>.md` | Markdown. The content, without component ids or layout |
+| `/p/<org>/<slug>.yaml` | Source component tree, for cloning the page as a template |
+| `/p/<org>/<slug>/prompt` | A prompt telling an agent what this page is and how to fetch it |
+
+Site-wide: `/robots.txt` (with Content Signals), `/sitemap.xml`, `/llms.txt`,
+`/llms-full.txt`, `/.well-known/mcp/server-card.json`,
+`/.well-known/agent-skills/index.json`, and `/.well-known/api-catalog`.
+
+Public pages carry a **Use with an agent** button holding the same prompt. Pages
+that exist to be handed to an agent can have that dialog open on load:
+
+```yaml
+title: Brand Your Screenshots
+agent_prompt: open
+```
+
+Use the object form to add a line the generic prompt cannot know:
+
+```yaml
+agent_prompt:
+  open: true
+  note: 'Tell it where your brand colors live: design tokens, a tailwind config, or a brand guide.'
+```
+
+The prompt never contains a credential. It describes anonymous fetches only, so
+it is safe to paste anywhere.
 
 ---
 
