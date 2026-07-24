@@ -76,6 +76,20 @@ describe("buildPagePrompt note", () => {
     );
     expect(buildPagePrompt(base)).not.toContain("From the author");
   });
+
+  it("leaves no double blank lines at the section seams", () => {
+    for (const variant of [
+      base,
+      { ...base, note: "a note" },
+      { ...base, packName: "p" },
+      { ...base, note: "a note", packName: "p" },
+      { ...base, description: undefined },
+    ]) {
+      const prompt = buildPagePrompt(variant);
+      expect(prompt).not.toMatch(/\n{3}/);
+      expect(prompt.endsWith("\n")).toBe(true);
+    }
+  });
 });
 
 describe("opensPromptOnLoad", () => {

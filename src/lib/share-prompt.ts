@@ -52,7 +52,11 @@ cargo install --git https://github.com/tdiderich/kazam
 `
     : "";
 
-  return `# ${title}
+  // Sections are optional, so the seams between them collapse rather than
+  // leaving gaps in what someone reads inside a chat window.
+  const tidy = (s: string) => `${s.replace(/\n{3,}/g, "\n\n").trim()}\n`;
+
+  return tidy(`# ${title}
 ${description ? `\n${description}\n` : ""}
 Source: ${pageUrl}
 ${noteLine}
@@ -82,7 +86,7 @@ ${packSection}
 - Index of every public page: ${baseUrl}/llms.txt
 - Full text of every public page: ${baseUrl}/llms-full.txt
 - MCP endpoint, for reading and writing pages with a key: ${baseUrl}/api/mcp
-`;
+`);
 }
 
 // The `agent_prompt` page key takes three shapes:
