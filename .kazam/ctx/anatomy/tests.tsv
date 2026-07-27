@@ -2,9 +2,12 @@ path	tokens	reads	description
 tests/api-key.test.ts	240	0	api-key.test tests
 tests/auth.test.ts	1121	0	auth.test tests
 tests/component-ids.test.ts	2323	0	component-ids.test tests
+tests/content-negotiation.test.ts	788	0	content-negotiation.test tests
 tests/glance-prompts.test.ts	2964	0	glance-prompts.test tests
 tests/global-setup.ts	298	0	global-setup tests
 tests/helpers.ts	537	0	helpers tests
 tests/mcp-tool-parity.test.ts	439	0	mcp-tool-parity.test tests
+tests/page-markdown.test.ts	2222	0	page-markdown.test tests
 tests/pages.test.ts	1957	0	pages.test tests
 tests/setup.ts	188	0	setup tests
+tests/share-prompt.test.ts	1418	0	share-prompt.test tests

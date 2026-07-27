@@ -1,1 +1,5 @@
-bugs: []
+bugs:
+- id: kz-22b0
+  symptom: 'Mobile: sidebar and nav-reveal both display:none below 900px — no way to access navigation on mobile'
+  file_path: curata/src/app/globals.css
+  created: 2026-07-05T10:12:02.238675-05:00

@@ -1,2 +1,2 @@
 path	tokens	reads	description
-src/app/api/keys/route.ts	1089	0	TypeScript source
+src/app/api/keys/route.ts	1089	0	POST mints a new API key (calls generateApiKey), supports expiresIn 1h/24h/7d/30d/never; GET lists non-revoked keys for org; DELETE revokes a key

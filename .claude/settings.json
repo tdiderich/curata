@@ -1,0 +1,54 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}\"/.kazam/hooks/post-tool.sh",
+            "description": "kazam-workspace: log file modifications and reads",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Read|Write|Edit|NotebookEdit"
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}\"/.kazam/hooks/pre-compact.sh",
+            "description": "kazam-workspace: flush state and mark compaction boundary",
+            "timeout": 20,
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}\"/.kazam/hooks/session-start.sh",
+            "description": "kazam-workspace: surface anatomy drift and ready tasks",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}\"/.kazam/hooks/stop.sh",
+            "description": "kazam-workspace: rescan anatomy on session end",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ]
+  }
+}

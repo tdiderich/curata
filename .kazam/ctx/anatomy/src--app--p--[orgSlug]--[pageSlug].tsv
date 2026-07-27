@@ -1,2 +1,2 @@
 path	tokens	reads	description
-src/app/p/[orgSlug]/[pageSlug]/page.tsx	1217	0	TypeScript source
+src/app/p/[orgSlug]/[pageSlug]/page.tsx	1712	0	Public page view: gates on visibility=public or valid share token, renders PageRenderer + PublicAnnotationClient wrapper, shows install banner for pack pages
