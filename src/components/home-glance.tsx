@@ -8,6 +8,8 @@ import {
   buildStaleCard,
   buildFlagCard,
   buildPageOptedCards,
+  extractFeaturedSlugs,
+  selectFeaturedPages,
   type GlanceFallbacks,
   type RecentPageInfo,
   type StalePageInfo,
@@ -117,8 +119,15 @@ export function HomeGlance({
   const staleCard = buildStaleCard(stalePages, ctx);
   const flagCard = buildFlagCard(flagInfos, ctx);
 
-  // Page-opted cards
-  const pageOptedCards = buildPageOptedCards(dashboardPageInfos, ctx);
+  // Page-opted cards. A "Featured" section on the home page trims the launcher
+  // to a curated handful; everything else stays reachable from ⌘K search.
+  const featuredSlugs = extractFeaturedSlugs(glanceSections);
+  const curated = featuredSlugs.length > 0;
+  const pageOptedCards = buildPageOptedCards(
+    selectFeaturedPages(dashboardPageInfos, featuredSlugs),
+    ctx,
+    { sort: !curated }
+  );
 
   // Legacy home-page prompts block
   const legacyCards = extractCustomPrompts(json, ctx);
@@ -127,7 +136,8 @@ export function HomeGlance({
 
   const categorized = new Map<string, typeof pageOptedCards>();
   for (const card of pageOptedCards) {
-    const cat = card.category ?? "Other";
+    // A curated launcher is one short list, not one section per folder.
+    const cat = curated ? "Featured" : card.category ?? "Other";
     const arr = categorized.get(cat) ?? [];
     arr.push(card);
     categorized.set(cat, arr);
@@ -139,6 +149,8 @@ export function HomeGlance({
   }
 
   const sortedCategories = [...categorized.keys()].sort((a, b) => {
+    if (a === "Featured") return -1;
+    if (b === "Featured") return 1;
     if (a === "Other") return 1;
     if (b === "Other") return -1;
     return a.localeCompare(b);

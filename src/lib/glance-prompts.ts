@@ -316,16 +316,47 @@ export interface DashboardPageInfo {
   dashboard: DashboardBlock;
 }
 
-export function buildPageOptedCards(pages: DashboardPageInfo[], ctx: GlanceContext = {}): GlanceCard[] {
+// A "Featured" section on the home page curates the launcher. Without it every
+// page carrying a dashboard block becomes a card, so the glance grows by one
+// every time someone writes a workflow page. Slugs come from the markdown link
+// targets, in the order they are listed.
+export const FEATURED_HEADING = /^featured\b/i;
+
+export function extractFeaturedSlugs(sections: GlanceSection[]): string[] {
+  const section = sections.find((s) => FEATURED_HEADING.test(s.heading));
+  if (!section) return [];
+  const slugs = [...section.body.matchAll(/\]\(([^)]+)\)/g)].map((m) => m[1].trim());
+  return [...new Set(slugs.filter(Boolean))];
+}
+
+/** Keeps only featured pages, in the home page's order. No featured list = every page. */
+export function selectFeaturedPages(
+  pages: DashboardPageInfo[],
+  featuredSlugs: string[]
+): DashboardPageInfo[] {
+  if (featuredSlugs.length === 0) return pages;
+  const rank = new Map(featuredSlugs.map((slug, i) => [slug, i]));
   return pages
-    .sort((a, b) => {
-      const fa = a.folderName ?? "";
-      const fb = b.folderName ?? "";
-      if (fa !== fb) return fa.localeCompare(fb);
-      const ta = a.dashboard.title ?? a.title;
-      const tb = b.dashboard.title ?? b.title;
-      return ta.localeCompare(tb);
-    })
+    .filter((p) => rank.has(p.slug))
+    .sort((a, b) => rank.get(a.slug)! - rank.get(b.slug)!);
+}
+
+export function buildPageOptedCards(
+  pages: DashboardPageInfo[],
+  ctx: GlanceContext = {},
+  { sort = true }: { sort?: boolean } = {}
+): GlanceCard[] {
+  const ordered = sort
+    ? [...pages].sort((a, b) => {
+        const fa = a.folderName ?? "";
+        const fb = b.folderName ?? "";
+        if (fa !== fb) return fa.localeCompare(fb);
+        const ta = a.dashboard.title ?? a.title;
+        const tb = b.dashboard.title ?? b.title;
+        return ta.localeCompare(tb);
+      })
+    : pages;
+  return ordered
     .map((p) => ({
       title: p.dashboard.title ?? p.title,
       subtitle: p.folderName ?? "custom",

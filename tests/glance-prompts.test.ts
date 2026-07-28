@@ -8,6 +8,8 @@ import {
   buildFlagCard,
   buildRecentlyCard,
   buildPageOptedCards,
+  extractFeaturedSlugs,
+  selectFeaturedPages,
 } from "@/lib/glance-prompts";
 import type { StalePageInfo, FlagInfo, RecentPageInfo, DashboardPageInfo } from "@/lib/glance-prompts";
 
@@ -299,5 +301,58 @@ describe("buildPageOptedCards", () => {
 
   it("returns empty for no pages", () => {
     expect(buildPageOptedCards([], {})).toHaveLength(0);
+  });
+
+  it("keeps the given order when sorting is off", () => {
+    const pages: DashboardPageInfo[] = [
+      { slug: "b", title: "B", subtitle: null, folderName: "Z", dashboard: { prompt: "b" } },
+      { slug: "a", title: "A", subtitle: null, folderName: "A", dashboard: { prompt: "a" } },
+    ];
+    const cards = buildPageOptedCards(pages, {}, { sort: false });
+    expect(cards.map((c) => c.title)).toEqual(["B", "A"]);
+  });
+});
+
+describe("extractFeaturedSlugs", () => {
+  const featured = (body: string) =>
+    extractGlanceSections([
+      { type: "section", heading: "Featured", components: [{ type: "markdown", body }] },
+    ]);
+
+  it("reads slugs from markdown link targets in listed order", () => {
+    const sections = featured("- [Call Prep](workflow-call-prep)\n- [Deal](workflow-deal)\n");
+    expect(extractFeaturedSlugs(sections)).toEqual(["workflow-call-prep", "workflow-deal"]);
+  });
+
+  it("dedupes repeated slugs", () => {
+    const sections = featured("- [One](a)\n- [Also one](a)\n");
+    expect(extractFeaturedSlugs(sections)).toEqual(["a"]);
+  });
+
+  it("returns empty when no Featured section exists", () => {
+    const sections = extractGlanceSections([
+      { type: "section", heading: "Plans in motion", components: [{ type: "markdown", body: "- [x](x)" }] },
+    ]);
+    expect(extractFeaturedSlugs(sections)).toEqual([]);
+  });
+});
+
+describe("selectFeaturedPages", () => {
+  const pages: DashboardPageInfo[] = [
+    { slug: "a", title: "A", subtitle: null, folderName: null, dashboard: { prompt: "a" } },
+    { slug: "b", title: "B", subtitle: null, folderName: null, dashboard: { prompt: "b" } },
+    { slug: "c", title: "C", subtitle: null, folderName: null, dashboard: { prompt: "c" } },
+  ];
+
+  it("filters to the featured slugs in the listed order", () => {
+    expect(selectFeaturedPages(pages, ["c", "a"]).map((p) => p.slug)).toEqual(["c", "a"]);
+  });
+
+  it("ignores featured slugs with no dashboard page", () => {
+    expect(selectFeaturedPages(pages, ["c", "missing"]).map((p) => p.slug)).toEqual(["c"]);
+  });
+
+  it("passes everything through when nothing is featured", () => {
+    expect(selectFeaturedPages(pages, [])).toHaveLength(3);
   });
 });
