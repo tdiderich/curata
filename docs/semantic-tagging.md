@@ -50,12 +50,16 @@ Pass a `links` param (JSON array) to `write_page` or `patch_page`:
 - Use `references` for citations or see-also links.
 - Use `supersedes` when a page replaces an older one.
 - Use `conflicts` when two pages contain contradictory information.
+- Links are replaced, not merged. Whatever you pass in `links` becomes the page's full set, and any edge you leave out is deleted. Pass `[]` to clear every link. Concepts behave the other way round: they are additive.
+- Read the page first and keep the links you still want. A write that tags one new link and omits the others drops the others.
 
 ## Querying the graph
 
 - `get_vocabulary` — see all terms, sorted by usage. Filter by `kind` or `query` prefix.
 - `get_related` — given a `term` or `slug`, find connected pages and shared concepts.
 - `get_semantic_map` — full graph topology. Use to find untagged pages or discover patterns.
+
+Archived pages are left out of `get_related` results, including links that point at them. `list_templates` skips archived templates the same way. Concept usage counts still include archived pages, so a term can report a higher count than the number of pages `get_related` hands back.
 
 ## Semantic refresh workflow
 

@@ -85,11 +85,17 @@ export async function upsertLinks(
   links: LinkInput[],
   createdBy: string
 ): Promise<void> {
+  // The caller passes the page's full declared link set, so anything not in it
+  // is a stale edge from an earlier version of the page and gets pruned below.
+  const declared = new Set<string>();
+
   for (const link of links) {
     const targetPage = await db.page.findUnique({
       where: { orgId_slug: { orgId, slug: link.target } },
     });
     if (!targetPage) continue;
+
+    declared.add(`${targetPage.id}::${link.rel}`);
 
     await db.pageLink.upsert({
       where: {
@@ -110,6 +116,17 @@ export async function upsertLinks(
         description: link.description ?? undefined,
       },
     });
+  }
+
+  const existing = await db.pageLink.findMany({
+    where: { fromPageId },
+    select: { id: true, toPageId: true, rel: true },
+  });
+  const staleIds = existing
+    .filter((e) => !declared.has(`${e.toPageId}::${e.rel}`))
+    .map((e) => e.id);
+  if (staleIds.length > 0) {
+    await db.pageLink.deleteMany({ where: { id: { in: staleIds } } });
   }
 }
 
@@ -186,7 +203,12 @@ export async function getRelated(
     const concept = await db.concept.findUnique({
       where: { normalizedName: normalized },
       include: {
-        pages: { include: { page: true } },
+        // Concepts are global, so scope the page fan-out to the caller's org
+        // and drop archived pages.
+        pages: {
+          where: { page: { orgId, status: { not: "archived" } } },
+          include: { page: true },
+        },
       },
     });
 
@@ -224,6 +246,7 @@ export async function getRelated(
             where: {
               conceptId: { in: conceptIds },
               pageId: { not: page.id },
+              page: { orgId, status: { not: "archived" } },
             },
             include: { page: true, concept: true },
           })
@@ -239,7 +262,11 @@ export async function getRelated(
     }
 
     const pageLinks = await db.pageLink.findMany({
-      where: { OR: [{ fromPageId: page.id }, { toPageId: page.id }] },
+      where: {
+        OR: [{ fromPageId: page.id }, { toPageId: page.id }],
+        fromPage: { status: { not: "archived" } },
+        toPage: { status: { not: "archived" } },
+      },
       include: { fromPage: true, toPage: true },
     });
 

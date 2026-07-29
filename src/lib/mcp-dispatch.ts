@@ -877,7 +877,7 @@ export async function dispatch(
       const ltFolder = ltFolders.find((f) => f.name.toLowerCase() === "templates");
       if (!ltFolder) return [];
       const ltPages = await db.page.findMany({
-        where: { orgId, folderId: ltFolder.id },
+        where: { orgId, folderId: ltFolder.id, status: { not: "archived" } },
         include: { versions: { orderBy: { createdAt: "desc" }, take: 1, select: { yamlContent: true } } },
       });
       return ltPages.map((p) => {
