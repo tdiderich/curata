@@ -2,7 +2,7 @@
 
 > **Note:** curata now includes a built-in MCP server via SSE. You no longer need this package. Just point your MCP client at `http://your-curata-url/api/mcp/stream`. This package is kept for backward compatibility with stdio-only MCP clients.
 
-MCP server for [curata](https://curata.ai) — connect your AI agents to your team's knowledge base.
+MCP server for [curata](https://curata.ai): connect your AI agents to your organization's shared infrastructure.
 
 ## Install
 

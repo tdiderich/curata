@@ -8,7 +8,7 @@ import "./kazam.css";
 import "./globals.css";
 
 const SITE_TITLE = process.env.SITE_TITLE ?? "curata";
-const SITE_DESCRIPTION = process.env.SITE_DESCRIPTION ?? "Where your AI work lives";
+const SITE_DESCRIPTION = process.env.SITE_DESCRIPTION ?? "Shared infrastructure for your organization's coding agents";
 const OG_TITLE = process.env.OG_TITLE ?? SITE_DESCRIPTION;
 
 export const metadata: Metadata = {

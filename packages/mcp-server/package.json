@@ -1,7 +1,7 @@
 {
   "name": "@curata/mcp-server",
   "version": "0.1.0",
-  "description": "MCP server for curata — connect your AI agents to your team's knowledge base",
+  "description": "MCP server for curata: connect your AI agents to your organization's shared infrastructure",
   "type": "module",
   "bin": {
     "curata-mcp": "./dist/index.js"

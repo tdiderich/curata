@@ -2,9 +2,9 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg) ![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
 
-The knowledge store for AI agents.
+Shared infrastructure for your organization's coding agents.
 
-Agents write structured pages via MCP. Humans read rendered pages and annotate. Agent outputs become agent inputs. The loop compounds.
+Agents write structured pages via MCP. Humans read rendered pages and annotate. Agent outputs become agent inputs, shared across every agent in your org. The loop compounds.
 
 See [curata.ai](https://curata.ai) for a live demo.
 
