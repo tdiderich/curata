@@ -70,6 +70,12 @@ Values: `right`, `left`, `top`, `bottom`
 ### PrintFlow
 Values: `slides`, `continuous`, `square`
 
+### QueueGroup
+Values: `urgency`, `horizon`, `owner`, `status`, `none`
+
+### QueueHorizon
+Values: `now`, `next`, `later`
+
 ### RefreshMode
 Values: `human`, `auto`, `assisted`
 
@@ -89,7 +95,7 @@ Values: `dark`, `light`, `red`, `orange`, `yellow`, `green`, `blue`, `indigo`, `
 Values: `completed`, `active`, `upcoming`
 
 ### TreeFilter
-Values: `all`, `incomplete`, `blocked`, `priority`
+Values: `all`, `incomplete`, `blocked`, `priority`, `overdue`
 
 ### TreeStatus
 Values: `default`, `completed`, `active`, `blocked`, `priority`, `upcoming`
@@ -277,13 +283,17 @@ Values: `up`, `down`, `flat`
 | Field | Type | Required |
 |-------|------|----------|
 | color | SemColor | no |
+| column | number | no |
 | detail | string | no |
 | group | string | no |
 | height | number | no |
+| hex | string | no |
 | id | string | yes |
 | label | string | yes |
 | ports | PortLabel[] | no |
+| row | number | no |
 | shape | GraphShape | no |
+| status | TimelineStatus | no |
 | width | number | no |
 
 ### HubConfig
@@ -375,6 +385,26 @@ Values: `up`, `down`, `flat`
 | label | string | yes |
 | x | number | yes |
 | y | number | yes |
+
+### QueueItem
+| Field | Type | Required |
+|-------|------|----------|
+| detail | string | no |
+| due | string | no |
+| horizon | QueueHorizon | no |
+| href | string | no |
+| label | string | yes |
+| original_due | string | no |
+| owner | string | no |
+| status | TreeStatus | no |
+| tags | QueueTag[] | no |
+
+### QueueTag
+| Field | Type | Required |
+|-------|------|----------|
+| color | SemColor | no |
+| emphasis | boolean | no |
+| label | string | yes |
 
 ### RadarCurve
 | Field | Type | Required |
@@ -528,8 +558,10 @@ Values: `up`, `down`, `flat`
 | Field | Type | Required |
 |-------|------|----------|
 | children | TreeNode[] | no |
+| due | string | no |
 | label | string | yes |
 | note | string | no |
+| original_due | string | no |
 | owner | string | no |
 | status | TreeStatus | no |
 
@@ -862,6 +894,7 @@ Values: `up`, `down`, `flat`
 | groups | GraphGroup[] | no |
 | height | number | no |
 | nodes | GraphNode[] | yes |
+| row_labels | (string | null)[] | no |
 | title | string | no |
 
 ```yaml
@@ -993,6 +1026,23 @@ Values: `up`, `down`, `flat`
   inputs: []
   outputs: []
   stages: []
+```
+
+### priority_queue
+| Field | Type | Required |
+|-------|------|----------|
+| filterable | boolean | no |
+| group_by | QueueGroup | no |
+| items | QueueItem[] | yes |
+| show_counts | boolean | no |
+| show_dates | boolean | no |
+| title | string | no |
+
+```yaml
+- type: priority_queue
+  filterable: false  # optional
+  group_by: "urgency"  # optional
+  items: []
 ```
 
 ### progress_bar

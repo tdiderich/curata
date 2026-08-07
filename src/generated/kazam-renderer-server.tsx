@@ -3,6 +3,11 @@
 import React from "react";
 import { stringify as yamlStringify, parse as yamlParse } from "yaml";
 
+export const DeckControlContext = React.createContext<{
+  slide?: number;
+  onSlideChange?: (index: number) => void;
+} | null>(null);
+
 interface SlideData {
   label: string;
   components?: ComponentData[];
@@ -413,7 +418,7 @@ function ChartSVG({ id, comp }: { id?: string; comp: ComponentData }) {
 }
 
 function GraphSVG({ id, comp }: { id?: string; comp: ComponentData }) {
-  type GNode = { id: string; label: string; group?: string; width?: number; height?: number; shape?: string; color?: string; detail?: string; ports?: Array<{ side: string; label: string }> };
+  type GNode = { id: string; label: string; group?: string; width?: number; height?: number; shape?: string; color?: string; hex?: string; status?: string; row?: number; column?: number; detail?: string; ports?: Array<{ side: string; label: string }> };
   type GEdge = { from: string; to: string; label?: string; style?: string; color?: string };
   type GGroup = { id: string; label?: string; parent?: string; color?: string };
 
@@ -423,59 +428,112 @@ function GraphSVG({ id, comp }: { id?: string; comp: ComponentData }) {
   const direction = (comp.direction as string) || "left_to_right";
   const title = comp.title as string | undefined;
   const compHeight = (comp.height as number) || 400;
+  const rowLabels = (comp.row_labels as Array<string | null | undefined>) || [];
 
   const svgData = React.useMemo(() => {
     if (nodes.length === 0) return null;
 
     const isLR = direction === "left_to_right" || direction === "LR" || direction === "lr";
+    // A node with an explicit `row` switches the whole diagram from
+    // topological auto-layout into tiered/grid mode: rows come from `row`
+    // directly and x-position comes from `column`, instead of both being
+    // derived from edge topology.
+    const explicitMode = nodes.some(n => n.row !== undefined && n.row !== null);
     const defaultW = 140;
     const defaultH = 60;
     const pad = 40;
     const groupPad = 24;
     const nodeGapV = 32;
     const hasGroups = groups.length > 0;
-    const minColGap = hasGroups ? 120 : 80;
+    const minColGap = hasGroups ? 120 : explicitMode ? 110 : 80;
     const portSpread = 0.85;
     const VB_W = 720;
+
+    // SVG <text> has no native wrap, so a long label/detail overflows into
+    // neighboring nodes. This estimates a wrap width from an average
+    // px-per-char and splits into lines; node height auto-grows to fit the
+    // wrapped line count when no explicit height is set.
+    const LABEL_CHAR_W = 7.0;
+    const DETAIL_CHAR_W = 5.6;
+    const LABEL_LINE_H = 15.0;
+    const DETAIL_LINE_H = 12.0;
+    const NODE_PAD_Y = 16.0;
+    const NODE_PAD_X = 20.0;
+    const LABEL_DETAIL_GAP = 6.0;
+    const MAX_WRAP_LINES = 4;
+    const wrapLines = (text: string, charW: number, maxWidth: number): string[] => {
+      const maxChars = Math.max(4, Math.floor(maxWidth / charW));
+      const lines: string[] = [];
+      let current = "";
+      for (const word of text.split(/\s+/).filter(Boolean)) {
+        const candidateLen = current ? current.length + 1 + word.length : word.length;
+        if (candidateLen > maxChars && current) {
+          lines.push(current);
+          current = "";
+        }
+        current = current ? `${current} ${word}` : word;
+      }
+      if (current) lines.push(current);
+      if (lines.length === 0) lines.push("");
+      if (lines.length > MAX_WRAP_LINES) {
+        lines.length = MAX_WRAP_LINES;
+        lines[lines.length - 1] += "…";
+      }
+      return lines;
+    };
 
     // Per-node dimensions
     const dims: Record<string, { w: number; h: number }> = {};
     for (const n of nodes) {
       const scale = n.shape === "diamond" ? 1.4 : 1;
-      dims[n.id] = { w: (n.width ?? defaultW) * scale, h: (n.height ?? defaultH) * scale };
+      const w = (n.width ?? defaultW) * scale;
+      let nh = n.height as number | undefined;
+      if (nh === undefined) {
+        const wrapW = w - NODE_PAD_X;
+        const labelLineCount = wrapLines(n.label, LABEL_CHAR_W, wrapW).length;
+        const detailLineCount = n.detail ? wrapLines(n.detail, DETAIL_CHAR_W, wrapW).length : 0;
+        const gap = detailLineCount > 0 ? LABEL_DETAIL_GAP : 0;
+        const textH = labelLineCount * LABEL_LINE_H + detailLineCount * DETAIL_LINE_H + gap + NODE_PAD_Y;
+        nh = Math.max(textH, defaultH);
+      }
+      dims[n.id] = { w, h: nh * scale };
     }
 
     // Filter out bidirectional edges for topo sort
     const edgeSet = new Set(edges.map(e => `${e.from}||${e.to}`));
     const forwardEdges = edges.filter(e => !edgeSet.has(`${e.to}||${e.from}`));
 
-    // Topological column assignment
     const col: Record<string, number> = {};
-    const inSet = new Set(forwardEdges.map(e => e.to));
-    for (const n of nodes) {
-      if (!inSet.has(n.id)) col[n.id] = 0;
-    }
-    const maxIters = nodes.length * forwardEdges.length + 1;
-    let iters = 0;
-    let changed = true;
-    while (changed && iters < maxIters) {
-      changed = false;
-      iters++;
-      for (const e of forwardEdges) {
-        if (col[e.from] !== undefined) {
-          const sc = col[e.from];
-          if (col[e.to] === undefined || col[e.to] <= sc) {
-            col[e.to] = sc + 1;
-            changed = true;
+    if (explicitMode) {
+      for (const n of nodes) col[n.id] = n.row ?? 0;
+    } else {
+      // Topological column assignment
+      const inSet = new Set(forwardEdges.map(e => e.to));
+      for (const n of nodes) {
+        if (!inSet.has(n.id)) col[n.id] = 0;
+      }
+      const maxIters = nodes.length * forwardEdges.length + 1;
+      let iters = 0;
+      let changed = true;
+      while (changed && iters < maxIters) {
+        changed = false;
+        iters++;
+        for (const e of forwardEdges) {
+          if (col[e.from] !== undefined) {
+            const sc = col[e.from];
+            if (col[e.to] === undefined || col[e.to] <= sc) {
+              col[e.to] = sc + 1;
+              changed = true;
+            }
           }
         }
       }
+      for (const n of nodes) {
+        if (col[n.id] === undefined) col[n.id] = 0;
+      }
+      const minColVal = Math.min(...Object.values(col));
+      for (const k of Object.keys(col)) col[k] -= minColVal;
     }
-    for (const n of nodes) {
-      if (col[n.id] === undefined) col[n.id] = 0;
-    }
-    const minColVal = Math.min(...Object.values(col));
-    for (const k of Object.keys(col)) col[k] -= minColVal;
 
     const maxColVal = Math.max(...Object.values(col));
     const numCols = maxColVal + 1;
@@ -489,9 +547,18 @@ function GraphSVG({ id, comp }: { id?: string; comp: ComponentData }) {
     const colMaxH = colsNodes.map(cn => Math.max(defaultH, ...cn.map(n => dims[n.id]?.h ?? defaultH)));
     const maxColHeight = Math.max(1, ...colsNodes.map(cn => cn.length));
 
+    // Aligned column count across ALL rows (not just the widest one), so a
+    // sparse row's nodes land in the same x-slots as their counterparts in a
+    // fuller row instead of centering independently.
+    const numAlignCols = explicitMode
+      ? Math.max(1, ...nodes.map(n => (n.column ?? 0) + 1), ...colsNodes.map(cn => cn.length))
+      : 0;
+
     const neededW = isLR
       ? pad * 2 + colMaxW.reduce((a, b) => a + b, 0) + Math.max(0, numCols - 1) * minColGap
-      : pad * 2 + maxColHeight * defaultW + Math.max(0, maxColHeight - 1) * nodeGapV;
+      : explicitMode
+        ? pad * 2 + numAlignCols * defaultW + Math.max(0, numAlignCols - 1) * nodeGapV
+        : pad * 2 + maxColHeight * defaultW + Math.max(0, maxColHeight - 1) * nodeGapV;
     const vbW = Math.max(neededW, VB_W);
 
     const neededH = !isLR
@@ -501,6 +568,9 @@ function GraphSVG({ id, comp }: { id?: string; comp: ComponentData }) {
 
     // Position nodes
     const positions: Record<string, { cx: number; cy: number }> = {};
+    // (row center y, row half-height), TB mode only, one entry per row in
+    // display order. Used to draw the row label + dashed rule above a tier.
+    const rowBands: Array<[number, number]> = [];
     if (isLR) {
       const colCx: number[] = [];
       let xCursor = pad;
@@ -531,17 +601,51 @@ function GraphSVG({ id, comp }: { id?: string; comp: ComponentData }) {
       }
       const totalUsed = yCursor - minColGap + pad;
       const yOffset = h > totalUsed ? (h - totalUsed) / 2 : 0;
+
+      const alignColW = defaultW + nodeGapV;
+      const gridW = numAlignCols * alignColW;
+      const alignXOffset = explicitMode && vbW > gridW ? (vbW - gridW) / 2 : 0;
+
       for (let ci = 0; ci < numCols; ci++) {
         const cn = colsNodes[ci];
-        const nCount = cn.length;
-        const totalW = nCount * defaultW + Math.max(0, nCount - 1) * nodeGapV;
-        const startX = (vbW - totalW) / 2;
-        for (let ni = 0; ni < cn.length; ni++) {
-          positions[cn[ni].id] = {
-            cx: startX + ni * (defaultW + nodeGapV) + defaultW / 2,
-            cy: rowCy[ci] + yOffset,
-          };
+        rowBands.push([rowCy[ci] + yOffset, colMaxH[ci] / 2]);
+
+        if (explicitMode) {
+          for (let ni = 0; ni < cn.length; ni++) {
+            const nodeCol = cn[ni].column ?? ni;
+            positions[cn[ni].id] = {
+              cx: alignXOffset + nodeCol * alignColW + alignColW / 2,
+              cy: rowCy[ci] + yOffset,
+            };
+          }
+        } else {
+          const nCount = cn.length;
+          const totalW = nCount * defaultW + Math.max(0, nCount - 1) * nodeGapV;
+          const startX = (vbW - totalW) / 2;
+          for (let ni = 0; ni < cn.length; ni++) {
+            positions[cn[ni].id] = {
+              cx: startX + ni * (defaultW + nodeGapV) + defaultW / 2,
+              cy: rowCy[ci] + yOffset,
+            };
+          }
         }
+      }
+    }
+
+    const rowLabelElems: React.ReactNode[] = [];
+    if (!isLR) {
+      for (let ri = 0; ri < rowBands.length; ri++) {
+        const label = rowLabels[ri];
+        if (!label) continue;
+        const [bandCy, halfH] = rowBands[ri];
+        const ruleY = bandCy - halfH - 18;
+        const textY = ruleY - 8;
+        rowLabelElems.push(
+          <text key={`rl-${ri}`} x={pad} y={textY} className="c-arch-node-detail" fontWeight={600}>{label}</text>
+        );
+        rowLabelElems.push(
+          <line key={`rr-${ri}`} x1={pad} y1={ruleY} x2={vbW - pad} y2={ruleY} stroke="rgba(var(--text-rgb),0.15)" strokeWidth={1} strokeDasharray="2 3" />
+        );
       }
     }
 
@@ -608,9 +712,18 @@ function GraphSVG({ id, comp }: { id?: string; comp: ComponentData }) {
         if (bidir && !forward) { ss = 2; ts = 2; }
         else { ss = forward ? 0 : 1; ts = forward ? 1 : 0; }
       } else {
-        const downward = tp.cy >= fp.cy;
-        if (bidir && !downward) { ss = 0; ts = 0; }
-        else { ss = downward ? 3 : 2; ts = downward ? 2 : 3; }
+        const sameRow = Math.abs(tp.cy - fp.cy) < 0.5;
+        if (sameRow) {
+          // Lateral edge within a tier (explicit-mode row): connect
+          // left/right ports instead of top/bottom so it draws as a clean
+          // horizontal arrow rather than dipping below the box.
+          const forward = tp.cx >= fp.cx;
+          ss = forward ? 0 : 1; ts = forward ? 1 : 0;
+        } else {
+          const downward = tp.cy >= fp.cy;
+          if (bidir && !downward) { ss = 0; ts = 0; }
+          else { ss = downward ? 3 : 2; ts = downward ? 2 : 3; }
+        }
       }
       edgeSrcSide.push(ss);
       edgeTgtSide.push(ts);
@@ -777,7 +890,11 @@ function GraphSVG({ id, comp }: { id?: string; comp: ComponentData }) {
       const nh = d.h;
       const rx = pos.cx - nw / 2;
       const ry = pos.cy - nh / 2;
-      const stroke = n.color && semToHex[n.color] ? semToHex[n.color] : "rgba(var(--text-rgb),0.5)";
+      // Exact brand color wins over the fixed SemColor palette when valid
+      // (`#RGB`/`#RRGGBB`/`#RRGGBBAA`); an invalid value falls back to
+      // `color` rather than breaking the render.
+      const hexValid = n.hex && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(n.hex);
+      const stroke = hexValid ? (n.hex as string) : (n.color && semToHex[n.color] ? semToHex[n.color] : "rgba(var(--text-rgb),0.5)");
       const shape = n.shape || "box";
 
       if (shape === "diamond") {
@@ -791,12 +908,48 @@ function GraphSVG({ id, comp }: { id?: string; comp: ComponentData }) {
         nodeElems.push(<rect key={`ns-${n.id}`} x={rx} y={ry} width={nw} height={nh} rx={8} fill="rgba(var(--text-rgb),0.06)" stroke={stroke} strokeWidth={1.5} className="c-arch-node" />);
       }
 
-      nodeElems.push(
-        <text key={`nl-${n.id}`} x={pos.cx} y={n.detail ? pos.cy - 7 : pos.cy} textAnchor="middle" dominantBaseline="middle" className="c-arch-node-label">{n.label}</text>
-      );
-      if (n.detail) {
+      // Progress badge, anchored on the box's top-right corner. Deliberately
+      // a fixed color (not n.color/n.hex) so it reads as a progress signal,
+      // independent of whatever role color the box border is already using.
+      if (n.status === "completed" || n.status === "active") {
+        const bcx = pos.cx + nw / 2;
+        const bcy = pos.cy - nh / 2;
+        const badgeFill = n.status === "completed" ? (semToHex.green || "#34D399") : (semToHex.yellow || "#FBBF24");
         nodeElems.push(
-          <text key={`nd-${n.id}`} x={pos.cx} y={pos.cy + 10} textAnchor="middle" dominantBaseline="middle" className="c-arch-node-detail">{n.detail}</text>
+          <React.Fragment key={`nb-${n.id}`}>
+            <circle cx={bcx} cy={bcy} r={9} fill={badgeFill} stroke="#0A0E17" strokeWidth={2} />
+            {n.status === "completed" ? (
+              <path d={`M ${(bcx - 4).toFixed(1)} ${bcy.toFixed(1)} L ${(bcx - 1.2).toFixed(1)} ${(bcy + 2.8).toFixed(1)} L ${(bcx + 4.2).toFixed(1)} ${(bcy - 3.2).toFixed(1)}`} fill="none" stroke="#0A0E17" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            ) : (
+              <path d={`M ${(bcx - 2.5).toFixed(1)} ${(bcy - 3.5).toFixed(1)} L ${(bcx - 2.5).toFixed(1)} ${(bcy + 3.5).toFixed(1)} L ${(bcx + 3.5).toFixed(1)} ${bcy.toFixed(1)} Z`} fill="#0A0E17" />
+            )}
+          </React.Fragment>
+        );
+      }
+
+      const nodeWrapW = nw - NODE_PAD_X;
+      const labelLines = wrapLines(n.label, LABEL_CHAR_W, nodeWrapW);
+      const detailLines = n.detail ? wrapLines(n.detail, DETAIL_CHAR_W, nodeWrapW) : null;
+      const ldGap = detailLines ? LABEL_DETAIL_GAP : 0;
+      const totalTextH = labelLines.length * LABEL_LINE_H + ldGap + (detailLines ? detailLines.length * DETAIL_LINE_H : 0);
+      let cursorY = pos.cy - totalTextH / 2 + LABEL_LINE_H * 0.72;
+
+      nodeElems.push(
+        <text key={`nl-${n.id}`}>
+          {labelLines.map((line, li) => (
+            <tspan key={li} x={pos.cx} y={cursorY + li * LABEL_LINE_H} textAnchor="middle" className="c-arch-node-label">{line}</tspan>
+          ))}
+        </text>
+      );
+      cursorY += (labelLines.length - 1) * LABEL_LINE_H;
+      if (detailLines) {
+        cursorY += LABEL_LINE_H * 0.28 + ldGap + DETAIL_LINE_H * 0.72;
+        nodeElems.push(
+          <text key={`nd-${n.id}`}>
+            {detailLines.map((line, li) => (
+              <tspan key={li} x={pos.cx} y={cursorY + li * DETAIL_LINE_H} textAnchor="middle" className="c-arch-node-detail">{line}</tspan>
+            ))}
+          </text>
         );
       }
 
@@ -813,8 +966,8 @@ function GraphSVG({ id, comp }: { id?: string; comp: ComponentData }) {
       }
     }
 
-    return { vbW, h, groupElems, edgeElems, nodeElems };
-  }, [nodes, edges, groups, direction, compHeight]);
+    return { vbW, h, rowLabelElems, groupElems, edgeElems, nodeElems };
+  }, [nodes, edges, groups, direction, compHeight, rowLabels]);
 
   return (
     <div id={id} className="c-chart" data-kind="graph">
@@ -826,6 +979,7 @@ function GraphSVG({ id, comp }: { id?: string; comp: ComponentData }) {
               <path d="M 0 0 L 10 3.5 L 0 7 z" fill="rgba(var(--text-rgb),0.5)" />
             </marker>
           </defs>
+          {svgData.rowLabelElems}
           {svgData.groupElems}
           {svgData.edgeElems}
           {svgData.nodeElems}
@@ -1413,9 +1567,11 @@ function ComponentView({
     }
 
     case "event_timeline": {
-      const events = (comp.events as Array<{ date: string; title: string; summary?: string; severity?: string; source?: string; link?: string; tags?: string[] }>) || [];
+      const rawEvents = (comp.events as Array<{ date: string; title: string; summary?: string; severity?: string; source?: string; link?: string; tags?: string[] }>) || [];
+      // Most-recent-first, regardless of authored order - a changelog/activity
+      // feed, not an ordered list an author controls.
+      const events = [...rawEvents].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
       const filterBy = comp.filter_by as string[] | undefined;
-      const etRef = React.useRef<HTMLDivElement>(null);
       const [activeTags, setActiveTags] = React.useState<Set<string>>(new Set());
       const handleTagFilter = (tag: string) => {
         setActiveTags(prev => {
@@ -1424,20 +1580,13 @@ function ComponentView({
           return next;
         });
       };
-      React.useEffect(() => {
-        const el = etRef.current;
-        if (!el) return;
-        el.querySelectorAll("[data-event-tags]").forEach(ev => {
-          const tags = (ev.getAttribute("data-event-tags") || "").split(",").filter(Boolean);
-          (ev as HTMLElement).style.display = activeTags.size === 0 || tags.some(t => activeTags.has(t)) ? "" : "none";
-        });
-      }, [activeTags]);
       const tagCounts: Record<string, number> = {};
       if (filterBy) filterBy.forEach(tag => {
         tagCounts[tag] = events.filter(e => (e.tags || []).includes(tag)).length;
       });
+      const visibleEvents = activeTags.size === 0 ? events : events.filter(ev => (ev.tags || []).some(t => activeTags.has(t)));
       return (
-        <div id={id} ref={etRef} className="c-event-timeline">
+        <div id={id} className="c-event-timeline">
           {filterBy && filterBy.length > 0 && (
             <div className="c-event-tag-filters">
               {filterBy.map((tag, ti) => (
@@ -1445,7 +1594,7 @@ function ComponentView({
               ))}
             </div>
           )}
-          {events.map((ev, i) => (
+          {visibleEvents.map((ev, i) => (
             <div key={i} className={`c-event severity-${ev.severity || "minor"}`} data-severity={ev.severity || "minor"} {...(ev.tags && ev.tags.length > 0 ? { "data-event-tags": ev.tags.join(",") } : {})}>
               <div className="c-event-rail">
                 <div className="c-event-dot" />
@@ -1480,6 +1629,31 @@ function ComponentView({
       const filters = ["all", "incomplete", "blocked", "priority"];
       const filterLabels: Record<string, string> = { all: "All", incomplete: "Incomplete only", blocked: "Blocked only", priority: "Priority only" };
 
+      const [activeFilter, setActiveFilter] = React.useState(defaultFilter);
+      const [collapsed, setCollapsed] = React.useState<Set<string>>(() => {
+        const set = new Set<string>();
+        function walk(nodeList: Array<Record<string, unknown>>, depth: number, prefix: string) {
+          for (let i = 0; i < nodeList.length; i++) {
+            const path = prefix ? `${prefix}.${i}` : String(i);
+            const ch = (nodeList[i].children as Array<Record<string, unknown>>) || [];
+            if (ch.length > 0) {
+              if (defaultDepth != null ? depth >= defaultDepth : defaultCollapsed) set.add(path);
+              walk(ch, depth + 1, path);
+            }
+          }
+        }
+        walk(nodes, 0, "");
+        return set;
+      });
+
+      const toggleCollapse = React.useCallback((path: string) => {
+        setCollapsed(prev => {
+          const next = new Set(prev);
+          if (next.has(path)) next.delete(path); else next.add(path);
+          return next;
+        });
+      }, []);
+
       const hasBlockedDescendant = (node: Record<string, unknown>): boolean => {
         const children = (node.children as Array<Record<string, unknown>>) || [];
         if ((node.status as string) === "blocked") return true;
@@ -1495,28 +1669,25 @@ function ComponentView({
         return children.reduce((acc, c) => acc + 1 + countDescendants(c), 0);
       };
 
-      const renderNode = (node: Record<string, unknown>, depth: number): React.JSX.Element => {
+      const renderNode = (node: Record<string, unknown>, depth: number, path: string): React.JSX.Element => {
         const children = (node.children as Array<Record<string, unknown>>) || [];
         const status = (node.status as string) || "default";
         const hasChildren = children.length > 0;
         const isLeaf = !hasChildren;
+        const isCollapsed = collapsed.has(path);
         const blockedDesc = status !== "blocked" && children.some(hasBlockedDescendant);
         const priorityDesc = status !== "priority" && children.some(hasPriorityDescendant);
-        const shouldCollapse = defaultDepth != null ? depth >= defaultDepth : defaultCollapsed;
         const descCount = countDescendants(node);
         return (
           <li
-            className={`c-tree-node status-${status}${shouldCollapse && hasChildren ? " collapsed" : ""}`}
+            className={`c-tree-node status-${status}${isCollapsed && hasChildren ? " collapsed" : ""}`}
             data-status={status}
             {...(isLeaf ? { "data-leaf": "true" } : {})}
             {...(blockedDesc ? { "data-has-blocked-descendant": "true" } : {})}
             {...(priorityDesc ? { "data-has-priority-descendant": "true" } : {})}
           >
             <div className="c-tree-row">
-              {hasChildren && <span className="c-tree-chevron" aria-hidden="true" onClick={(e) => {
-                const node = (e.target as HTMLElement).closest(".c-tree-node");
-                if (node) node.classList.toggle("collapsed");
-              }}>▶</span>}
+              {hasChildren && <span className="c-tree-chevron" aria-hidden="true" onClick={() => toggleCollapse(path)}>▶</span>}
               <span className="c-tree-glyph" aria-hidden="true">{statusGlyphs[status] || "·"}</span>
               <span className="c-tree-label">{node.label as string}</span>
               {node.owner ? <span className="c-tree-owner">{String(node.owner)}</span> : null}
@@ -1525,35 +1696,273 @@ function ComponentView({
             </div>
             {hasChildren && (
               <ul className="c-tree-children">
-                {children.map((child, i) => <React.Fragment key={i}>{renderNode(child, depth + 1)}</React.Fragment>)}
+                {children.map((child, i) => {
+                  const childPath = path ? `${path}.${i}` : String(i);
+                  return <React.Fragment key={i}>{renderNode(child, depth + 1, childPath)}</React.Fragment>;
+                })}
               </ul>
             )}
           </li>
         );
       };
 
-      const treeRef = React.useRef<HTMLDivElement>(null);
-      const handleFilter = (filter: string) => {
-        const tree = treeRef.current;
-        if (!tree) return;
-        tree.classList.remove("filter-all", "filter-incomplete", "filter-blocked", "filter-priority");
-        tree.classList.add("filter-" + filter);
-        tree.setAttribute("data-filter", filter);
-        tree.querySelectorAll("[data-tree-filter-toggle] button").forEach((btn) => {
-          btn.classList.toggle("active", btn.getAttribute("data-filter") === filter);
-        });
-      };
-
       return (
-        <div id={id} ref={treeRef} className={`c-tree filter-${defaultFilter}`} data-filter={defaultFilter}>
+        <div id={id} className={`c-tree filter-${activeFilter}`} data-filter={activeFilter}>
           {showFilterToggle && (
-            <div className="c-tree-filter-toggle" data-tree-filter-toggle>
+            <div className="c-tree-filter-toggle">
               {filters.map((f) => (
-                <button key={f} type="button" data-filter={f} className={f === defaultFilter ? "active" : ""} onClick={() => handleFilter(f)}>{filterLabels[f]}</button>
+                <button key={f} type="button" className={f === activeFilter ? "active" : ""} onClick={() => setActiveFilter(f)}>{filterLabels[f]}</button>
               ))}
             </div>
           )}
-          <ul className="c-tree-root">{nodes.map((n, i) => <React.Fragment key={i}>{renderNode(n, 0)}</React.Fragment>)}</ul>
+          <ul className="c-tree-root">{nodes.map((n, i) => <React.Fragment key={i}>{renderNode(n, 0, String(i))}</React.Fragment>)}</ul>
+        </div>
+      );
+    }
+
+    case "priority_queue": {
+      const items = (comp.items as Array<Record<string, unknown>>) || [];
+      const groupBy = (comp.group_by as string) || "urgency";
+      const showDates = (comp.show_dates as boolean) ?? true;
+      const showCounts = (comp.show_counts as boolean) ?? true;
+      const filterable = (comp.filterable as boolean) ?? false;
+      const title = comp.title as string | undefined;
+
+      const today = (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      })();
+
+      const addDays = (dateStr: string, n: number): string => {
+        const d = new Date(dateStr + "T00:00:00");
+        d.setDate(d.getDate() + n);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      };
+
+      const fmtDate = (d: string): string => {
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const [, m, day] = d.split("-");
+        return `${months[parseInt(m, 10) - 1]} ${parseInt(day, 10)}`;
+      };
+
+      const twoWeekEnd = addDays(today, 13);
+      const eightWeekEnd = addDays(today, 55);
+
+      const getDateUrgency = (item: Record<string, unknown>): string => {
+        const status = (item.status as string) || "default";
+        if (status === "blocked") return "blocked";
+        const due = item.due as string | undefined;
+        if (!due) return "none";
+        if (due < today) {
+          return status === "completed" ? "soon" : "overdue";
+        }
+        if (due <= twoWeekEnd) return "soon";
+        if (due <= eightWeekEnd) return "track";
+        return "track";
+      };
+
+      const getUrgency = (item: Record<string, unknown>): string => {
+        const horizon = item.horizon as string | undefined;
+        if (horizon) {
+          if (horizon === "now") return "soon";
+          return "track";
+        }
+        return getDateUrgency(item);
+      };
+
+      const horizonRank: Record<string, number> = { overdue: 0, soon: 1, track: 2, none: 3, blocked: 2 };
+
+      const hasDrift = (item: Record<string, unknown>): boolean => {
+        const horizon = item.horizon as string | undefined;
+        if (!horizon || !item.due) return false;
+        const dateUrg = getDateUrgency(item);
+        const horizonUrg = horizon === "now" ? "soon" : "track";
+        return (horizonRank[dateUrg] ?? 3) < (horizonRank[horizonUrg] ?? 3);
+      };
+
+      const [query, setQuery] = React.useState("");
+      const [openOverride, setOpenOverride] = React.useState<Record<string, boolean>>({});
+      const trimmedQuery = filterable ? query.toLowerCase().trim() : "";
+
+      const filteredItems = React.useMemo(() => {
+        if (!trimmedQuery) return items;
+        return items.filter((item) => {
+          const tags = (item.tags as Array<{ label?: string }> | undefined) || [];
+          const haystack = [
+            item.label as string | undefined,
+            item.detail as string | undefined,
+            item.owner as string | undefined,
+            item.due as string | undefined,
+            ...tags.map((t) => t.label),
+          ];
+          return haystack.some((part) => typeof part === "string" && part.toLowerCase().includes(trimmedQuery));
+        });
+      }, [items, trimmedQuery]);
+
+      const activeItems = React.useMemo(() => filteredItems.filter((item) => (item.status as string) !== "completed"), [filteredItems]);
+      const doneItems = React.useMemo(() => filteredItems.filter((item) => (item.status as string) === "completed"), [filteredItems]);
+
+      type QueueGroup = { key: string; label: string; groupItems: Array<Record<string, unknown>> };
+
+      const groups = React.useMemo<QueueGroup[]>(() => {
+        if (groupBy === "none") return [{ key: "all", label: "", groupItems: activeItems }];
+
+        const buckets = new Map<string, Array<Record<string, unknown>>>();
+        const order: string[] = [];
+        const pushTo = (key: string, item: Record<string, unknown>) => {
+          if (!buckets.has(key)) { buckets.set(key, []); order.push(key); }
+          buckets.get(key)!.push(item);
+        };
+
+        const itemBucket = (item: Record<string, unknown>): string => {
+          const horizon = item.horizon as string | undefined;
+          const due = item.due as string | undefined;
+          const status = (item.status as string) || "default";
+          if (horizon) {
+            if (horizon === "now") return "two_weeks";
+            if (horizon === "next") return "two_to_eight";
+            return "later";
+          }
+          if (!due) return "none";
+          if (due < today) {
+            return status === "completed" ? "two_weeks" : "overdue";
+          }
+          if (due <= twoWeekEnd) return "two_weeks";
+          if (due <= eightWeekEnd) return "two_to_eight";
+          return "later";
+        };
+
+        if (groupBy === "urgency") {
+          for (const item of activeItems) { pushTo(itemBucket(item), item); }
+          const fixedOrder = ["overdue", "two_weeks", "two_to_eight", "later", "none"];
+          const labels: Record<string, string> = { overdue: "Overdue", two_weeks: "Next two weeks", two_to_eight: "2-8 weeks", later: "Later", none: "No date" };
+          return fixedOrder.filter((k) => buckets.has(k)).map((k) => ({ key: k, label: labels[k], groupItems: buckets.get(k)! }));
+        }
+
+        if (groupBy === "horizon") {
+          const horizonMap: Record<string, string> = { overdue: "now", two_weeks: "now", two_to_eight: "next", later: "later", none: "none" };
+          for (const item of activeItems) { pushTo(horizonMap[itemBucket(item)] || "later", item); }
+          const fixedOrder = ["now", "next", "later", "none"];
+          const labels: Record<string, string> = { now: "Now", next: "Next", later: "Later", none: "No date" };
+          return fixedOrder.filter((k) => buckets.has(k)).map((k) => ({ key: k, label: labels[k], groupItems: buckets.get(k)! }));
+        }
+
+        if (groupBy === "owner") {
+          for (const item of activeItems) {
+            const owner = (item.owner as string) || "Unassigned";
+            pushTo(owner, item);
+          }
+          return order.map((k) => ({ key: k, label: k, groupItems: buckets.get(k)! }));
+        }
+
+        if (groupBy === "status") {
+          for (const item of activeItems) {
+            const status = (item.status as string) || "default";
+            pushTo(status, item);
+          }
+          return order.map((k) => ({ key: k, label: k.charAt(0).toUpperCase() + k.slice(1), groupItems: buckets.get(k)! }));
+        }
+
+        return [{ key: "all", label: "", groupItems: activeItems }];
+      }, [activeItems, groupBy, today, twoWeekEnd, eightWeekEnd]);
+
+      const renderSlip = (item: Record<string, unknown>): React.JSX.Element | null => {
+        const due = item.due as string | undefined;
+        const originalDue = item.original_due as string | undefined;
+        if (!due || !originalDue) return null;
+        if (due > originalDue) return <span className="c-queue-slip">was {fmtDate(originalDue)}</span>;
+        if (due < originalDue) return <span className="c-queue-slip pulled">pulled in</span>;
+        return null;
+      };
+
+      const renderItem = (item: Record<string, unknown>, i: number): React.JSX.Element => {
+        const status = (item.status as string) || "default";
+        const urgency = getUrgency(item);
+        const drift = hasDrift(item);
+        const label = item.label as string;
+        const detail = item.detail as string | undefined;
+        const owner = item.owner as string | undefined;
+        const href = item.href as string | undefined;
+        const due = item.due as string | undefined;
+        const tags = (item.tags as Array<{ label: string; color?: string; emphasis?: boolean }>) || [];
+        return (
+          <div key={i} className={`c-queue-row status-${status} urgency-${urgency}${drift ? " drift" : ""}`}>
+            <div className="c-queue-stripe"></div>
+            <div className="c-queue-main">
+              <div className="c-queue-label-line">
+                {href ? <a className="c-queue-label" href={href}>{label}</a> : <span className="c-queue-label">{label}</span>}
+                {owner && <span className="c-queue-owner">{owner}</span>}
+              </div>
+              {detail && <div className="c-queue-detail">{detail}</div>}
+              {tags.length > 0 && (
+                <div className="c-queue-tags">
+                  {tags.map((tag, ti) => (
+                    <span key={ti} className={`c-queue-tag color-${tag.color || "default"}${tag.emphasis ? " emphasis" : ""}`}>{tag.label}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+            {showDates && due && (
+              <div className="c-queue-date">
+                <span className="c-queue-due">{fmtDate(due)}</span>
+                {renderSlip(item)}
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      const defaultOpen = (groupKey: string, index: number): boolean => {
+        if (groupBy === "none") return true;
+        if (groupBy === "urgency") return groupKey === "overdue" || groupKey === "two_weeks";
+        if (groupBy === "horizon") return groupKey === "now";
+        return index === 0;
+      };
+
+      const toggleGroup = (groupKey: string, open: boolean) => {
+        setOpenOverride((prev) => ({ ...prev, [groupKey]: !open }));
+      };
+
+      return (
+        <div id={id} className="c-queue">
+          {title && <div className="c-queue-title">{title}</div>}
+          {filterable && (
+            <div className="c-queue-search">
+              <input
+                type="text"
+                className="c-queue-search-input"
+                placeholder="Filter items…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+          )}
+          {groups.map((group, gi) => {
+            const open = trimmedQuery ? true : (openOverride[group.key] ?? defaultOpen(group.key, gi));
+            return (
+              <div key={group.key} className={`c-queue-group${open ? "" : " collapsed"}`}>
+                {groupBy !== "none" && (
+                  <div className="c-queue-group-header" onClick={() => toggleGroup(group.key, open)}>
+                    <span className="c-queue-group-label">{group.label}</span>
+                    {showCounts && <span className="c-queue-group-count">{group.groupItems.length}</span>}
+                  </div>
+                )}
+                {group.groupItems.map((item, i) => renderItem(item, i))}
+              </div>
+            );
+          })}
+          {doneItems.length > 0 && (() => {
+            const doneOpen = trimmedQuery ? true : (openOverride["__done"] ?? false);
+            return (
+              <div className={`c-queue-group c-queue-done${doneOpen ? "" : " collapsed"}`}>
+                <div className="c-queue-group-header" onClick={() => toggleGroup("__done", doneOpen)}>
+                  <span className="c-queue-group-label">Done</span>
+                  {showCounts && <span className="c-queue-group-count">{doneItems.length}</span>}
+                </div>
+                {doneItems.map((item, i) => renderItem(item, i))}
+              </div>
+            );
+          })()}
         </div>
       );
     }
@@ -2346,7 +2755,17 @@ function ComponentView({
 }
 
 function DeckRenderer({ slides, renderMarkdown, renderChart, renderRoleMap }: { slides: SlideData[]; renderMarkdown?: (md: string) => string; renderChart?: (comp: ComponentData) => React.ReactNode; renderRoleMap?: (comp: ComponentData) => React.ReactNode }) {
-  const [current, setCurrent] = React.useState(0);
+  const control = React.useContext(DeckControlContext);
+  const [internalCurrent, setInternalCurrent] = React.useState(() => {
+    if (control?.slide !== undefined) return control.slide;
+    if (typeof window === "undefined") return 0;
+    const p = new URLSearchParams(window.location.search);
+    const s = parseInt(p.get("slide") ?? "", 10);
+    return isNaN(s) || s < 1 ? 0 : Math.min(s - 1, slides.length - 1);
+  });
+  const controlled = control?.slide !== undefined;
+  const rawCurrent = controlled ? control.slide! : internalCurrent;
+  const current = Math.max(0, Math.min(slides.length - 1, rawCurrent));
   const [presenting, setPresenting] = React.useState(false);
   const [overlayVisible, setOverlayVisible] = React.useState(true);
   const trackRef = React.useRef<HTMLDivElement>(null);
@@ -2354,8 +2773,10 @@ function DeckRenderer({ slides, renderMarkdown, renderChart, renderRoleMap }: { 
   const fadeTimer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const go = React.useCallback((n: number) => {
-    setCurrent(Math.max(0, Math.min(slides.length - 1, n)));
-  }, [slides.length]);
+    const clamped = Math.max(0, Math.min(slides.length - 1, n));
+    if (control?.onSlideChange) control.onSlideChange(clamped);
+    else setInternalCurrent(clamped);
+  }, [slides.length, control]);
 
   const resetFade = React.useCallback(() => {
     setOverlayVisible(true);
@@ -2399,13 +2820,15 @@ function DeckRenderer({ slides, renderMarkdown, renderChart, renderRoleMap }: { 
 
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") { setCurrent(c => Math.min(slides.length - 1, c + 1)); if (presenting) resetFade(); }
-      if (e.key === "ArrowLeft" || e.key === "ArrowUp") { setCurrent(c => Math.max(0, c - 1)); if (presenting) resetFade(); }
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") { go(current + 1); if (presenting) resetFade(); }
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") { go(current - 1); if (presenting) resetFade(); }
+      if (e.key === "Home") { go(0); }
+      if (e.key === "End") { go(slides.length - 1); }
       if (e.key === "f" || e.key === "F") { if (!presenting && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) enterPresentation(); }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [slides.length, presenting, enterPresentation, resetFade]);
+  }, [slides.length, presenting, enterPresentation, resetFade, go, current]);
 
   React.useEffect(() => {
     if (!presenting) return;
@@ -2415,8 +2838,16 @@ function DeckRenderer({ slides, renderMarkdown, renderChart, renderRoleMap }: { 
   }, [presenting, resetFade]);
 
   React.useEffect(() => {
-    document.dispatchEvent(new CustomEvent("deckslidechange", { detail: { index: current, label: slides[current]?.label } }));
-  }, [current, slides]);
+    if (controlled && rawCurrent !== current && control?.onSlideChange) {
+      control.onSlideChange(current);
+    }
+  }, [controlled, rawCurrent, current, control]);
+
+  React.useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    p.set("slide", String(current + 1));
+    try { history.replaceState(history.state, "", window.location.pathname + "?" + p.toString()); } catch {}
+  }, [current]);
 
   React.useEffect(() => {
     document.body.classList.add("shell-deck");
@@ -2636,6 +3067,7 @@ const EDITOR_TYPES: Array<{type: string; label: string; icon: string}> = [
   { type: "meta", label: "Meta", icon: "M" },
   { type: "org_chart", label: "Org Chart", icon: "👥" },
   { type: "pipeline", label: "Pipeline", icon: "➡" },
+  { type: "priority_queue", label: "Priority Queue", icon: "P" },
   { type: "progress_bar", label: "Progress Bar", icon: "P" },
   { type: "quadrant", label: "Quadrant", icon: "⊞" },
   { type: "radar", label: "Radar", icon: "◎" },
@@ -2691,6 +3123,7 @@ function newEditorComponent(type: string): ComponentData {
     case "meta": return { type: "meta", fields: [] };
     case "org_chart": return { type: "org_chart", people: [] };
     case "pipeline": return { type: "pipeline", inputs: [], outputs: [], stages: [] };
+    case "priority_queue": return { type: "priority_queue", items: [] };
     case "progress_bar": return { type: "progress_bar", value: 0 };
     case "quadrant": return { type: "quadrant", points: [], quadrants: [], x_axis: "", y_axis: "" };
     case "radar": return { type: "radar", axes: [], curves: [] };
@@ -3037,6 +3470,7 @@ function ComponentFieldEditor({ comp, onChange }: { comp: ComponentData; onChang
       <textarea className="pe-textarea" placeholder="Groups" value={yamlStringify(comp.groups ?? [])} onChange={(e) => { try { onChange({...comp, groups: yamlParse(e.target.value)}); } catch(_) {} }} />
       <input className="pe-input" type="number" placeholder="Height" value={(comp.height as number) ?? ""} onChange={(e) => onChange({...comp, height: e.target.value ? Number(e.target.value) : undefined})} />
       <textarea className="pe-textarea" placeholder="Nodes" value={yamlStringify(comp.nodes ?? [])} onChange={(e) => { try { onChange({...comp, nodes: yamlParse(e.target.value)}); } catch(_) {} }} />
+      <textarea className="pe-textarea" placeholder="Row Labels" value={yamlStringify(comp.row_labels ?? [])} onChange={(e) => { try { onChange({...comp, row_labels: yamlParse(e.target.value)}); } catch(_) {} }} />
       <input className="pe-input" placeholder="Title" value={(comp.title as string) || ""} onChange={(e) => onChange({...comp, title: e.target.value || undefined})} />
     </>);
     case "header": return (<>
@@ -3127,6 +3561,14 @@ function ComponentFieldEditor({ comp, onChange }: { comp: ComponentData; onChang
       <textarea className="pe-textarea" placeholder="Inputs" value={yamlStringify(comp.inputs ?? [])} onChange={(e) => { try { onChange({...comp, inputs: yamlParse(e.target.value)}); } catch(_) {} }} />
       <textarea className="pe-textarea" placeholder="Outputs" value={yamlStringify(comp.outputs ?? [])} onChange={(e) => { try { onChange({...comp, outputs: yamlParse(e.target.value)}); } catch(_) {} }} />
       <textarea className="pe-textarea" placeholder="Stages" value={yamlStringify(comp.stages ?? [])} onChange={(e) => { try { onChange({...comp, stages: yamlParse(e.target.value)}); } catch(_) {} }} />
+      <input className="pe-input" placeholder="Title" value={(comp.title as string) || ""} onChange={(e) => onChange({...comp, title: e.target.value || undefined})} />
+    </>);
+    case "priority_queue": return (<>
+      <label className="pe-checkbox-label"><input type="checkbox" checked={(comp.filterable as boolean) || false} onChange={(e) => onChange({...comp, filterable: e.target.checked || undefined})}/> Filterable</label>
+      <textarea className="pe-textarea" placeholder="Group By" value={yamlStringify(comp.group_by ?? null)} onChange={(e) => { try { onChange({...comp, group_by: yamlParse(e.target.value) || undefined}); } catch(_) {} }} />
+      <textarea className="pe-textarea" placeholder="Items" value={yamlStringify(comp.items ?? [])} onChange={(e) => { try { onChange({...comp, items: yamlParse(e.target.value)}); } catch(_) {} }} />
+      <label className="pe-checkbox-label"><input type="checkbox" checked={(comp.show_counts as boolean) || false} onChange={(e) => onChange({...comp, show_counts: e.target.checked || undefined})}/> Show Counts</label>
+      <label className="pe-checkbox-label"><input type="checkbox" checked={(comp.show_dates as boolean) || false} onChange={(e) => onChange({...comp, show_dates: e.target.checked || undefined})}/> Show Dates</label>
       <input className="pe-input" placeholder="Title" value={(comp.title as string) || ""} onChange={(e) => onChange({...comp, title: e.target.value || undefined})} />
     </>);
     case "progress_bar": return (<>
