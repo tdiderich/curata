@@ -7,6 +7,7 @@ import { basePath } from "@/lib/api-fetch";
 import { toast } from "@/components/toast";
 import { isPinned, togglePin } from "@/lib/pins";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 
 interface Folder {
   id: string;
@@ -190,6 +191,7 @@ export function PageMenu({ slug, title, folderId, folders, visibility = "org", o
   const [visOpen, setVisOpen] = useState(false);
   const [currentVis, setCurrentVis] = useState(visibility);
   const [browseParent, setBrowseParent] = useState<string | null | undefined>(undefined);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
@@ -238,9 +240,12 @@ export function PageMenu({ slug, title, folderId, folders, visibility = "org", o
     setOpen(false);
   }
 
-  async function doDelete() {
+  function startDelete() {
     setOpen(false);
-    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    setConfirmOpen(true);
+  }
+
+  async function doDelete() {
     setBusy(true);
     try {
       const res = await fetch(`${basePath}/api/pages?slug=${encodeURIComponent(slug)}`, { method: "DELETE" });
@@ -254,6 +259,7 @@ export function PageMenu({ slug, title, folderId, folders, visibility = "org", o
       toast.error("Couldn't delete page — check your connection and try again.");
     } finally {
       setBusy(false);
+      setConfirmOpen(false);
       router.refresh();
     }
   }
@@ -409,11 +415,23 @@ export function PageMenu({ slug, title, folderId, folders, visibility = "org", o
           <div className="dash-page-actions-divider" />
           <button
             className="dash-page-actions-item dash-page-actions-item--danger"
-            onClick={doDelete}
+            onClick={startDelete}
           >
             Delete
           </button>
         </AnchoredMenu>
+      )}
+      {confirmOpen && (
+        <ConfirmDeleteModal
+          title={<>Delete &ldquo;{title}&rdquo;?</>}
+          confirmButtonLabel="Delete"
+          busyLabel="Deleting…"
+          busy={busy}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={doDelete}
+        >
+          <p className="confirm-delete-warning">This cannot be undone.</p>
+        </ConfirmDeleteModal>
       )}
     </div>
   );
@@ -445,7 +463,6 @@ export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRu
   const [childName, setChildName] = useState("");
   const [rulesOpen, setRulesOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmText, setConfirmText] = useState("");
   const [folderRules, setFolderRules] = useState<Array<{ id: string; text: string; mode: "warn" | "block"; patterns?: string[] }>>([]);
   const [rulesLoaded, setRulesLoaded] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -534,12 +551,10 @@ export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRu
 
   function startDelete() {
     setOpen(false);
-    setConfirmText("");
     setConfirmOpen(true);
   }
 
   async function doDelete() {
-    if (confirmText !== folder.name) return;
     setBusy(true);
     try {
       const res = await fetch(`${basePath}/api/folders`, {
@@ -805,63 +820,36 @@ export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRu
           </button>
         </AnchoredMenu>
       )}
-      {confirmOpen && typeof document !== "undefined" && createPortal(
-        <div className="agent-overlay" onClick={() => setConfirmOpen(false)}>
-          <div className="agent-modal folder-delete-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="agent-modal-header">
-              <span className="agent-modal-title">Delete folder &ldquo;{folder.name}&rdquo;?</span>
-              <button className="agent-modal-close" onClick={() => setConfirmOpen(false)} aria-label="Cancel">&times;</button>
-            </div>
-            <div className="agent-step">
-              {descendantPages.length > 0 ? (
-                <>
-                  <p className="folder-delete-warning">
-                    This also deletes {descendantPages.length} page{descendantPages.length !== 1 ? "s" : ""} inside
-                    this folder and its subfolders. This cannot be undone.
-                  </p>
-                  <ul className="folder-delete-list">
-                    {descendantPages.slice(0, 5).map((p) => (
-                      <li key={p.slug}>{p.title}</li>
-                    ))}
-                    {descendantPages.length > 5 && (
-                      <li className="folder-delete-more">+{descendantPages.length - 5} more</li>
-                    )}
-                  </ul>
-                </>
-              ) : (
-                <p className="folder-delete-warning">This folder is empty. Deleting it cannot be undone.</p>
-              )}
-              <label className="folder-delete-confirm-label" htmlFor="folder-delete-confirm-input">
-                Type <strong>{folder.name}</strong> to confirm
-              </label>
-              <input
-                id="folder-delete-confirm-input"
-                className="folder-delete-confirm-input"
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && confirmText === folder.name) doDelete();
-                  if (e.key === "Escape") setConfirmOpen(false);
-                }}
-                autoFocus
-                disabled={busy}
-              />
-              <div className="folder-delete-actions">
-                <button className="cleanup-btn" onClick={() => setConfirmOpen(false)} disabled={busy}>
-                  Cancel
-                </button>
-                <button
-                  className="cleanup-btn cleanup-btn--danger"
-                  onClick={doDelete}
-                  disabled={busy || confirmText !== folder.name}
-                >
-                  {busy ? "Deleting…" : "Delete folder"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>,
-        document.body,
+      {confirmOpen && (
+        <ConfirmDeleteModal
+          title={<>Delete folder &ldquo;{folder.name}&rdquo;?</>}
+          confirmValue={folder.name}
+          confirmPrompt={<>Type <strong>{folder.name}</strong> to confirm</>}
+          confirmButtonLabel="Delete folder"
+          busyLabel="Deleting…"
+          busy={busy}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={doDelete}
+        >
+          {descendantPages.length > 0 ? (
+            <>
+              <p className="confirm-delete-warning">
+                This also deletes {descendantPages.length} page{descendantPages.length !== 1 ? "s" : ""} inside
+                this folder and its subfolders. This cannot be undone.
+              </p>
+              <ul className="confirm-delete-list">
+                {descendantPages.slice(0, 5).map((p) => (
+                  <li key={p.slug}>{p.title}</li>
+                ))}
+                {descendantPages.length > 5 && (
+                  <li className="confirm-delete-more">+{descendantPages.length - 5} more</li>
+                )}
+              </ul>
+            </>
+          ) : (
+            <p className="confirm-delete-warning">This folder is empty. Deleting it cannot be undone.</p>
+          )}
+        </ConfirmDeleteModal>
       )}
       {rulesOpen && typeof document !== "undefined" && createPortal(
         <div className="rules-panel-overlay" onClick={() => { setRulesOpen(false); setRulesLoaded(false); }}>

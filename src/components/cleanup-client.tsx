@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "@/components/toast";
 import { basePath } from "@/lib/api-fetch";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 
 export interface ArchivedRow {
   slug: string;
@@ -38,6 +39,12 @@ function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+interface PendingBulkDelete {
+  kind: "flag" | "archive";
+  ids: string[];
+  titles: string[];
+}
+
 export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRow[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,6 +58,7 @@ export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRo
   const [busy, setBusy] = useState(false);
   const [archiveBusy, setArchiveBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<PendingBulkDelete | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -104,7 +112,15 @@ export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRo
   }, [rows]);
 
   async function disposition(flagIds: string[], d: "archive" | "delete" | "keep" | "snooze") {
-    if (d === "delete" && !confirm(`Permanently delete ${flagIds.length} page${flagIds.length !== 1 ? "s" : ""}? Archive is reversible; this is not.`)) return;
+    if (d === "delete") {
+      const titles = rows.filter((r) => flagIds.includes(r.id)).map((r) => r.title);
+      setPendingDelete({ kind: "flag", ids: flagIds, titles });
+      return;
+    }
+    await runDisposition(flagIds, d);
+  }
+
+  async function runDisposition(flagIds: string[], d: "archive" | "delete" | "keep" | "snooze") {
     setBusy(true);
     let ok = 0;
     let failed = 0;
@@ -138,7 +154,15 @@ export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRo
   }
 
   async function archiveAction(slugs: string[], action: "delete" | "restore") {
-    if (action === "delete" && !confirm(`Permanently delete ${slugs.length} page${slugs.length !== 1 ? "s" : ""}? This cannot be undone.`)) return;
+    if (action === "delete") {
+      const titles = initialArchived.filter((p) => slugs.includes(p.slug)).map((p) => p.title);
+      setPendingDelete({ kind: "archive", ids: slugs, titles });
+      return;
+    }
+    await runArchiveAction(slugs, action);
+  }
+
+  async function runArchiveAction(slugs: string[], action: "delete" | "restore") {
     setArchiveBusy(true);
     try {
       const res = await fetch(`${basePath}/api/pages/bulk`, {
@@ -158,6 +182,14 @@ export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRo
       setArchiveBusy(false);
       router.refresh();
     }
+  }
+
+  async function confirmPendingDelete() {
+    if (!pendingDelete) return;
+    const { kind, ids } = pendingDelete;
+    if (kind === "flag") await runDisposition(ids, "delete");
+    else await runArchiveAction(ids, "delete");
+    setPendingDelete(null);
   }
 
   function copyAuditPrompt() {
@@ -323,6 +355,28 @@ export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRo
             </div>
           )}
         </div>
+      )}
+      {pendingDelete && (
+        <ConfirmDeleteModal
+          title={pendingDelete.ids.length > 1 ? `Permanently delete ${pendingDelete.ids.length} pages?` : `Permanently delete "${pendingDelete.titles[0]}"?`}
+          confirmValue={pendingDelete.ids.length > 1 ? String(pendingDelete.ids.length) : null}
+          confirmPrompt={<>Type <strong>{pendingDelete.ids.length}</strong> to confirm</>}
+          confirmButtonLabel={pendingDelete.ids.length > 1 ? "Delete pages" : "Delete"}
+          busyLabel="Deleting…"
+          busy={pendingDelete.kind === "flag" ? busy : archiveBusy}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={confirmPendingDelete}
+        >
+          <p className="confirm-delete-warning">This cannot be undone.</p>
+          {pendingDelete.ids.length > 1 && (
+            <ul className="confirm-delete-list">
+              {pendingDelete.titles.slice(0, 5).map((t, i) => <li key={i}>{t}</li>)}
+              {pendingDelete.titles.length > 5 && (
+                <li className="confirm-delete-more">+{pendingDelete.titles.length - 5} more</li>
+              )}
+            </ul>
+          )}
+        </ConfirmDeleteModal>
       )}
     </div>
   );
