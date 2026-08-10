@@ -45,6 +45,9 @@ next-env.d.ts
 /src/generated/prisma
 /src/generated/kazam.ts
 /src/generated/kazam-renderer.tsx
+/src/generated/kazam-renderer-server.tsx
+/src/app/kazam.css
+/docs/agents-reference.md
 
 # local kazam binary (downloaded by scripts/install-kazam.sh)
 /.bin/
