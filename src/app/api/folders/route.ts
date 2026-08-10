@@ -203,12 +203,31 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Deleting a folder deletes everything nested under it — subfolders and
+    // their pages — rather than promoting pages to top level.
+    const orgFolders = await db.folder.findMany({
+      where: { orgId: ctx.orgId },
+      select: { id: true, parentId: true },
+    });
+    const folderIds = new Set<string>([body.id]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const f of orgFolders) {
+        if (f.parentId && folderIds.has(f.parentId) && !folderIds.has(f.id)) {
+          folderIds.add(f.id);
+          grew = true;
+        }
+      }
+    }
+
     await db.$transaction([
-      db.page.updateMany({
-        where: { folderId: body.id },
-        data: { folderId: null },
+      db.page.deleteMany({
+        where: { folderId: { in: [...folderIds] } },
       }),
-      db.folder.delete({ where: { id: body.id } }),
+      db.folder.deleteMany({
+        where: { id: { in: [...folderIds] } },
+      }),
     ]);
 
     return NextResponse.json({ ok: true });

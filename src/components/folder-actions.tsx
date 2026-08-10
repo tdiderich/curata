@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
@@ -421,13 +421,20 @@ export function PageMenu({ slug, title, folderId, folders, visibility = "org", o
 
 // ── Per-folder "..." dropdown ─────────────────────────────────────────────────
 
+interface FolderPage {
+  slug: string;
+  title: string;
+  folderId: string | null;
+}
+
 interface FolderMenuProps {
   folder: Folder;
   allFolders?: Folder[];
+  allPages?: FolderPage[];
   canManageRules?: boolean;
 }
 
-export function FolderMenu({ folder, allFolders = [], canManageRules = false }: FolderMenuProps) {
+export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRules = false }: FolderMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -437,6 +444,8 @@ export function FolderMenu({ folder, allFolders = [], canManageRules = false }: 
   const [addingChild, setAddingChild] = useState(false);
   const [childName, setChildName] = useState("");
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
   const [folderRules, setFolderRules] = useState<Array<{ id: string; text: string; mode: "warn" | "block"; patterns?: string[] }>>([]);
   const [rulesLoaded, setRulesLoaded] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -506,9 +515,31 @@ export function FolderMenu({ folder, allFolders = [], canManageRules = false }: 
     }
   }
 
-  async function doDelete() {
+  // Deleting a folder deletes every page nested under it (including in
+  // subfolders), so the confirm dialog needs to show what's actually at risk.
+  const descendantPages = useMemo(() => {
+    const descFolderIds = new Set<string>([folder.id]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const f of allFolders) {
+        if (f.parentId && descFolderIds.has(f.parentId) && !descFolderIds.has(f.id)) {
+          descFolderIds.add(f.id);
+          grew = true;
+        }
+      }
+    }
+    return allPages.filter((p) => p.folderId && descFolderIds.has(p.folderId));
+  }, [folder.id, allFolders, allPages]);
+
+  function startDelete() {
     setOpen(false);
-    if (!confirm(`Delete folder "${folder.name}"? This cannot be undone.`)) return;
+    setConfirmText("");
+    setConfirmOpen(true);
+  }
+
+  async function doDelete() {
+    if (confirmText !== folder.name) return;
     setBusy(true);
     try {
       const res = await fetch(`${basePath}/api/folders`, {
@@ -526,6 +557,7 @@ export function FolderMenu({ folder, allFolders = [], canManageRules = false }: 
       toast.error("Couldn't delete folder — check your connection and try again.");
     } finally {
       setBusy(false);
+      setConfirmOpen(false);
       router.refresh();
     }
   }
@@ -767,11 +799,69 @@ export function FolderMenu({ folder, allFolders = [], canManageRules = false }: 
           <div className="dash-page-actions-divider" />
           <button
             className="dash-folder-actions-item dash-folder-actions-item--danger"
-            onClick={doDelete}
+            onClick={startDelete}
           >
             Delete
           </button>
         </AnchoredMenu>
+      )}
+      {confirmOpen && typeof document !== "undefined" && createPortal(
+        <div className="agent-overlay" onClick={() => setConfirmOpen(false)}>
+          <div className="agent-modal folder-delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="agent-modal-header">
+              <span className="agent-modal-title">Delete folder &ldquo;{folder.name}&rdquo;?</span>
+              <button className="agent-modal-close" onClick={() => setConfirmOpen(false)} aria-label="Cancel">&times;</button>
+            </div>
+            <div className="agent-step">
+              {descendantPages.length > 0 ? (
+                <>
+                  <p className="folder-delete-warning">
+                    This also deletes {descendantPages.length} page{descendantPages.length !== 1 ? "s" : ""} inside
+                    this folder and its subfolders. This cannot be undone.
+                  </p>
+                  <ul className="folder-delete-list">
+                    {descendantPages.slice(0, 5).map((p) => (
+                      <li key={p.slug}>{p.title}</li>
+                    ))}
+                    {descendantPages.length > 5 && (
+                      <li className="folder-delete-more">+{descendantPages.length - 5} more</li>
+                    )}
+                  </ul>
+                </>
+              ) : (
+                <p className="folder-delete-warning">This folder is empty. Deleting it cannot be undone.</p>
+              )}
+              <label className="folder-delete-confirm-label" htmlFor="folder-delete-confirm-input">
+                Type <strong>{folder.name}</strong> to confirm
+              </label>
+              <input
+                id="folder-delete-confirm-input"
+                className="folder-delete-confirm-input"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && confirmText === folder.name) doDelete();
+                  if (e.key === "Escape") setConfirmOpen(false);
+                }}
+                autoFocus
+                disabled={busy}
+              />
+              <div className="folder-delete-actions">
+                <button className="cleanup-btn" onClick={() => setConfirmOpen(false)} disabled={busy}>
+                  Cancel
+                </button>
+                <button
+                  className="cleanup-btn cleanup-btn--danger"
+                  onClick={doDelete}
+                  disabled={busy || confirmText !== folder.name}
+                >
+                  {busy ? "Deleting…" : "Delete folder"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
       {rulesOpen && typeof document !== "undefined" && createPortal(
         <div className="rules-panel-overlay" onClick={() => { setRulesOpen(false); setRulesLoaded(false); }}>

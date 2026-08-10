@@ -2,9 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "@/components/toast";
 import { basePath } from "@/lib/api-fetch";
+
+export interface ArchivedRow {
+  slug: string;
+  title: string;
+  folderName: string | null;
+  updatedAt: string;
+}
 
 interface FlagRow {
   id: string;
@@ -31,13 +38,18 @@ function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function CleanupClient() {
+export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRow[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<"flagged" | "archived">(
+    searchParams.get("tab") === "archived" ? "archived" : "flagged"
+  );
   const [flags, setFlags] = useState<FlagRow[]>([]);
   const [lastSweepAt, setLastSweepAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [previewSlug, setPreviewSlug] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [archiveBusy, setArchiveBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
@@ -58,6 +70,11 @@ export function CleanupClient() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTab(searchParams.get("tab") === "archived" ? "archived" : "flagged");
+  }, [searchParams]);
 
   // Latest flag per page wins for display; older pending flags ride along
   // and get resolved together on archive.
@@ -115,6 +132,34 @@ export function CleanupClient() {
     router.refresh();
   }
 
+  function selectTab(t: "flagged" | "archived") {
+    setTab(t);
+    router.replace(`/cleanup${t === "archived" ? "?tab=archived" : ""}`, { scroll: false });
+  }
+
+  async function archiveAction(slugs: string[], action: "delete" | "restore") {
+    if (action === "delete" && !confirm(`Permanently delete ${slugs.length} page${slugs.length !== 1 ? "s" : ""}? This cannot be undone.`)) return;
+    setArchiveBusy(true);
+    try {
+      const res = await fetch(`${basePath}/api/pages/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, slugs }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { affected?: number; error?: string };
+      if (!res.ok) {
+        toast.error(`Couldn't ${action} pages: ${data.error ?? "unknown error"}`);
+      } else {
+        toast.success(`${data.affected ?? slugs.length} page${(data.affected ?? slugs.length) !== 1 ? "s" : ""} ${action === "restore" ? "restored" : "deleted"}`);
+      }
+    } catch {
+      toast.error(`Couldn't ${action} pages — check your connection and try again.`);
+    } finally {
+      setArchiveBusy(false);
+      router.refresh();
+    }
+  }
+
   function copyAuditPrompt() {
     navigator.clipboard.writeText(AUDIT_PROMPT).then(() => {
       setCopied(true);
@@ -148,6 +193,25 @@ export function CleanupClient() {
     );
   }
 
+  function ArchivedRowView({ page }: { page: ArchivedRow }) {
+    return (
+      <div className="cleanup-row">
+        <div className="cleanup-row-main" style={{ cursor: "default" }}>
+          <div className="cleanup-row-top">
+            <span className="cleanup-title">{page.title}</span>
+            {page.folderName && <span className="cleanup-folder">{page.folderName}</span>}
+          </div>
+          <div className="cleanup-meta">archived · content updated {fmtDate(page.updatedAt)}</div>
+        </div>
+        <div className="cleanup-actions">
+          <Link href={`/pages/${page.slug}`} className="cleanup-btn">Open</Link>
+          <button className="cleanup-btn cleanup-btn--archive" disabled={archiveBusy} onClick={() => archiveAction([page.slug], "restore")}>Restore</button>
+          <button className="cleanup-btn cleanup-btn--danger" disabled={archiveBusy} onClick={() => archiveAction([page.slug], "delete")}>Delete</button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="dash-root">
@@ -161,30 +225,50 @@ export function CleanupClient() {
     <div className="dash-root">
       <div className="cleanup-header">
         <h1 className="cleanup-heading">Cleanup</h1>
-        <span className="cleanup-count">{rows.length} flagged page{rows.length !== 1 ? "s" : ""}</span>
         <div className="dash-toolbar-spacer" style={{ flex: 1 }} />
-        {rows.length > 0 && (
-          <>
-            <button
-              className="cleanup-btn cleanup-btn--archive"
-              disabled={busy}
-              onClick={() => disposition(rows.map((r) => r.id), "archive")}
-              title="Reversible — archived pages keep a restore button"
-            >
-              Archive all {rows.length}
-            </button>
-            <button
-              className="cleanup-btn cleanup-btn--danger"
-              disabled={busy}
-              onClick={() => disposition(rows.map((r) => r.id), "delete")}
-            >
-              Delete all {rows.length}
-            </button>
-          </>
-        )}
       </div>
 
-      {rows.length === 0 ? (
+      <nav className="settings-tab-bar" style={{ marginBottom: 16 }}>
+        <button className={`settings-tab${tab === "flagged" ? " settings-tab--active" : ""}`} onClick={() => selectTab("flagged")}>
+          Flagged{rows.length > 0 ? ` (${rows.length})` : ""}
+        </button>
+        <button className={`settings-tab${tab === "archived" ? " settings-tab--active" : ""}`} onClick={() => selectTab("archived")}>
+          Archived{initialArchived.length > 0 ? ` (${initialArchived.length})` : ""}
+        </button>
+      </nav>
+
+      {tab === "archived" ? (
+        initialArchived.length === 0 ? (
+          <div className="cleanup-empty">
+            <div className="cleanup-empty-title">Nothing archived</div>
+            <div className="cleanup-empty-sub">Pages you archive show up here so you can restore or permanently delete them.</div>
+          </div>
+        ) : (
+          <div className="cleanup-body">
+            <div className="cleanup-list">
+              <div className="cleanup-header" style={{ marginBottom: 4 }}>
+                <span className="cleanup-count">{initialArchived.length} archived page{initialArchived.length !== 1 ? "s" : ""}</span>
+                <div className="dash-toolbar-spacer" style={{ flex: 1 }} />
+                <button
+                  className="cleanup-btn cleanup-btn--archive"
+                  disabled={archiveBusy}
+                  onClick={() => archiveAction(initialArchived.map((p) => p.slug), "restore")}
+                >
+                  Restore all {initialArchived.length}
+                </button>
+                <button
+                  className="cleanup-btn cleanup-btn--danger"
+                  disabled={archiveBusy}
+                  onClick={() => archiveAction(initialArchived.map((p) => p.slug), "delete")}
+                >
+                  Delete all {initialArchived.length}
+                </button>
+              </div>
+              {initialArchived.map((p) => <ArchivedRowView key={p.slug} page={p} />)}
+            </div>
+          </div>
+        )
+      ) : rows.length === 0 ? (
         <div className="cleanup-empty">
           <div className="cleanup-empty-title">Queue is clear</div>
           <div className="cleanup-empty-sub">
@@ -198,6 +282,25 @@ export function CleanupClient() {
       ) : (
         <div className="cleanup-body">
           <div className="cleanup-list">
+            <div className="cleanup-header" style={{ marginBottom: 4 }}>
+              <span className="cleanup-count">{rows.length} flagged page{rows.length !== 1 ? "s" : ""}</span>
+              <div className="dash-toolbar-spacer" style={{ flex: 1 }} />
+              <button
+                className="cleanup-btn cleanup-btn--archive"
+                disabled={busy}
+                onClick={() => disposition(rows.map((r) => r.id), "archive")}
+                title="Reversible — archived pages keep a restore button"
+              >
+                Archive all {rows.length}
+              </button>
+              <button
+                className="cleanup-btn cleanup-btn--danger"
+                disabled={busy}
+                onClick={() => disposition(rows.map((r) => r.id), "delete")}
+              >
+                Delete all {rows.length}
+              </button>
+            </div>
             {grouped.clusters.map(([target, members]) => (
               <div key={target} className="cleanup-cluster">
                 <div className="cleanup-cluster-label">

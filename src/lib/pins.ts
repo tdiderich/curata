@@ -46,3 +46,15 @@ export function togglePin(slug: string): boolean {
   writePins(next);
   return next.includes(slug);
 }
+
+/** Move a pinned slug next to another pinned slug (drag-to-reorder). */
+export function reorderPin(slug: string, targetSlug: string, pos: "before" | "after" = "before"): string[] {
+  const pins = readPins() ?? [];
+  if (slug === targetSlug || !pins.includes(slug) || !pins.includes(targetSlug)) return pins;
+  const without = pins.filter((s) => s !== slug);
+  let targetIdx = without.indexOf(targetSlug);
+  if (pos === "after") targetIdx += 1;
+  without.splice(targetIdx, 0, slug);
+  writePins(without);
+  return without;
+}

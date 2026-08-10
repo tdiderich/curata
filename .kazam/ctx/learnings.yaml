@@ -3,3 +3,7 @@ learnings:
   text: Next dev server holds a stale Prisma client after schema changes — prisma db push + generate is not enough, the dev process must be restarted or API routes 500 with PrismaClientValidationError on new columns
   category: correction
   created: 2026-06-09T15:46:29.507123-05:00
+- id: kz-a991
+  text: An Edit that inserted a template literal wrote a literal NUL byte where a space was intended, which made git report src/lib/concepts.ts as 'Bin' in diff --stat and file(1) call it 'data'. Check 'git diff --stat' for Bin on a text file after edits, then grep for NUL before committing.
+  category: correction
+  created: 2026-07-28T21:58:14.940709-05:00

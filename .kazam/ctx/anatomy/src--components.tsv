@@ -1,18 +1,16 @@
 path	tokens	reads	description
+src/components/activity-feed.tsx	1277	0	activity-feed component
 src/components/agent-connect-button.tsx	153	0	agent-connect-button component
 src/components/agent-connect-flow.tsx	653	0	Renders the two-step 'Connect an agent' flow: generate API key button, then prompt display with copy-to-clipboard and 1h expiry warning
 src/components/agent-connect-modal.tsx	186	0	agent-connect-modal component
 src/components/api-key-manager.tsx	1470	0	api-key-manager component
-src/components/cleanup-client.tsx	2338	0	cleanup-client component
+src/components/cleanup-client.tsx	3581	0	cleanup-client component
 src/components/command-palette.tsx	1699	0	command-palette component
 src/components/content-rules-editor.tsx	3013	0	content-rules-editor component
 src/components/dashboard-client.tsx	4260	0	dashboard-client component
 src/components/dashboard-feed.tsx	812	0	dashboard-feed component
 src/components/delete-page-button.tsx	170	0	delete-page-button component
-src/components/folder-actions.tsx	7152	0	folder-actions component
-src/components/glance-card.tsx	464	0	glance-card component
-src/components/glance-cards.tsx	772	0	glance-cards component
-src/components/home-glance.tsx	1495	0	home-glance component
+src/components/folder-actions.tsx	8084	0	folder-actions component
 src/components/member-list.tsx	1184	0	member-list component
 src/components/new-page-button.tsx	1576	0	new-page-button component
 src/components/org-settings.tsx	2003	0	org-settings component
@@ -25,7 +23,7 @@ src/components/public-annotation-client.tsx	2869	0	public-annotation-client comp
 src/components/public-toggle.tsx	399	0	Private-page-editor toggle for visibility public/org + Copy link button using navigator.clipboard.writeText; appears currently unreferenced in JSX
 src/components/report-builder.tsx	5145	0	report-builder component
 src/components/settings-tabs.tsx	395	0	settings-tabs component
-src/components/sidebar.tsx	5104	0	sidebar component
+src/components/sidebar.tsx	5650	0	sidebar component
 src/components/source-editor.tsx	2232	0	source-editor component
 src/components/theme-script.tsx	189	0	theme-script component
 src/components/theme-settings.tsx	1543	0	theme-settings component

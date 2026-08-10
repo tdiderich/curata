@@ -47,6 +47,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, affected: deletable.length });
     }
 
+    case "restore": {
+      const editable = pages.filter((p) =>
+        can(ctx.role, "page:edit", p.createdBy === ctx.userId)
+      );
+      if (editable.length === 0) {
+        return NextResponse.json({ error: "forbidden" }, { status: 403 });
+      }
+      await db.page.updateMany({
+        where: { id: { in: editable.map((p) => p.id) } },
+        data: { status: "active", supersededBy: null },
+      });
+      return NextResponse.json({ ok: true, affected: editable.length });
+    }
+
     case "move": {
       const editable = pages.filter((p) =>
         can(ctx.role, "page:edit", p.createdBy === ctx.userId)

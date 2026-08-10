@@ -893,6 +893,54 @@ body .c-section.align-right > * { max-width: none !important; }
   margin: 0;
 }
 
+.folder-delete-modal { width: 420px; }
+
+.folder-delete-warning {
+  font-size: 13px;
+  color: var(--light-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.folder-delete-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.folder-delete-more { color: var(--muted); }
+
+.folder-delete-confirm-label {
+  font-size: 12.5px;
+  color: var(--light-muted);
+}
+
+.folder-delete-confirm-input {
+  background: var(--bg-subtle);
+  border: 1px solid rgba(var(--text-rgb), 0.15);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.folder-delete-confirm-input:focus {
+  outline: none;
+  border-color: rgba(var(--accent-rgb), 0.5);
+}
+
+.folder-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .agent-warning {
   font-size: 12px;
   font-weight: 500;
@@ -5522,6 +5570,20 @@ body .c-section.align-right > * { max-width: none !important; }
 .nav-page-row[draggable="true"] { cursor: grab; }
 .nav-page-row[draggable="true"]:active { cursor: grabbing; }
 
+.nav-pin-dropzone { position: relative; }
+.nav-pin-dropzone--before::before,
+.nav-pin-dropzone--after::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--teal);
+  border-radius: 1px;
+}
+.nav-pin-dropzone--before::before { top: -1px; }
+.nav-pin-dropzone--after::after { bottom: -1px; }
+
 .nav-section { display: flex; flex-direction: column; gap: 1px; }
 .nav-tree { flex: 1; }
 
@@ -5798,11 +5860,6 @@ body .c-section.align-right > * { max-width: none !important; }
 
 .org-logo-remove:hover { color: var(--red); }
 
-.nav-folder-toggle--archived .nav-folder-name {
-  color: var(--muted);
-  font-style: italic;
-}
-
 /* ── Cleanup queue ───────────────────────────────────────────────────────── */
 
 .nav-count-badge {
@@ -5997,305 +6054,59 @@ body .c-section.align-right > * { max-width: none !important; }
 .dash-attention-chip--cleanup { border-color: rgba(228, 230, 195, 0.3); }
 .dash-attention-chip--cleanup:hover { border-color: rgba(228, 230, 195, 0.6); }
 
-/* --- Curata at a Glance (dashboard home narrative) ---
-   Renders inside the dashboard above the table; horizontal padding matches
-   .dash-root (48px) so the glance aligns with the content below it. The
-   compact rules rescale kazam's document-size sections into a glance module. */
-.home-glance {
-  padding: 44px 48px 48px;
-}
-.home-glance-hero {
-  margin-bottom: 28px;
-}
-.home-glance-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 10px;
-}
-.home-glance-title {
-  font-size: 28px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  margin: 0;
-}
-.home-glance-divider {
-  height: 1px;
-  background: rgba(var(--text-rgb), 0.08);
-  margin: 26px 0;
-}
-.home-glance-meta {
-  font-size: 12px;
-  opacity: 0.6;
-  display: inline-flex;
-  gap: 10px;
-}
-.home-glance-source {
-  text-decoration: underline;
-}
-.home-glance-stale {
-  font-size: 12.5px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  margin-bottom: 14px;
-  background: rgba(228, 230, 195, 0.12);
-  color: var(--yellow);
-}
-
-.home-glance-orientation {
-  font-size: 14.5px;
-  line-height: 1.6;
-  color: var(--light-muted, var(--muted));
-  max-width: 860px;
-  margin: 0;
-}
-
-/* Workspace metric cards */
-.home-glance-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-  margin-bottom: 14px;
-}
-.glance-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 18px 20px;
-  border: 1px solid rgba(var(--text-rgb), 0.1);
-  border-radius: 10px;
-  background: rgba(var(--text-rgb), 0.03);
-}
-.glance-stat-value {
-  font-size: 30px;
-  font-weight: 650;
-  line-height: 1;
-  color: var(--snow);
-}
-.glance-stat-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--muted);
-}
-
-/* Section groups for dashboard cards */
-.glance-section { margin-bottom: 8px; }
-.glance-section-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 0;
-  border: none;
-  background: none;
-  font: inherit;
-  cursor: pointer;
-  color: var(--muted);
-}
-.glance-section-header:hover { color: var(--snow); }
-.glance-section-label {
+/* --- Activity feed (dashboard) --- */
+.activity-feed { display: flex; flex-direction: column; gap: 4px; }
+.activity-group-label {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  margin: 22px 0 8px;
 }
-.glance-section-count {
-  font-size: 11px;
-  color: var(--teal);
-}
-.glance-section-chevron {
-  margin-left: auto;
-  font-size: 12px;
-  transition: transform 0.15s;
-}
-.glance-section-chevron--collapsed {
-  transform: rotate(-90deg);
-}
-
-.home-glance-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
-}
-.glance-card {
-  position: relative;
-  max-width: 340px;
-  border: 1px solid rgba(var(--text-rgb), 0.1);
-  border-radius: 10px;
-  background: rgba(var(--text-rgb), 0.03);
-  transition: border-color 0.12s, background 0.12s;
-}
-.glance-card:hover {
-  border-color: var(--teal);
-  background: rgba(var(--text-rgb), 0.05);
-}
-.glance-card--empty {
-  opacity: 0.55;
-}
-.glance-card--empty:hover {
-  border-color: rgba(var(--text-rgb), 0.1);
-  background: rgba(var(--text-rgb), 0.03);
-}
-.glance-card--copied {
-  border-color: var(--teal);
-}
-.glance-card-action {
+.activity-feed section:first-child .activity-group-label { margin-top: 0; }
+.activity-list { list-style: none; margin: 0; padding: 0; }
+.activity-row {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
-  width: 100%;
-  height: 100%;
-  min-height: 150px;
-  text-align: left;
-  font: inherit;
-  padding: 18px 20px;
-  border: none;
-  background: none;
-  color: inherit;
-  cursor: pointer;
-}
-.glance-card-action:disabled {
-  cursor: default;
-}
-.glance-card-dismiss {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  z-index: 1;
-  border: none;
-  background: none;
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1;
-  padding: 4px;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.12s;
-}
-.glance-card:hover .glance-card-dismiss {
-  opacity: 0.7;
-}
-.glance-card-dismiss:hover {
-  opacity: 1;
-  color: var(--snow);
-}
-.glance-restore {
-  margin-top: 10px;
-  border: none;
-  background: none;
-  font: inherit;
-  font-size: 12px;
-  color: var(--muted);
-  cursor: pointer;
-  text-decoration: underline;
-  padding: 0;
-}
-.glance-restore:hover {
-  color: var(--snow);
-}
-
-/* Bottom visuals: activity chart + folder breakdown */
-.home-glance-visuals {
-  display: grid;
-  grid-template-columns: 3fr 2fr;
-  gap: 40px;
-}
-.glance-visual-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-  margin-bottom: 14px;
-}
-.glance-activity-svg {
-  width: 100%;
-  height: 84px;
-  display: block;
-}
-.glance-activity-bar {
-  fill: var(--teal);
-  opacity: 0.75;
-}
-.glance-activity-bar--zero {
-  fill: rgba(var(--text-rgb), 0.12);
-}
-.glance-folder-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.glance-folder-row {
-  display: grid;
-  grid-template-columns: 130px 1fr 28px;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  font-size: 12.5px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  transition: background 0.12s;
 }
-.glance-folder-name {
-  color: var(--light-muted, var(--snow));
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.glance-folder-track {
-  height: 8px;
-  border-radius: 4px;
-  background: rgba(var(--text-rgb), 0.07);
-  overflow: hidden;
-}
-.glance-folder-fill {
-  display: block;
-  height: 100%;
-  border-radius: 4px;
-  background: var(--teal);
-  opacity: 0.75;
-}
-.glance-folder-count {
-  color: var(--muted);
-  text-align: right;
-}
-@media (max-width: 900px) {
-  .home-glance-visuals { grid-template-columns: 1fr; }
-}
-.glance-card-top {
+.activity-row:hover { background: rgba(var(--text-rgb), 0.04); }
+.activity-icon {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  background: rgba(var(--text-rgb), 0.07);
+  color: var(--light-muted);
 }
-.glance-card-title {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.activity-icon svg { width: 14px; height: 14px; }
+.activity-row--accent .activity-icon { background: rgba(var(--accent-rgb), 0.14); color: var(--teal); }
+.activity-row--yellow .activity-icon { background: rgba(228, 230, 195, 0.18); color: var(--yellow); }
+.activity-row--red .activity-icon { background: rgba(201, 123, 138, 0.18); color: var(--red); }
+.activity-content { flex: 1; min-width: 0; padding-top: 2px; }
+.activity-body {
+  font-size: 13.5px;
+  color: var(--light-muted, var(--muted));
+  line-height: 1.55;
+}
+.activity-body strong { color: var(--snow); font-weight: 650; }
+.activity-link { color: var(--teal); font-weight: 650; text-decoration: none; }
+.activity-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+.activity-meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.activity-meta .activity-sep { margin: 0 5px; opacity: 0.6; }
+.activity-meta .activity-time { font-variant-numeric: tabular-nums; }
+.activity-empty {
+  font-size: 12.5px;
   color: var(--muted);
-}
-.glance-card-badge {
-  font-size: 11px;
-  color: var(--teal);
-  white-space: nowrap;
-}
-.glance-card-summary {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--light-muted, var(--snow));
-}
-.glance-card-hint {
-  margin-top: auto;
-  font-size: 11.5px;
-  color: var(--muted);
-}
-.glance-card:hover:not(:disabled) .glance-card-hint {
-  color: var(--teal);
-}
-@media (max-width: 900px) {
-  .home-glance { margin: 16px; padding: 16px; }
-  .home-glance-cards { grid-template-columns: 1fr; }
 }
 
 /* ── Settings Tabs ─────────────────────────────────────────────────────── */

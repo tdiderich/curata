@@ -941,3 +941,12 @@ tasks:
   updated: 2026-06-09T15:45:54.840242-05:00
   closed: 2026-06-09T15:45:54.840242-05:00
   close_reason: 'timestamp split (raw-SQL view bumps), Page.status+supersededBy+lastViewedAt, PageFlag model, flag_page/list_flags MCP (HTTP+stdio) w/ dismissed-flag guard, Cleanup queue UI (clusters, preview, bulk, 4 dispositions), archived banner+restore, passive staleness heuristics, OOTB cleanup audit workflow. Full cycle verified live. Rolled out: curata 29602fa, curata-app 4a933b9, maze-apps PR #89 merged+deployed.'
+- id: kz-8133
+  title: 'Release: curata archived-status + stale link edge fixes (list_templates, get_related, upsertLinks prune)'
+  status: blocked
+  priority: 1
+  task_type: task
+  assignee: claude
+  note: curata OSS a4b6a9b + curata-app 52ee198 shipped and CI green; maze-apps sync PR 182 open, merge denied by permission classifier, needs Tyler
+  created: 2026-07-28T21:49:29.456957-05:00
+  updated: 2026-07-28T21:57:20.650429-05:00

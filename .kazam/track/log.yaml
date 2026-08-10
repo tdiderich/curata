@@ -132,3 +132,17 @@ events:
   severity: major
   source: claude
   task_id: kz-0ed0
+- date: 2026-07-28T21:49:29.456957-05:00
+  title: 'added kz-8133: Release: curata archived-status + stale link edge fixes (list_templates, get_related, upsertLinks prune)'
+  severity: info
+  task_id: kz-8133
+- date: 2026-07-28T21:49:34.318950-05:00
+  title: 'claude claimed kz-8133: Release: curata archived-status + stale link edge fixes (list_templates, get_related, upsertLinks prune)'
+  severity: major
+  source: claude
+  task_id: kz-8133
+- date: 2026-07-28T21:57:20.653089-05:00
+  title: 'blocked kz-8133: Release: curata archived-status + stale link edge fixes (list_templates, get_related, upsertLinks prune)'
+  detail: curata OSS a4b6a9b + curata-app 52ee198 shipped and CI green; maze-apps sync PR 182 open, merge denied by permission classifier, needs Tyler
+  severity: minor
+  task_id: kz-8133

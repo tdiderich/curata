@@ -8,7 +8,7 @@ import { toast } from "@/components/toast";
 import { FolderMenu, PageMenu, NewFolderButton } from "@/components/folder-actions";
 import { NewPageButton } from "@/components/new-page-button";
 import ReportBuilder from "@/components/report-builder";
-import { readPinsSeeded, PINS_CHANGED_EVENT } from "@/lib/pins";
+import { readPinsSeeded, reorderPin, PINS_CHANGED_EVENT } from "@/lib/pins";
 
 export interface SidebarFolder {
   id: string;
@@ -34,13 +34,16 @@ interface RecentEntry {
 // Folders default collapsed; the store tracks what the user explicitly
 // expanded (so new folders also arrive collapsed).
 const EXPAND_KEY = "curata-nav-expanded";
+// Pinned is a special folder that defaults open (it's actively curated, not
+// just a dumping ground), so it tracks the opposite: ids explicitly closed.
+const COLLAPSE_KEY = "curata-nav-collapsed";
 const HIDDEN_KEY = "curata-nav-hidden";
 // dataTransfer payload type for page rows dragged onto folders.
 const DRAG_MIME = "application/x-curata-page";
 
-function readExpanded(): Set<string> {
+function readIdSet(key: string): Set<string> {
   try {
-    return new Set(JSON.parse(localStorage.getItem(EXPAND_KEY) ?? "[]") as string[]);
+    return new Set(JSON.parse(localStorage.getItem(key) ?? "[]") as string[]);
   } catch {
     return new Set();
   }
@@ -102,6 +105,32 @@ function PageLink({ page, folders, active, pinned, orgSlug, authMode }: { page: 
   );
 }
 
+// Auto-maintained collections (Recent, Pinned) presented like a folder you
+// can open/close, but membership is derived rather than manually curated.
+function SpecialFolder({
+  label,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  label: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="nav-folder" style={{ "--nav-depth": 0 } as React.CSSProperties}>
+      <div className="nav-folder-row">
+        <button className="nav-folder-toggle" onClick={onToggle} aria-expanded={isOpen}>
+          <span className={`nav-folder-chevron${isOpen ? "" : " nav-folder-chevron--collapsed"}`} aria-hidden="true">&#9662;</span>
+          <span className="nav-folder-name">{label}</span>
+        </button>
+      </div>
+      {isOpen && <div className="nav-folder-children">{children}</div>}
+    </div>
+  );
+}
+
 export function Sidebar({
   folders,
   pages,
@@ -129,11 +158,14 @@ export function Sidebar({
   const router = useRouter();
   const sidebarRef = useRef<HTMLElement>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [recents, setRecents] = useState<RecentEntry[]>([]);
   const [pins, setPins] = useState<string[]>([]);
   const [hidden, setHidden] = useState(false);
   // Folder id (or "__root") currently hovered by a page drag.
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  // Pinned slug currently hovered while dragging another pin to reorder.
+  const [pinDrop, setPinDrop] = useState<{ slug: string; pos: "before" | "after" } | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
 
   const [resizing, setResizing] = useState(false);
@@ -169,7 +201,8 @@ export function Sidebar({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setExpanded(readExpanded());
+    setExpanded(readIdSet(EXPAND_KEY));
+    setCollapsed(readIdSet(COLLAPSE_KEY));
     setRecents(readRecents());
     setMobileOpen(false);
   }, [pathname]);
@@ -261,6 +294,18 @@ export function Sidebar({
     });
   };
 
+  // Inverse of toggle(): membership means explicitly closed, so the section
+  // defaults open the first time it's seen.
+  const toggleCollapsed = (id: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  };
+
   const childFolders = useMemo(() => {
     const m = new Map<string | null, SidebarFolder[]>();
     for (const f of folders) {
@@ -299,6 +344,36 @@ export function Sidebar({
     ? decodeURIComponent(pathname.slice("/pages/".length).split("/")[0])
     : null;
 
+  // Folder deletion cascades to archived pages too, so the confirm dialog
+  // needs the full set, not just what's currently visible in the tree.
+  const allPages = useMemo(() => [...pages, ...archivedPages], [pages, archivedPages]);
+  // Flagged + archived both live on /cleanup now, so one nav entry covers both.
+  const cleanupTotal = cleanupCount + archivedPages.length;
+
+  function onPinDragOver(e: React.DragEvent, slug: string) {
+    if (!e.dataTransfer.types.includes(DRAG_MIME)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pos = e.clientY - rect.top < rect.height / 2 ? "before" : "after";
+    setPinDrop((cur) => (cur?.slug === slug && cur.pos === pos ? cur : { slug, pos }));
+  }
+
+  function onPinDrop(e: React.DragEvent) {
+    e.preventDefault();
+    const target = pinDrop;
+    setPinDrop(null);
+    if (!target) return;
+    let payload: { slug: string };
+    try {
+      payload = JSON.parse(e.dataTransfer.getData(DRAG_MIME));
+    } catch {
+      return;
+    }
+    if (!payload?.slug || !pinnedSet.has(payload.slug)) return;
+    reorderPin(payload.slug, target.slug, target.pos);
+  }
+
   function renderFolder(folder: SidebarFolder, depth: number) {
     const isCollapsed = !expanded.has(folder.id);
     const kids = childFolders.get(folder.id) ?? [];
@@ -319,7 +394,7 @@ export function Sidebar({
             <span className="nav-folder-name">{folder.name}</span>
           </button>
           <span className="nav-row-menu">
-            <FolderMenu folder={folder} allFolders={folders} canManageRules={canManageRules} />
+            <FolderMenu folder={folder} allFolders={folders} allPages={allPages} canManageRules={canManageRules} />
           </span>
         </div>
         {!isCollapsed && (
@@ -436,36 +511,13 @@ export function Sidebar({
         <NewPageButton className="nav-link-item nav-link-item--action" label="+ New page" />
         <NewFolderButton className="nav-link-item nav-link-item--action" label="+ New folder" />
         <button className="nav-link-item nav-link-item--action" onClick={() => setReportOpen(true)}>+ Create report</button>
-        {cleanupCount > 0 && (
+        {cleanupTotal > 0 && (
           <Link href="/cleanup" className={`nav-link-item${pathname === "/cleanup" ? " nav-link-item--active" : ""}`}>
             Cleanup
-            <span className="nav-count-badge">{cleanupCount}</span>
+            <span className="nav-count-badge">{cleanupTotal}</span>
           </Link>
         )}
       </nav>
-
-      {(pinned.length > 0 || recentList.length > 0) && (
-        <div className="nav-section">
-          {pinned.length > 0 && (
-            <>
-              <div className="nav-section-label">Pinned</div>
-              {pinned.map((p) => (
-                <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned orgSlug={orgSlug} authMode={authMode} />
-              ))}
-            </>
-          )}
-          {recentList.length > 0 && (
-            <>
-              <div className="nav-section-label">Recent</div>
-              {recentList.map((r) => {
-                const page = pages.find((p) => p.slug === r.slug);
-                if (!page) return null;
-                return <PageLink key={r.slug} page={page} folders={folders} active={activeSlug === r.slug} pinned={pinnedSet.has(r.slug)} orgSlug={orgSlug} authMode={authMode} />;
-              })}
-            </>
-          )}
-        </div>
-      )}
 
       <div className="nav-section nav-tree">
         <div
@@ -487,32 +539,34 @@ export function Sidebar({
             </button>
           )}
         </div>
+        {recentList.length > 0 && (
+          <SpecialFolder label="Recent" isOpen={expanded.has("__recent")} onToggle={() => toggle("__recent")}>
+            {recentList.map((r) => {
+              const page = pages.find((p) => p.slug === r.slug);
+              if (!page) return null;
+              return <PageLink key={r.slug} page={page} folders={folders} active={activeSlug === r.slug} pinned={pinnedSet.has(r.slug)} orgSlug={orgSlug} authMode={authMode} />;
+            })}
+          </SpecialFolder>
+        )}
+        {pinned.length > 0 && (
+          <SpecialFolder label="Pinned" isOpen={!collapsed.has("__pinned")} onToggle={() => toggleCollapsed("__pinned")}>
+            {pinned.map((p) => (
+              <div
+                key={p.slug}
+                className={`nav-pin-dropzone${pinDrop?.slug === p.slug ? ` nav-pin-dropzone--${pinDrop.pos}` : ""}`}
+                onDragOver={(e) => onPinDragOver(e, p.slug)}
+                onDragLeave={() => setPinDrop((cur) => (cur?.slug === p.slug ? null : cur))}
+                onDrop={onPinDrop}
+              >
+                <PageLink page={p} folders={folders} active={activeSlug === p.slug} pinned orgSlug={orgSlug} authMode={authMode} />
+              </div>
+            ))}
+          </SpecialFolder>
+        )}
         {rootFolders.map((f) => renderFolder(f, 0))}
         {unfiled.map((p) => (
           <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned={pinnedSet.has(p.slug)} orgSlug={orgSlug} authMode={authMode} />
         ))}
-        {archivedPages.length > 0 && (
-          <div className="nav-folder" style={{ "--nav-depth": 0 } as React.CSSProperties}>
-            <div className="nav-folder-row">
-              <button
-                className="nav-folder-toggle nav-folder-toggle--archived"
-                onClick={() => toggle("__archived")}
-                aria-expanded={expanded.has("__archived")}
-              >
-                <span className={`nav-folder-chevron${!expanded.has("__archived") ? " nav-folder-chevron--collapsed" : ""}`} aria-hidden="true">&#9662;</span>
-                <span className="nav-folder-name">Archived</span>
-                <span className="nav-count-badge">{archivedPages.length}</span>
-              </button>
-            </div>
-            {expanded.has("__archived") && (
-              <div className="nav-folder-children">
-                {archivedPages.map((p) => (
-                  <PageLink key={p.slug} page={p} folders={folders} active={activeSlug === p.slug} pinned={false} orgSlug={orgSlug} authMode={authMode} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       <div className="nav-footer">
