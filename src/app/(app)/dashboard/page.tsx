@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { AUTH_MODE, resolveOrg } from "@/lib/auth";
-import { seedOrg } from "@/lib/seed";
+import { seedOrg, seedOrgContent } from "@/lib/seed";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { ActivityFeed } from "@/components/activity-feed";
@@ -20,6 +20,11 @@ export default async function DashboardPage() {
     ctx = await resolveOrg();
   }
   if (!ctx) redirect(AUTH_MODE === "clerk" ? "/onboarding" : "/sign-in");
+
+  // Idempotent: backfills any seed templates/workflows added to this build
+  // since the org was created. seedOrg() only seeds brand-new orgs, so
+  // existing orgs would otherwise never pick up new seed content.
+  await seedOrgContent(ctx.orgId);
 
   const [graph, org, pageTitles, auditRows] = await Promise.all([
     buildKnowledgeGraph(ctx.orgId),

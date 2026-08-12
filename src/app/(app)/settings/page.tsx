@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AUTH_MODE, resolveOrg, resolveCurrentUser } from "@/lib/auth";
-import { seedOrg } from "@/lib/seed";
+import { seedOrg, seedOrgContent } from "@/lib/seed";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { isPersonalEmailDomain } from "@/lib/personal-domains";
@@ -28,6 +28,11 @@ export default async function SettingsPage() {
     ctx = await resolveOrg();
   }
   if (!ctx) redirect(AUTH_MODE === "clerk" ? "/onboarding" : "/sign-in");
+
+  // Idempotent: backfills any seed templates/workflows added to this build
+  // since the org was created. seedOrg() only seeds brand-new orgs, so
+  // existing orgs would otherwise never pick up new seed content.
+  await seedOrgContent(ctx.orgId);
 
   const canManage = can(ctx.role, "member:manage");
   const canManageKeys = can(ctx.role, "key:manage");
