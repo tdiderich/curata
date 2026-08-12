@@ -11,6 +11,9 @@ import { OrgSettings } from "@/components/org-settings";
 import { ThemeSettings } from "@/components/theme-settings";
 import { ApiKeyManager } from "@/components/api-key-manager";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
+import { OrgTagsManager } from "@/components/org-tags-manager";
+import { extractOrgTags } from "@/lib/org-tags";
+import { DEFAULT_TAGS } from "@/lib/default-tags";
 import { SettingsTabs } from "@/components/settings-tabs";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +42,7 @@ export default async function SettingsPage() {
     const raw = org?.rules;
     if (!raw || !Array.isArray(raw)) return [];
     return (raw as Array<Record<string, unknown>>).filter(
-      (r) => typeof r.id === "string" && typeof r.text === "string"
+      (r) => typeof r.id === "string" && r.id !== "org-tags" && typeof r.text === "string"
     ).map((r) => ({
       id: r.id as string,
       text: r.text as string,
@@ -47,6 +50,16 @@ export default async function SettingsPage() {
       ...(Array.isArray(r.patterns) ? { patterns: r.patterns as string[] } : {}),
     }));
   })();
+
+  const orgTagNames = canManageRules
+    ? (
+        await db.concept.findMany({
+          where: { pages: { some: { page: { orgId: ctx.orgId, status: "active" } } } },
+          select: { displayName: true },
+          take: 200,
+        })
+      ).map((c) => c.displayName.toLowerCase())
+    : [];
 
   const currentUser = await resolveCurrentUser();
   const userEmail = currentUser?.email ?? "";
@@ -89,11 +102,18 @@ export default async function SettingsPage() {
     ...(canManageRules ? [{
       label: "Content Rules",
       content: (
-        <ContentRulesEditor
-          scopeParam="scope=global"
-          initialRules={globalRules}
-          canManage={canManageRules}
-        />
+        <>
+          <OrgTagsManager
+            initialTags={extractOrgTags(org?.rules)}
+            suggestions={[...new Set([...DEFAULT_TAGS, ...orgTagNames])]}
+            canManage={canManageRules}
+          />
+          <ContentRulesEditor
+            scopeParam="scope=global"
+            initialRules={globalRules}
+            canManage={canManageRules}
+          />
+        </>
       ),
     }] : []),
   ];

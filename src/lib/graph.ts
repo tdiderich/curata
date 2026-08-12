@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { DEFAULT_TAGS } from "./default-tags";
+import { extractOrgTags } from "./org-tags";
 
 export type TagTier = "default" | "org" | "personal";
 
@@ -9,9 +10,9 @@ export interface GraphTag {
   pages: number;
   tokens: number;
   /**
-   * default = curata's canonical starter tags; org = used by multiple people
-   * (derived from distinct PageConcept creators until explicit org blessing
-   * ships with tag governance); personal = one person's tag so far.
+   * default = curata's canonical starter tags; org = blessed by an
+   * owner/admin in settings (the org-tags entry in content rules);
+   * personal = everything else.
    */
   tier: TagTier;
 }
@@ -55,13 +56,18 @@ const MAX_PAGES = 400;
  * as suggestions.
  */
 export async function buildKnowledgeGraph(orgId: string): Promise<KnowledgeGraph> {
+  const org = await db.organization.findUnique({
+    where: { id: orgId },
+    select: { rules: true },
+  });
+  const blessed = new Set(extractOrgTags(org?.rules));
+
   const tagRows = await db.$queryRaw<
-    { id: string; name: string; pages: number; tokens: bigint; creators: number }[]
+    { id: string; name: string; pages: number; tokens: bigint }[]
   >`
     SELECT c.id, c.display_name AS name,
            COUNT(DISTINCT p.id)::int AS pages,
-           (SUM(LENGTH(pv.yaml_content)) / 4)::bigint AS tokens,
-           COUNT(DISTINCT pc.created_by)::int AS creators
+           (SUM(LENGTH(pv.yaml_content)) / 4)::bigint AS tokens
     FROM concepts c
     JOIN page_concepts pc ON pc.concept_id = c.id
     JOIN pages p ON p.id = pc.page_id
@@ -80,7 +86,11 @@ export async function buildKnowledgeGraph(orgId: string): Promise<KnowledgeGraph
     name: t.name,
     pages: t.pages,
     tokens: Number(t.tokens),
-    tier: defaultNames.has(t.name.toLowerCase()) ? "default" : t.creators > 1 ? "org" : "personal",
+    tier: defaultNames.has(t.name.toLowerCase())
+      ? "default"
+      : blessed.has(t.name.toLowerCase())
+        ? "org"
+        : "personal",
   }));
   const tagIds = tags.map((t) => t.id);
 

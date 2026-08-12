@@ -6772,3 +6772,62 @@ i.kg-circle-page {
 .pg-tag-x:hover {
   color: var(--red);
 }
+
+/* Tag row sits as a slim second header line under the sticky toolbar */
+.page-toolbar-tags {
+  padding: 4px 16px 6px;
+  border-bottom: 1px solid var(--card-border);
+}
+.page-toolbar-tags .pg-tags {
+  padding: 0;
+  gap: 5px;
+}
+.page-toolbar-tags .pg-tag {
+  font-size: 0.72rem;
+  padding: 1px 9px;
+}
+.page-toolbar-tags .kg-picker-btn {
+  font-size: 0.72rem;
+  padding: 2px 10px;
+  border-style: dashed;
+}
+
+/* ── Content rules: members-table treatment + org tags section ── */
+.cr-head-row {
+  display: flex;
+  align-items: center;
+}
+.cr-th-enforcement {
+  width: 120px;
+  text-align: right;
+}
+.cr-editor .cr-row {
+  border-bottom: 1px solid var(--card-border);
+}
+.cr-editor .cr-row:last-child {
+  border-bottom: none;
+}
+.org-tags {
+  margin-bottom: 22px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--card-border);
+}
+.org-tags-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.org-tags-title {
+  font-weight: 600;
+  color: rgba(var(--text-rgb), 0.95);
+  font-size: 0.9rem;
+}
+.org-tags-hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.org-tags-empty {
+  color: var(--muted);
+  font-size: 0.8rem;
+}

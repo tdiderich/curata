@@ -192,15 +192,17 @@ export default async function PageDetailView({
         archived={pageRow?.status === "archived"
           ? { since: pageRow.updatedAt.toISOString().slice(0, 10), supersededBy: pageRow.supersededBy }
           : undefined}
+        tagsRow={
+          pageRow ? (
+            <PageTags
+              pageId={pageRow.id}
+              initialTags={pageTags}
+              tagOptions={tagOptions}
+              canEdit={canEditPage}
+            />
+          ) : undefined
+        }
       >
-        {pageRow && (
-          <PageTags
-            pageId={pageRow.id}
-            initialTags={pageTags}
-            tagOptions={tagOptions}
-            canEdit={canEditPage}
-          />
-        )}
         <div className="page-detail-content">
           <PageRenderer
             page={page}

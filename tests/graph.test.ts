@@ -29,13 +29,20 @@ describe("buildKnowledgeGraph", () => {
     orgId = org.id;
   });
 
-  it("classifies tag tiers: default list, multi-creator org, single-creator personal", async () => {
+  it("classifies tag tiers: default list, admin-blessed org, everything else personal", async () => {
+    await testDb.organization.update({
+      where: { id: orgId },
+      data: {
+        rules: [
+          { id: "org-tags", text: "Blessed organization tags", mode: "warn", tags: ["kubernetes"] },
+        ],
+      },
+    });
     const a = await createTestPage(orgId, { slug: "a", title: "A" });
     const b = await createTestPage(orgId, { slug: "b", title: "B" });
     await tagPage(a.id, "faq", "user-a"); // in DEFAULT_TAGS
-    await tagPage(a.id, "kubernetes", "user-a");
-    await tagPage(b.id, "kubernetes", "user-b"); // two creators -> org
-    await tagPage(b.id, "my-notes", "user-b"); // one creator -> personal
+    await tagPage(a.id, "kubernetes", "user-a"); // blessed -> org
+    await tagPage(b.id, "my-notes", "user-b"); // unblessed -> personal
 
     const g = await buildKnowledgeGraph(orgId);
     const byName = Object.fromEntries(g.tags.map((t) => [t.name, t.tier]));

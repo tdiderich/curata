@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { DEFAULT_TAGS } from "./default-tags";
+import { ORG_TAGS_RULE_ID, extractOrgTags } from "./org-tags";
 
 interface TagRow {
   tag: string;
@@ -88,7 +89,15 @@ export async function buildServerInstructions(
       where: { id: orgId },
       select: { rules: true },
     });
-    const rules = Array.isArray(org?.rules) ? org.rules : [];
+    const blessed = extractOrgTags(org?.rules);
+    if (blessed.length > 0) {
+      sections.push(
+        `ORG TAGS (blessed by this organization's admins - prefer these over inventing near-synonyms): ${blessed.join(", ")}`
+      );
+    }
+    const rules = (Array.isArray(org?.rules) ? org.rules : []).filter(
+      (r) => !(typeof r === "object" && r !== null && (r as Record<string, unknown>).id === ORG_TAGS_RULE_ID)
+    );
     const texts = rules
       .map((r) =>
         typeof r === "object" && r !== null && typeof (r as Record<string, unknown>).text === "string"

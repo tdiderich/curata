@@ -243,7 +243,14 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
         <div className="cr-empty">No content rules configured.</div>
       )}
 
-      <div className="cr-list">
+      <div className="cr-list dash-table">
+        {rules.length > 0 && (
+          <div className="dash-row cr-head-row">
+            <span className="dash-th dash-th-title">Rule</span>
+            <span className="dash-th cr-th-enforcement">Enforcement</span>
+            <span className="dash-th dash-th-right">Actions</span>
+          </div>
+        )}
         {rules.map((rule) => (
           <div key={rule.id} className={`cr-row${isExpanded(rule.id) ? " cr-row--expanded" : ""}`}>
             <div className="cr-row-summary" onClick={() => toggleExpand(rule.id)}>

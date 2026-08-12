@@ -68,6 +68,7 @@ export default function PageDetailClient({
   pageSlug,
   canManageRules = false,
   canEditPageRules = false,
+  tagsRow,
 }: {
   slug: string;
   children?: React.ReactNode;
@@ -86,6 +87,7 @@ export default function PageDetailClient({
   pageSlug?: string;
   canManageRules?: boolean;
   canEditPageRules?: boolean;
+  tagsRow?: React.ReactNode;
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -540,6 +542,7 @@ export default function PageDetailClient({
           </div>
         </div>
       </div>
+      {tagsRow && <div className="page-toolbar-tags">{tagsRow}</div>}
       {agentOpen &&
         createPortal(
           <AgentConnectModal slug={slug} onClose={() => setAgentOpen(false)} authMode={authMode} />,
@@ -552,11 +555,11 @@ export default function PageDetailClient({
         )}
       {rulesOpen &&
         createPortal(
-          <div className="rules-panel-overlay" onClick={() => setRulesOpen(false)}>
-            <div className="rules-panel" onClick={(e) => e.stopPropagation()}>
-              <div className="rules-panel-header">
-                <span className="rules-panel-title">Content Rules</span>
-                <button className="rules-panel-close" onClick={() => setRulesOpen(false)}>&times;</button>
+          <div className="agent-overlay" onClick={() => setRulesOpen(false)}>
+            <div className="agent-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="agent-modal-header">
+                <span className="agent-modal-title">Content rules</span>
+                <button className="agent-modal-close" onClick={() => setRulesOpen(false)}>&#x2715;</button>
               </div>
               <div className="rules-panel-body">
                 {inheritedRules.length > 0 && (

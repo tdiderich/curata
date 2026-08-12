@@ -36,6 +36,9 @@ function parseRules(json: unknown): ContentRule[] {
       typeof r === "object" &&
       r !== null &&
       typeof r.id === "string" &&
+      // The blessed org-tags list rides the same JSON but is not a prose
+      // rule — it has its own settings surface and MCP instructions line.
+      r.id !== "org-tags" &&
       typeof r.text === "string"
   ).map((r) => ({
     id: r.id,
