@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrgFromApiKey } from "@/lib/auth";
+import { requestOrigin } from "@/lib/request-origin";
 import { db } from "@/lib/db";
 import { dispatch, READ_TOOLS, WRITE_TOOLS, ALL_TOOLS } from "@/lib/mcp-dispatch";
 
@@ -45,7 +46,7 @@ async function resolveAuth(request: NextRequest) {
 /** RFC 9728 challenge so OAuth-capable MCP clients can discover the auth server. */
 function unauthorizedHeaders(request: NextRequest): Record<string, string> {
   if (process.env.AUTH_MODE !== "clerk") return {};
-  const origin = new URL(request.url).origin;
+  const origin = requestOrigin(request);
   return { "WWW-Authenticate": `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource"` };
 }
 

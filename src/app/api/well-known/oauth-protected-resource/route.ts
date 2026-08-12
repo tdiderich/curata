@@ -2,6 +2,7 @@ import {
   protectedResourceHandlerClerk,
   metadataCorsOptionsRequestHandler,
 } from "@clerk/mcp-tools/next";
+import { requestOrigin } from "@/lib/request-origin";
 
 // RFC 9728 protected-resource metadata for the MCP endpoint. Surfaced at
 // /.well-known/oauth-protected-resource (and path-suffixed variants like
@@ -17,9 +18,12 @@ const AUTH_MODE = process.env.AUTH_MODE ?? "none";
 
 export async function GET(request: Request) {
   if (AUTH_MODE !== "clerk") return new Response(null, { status: 404 });
+  // Clerk's handler reads the resource origin off request.url, which behind
+  // the proxy is the internal bind address — rewrite it to the public origin.
+  const publicUrl = new URL(new URL(request.url).pathname, requestOrigin(request));
   return protectedResourceHandlerClerk({
     scopes_supported: ["email", "profile", "user:org:read"],
-  })(request);
+  })(new Request(publicUrl, { headers: request.headers }));
 }
 
 export async function OPTIONS() {

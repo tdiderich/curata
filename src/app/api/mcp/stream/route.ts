@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
 import { resolveOrgFromApiKey } from "@/lib/auth";
+import { requestOrigin } from "@/lib/request-origin";
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import {
@@ -110,7 +111,7 @@ async function serverInstructions(request: Request, orgId: string, orgSlug: stri
 function unauthorizedHeaders(request: Request): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (process.env.AUTH_MODE === "clerk") {
-    const origin = new URL(request.url).origin;
+    const origin = requestOrigin(request);
     headers["WWW-Authenticate"] = `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource"`;
   }
   return headers;

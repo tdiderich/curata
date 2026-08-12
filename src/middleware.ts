@@ -24,6 +24,9 @@ const PUBLIC_PREFIXES_BASE = [
   "/llms-full.txt",
   "/.well-known/",
   "/api/well-known/",
+  // Generic agent documentation (AGL execution semantics, agents reference) —
+  // fetched by unauthenticated MCP clients following the server instructions.
+  "/api/docs/",
   "/mcp",
 ];
 
