@@ -21,8 +21,9 @@ export default async function DashboardPage() {
   }
   if (!ctx) redirect(AUTH_MODE === "clerk" ? "/onboarding" : "/sign-in");
 
-  const [graph, pageTitles, auditRows] = await Promise.all([
+  const [graph, org, pageTitles, auditRows] = await Promise.all([
     buildKnowledgeGraph(ctx.orgId),
+    db.organization.findUnique({ where: { id: ctx.orgId }, select: { name: true } }),
     db.page.findMany({ where: { orgId: ctx.orgId }, select: { slug: true, title: true } }),
     db.auditLog.findMany({ where: { orgId: ctx.orgId }, orderBy: { createdAt: "desc" }, take: 100 }),
   ]);
@@ -33,7 +34,7 @@ export default async function DashboardPage() {
   return (
     <div className="dash-root">
       <div className="cleanup-header">
-        <h1 className="cleanup-heading">Brain</h1>
+        <h1 className="cleanup-heading">{org?.name ?? "Knowledge"}</h1>
       </div>
       <DashboardTabs graph={graph} activity={<ActivityFeed entries={activityFeed} />} />
     </div>

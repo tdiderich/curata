@@ -10,6 +10,9 @@ import type { ResolvedRule } from "@/lib/content-rules";
 import { PageRenderer } from "@/generated/kazam-renderer";
 import PageDetailClient from "@/components/page-detail-client";
 import PageEditor from "@/components/page-editor";
+import { PageTags } from "@/components/page-tags";
+import { getPageConcepts } from "@/lib/concepts";
+import { DEFAULT_TAGS } from "@/lib/default-tags";
 
 export async function generateMetadata({
   params,
@@ -82,6 +85,23 @@ export default async function PageDetailView({
         />
       </>
     );
+  }
+
+  let pageTags: string[] = [];
+  let tagOptions: string[] = [];
+  if (pageRow) {
+    const [concepts, orgConcepts] = await Promise.all([
+      getPageConcepts(pageRow.id),
+      db.concept.findMany({
+        where: { pages: { some: { page: { orgId: ctx.orgId, status: "active" } } } },
+        select: { displayName: true },
+        take: 200,
+      }),
+    ]);
+    pageTags = [...new Set(concepts.map((c) => c.term.toLowerCase()))];
+    tagOptions = [
+      ...new Set([...DEFAULT_TAGS, ...orgConcepts.map((c) => c.displayName.toLowerCase())]),
+    ];
   }
 
   const rawAnnotations = await getAnnotations(ctx.orgId, slug);
@@ -173,6 +193,14 @@ export default async function PageDetailView({
           ? { since: pageRow.updatedAt.toISOString().slice(0, 10), supersededBy: pageRow.supersededBy }
           : undefined}
       >
+        {pageRow && (
+          <PageTags
+            pageId={pageRow.id}
+            initialTags={pageTags}
+            tagOptions={tagOptions}
+            canEdit={canEditPage}
+          />
+        )}
         <div className="page-detail-content">
           <PageRenderer
             page={page}

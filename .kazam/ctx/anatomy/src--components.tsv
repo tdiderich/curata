@@ -10,7 +10,9 @@ src/components/confirm-delete-modal.tsx	704	0	confirm-delete-modal component
 src/components/content-rules-editor.tsx	3013	0	content-rules-editor component
 src/components/dashboard-client.tsx	4260	0	dashboard-client component
 src/components/dashboard-feed.tsx	812	0	dashboard-feed component
+src/components/dashboard-tabs.tsx	1571	0	dashboard-tabs component
 src/components/folder-actions.tsx	7821	0	folder-actions component
+src/components/knowledge-graph.tsx	2488	0	knowledge-graph component
 src/components/member-list.tsx	1184	0	member-list component
 src/components/new-page-button.tsx	1576	0	new-page-button component
 src/components/org-settings.tsx	2003	0	org-settings component
