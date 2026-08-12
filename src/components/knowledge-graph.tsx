@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   forceSimulation,
@@ -30,8 +30,9 @@ interface Props {
   untaggedPanel?: ReactNode;
 }
 
-const W = 960;
-const H = 560;
+// Fallback used only until the wrap's real box is measured on mount.
+const DEFAULT_W = 960;
+const DEFAULT_H = 560;
 
 const UNTAGGED_ID = "__untagged";
 
@@ -42,6 +43,22 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
   const [view, setView] = useState({ x: 0, y: 0, k: 1 });
   const [interactive, setInteractive] = useState(false);
   const dragRef = useRef<{ x: number; y: number } | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [{ W, H }, setBox] = useState({ W: DEFAULT_W, H: DEFAULT_H });
+
+  // The simulation packs bubbles into a fixed W x H area, so it has to track
+  // the wrap's real rendered box or the graph stays capped at the fallback
+  // size and reads as short-and-wide once the panel grows taller than that.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) setBox({ W: width, H: height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const { nodes, bbox } = useMemo(() => {
     // Tags-only bubble pack: page dots and edges made the canvas noise, so
@@ -89,7 +106,7 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
       h: Math.max(...ys) - Math.min(...ys) + pad * 2,
     };
     return { nodes, bbox };
-  }, [tags, untaggedCount]);
+  }, [tags, untaggedCount, W, H]);
 
   const pagesByTag = useMemo(() => {
     const titleById = new Map(pages.map((p) => [p.id, p]));
@@ -170,7 +187,7 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
     ) : null;
 
   return (
-    <div className="kg-wrap">
+    <div className="kg-wrap" ref={wrapRef}>
       <div className="kg-main">
       <svg
         viewBox={`${bbox.x - view.x} ${bbox.y - view.y} ${bbox.w / view.k} ${bbox.h / view.k}`}

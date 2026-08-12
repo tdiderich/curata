@@ -90,7 +90,22 @@ export async function buildKnowledgeGraph(orgId: string): Promise<KnowledgeGraph
   ]);
   const blessed = new Set(extractOrgTags(org?.rules));
   const defaultNames = new Set<string>(DEFAULT_TAGS);
-  const folderName = new Map(folders.map((f) => [f.id, f.name.trim().toLowerCase()]));
+  // Folder names collide constantly (every customer folder tends to have its
+  // own "Pages" or "Assets" subfolder), and a name shared across unrelated
+  // folders merges their pages into one meaningless tag. Only names unique
+  // to a single folder in the org carry real signal, so only those become
+  // folder-derived tags; pages in a duplicate-named folder fall back to
+  // concept tags (or untagged) instead.
+  const folderNameCounts = new Map<string, number>();
+  for (const f of folders) {
+    const name = f.name.trim().toLowerCase();
+    folderNameCounts.set(name, (folderNameCounts.get(name) ?? 0) + 1);
+  }
+  const folderName = new Map(
+    folders
+      .filter((f) => folderNameCounts.get(f.name.trim().toLowerCase()) === 1)
+      .map((f) => [f.id, f.name.trim().toLowerCase()])
+  );
 
   const conceptRows =
     pageRows.length === 0
