@@ -84,11 +84,16 @@ async function resolveAuth(request: Request) {
 
 /**
  * Org-derived server instructions (base behavior + brain map + org rules) for
- * the initialize response. Best-effort: a failure here must never block the
- * connection, so it degrades to no instructions.
+ * the initialize response. Instructions only surface in the initialize
+ * result, and this transport builds a fresh server per request — so the map
+ * queries run only when the request actually is an initialize, not on every
+ * tool call. Best-effort: a failure here must never block the connection.
  */
-async function serverInstructions(orgId: string, orgSlug: string): Promise<string | undefined> {
+async function serverInstructions(request: Request, orgId: string, orgSlug: string): Promise<string | undefined> {
   try {
+    const body: unknown = await request.clone().json();
+    const method = typeof body === "object" && body !== null ? (body as { method?: unknown }).method : undefined;
+    if (method !== "initialize") return undefined;
     const { buildServerInstructions } = await import("@/lib/mcp-instructions");
     return await buildServerInstructions(orgId, orgSlug);
   } catch {
@@ -624,7 +629,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const server = createMcpServer(ctx.orgId, ctx.orgSlug, ctx.actorId, ctx.userId, await serverInstructions(ctx.orgId, ctx.orgSlug));
+  const server = createMcpServer(ctx.orgId, ctx.orgSlug, ctx.actorId, ctx.userId, await serverInstructions(request, ctx.orgId, ctx.orgSlug));
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   await server.connect(transport);
   return transport.handleRequest(request);
@@ -638,7 +643,7 @@ export async function GET(request: Request) {
     });
   }
 
-  const server = createMcpServer(ctx.orgId, ctx.orgSlug, ctx.actorId, ctx.userId, await serverInstructions(ctx.orgId, ctx.orgSlug));
+  const server = createMcpServer(ctx.orgId, ctx.orgSlug, ctx.actorId, ctx.userId, await serverInstructions(request, ctx.orgId, ctx.orgSlug));
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   await server.connect(transport);
   return transport.handleRequest(request);
