@@ -83,6 +83,20 @@ async function resolveAuth(request: Request) {
 }
 
 /**
+ * Org-derived server instructions (base behavior + brain map + org rules) for
+ * the initialize response. Best-effort: a failure here must never block the
+ * connection, so it degrades to no instructions.
+ */
+async function serverInstructions(orgId: string, orgSlug: string): Promise<string | undefined> {
+  try {
+    const { buildServerInstructions } = await import("@/lib/mcp-instructions");
+    return await buildServerInstructions(orgId, orgSlug);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * RFC 9728: a 401 from a protected MCP resource advertises where its
  * protected-resource metadata lives so OAuth-capable clients (Claude.ai,
  * ChatGPT connectors) can discover the authorization server and start the
@@ -97,8 +111,8 @@ function unauthorizedHeaders(request: Request): Record<string, string> {
   return headers;
 }
 
-function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId?: string): McpServer {
-  const server = new McpServer({ name: "curata", version: "0.1.0" });
+function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId?: string, instructions?: string): McpServer {
+  const server = new McpServer({ name: "curata", version: "0.1.0" }, instructions ? { instructions } : undefined);
 
   // Tools below that have no bespoke streaming handler delegate to the shared
   // dispatch registry so this transport stays at parity with /api/mcp.
@@ -117,7 +131,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     }
   };
 
-  server.tool("search_pages", "Search the knowledge base", { query: z.string() }, async ({ query }) => {
+  server.tool("search_pages", "Search this organization's validated knowledge brain: approved customer answers, how-things-work pages, best practices. Call this FIRST, before answering from general knowledge, whenever a question touches this organization's product, customers, pricing, or internal process — an approved answer may already exist", { query: z.string() }, async ({ query }) => {
     const results = await searchPages(orgId, query, userId);
     return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
   });
@@ -132,7 +146,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   });
 
-  server.tool("read_page", "Read a page by slug", { slug: z.string() }, async ({ slug }) => {
+  server.tool("read_page", "Read a knowledge page's full content by slug. Use after search_pages or get_related surfaces a promising page — the full page carries caveats and provenance the search snippet omits", { slug: z.string() }, async ({ slug }) => {
     validateSlug(slug);
     const result = await readPageYaml(orgId, slug);
     if (!result) return { content: [{ type: "text", text: `Error: page not found: ${slug}` }], isError: true };
@@ -299,7 +313,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       }
     });
 
-  server.tool("create_page", "Create a new page",
+  server.tool("create_page", "Create a new knowledge page in the brain. Search for duplicates FIRST (search_pages + get_related) — if an existing page covers the topic, patch_page it instead of creating a near-duplicate. Tag the page with concepts so it appears in the brain map",
     { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages.") },
     async ({ slug, content, folder_id, visibility, sort_order }) => {
       validateSlug(slug);
@@ -506,7 +520,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
-  server.tool("get_related", "Get pages and concepts related to a term or page slug",
+  server.tool("get_related", "Get pages and concepts related to a term, tag, or page slug. Use to pull everything under a brain-map tag, or to check for existing coverage before creating a page",
     { term: z.string().optional(), slug: z.string().optional() },
     async ({ term, slug }) => {
       const result = await getRelated(orgId, { term, slug });
@@ -610,7 +624,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const server = createMcpServer(ctx.orgId, ctx.orgSlug, ctx.actorId, ctx.userId);
+  const server = createMcpServer(ctx.orgId, ctx.orgSlug, ctx.actorId, ctx.userId, await serverInstructions(ctx.orgId, ctx.orgSlug));
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   await server.connect(transport);
   return transport.handleRequest(request);
@@ -624,7 +638,7 @@ export async function GET(request: Request) {
     });
   }
 
-  const server = createMcpServer(ctx.orgId, ctx.orgSlug, ctx.actorId, ctx.userId);
+  const server = createMcpServer(ctx.orgId, ctx.orgSlug, ctx.actorId, ctx.userId, await serverInstructions(ctx.orgId, ctx.orgSlug));
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   await server.connect(transport);
   return transport.handleRequest(request);
