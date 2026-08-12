@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { TEMPLATES, PERSONAS } from "@/lib/templates";
 import { basePath } from "@/lib/api-fetch";
@@ -91,7 +92,9 @@ export function NewPageButton({
     );
   }
 
-  return (
+  // Portaled so the sidebar's stacking context can't paint the hub masthead
+  // or page content over the dialog.
+  return createPortal(
     <div className="new-page-modal-overlay" onClick={closeModal}>
       <div
         className={`new-page-modal ${step === "template" ? "new-page-modal--wide" : ""}`}
@@ -200,6 +203,7 @@ export function NewPageButton({
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
