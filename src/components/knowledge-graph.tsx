@@ -4,9 +4,8 @@ import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   forceSimulation,
-  forceLink,
-  forceManyBody,
-  forceCenter,
+  forceX,
+  forceY,
   forceCollide,
   type SimulationNodeDatum,
 } from "d3-force";
@@ -36,12 +35,6 @@ const H = 560;
 
 const UNTAGGED_ID = "__untagged";
 
-function tagRadius(pages: number): number {
-  // Page count drives size — more tagged pages, bigger bubble; sqrt keeps
-  // big tags from swallowing the canvas. Token cost lives in the tooltip.
-  return Math.min(34, 8 + 4 * Math.sqrt(pages));
-}
-
 export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPanel }: Props) {
   const router = useRouter();
   const [hover, setHover] = useState<{ node: SimNode; x: number; y: number } | null>(null);
@@ -50,82 +43,78 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
   const [interactive, setInteractive] = useState(false);
   const dragRef = useRef<{ x: number; y: number } | null>(null);
 
-  const { nodes, links, bbox } = useMemo(() => {
-    const tagNodes: SimNode[] = tags.map((t) => ({
+  const { nodes, bbox } = useMemo(() => {
+    // Tags-only bubble pack: page dots and edges made the canvas noise, so
+    // pages live in the side panel and the bubbles are scaled to fill ~55%
+    // of the canvas area regardless of how many tags exist.
+    const weights = tags.map((t) => Math.sqrt(Math.max(1, t.pages)));
+    const untaggedWeight = untaggedCount > 0 ? Math.sqrt(untaggedCount) : 0;
+    const totalWeight = weights.reduce((a, b) => a + b * b, 0) + untaggedWeight * untaggedWeight;
+    const k = totalWeight > 0 ? Math.sqrt((0.55 * W * H) / (Math.PI * totalWeight)) : 1;
+    const radius = (w: number) => Math.max(18, Math.min(130, k * w));
+
+    const tagNodes: SimNode[] = tags.map((t, i) => ({
       id: t.id,
       kind: "tag",
       tier: t.tier,
       label: t.name,
-      r: tagRadius(t.pages),
+      r: radius(weights[i]),
       pages: t.pages,
       tokens: t.tokens,
     }));
-    const pageNodes: SimNode[] = pages.map((p) => ({
-      id: p.id,
-      kind: "page",
-      label: p.title,
-      r: 5,
-      slug: p.slug,
-    }));
-    const nodes = [...tagNodes, ...pageNodes];
+    const nodes = [...tagNodes];
     if (untaggedCount > 0) {
       nodes.push({
         id: UNTAGGED_ID,
         kind: "untagged",
         label: `untagged (${untaggedCount})`,
-        r: tagRadius(untaggedCount),
+        r: radius(untaggedWeight),
       });
     }
-    const byId = new Map(nodes.map((n) => [n.id, n]));
-    const links = edges.flatMap((e) => {
-      const source = byId.get(e.tagId);
-      const target = byId.get(e.pageId);
-      return source && target ? [{ source, target }] : [];
-    });
 
     const sim = forceSimulation(nodes)
-      .force("link", forceLink(links).distance(52).strength(0.6))
-      .force("charge", forceManyBody().strength(-90))
-      .force("center", forceCenter(W / 2, H / 2))
-      .force("collide", forceCollide<SimNode>().radius((d) => d.r + 10))
+      .force("x", forceX(W / 2).strength(0.06))
+      .force("y", forceY(H / 2).strength(0.09))
+      .force("collide", forceCollide<SimNode>().radius((d) => d.r + 4).strength(1))
       .stop();
-    for (let i = 0; i < 200; i++) sim.tick();
+    for (let i = 0; i < 260; i++) sim.tick();
 
-    // Fit the viewport to where the simulation actually put things — a sparse
-    // graph otherwise floats as a speck in a fixed frame.
-    const pad = 70;
-    const xs = nodes.map((n) => n.x ?? 0);
-    const ys = nodes.map((n) => n.y ?? 0);
+    const pad = 24;
+    const xs = nodes.flatMap((n) => [(n.x ?? 0) - n.r, (n.x ?? 0) + n.r]);
+    const ys = nodes.flatMap((n) => [(n.y ?? 0) - n.r, (n.y ?? 0) + n.r]);
     const bbox = {
       x: Math.min(...xs) - pad,
       y: Math.min(...ys) - pad,
       w: Math.max(...xs) - Math.min(...xs) + pad * 2,
       h: Math.max(...ys) - Math.min(...ys) + pad * 2,
     };
-    return { nodes, links, bbox };
-  }, [tags, pages, edges, untaggedCount]);
+    return { nodes, bbox };
+  }, [tags, untaggedCount]);
 
-  const neighbors = useMemo(() => {
-    if (!focusTag) return null;
-    const set = new Set<string>([focusTag]);
-    for (const l of links) {
-      if (l.source.id === focusTag) set.add(l.target.id);
+  const pagesByTag = useMemo(() => {
+    const titleById = new Map(pages.map((p) => [p.id, p]));
+    const map = new Map<string, GraphPage[]>();
+    for (const e of edges) {
+      const page = titleById.get(e.pageId);
+      if (!page) continue;
+      const list = map.get(e.tagId) ?? [];
+      list.push(page);
+      map.set(e.tagId, list);
     }
-    return set;
-  }, [focusTag, links]);
+    return map;
+  }, [pages, edges]);
 
-  const dimmed = (n: SimNode) => (neighbors ? !neighbors.has(n.id) : false);
+  const dimmed = (n: SimNode) => (focusTag ? n.id !== focusTag : false);
 
   const focused = useMemo(() => {
     if (!focusTag) return null;
     const tag = nodes.find((n) => n.id === focusTag);
     if (!tag) return null;
-    const pages = links
-      .filter((l) => l.source.id === focusTag && l.target.kind === "page")
-      .map((l) => l.target)
-      .sort((a, b) => a.label.localeCompare(b.label));
-    return { tag, pages };
-  }, [focusTag, nodes, links]);
+    const tagPages = (pagesByTag.get(focusTag) ?? [])
+      .slice()
+      .sort((a, b) => a.title.localeCompare(b.title));
+    return { tag, pages: tagPages };
+  }, [focusTag, nodes, pagesByTag]);
 
   if (nodes.length === 0) {
     return (
@@ -170,7 +159,7 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
               <span className="activity-content">
                 <span className="activity-body">
                   <a href={`/pages/${p.slug}`} className="activity-link">
-                    {p.label}
+                    {p.title}
                   </a>
                 </span>
               </span>
@@ -212,34 +201,29 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
         onPointerLeave={() => (dragRef.current = null)}
       >
         <g>
-          {links.map((l, i) => (
-            <line
-              key={i}
-              x1={l.source.x}
-              y1={l.source.y}
-              x2={l.target.x}
-              y2={l.target.y}
-              className="kg-edge"
-              opacity={dimmed(l.source) || dimmed(l.target) ? 0.08 : 0.3}
-            />
-          ))}
           {nodes.map((n) => (
             <g
               key={n.id}
               transform={`translate(${n.x},${n.y})`}
-              opacity={dimmed(n) ? 0.15 : 1}
+              opacity={dimmed(n) ? 0.25 : 1}
               className={`kg-node kg-node-${n.kind}`}
               onPointerEnter={(e) => setHover({ node: n, x: e.clientX, y: e.clientY })}
               onPointerLeave={() => setHover(null)}
-              onClick={() => {
-                if (n.kind === "page" && n.slug) router.push(`/pages/${n.slug}`);
-                else setFocusTag(focusTag === n.id ? null : n.id);
-              }}
+              onClick={() => setFocusTag(focusTag === n.id ? null : n.id)}
             >
-              {n.kind !== "page" && <circle r={n.r + 5} className="kg-halo" />}
+              <circle r={n.r + 5} className="kg-halo" />
               <circle r={n.r} className={n.kind === "tag" ? `kg-circle-tag-${n.tier}` : `kg-circle-${n.kind}`} />
-              {n.kind !== "page" && (
-                <text y={n.r + 18} textAnchor="middle" className="kg-label">
+              {n.r >= 30 ? (
+                <>
+                  <text y={-2} textAnchor="middle" className="kg-label kg-label-in" style={{ fontSize: Math.min(16, n.r / 2.6) }}>
+                    {n.label}
+                  </text>
+                  <text y={Math.min(16, n.r / 2.6) + 4} textAnchor="middle" className="kg-label-count" style={{ fontSize: Math.min(12, n.r / 3.4) }}>
+                    {n.kind === "tag" ? `${n.pages} page${n.pages === 1 ? "" : "s"}` : ""}
+                  </text>
+                </>
+              ) : (
+                <text y={n.r + 14} textAnchor="middle" className="kg-label">
                   {n.label}
                 </text>
               )}
@@ -283,9 +267,6 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
             <i className="kg-dot kg-circle-untagged" /> Untagged
           </span>
         )}
-        <span>
-          <i className="kg-dot kg-circle-page" /> Page
-        </span>
       </div>
       {hover && (
         <div className="kg-tooltip" style={{ left: hover.x + 12, top: hover.y + 12 }}>

@@ -6927,3 +6927,12 @@ body:has(.nav-reveal) .page-toolbar {
   border-color: rgba(var(--text-rgb), 0.2);
   color: var(--light-muted);
 }
+
+.kg-label-in {
+  font-weight: 600;
+}
+.kg-label-count {
+  fill: rgba(var(--text-rgb), 0.6);
+  stroke: none;
+  pointer-events: none;
+}
