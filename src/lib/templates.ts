@@ -7,6 +7,14 @@ export interface Template {
 }
 
 export const TEMPLATES: Template[] = [
+  // Agents
+  {
+    slug: "skill",
+    title: "Skill",
+    description: "An agent procedure: trigger, steps, and an optionally AGL-validated flow",
+    persona: "Agents",
+    previewUrl: "/p/curata-internal/template-skill",
+  },
   // Sales
   {
     slug: "sales-forecast",

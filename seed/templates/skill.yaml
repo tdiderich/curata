@@ -1,0 +1,50 @@
+title: "{{skill_name}}"
+shell: document
+skill:
+  trigger: "{{trigger_phrases}}"
+components:
+  - type: header
+    title: "{{skill_name}}"
+    eyebrow: Skill
+    subtitle: "{{description}}"
+  - type: definition_list
+    items:
+      - term: Trigger
+        definition: "{{trigger_phrases}}"
+      - term: Requires
+        definition: "{{required_tools}}"
+      - term: Owner
+        definition: "{{owner}}"
+  - type: markdown
+    body: |
+      ## Steps
+
+      {{steps}}
+
+      ## Validated flow
+
+      For a flow with branches, gates, or invariants, replace the steps above
+      with an ```agl fence — curata runs the AGL static analyzer on every
+      fence at save, so an unreachable state or an unsound invariant blocks
+      the write. Execution semantics live at /api/docs/agl. Skeleton (change
+      the fence language from `text` to `agl` to activate validation):
+
+      ```text
+      spec {{skill_name}} {
+        in: none: str
+        out: done: bool
+        description: "{{description}}"
+
+        flow {
+          state FIRST_STEP -> call(Tool, "what to do") -> next
+          state CHECK -> evaluate(result vs expectation) -> branch
+
+          branch CHECK {
+            if looks_right -> FINISH
+            if needs_rework -> FIRST_STEP
+          }
+
+          state FINISH -> gate(human_approval) -> TERMINATE("done")
+        }
+      }
+      ```
