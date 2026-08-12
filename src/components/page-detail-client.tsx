@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { PageContent } from "./page-viewer";
 import { VisibilityPicker } from "./visibility-picker";
+import { registerPageActions } from "@/lib/page-actions";
 import { VersionHistoryPanel } from "./version-history";
 import AgentConnectModal from "./agent-connect-modal";
 import SourceEditor, { type SourceEditorControls } from "./source-editor";
@@ -51,6 +52,18 @@ interface ContentRuleDisplay {
   patterns?: string[];
 }
 
+function relativeTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
 export default function PageDetailClient({
   slug,
   children,
@@ -69,6 +82,7 @@ export default function PageDetailClient({
   canManageRules = false,
   canEditPageRules = false,
   tagsRow,
+  updatedAt,
 }: {
   slug: string;
   children?: React.ReactNode;
@@ -88,6 +102,7 @@ export default function PageDetailClient({
   canManageRules?: boolean;
   canEditPageRules?: boolean;
   tagsRow?: React.ReactNode;
+  updatedAt?: string;
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -104,8 +119,8 @@ export default function PageDetailClient({
   const [agentOpen, setAgentOpen] = useState(false);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [actionsOpen, setActionsOpen] = useState(false);
-  const actionsRef = useRef<HTMLDivElement>(null);
+  const [pastHeader, setPastHeader] = useState(false);
+  const headSentinelRef = useRef<HTMLDivElement>(null);
   const [viewTab, setViewTab] = useState<"preview" | "source">("preview");
   const [srcDirty, setSrcDirty] = useState(false);
   const [srcSaving, setSrcSaving] = useState(false);
@@ -138,15 +153,12 @@ export default function PageDetailClient({
   }, [printFlow]);
 
   useEffect(() => {
-    if (!actionsOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
-        setActionsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [actionsOpen]);
+    const el = headSentinelRef.current;
+    if (!el || viewTab !== "preview") return;
+    const io = new IntersectionObserver(([entry]) => setPastHeader(!entry.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [viewTab]);
 
   useEffect(() => {
     if (!autoConnect) return;
@@ -391,6 +403,49 @@ export default function PageDetailClient({
     }
   }
 
+  useEffect(() => {
+    if (viewTab !== "preview") return;
+    return registerPageActions([
+      { id: "edit", label: "Edit page", hint: "source", run: () => setViewTab("source") },
+      { id: "form", label: "Form editor", run: () => router.push(`/pages/${slug}?edit=1`) },
+      {
+        id: "annotate",
+        label: "Add annotation",
+        run: () => setFormState({ mode: "note", section: "", target: "", componentId: "", y: 0 }),
+      },
+      { id: "agent", label: "Add agent", run: () => setAgentOpen(true) },
+      {
+        id: "visibility",
+        label: "Change visibility",
+        hint: visibility,
+        run: () => window.dispatchEvent(new Event("curata-open-visibility")),
+      },
+      {
+        id: "rules",
+        label: `Content rules (${inheritedRules.length + pageRules.length})`,
+        run: () => setRulesOpen(true),
+      },
+      { id: "revert", label: "Revert to past version", run: () => setVersionHistoryOpen(true) },
+      { id: "export-png", label: "Export PNG", run: () => handleExport("png") },
+      { id: "export-pdf", label: "Export PDF", run: () => handleExport("pdf") },
+      ...(resolvedCount > 0
+        ? [{
+            id: "resolved",
+            label: showResolved ? `Hide ${resolvedCount} resolved annotations` : `Show ${resolvedCount} resolved annotations`,
+            run: () => setShowResolved((v) => !v),
+          }]
+        : []),
+      ...(activeAnns.length > 0
+        ? [{
+            id: "expand",
+            label: expandAll ? "Collapse all annotations" : "Expand all annotations",
+            run: () => { setExpandAll((v) => !v); setExpandedId(null); },
+          }]
+        : []),
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewTab, visibility, showResolved, expandAll, resolvedCount, activeAnns.length, inheritedRules.length, pageRules.length, slug]);
+
   return (
     <div className="page-detail-layout">
       {archived && (
@@ -405,144 +460,89 @@ export default function PageDetailClient({
           <button className="archived-banner-restore" onClick={restorePage}>Restore</button>
         </div>
       )}
-      <div className="page-toolbar">
-        {pageTitle && <span className="page-toolbar-title">{pageTitle}</span>}
-        <div className="page-toolbar-spacer" />
-        <div className="page-toolbar-right">
-          {viewTab === "source" ? (
-            <>
-              {srcDirty && (
-                <button
-                  className="view-tab"
-                  onClick={() => {
-                    if (confirm("Discard unsaved changes?")) srcControls.current?.discard();
-                  }}
-                >
-                  Discard
-                </button>
-              )}
+      {viewTab === "source" ? (
+        <div className="page-toolbar">
+          {pageTitle && <span className="page-toolbar-title">{pageTitle}</span>}
+          <div className="page-toolbar-spacer" />
+          <div className="page-toolbar-right">
+            {srcDirty && (
               <button
-                className="view-tab view-tab--active"
-                disabled={srcSaving}
+                className="view-tab"
                 onClick={() => {
-                  // One state-aware button: saves when dirty, exits when clean.
-                  if (srcDirty) srcControls.current?.save();
-                  else setViewTab("preview");
+                  if (confirm("Discard unsaved changes?")) srcControls.current?.discard();
                 }}
               >
-                {srcSaving ? "Saving…" : srcDirty ? "Save" : "Done"}
+                Discard
               </button>
-            </>
-          ) : (
-            <>
-              {shell === "deck" && (
-                <button
-                  className="deck-present-btn"
-                  onClick={() => {
-                    const root = document.querySelector(".deck-root") as HTMLElement | null;
-                    if (root?.requestFullscreen) root.requestFullscreen();
-                    else {
-                      const wk = root as HTMLElement & { webkitRequestFullscreen?: () => void };
-                      if (wk.webkitRequestFullscreen) wk.webkitRequestFullscreen();
-                    }
-                  }}
-                >
-                  Present
+            )}
+            <button
+              className="view-tab view-tab--active"
+              disabled={srcSaving}
+              onClick={() => {
+                // One state-aware button: saves when dirty, exits when clean.
+                if (srcDirty) srcControls.current?.save();
+                else setViewTab("preview");
+              }}
+            >
+              {srcSaving ? "Saving…" : srcDirty ? "Save" : "Done"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div ref={headSentinelRef} aria-hidden />
+          <header className="doc-head">
+            <div className="doc-head-row">
+              <h1 className="doc-head-title">{pageTitle}</h1>
+              <div className="doc-head-actions">
+                {shell === "deck" && (
+                  <button
+                    className="deck-present-btn"
+                    onClick={() => {
+                      const root = document.querySelector(".deck-root") as HTMLElement | null;
+                      if (root?.requestFullscreen) root.requestFullscreen();
+                      else {
+                        const wk = root as HTMLElement & { webkitRequestFullscreen?: () => void };
+                        if (wk.webkitRequestFullscreen) wk.webkitRequestFullscreen();
+                      }
+                    }}
+                  >
+                    Present
+                  </button>
+                )}
+                <button className="view-tab" onClick={() => setViewTab("source")}>
+                  Edit
                 </button>
-              )}
+                <button
+                  className="doc-actions-btn"
+                  onClick={() => window.dispatchEvent(new Event("curata-open-palette"))}
+                >
+                  Actions <kbd>⌘K</kbd>
+                </button>
+              </div>
+            </div>
+            <div className="doc-head-meta">
+              {tagsRow}
+              <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} />
+              {updatedAt && <span className="doc-head-updated">updated {relativeTime(updatedAt)}</span>}
+            </div>
+          </header>
+          {pastHeader && (
+            <div className="doc-minibar">
+              <span className="doc-minibar-title">{pageTitle}</span>
               <button className="view-tab" onClick={() => setViewTab("source")}>
                 Edit
               </button>
-            </>
+              <button
+                className="doc-actions-btn"
+                onClick={() => window.dispatchEvent(new Event("curata-open-palette"))}
+              >
+                Actions <kbd>⌘K</kbd>
+              </button>
+            </div>
           )}
-          <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} />
-          <div className="page-toolbar-divider" />
-          <div className="page-actions-wrap" ref={actionsRef}>
-            <button
-              className="page-actions-trigger"
-              onClick={() => setActionsOpen((v) => !v)}
-              title="More actions"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <circle cx="8" cy="3" r="1.5" />
-                <circle cx="8" cy="8" r="1.5" />
-                <circle cx="8" cy="13" r="1.5" />
-              </svg>
-            </button>
-            {actionsOpen && (
-              <div className="page-actions-menu">
-                <button
-                  className="page-actions-item"
-                  onClick={() => { setAgentOpen(true); setActionsOpen(false); }}
-                >
-                  Add agent
-                </button>
-                <button
-                  className="page-actions-item"
-                  onClick={() => { setVersionHistoryOpen(true); setActionsOpen(false); }}
-                >
-                  Revert to past version
-                </button>
-                {(inheritedRules.length > 0 || pageRules.length > 0 || canEditPageRules) && (
-                  <button
-                    className="page-actions-item"
-                    onClick={() => { setRulesOpen(true); setActionsOpen(false); }}
-                  >
-                    Content rules ({inheritedRules.length + pageRules.length})
-                  </button>
-                )}
-                <Link
-                  href={`/pages/${slug}?edit=1`}
-                  className="page-actions-item"
-                  onClick={() => setActionsOpen(false)}
-                >
-                  Form editor
-                </Link>
-                <div className="page-actions-divider" />
-                <button
-                  className="page-actions-item"
-                  onClick={() => { handleExport("png"); setActionsOpen(false); }}
-                >
-                  Export PNG
-                </button>
-                <button
-                  className="page-actions-item"
-                  onClick={() => { handleExport("pdf"); setActionsOpen(false); }}
-                >
-                  Export PDF
-                </button>
-                {annotations.length > 0 && (
-                  <>
-                    <div className="page-actions-divider" />
-                    <div className="page-actions-section">
-                      <span className="page-actions-stat">
-                        {activeAnns.length} annotation{activeAnns.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    {resolvedCount > 0 && (
-                      <button
-                        className="page-actions-item"
-                        onClick={() => { setShowResolved((v) => !v); setActionsOpen(false); }}
-                      >
-                        {showResolved ? "Hide" : "Show"} {resolvedCount} resolved
-                      </button>
-                    )}
-                    {activeAnns.length > 0 && (
-                      <button
-                        className="page-actions-item"
-                        onClick={() => { setExpandAll((v) => !v); setExpandedId(null); setActionsOpen(false); }}
-                      >
-                        {expandAll ? "Collapse all" : "Expand all"}
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      {tagsRow && <div className="page-toolbar-tags">{tagsRow}</div>}
+        </>
+      )}
       {agentOpen &&
         createPortal(
           <AgentConnectModal slug={slug} onClose={() => setAgentOpen(false)} authMode={authMode} />,

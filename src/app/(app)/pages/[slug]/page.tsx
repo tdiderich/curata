@@ -189,6 +189,7 @@ export default async function PageDetailView({
         pageSlug={slug}
         canManageRules={canManageRules}
         canEditPageRules={canEditPage}
+        updatedAt={pageRow?.updatedAt.toISOString()}
         archived={pageRow?.status === "archived"
           ? { since: pageRow.updatedAt.toISOString().slice(0, 10), supersededBy: pageRow.supersededBy }
           : undefined}

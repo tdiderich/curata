@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
+import { getPageActions, type PageAction } from "@/lib/page-actions";
 
 interface SearchResult {
   slug: string;
@@ -22,6 +23,7 @@ export function CommandPalette() {
   const [selected, setSelected] = useState(-1);
   const [state, setState] = useState<SearchState>("idle");
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const [actions, setActions] = useState<PageAction[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seqRef = useRef(0);
@@ -43,6 +45,14 @@ export function CommandPalette() {
       window.removeEventListener("curata-open-palette", onOpenEvent);
     };
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const sync = () => setActions(getPageActions());
+    sync();
+    window.addEventListener("curata-page-actions", sync);
+    return () => window.removeEventListener("curata-page-actions", sync);
+  }, [open]);
 
   useEffect(() => {
     if (open) {
@@ -109,19 +119,28 @@ export function CommandPalette() {
       setOpen(false);
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      setSelected((s) => Math.min(s + 1, results.length - 1));
+      setSelected((s) => Math.min(s + 1, shownActions.length + results.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setSelected((s) => Math.max(s - 1, 0));
-    } else if (e.key === "Enter" && selected >= 0 && results[selected]) {
+    } else if (e.key === "Enter" && selected >= 0) {
       e.preventDefault();
-      activate(results[selected]);
+      if (selected < shownActions.length) {
+        const a = shownActions[selected];
+        setOpen(false);
+        a.run();
+      } else if (results[selected - shownActions.length]) {
+        activate(results[selected - shownActions.length]);
+      }
     }
   }
 
   if (!open) return null;
 
   const trimmed = query.trim();
+  const shownActions = trimmed
+    ? actions.filter((a) => a.label.toLowerCase().includes(trimmed.toLowerCase()))
+    : actions;
   const status =
     state === "loading"
       ? "Searching…"
@@ -169,6 +188,27 @@ export function CommandPalette() {
           {status}
         </div>
         <div className="site-search-results">
+          {shownActions.length > 0 && (
+            <>
+              <div className="site-search-section">Page actions</div>
+              {shownActions.map((a, i) => (
+                <button
+                  key={a.id}
+                  className={`site-search-hit${i === selected ? " site-search-hit-active" : ""}`}
+                  onClick={() => {
+                    setOpen(false);
+                    a.run();
+                  }}
+                  onMouseEnter={() => setSelected(i)}
+                >
+                  <span className="site-search-hit-title">
+                    {a.label}
+                    {a.hint && <span className="site-search-hit-type">{a.hint}</span>}
+                  </span>
+                </button>
+              ))}
+            </>
+          )}
           {state === "loading" && results.length === 0 && (
             <div className="site-search-empty">Searching…</div>
           )}
@@ -188,9 +228,9 @@ export function CommandPalette() {
             return (
               <button
                 key={key + i}
-                className={`site-search-hit${i === selected ? " site-search-hit-active" : ""}${r.type === "prompt" ? " site-search-hit--prompt" : ""}`}
+                className={`site-search-hit${i + shownActions.length === selected ? " site-search-hit-active" : ""}${r.type === "prompt" ? " site-search-hit--prompt" : ""}`}
                 onClick={() => activate(r)}
-                onMouseEnter={() => setSelected(i)}
+                onMouseEnter={() => setSelected(i + shownActions.length)}
               >
                 <span className="site-search-hit-title">
                   {r.title}

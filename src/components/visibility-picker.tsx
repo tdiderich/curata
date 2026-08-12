@@ -34,6 +34,13 @@ export function VisibilityPicker({ slug, orgSlug, visibility, authMode }: Visibi
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
 
+  // The command palette's "Change visibility" action opens this picker.
+  useEffect(() => {
+    const openFromPalette = () => setOpen(true);
+    window.addEventListener("curata-open-visibility", openFromPalette);
+    return () => window.removeEventListener("curata-open-visibility", openFromPalette);
+  }, []);
+
   const available = authMode === "none"
     ? LEVELS.filter((l) => l.value !== "private")
     : LEVELS;

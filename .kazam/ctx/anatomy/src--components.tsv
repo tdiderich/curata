@@ -7,19 +7,21 @@ src/components/api-key-manager.tsx	1470	0	api-key-manager component
 src/components/cleanup-client.tsx	4098	0	cleanup-client component
 src/components/command-palette.tsx	1699	0	command-palette component
 src/components/confirm-delete-modal.tsx	704	0	confirm-delete-modal component
-src/components/content-rules-editor.tsx	3013	0	content-rules-editor component
+src/components/content-rules-editor.tsx	3094	0	content-rules-editor component
 src/components/dashboard-client.tsx	4260	0	dashboard-client component
 src/components/dashboard-feed.tsx	812	0	dashboard-feed component
-src/components/dashboard-tabs.tsx	1571	0	dashboard-tabs component
+src/components/dashboard-tabs.tsx	914	0	dashboard-tabs component
 src/components/folder-actions.tsx	7821	0	folder-actions component
-src/components/knowledge-graph.tsx	2488	0	knowledge-graph component
+src/components/knowledge-graph.tsx	2490	0	knowledge-graph component
 src/components/member-list.tsx	1184	0	member-list component
 src/components/new-page-button.tsx	1576	0	new-page-button component
 src/components/org-settings.tsx	2003	0	org-settings component
-src/components/page-detail-client.tsx	7742	0	page-detail-client component
+src/components/org-tags-manager.tsx	599	0	org-tags-manager component
+src/components/page-detail-client.tsx	7768	0	page-detail-client component
 src/components/page-editor.tsx	801	0	page-editor component
 src/components/page-folder-select.tsx	752	0	page-folder-select component
 src/components/page-prompt-dialog.tsx	1051	0	page-prompt-dialog component
+src/components/page-tags.tsx	460	0	page-tags component
 src/components/page-viewer.tsx	1183	0	page-viewer component
 src/components/public-annotation-client.tsx	2869	0	public-annotation-client component
 src/components/public-toggle.tsx	399	0	Private-page-editor toggle for visibility public/org + Copy link button using navigator.clipboard.writeText; appears currently unreferenced in JSX
@@ -27,6 +29,7 @@ src/components/report-builder.tsx	5145	0	report-builder component
 src/components/settings-tabs.tsx	395	0	settings-tabs component
 src/components/sidebar.tsx	5650	0	sidebar component
 src/components/source-editor.tsx	2232	0	source-editor component
+src/components/tag-picker.tsx	759	0	tag-picker component
 src/components/theme-script.tsx	189	0	theme-script component
 src/components/theme-settings.tsx	1543	0	theme-settings component
 src/components/toast.tsx	478	0	toast component

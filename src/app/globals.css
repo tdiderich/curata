@@ -6831,3 +6831,107 @@ i.kg-circle-page {
   color: var(--muted);
   font-size: 0.8rem;
 }
+
+/* ── Document header (A+C page top) ── */
+.doc-head {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 34px 24px 6px;
+}
+.doc-head-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.doc-head-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  color: rgba(var(--text-rgb), 0.96);
+}
+.doc-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+.doc-head:hover .doc-head-actions,
+.doc-head-actions:focus-within {
+  opacity: 1;
+}
+.doc-actions-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 7px;
+  color: var(--light-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 4px 11px;
+  cursor: pointer;
+}
+.doc-actions-btn:hover {
+  border-color: rgba(var(--accent-rgb), 0.6);
+  color: rgba(var(--text-rgb), 0.95);
+}
+.doc-actions-btn kbd {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.65rem;
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  padding: 0 4px;
+  color: var(--muted);
+}
+.doc-head-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.doc-head-meta .pg-tags {
+  padding: 0;
+}
+.doc-head-updated {
+  white-space: nowrap;
+}
+.doc-minibar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--card-border);
+}
+.doc-minibar-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: rgba(var(--text-rgb), 0.95);
+}
+.site-search-section {
+  font-size: 0.65rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: ui-monospace, Menlo, monospace;
+  padding: 8px 14px 3px;
+}
