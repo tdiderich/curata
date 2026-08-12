@@ -357,8 +357,15 @@ async function _writePageInternal(
 
   const existing = await db.page.findUnique({
     where: { orgId_slug: { orgId, slug } },
-    include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
+    include: {
+      versions: { orderBy: { createdAt: "desc" }, take: 1 },
+      folder: { select: { locked: true } },
+    },
   });
+
+  if (existing?.folder?.locked) {
+    return { ok: false, error: "cannot edit: page is in a curata-managed folder (view + copy only)" };
+  }
 
   if (expectedHash && existing && existing.versions.length > 0) {
     if (existing.versions[0].contentHash !== expectedHash) {

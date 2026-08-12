@@ -8,11 +8,35 @@ import fs from "fs";
 import path from "path";
 import type { Prisma } from "@/generated/prisma/client";
 
-async function findOrCreateFolder(orgId: string, name: string): Promise<string> {
+async function findOrCreateFolder(
+  orgId: string,
+  name: string,
+  locked = false,
+  legacyNames: string[] = []
+): Promise<string> {
   const existing = await db.folder.findFirst({ where: { orgId, name } });
-  if (existing) return existing.id;
+  if (existing) {
+    if (locked && !existing.locked) {
+      await db.folder.update({ where: { id: existing.id }, data: { locked: true } });
+    }
+    return existing.id;
+  }
+  // A folder rename (e.g. Workflows -> Skills) needs to rename the existing
+  // row in place, not create a new one alongside it: seedPagesFromDir skips
+  // by slug org-wide, so pages already seeded under the old name would be
+  // orphaned under the stale folder instead of following into the new one.
+  for (const legacy of legacyNames) {
+    const legacyFolder = await db.folder.findFirst({ where: { orgId, name: legacy } });
+    if (legacyFolder) {
+      const renamed = await db.folder.update({
+        where: { id: legacyFolder.id },
+        data: { name, locked },
+      });
+      return renamed.id;
+    }
+  }
   const created = await db.folder.create({
-    data: { orgId, name, visibility: "org", createdBy: "system" },
+    data: { orgId, name, visibility: "org", createdBy: "system", locked },
   });
   return created.id;
 }
@@ -111,14 +135,14 @@ export async function seedOrgContent(orgId: string): Promise<void> {
   );
 
   try {
-    const workflowsFolderId = await findOrCreateFolder(orgId, "Workflows");
-    await seedPagesFromDir(orgId, workflowsFolderId, path.join(process.cwd(), "seed", "workflows"));
+    const skillsFolderId = await findOrCreateFolder(orgId, "Skills", true);
+    await seedPagesFromDir(orgId, skillsFolderId, path.join(process.cwd(), "seed", "workflows"));
   } catch (err) {
-    console.error("[seed] workflows folder/pages failed:", err);
+    console.error("[seed] skills folder/pages failed:", err);
   }
 
   try {
-    const templatesFolderId = await findOrCreateFolder(orgId, "Templates");
+    const templatesFolderId = await findOrCreateFolder(orgId, "Templates", true);
     await seedPagesFromDir(orgId, templatesFolderId, path.join(process.cwd(), "seed", "templates"));
   } catch (err) {
     console.error("[seed] templates folder/pages failed:", err);

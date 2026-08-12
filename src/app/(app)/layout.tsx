@@ -83,7 +83,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       const rawFolders = await db.folder.findMany({
         where: folderVisFilter,
         orderBy: { name: "asc" },
-        select: { id: true, name: true, parentId: true, visibility: true },
+        select: { id: true, name: true, parentId: true, visibility: true, locked: true },
       });
       folders = rawFolders;
 

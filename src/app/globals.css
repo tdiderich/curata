@@ -5586,6 +5586,15 @@ body .c-section.align-right > * { max-width: none !important; }
 
 .nav-section { display: flex; flex-direction: column; gap: 1px; }
 .nav-tree { flex: 1; }
+.nav-tree--managed {
+  flex: 0 0 auto;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  border-top: 1px solid var(--card-border);
+  border-bottom: 1px solid var(--card-border);
+}
 
 .nav-section-label {
   font-size: 10.5px;
@@ -6370,6 +6379,8 @@ body .c-section.align-right > * { max-width: none !important; }
   position: relative;
   height: min(78vh, 900px);
   min-height: 480px;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--card-border);
   border-radius: 12px;
   background:
@@ -6705,7 +6716,8 @@ i.kg-circle-page {
 
 .kg-main {
   position: relative;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: stretch;
 }

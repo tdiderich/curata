@@ -15,6 +15,7 @@ export interface SidebarFolder {
   name: string;
   parentId: string | null;
   visibility: string;
+  locked?: boolean;
 }
 
 export interface SidebarPage {
@@ -409,7 +410,9 @@ export function Sidebar({
     );
   }
 
-  const rootFolders = childFolders.get(null) ?? [];
+  const allRootFolders = childFolders.get(null) ?? [];
+  const managedFolders = allRootFolders.filter((f) => f.locked);
+  const rootFolders = allRootFolders.filter((f) => !f.locked);
   const unfiled = pagesByFolder.get(null) ?? [];
 
   if (hidden) {
@@ -518,6 +521,15 @@ export function Sidebar({
           </Link>
         )}
       </nav>
+
+      {managedFolders.length > 0 && (
+        <div className="nav-section nav-tree nav-tree--managed">
+          <div className="nav-section-label">
+            Curata Managed
+          </div>
+          {managedFolders.map((f) => renderFolder(f, 0))}
+        </div>
+      )}
 
       <div className="nav-section nav-tree">
         <div

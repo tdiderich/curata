@@ -52,6 +52,11 @@ model Folder {
   name       String
   visibility String   @default("org")
   rules      Json?
+  // Curata-managed folders (Templates, Skills): seeded/backfilled by the
+  // app itself, view + copy only. Content edits are blocked at the write
+  // choke points (_writePageInternal, mcp-dispatch); seed.ts writes
+  // directly to the DB so backfill is unaffected.
+  locked     Boolean  @default(false)
   createdBy  String   @map("created_by")
   createdAt  DateTime @default(now()) @map("created_at")
 
