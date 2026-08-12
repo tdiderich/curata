@@ -1,4 +1,4 @@
-// Blessed organization tags live inside the org's global content-rules JSON
+// Recommended organization tags live inside the org's global content-rules JSON
 // as one reserved entry, so they ride the existing rules storage, API
 // permissions (rules:manage), and settings surface instead of a new table.
 // Everything that lists prose rules filters this entry out by id.
@@ -12,7 +12,7 @@ interface OrgTagsEntry {
   tags: string[];
 }
 
-/** Reads the blessed tag list out of an org's rules JSON. */
+/** Reads the recommended tag list out of an org's rules JSON. */
 export function extractOrgTags(rulesJson: unknown): string[] {
   if (!Array.isArray(rulesJson)) return [];
   const entry = rulesJson.find(
@@ -25,7 +25,7 @@ export function extractOrgTags(rulesJson: unknown): string[] {
   return entry.tags.filter((t): t is string => typeof t === "string" && !!t);
 }
 
-/** Returns a new rules array with the blessed list replaced (or removed when empty). */
+/** Returns a new rules array with the recommended list replaced (or removed when empty). */
 export function withOrgTags(rulesJson: unknown, tags: string[]): unknown[] {
   const rules = Array.isArray(rulesJson) ? rulesJson : [];
   const rest = rules.filter(
@@ -35,6 +35,6 @@ export function withOrgTags(rulesJson: unknown, tags: string[]): unknown[] {
   if (cleaned.length === 0) return rest;
   return [
     ...rest,
-    { id: ORG_TAGS_RULE_ID, text: "Blessed organization tags", mode: "warn", tags: cleaned },
+    { id: ORG_TAGS_RULE_ID, text: "Recommended organization tags", mode: "warn", tags: cleaned },
   ];
 }

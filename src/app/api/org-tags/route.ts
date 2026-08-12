@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { extractOrgTags, withOrgTags } from "@/lib/org-tags";
 import type { Prisma } from "@/generated/prisma/client";
 
-/** Blessed organization tags: read for anyone in the org. */
+/** Recommended organization tags: read for anyone in the org. */
 export async function GET() {
   const ctx = await resolveOrg();
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -16,7 +16,7 @@ export async function GET() {
   return NextResponse.json({ tags: extractOrgTags(org?.rules) });
 }
 
-/** Replace the blessed list. Owners/admins only (same gate as content rules). */
+/** Replace the recommended list. Owners/admins only (same gate as content rules). */
 export async function PUT(request: NextRequest) {
   const ctx = await resolveOrg();
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

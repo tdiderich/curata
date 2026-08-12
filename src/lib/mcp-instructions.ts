@@ -92,7 +92,7 @@ export async function buildServerInstructions(
     const blessed = extractOrgTags(org?.rules);
     if (blessed.length > 0) {
       sections.push(
-        `ORG TAGS (blessed by this organization's admins - prefer these over inventing near-synonyms): ${blessed.join(", ")}`
+        `ORG TAGS (recommended by this organization's admins - prefer these over inventing near-synonyms): ${blessed.join(", ")}`
       );
     }
     const rules = (Array.isArray(org?.rules) ? org.rules : []).filter(

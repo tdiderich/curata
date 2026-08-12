@@ -6,7 +6,7 @@ import { basePath } from "@/lib/api-fetch";
 import { TagPicker } from "./tag-picker";
 
 /**
- * Owner/admin surface for blessing organization tags. Blessed tags render as
+ * Owner/admin surface for the recommended organization tags. They render as
  * the Organization tier in the knowledge graph and are pushed to every
  * connected agent in the MCP server instructions.
  */
@@ -45,7 +45,7 @@ export function OrgTagsManager({
       <div className="org-tags-head">
         <span className="org-tags-title">Organization tags</span>
         <span className="org-tags-hint">
-          Blessed tags show as the Organization tier in the knowledge graph and are recommended
+          Recommended tags show as the Organization tier in the knowledge graph and are suggested
           to every connected agent.
         </span>
       </div>
@@ -66,10 +66,10 @@ export function OrgTagsManager({
             )}
           </span>
         ))}
-        {tags.length === 0 && <span className="org-tags-empty">No blessed tags yet.</span>}
+        {tags.length === 0 && <span className="org-tags-empty">No recommended tags yet.</span>}
         {canManage && (
           <TagPicker
-            label="bless tags"
+            label="recommend tags"
             options={suggestions.filter((s) => !tags.includes(s))}
             onSave={(added) => put([...tags, ...added])}
           />

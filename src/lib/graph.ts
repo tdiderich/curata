@@ -10,7 +10,7 @@ export interface GraphTag {
   pages: number;
   tokens: number;
   /**
-   * default = curata's canonical starter tags; org = blessed by an
+   * default = curata's canonical starter tags; org = recommended by an
    * owner/admin in settings (the org-tags entry in content rules);
    * personal = everything else.
    */

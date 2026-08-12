@@ -29,20 +29,20 @@ describe("buildKnowledgeGraph", () => {
     orgId = org.id;
   });
 
-  it("classifies tag tiers: default list, admin-blessed org, everything else personal", async () => {
+  it("classifies tag tiers: default list, admin-recommended org, everything else personal", async () => {
     await testDb.organization.update({
       where: { id: orgId },
       data: {
         rules: [
-          { id: "org-tags", text: "Blessed organization tags", mode: "warn", tags: ["kubernetes"] },
+          { id: "org-tags", text: "Recommended organization tags", mode: "warn", tags: ["kubernetes"] },
         ],
       },
     });
     const a = await createTestPage(orgId, { slug: "a", title: "A" });
     const b = await createTestPage(orgId, { slug: "b", title: "B" });
     await tagPage(a.id, "faq", "user-a"); // in DEFAULT_TAGS
-    await tagPage(a.id, "kubernetes", "user-a"); // blessed -> org
-    await tagPage(b.id, "my-notes", "user-b"); // unblessed -> personal
+    await tagPage(a.id, "kubernetes", "user-a"); // recommended -> org
+    await tagPage(b.id, "my-notes", "user-b"); // not recommended -> personal
 
     const g = await buildKnowledgeGraph(orgId);
     const byName = Object.fromEntries(g.tags.map((t) => [t.name, t.tier]));
