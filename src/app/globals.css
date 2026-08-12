@@ -6595,13 +6595,13 @@ i.kg-circle-page {
 .kg-picker-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 69;
 }
 .kg-picker-menu {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  z-index: 41;
+  z-index: 70;
   display: flex;
   flex-direction: column;
   width: 210px;
@@ -6773,24 +6773,6 @@ i.kg-circle-page {
   color: var(--red);
 }
 
-/* Tag row sits as a slim second header line under the sticky toolbar */
-.page-toolbar-tags {
-  padding: 4px 16px 6px;
-  border-bottom: 1px solid var(--card-border);
-}
-.page-toolbar-tags .pg-tags {
-  padding: 0;
-  gap: 5px;
-}
-.page-toolbar-tags .pg-tag {
-  font-size: 0.72rem;
-  padding: 1px 9px;
-}
-.page-toolbar-tags .kg-picker-btn {
-  font-size: 0.72rem;
-  padding: 2px 10px;
-  border-style: dashed;
-}
 
 /* ── Content rules: members-table treatment + org tags section ── */
 .cr-head-row {
@@ -6832,39 +6814,7 @@ i.kg-circle-page {
   font-size: 0.8rem;
 }
 
-/* ── Document header (A+C page top) ── */
-.doc-head {
-  max-width: 860px;
-  margin: 0 auto;
-  padding: 34px 24px 6px;
-}
-.doc-head-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-}
-.doc-head-title {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  font-size: 1.7rem;
-  font-weight: 650;
-  letter-spacing: -0.015em;
-  line-height: 1.2;
-  color: rgba(var(--text-rgb), 0.96);
-}
-.doc-head-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  opacity: 0.55;
-  transition: opacity 0.15s;
-}
-.doc-head:hover .doc-head-actions,
-.doc-head-actions:focus-within {
-  opacity: 1;
-}
+/* ── Page toolbar actions button (B+C page top) ── */
 .doc-actions-btn {
   display: inline-flex;
   align-items: center;
@@ -6890,43 +6840,6 @@ i.kg-circle-page {
   padding: 0 4px;
   color: var(--muted);
 }
-.doc-head-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 0.78rem;
-}
-.doc-head-meta .pg-tags {
-  padding: 0;
-}
-.doc-head-updated {
-  white-space: nowrap;
-}
-.doc-minibar {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--card-border);
-}
-.doc-minibar-title {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: rgba(var(--text-rgb), 0.95);
-}
 .site-search-section {
   font-size: 0.65rem;
   letter-spacing: 0.09em;
@@ -6934,4 +6847,75 @@ i.kg-circle-page {
   color: var(--muted);
   font-family: ui-monospace, Menlo, monospace;
   padding: 8px 14px 3px;
+}
+
+.doc-head--hub .doc-head--hub .doc-head--hub .doc-head--hub:hover 
+/* B+C variant: zoned sticky bar - identity left, actions right */
+.pt-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.pt-title {
+  white-space: nowrap;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--snow);
+  line-height: 30px;
+}
+.pt-tags {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.pt-tags .pg-tags {
+  padding: 0;
+  align-items: center;
+}
+.pt-tags .pg-tag {
+  font-size: 0.7rem;
+  padding: 1px 8px;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+.pt-tags .kg-picker-btn {
+  font-size: 0.7rem;
+  padding: 1px 9px;
+  white-space: nowrap;
+}
+
+/* When the sidebar is hidden its fixed reveal button occupies the top-left
+   corner - shift the toolbar identity zone right so the title never sits
+   under it. */
+body:has(.nav-reveal) .page-toolbar {
+  /* The fixed reveal button sits at top:14px with a 30px square; give the bar
+     the same top offset so both rows share one vertical center. */
+  padding: 14px 16px 8px 56px;
+}
+
+/* In the toolbar the picker sits near the left edge - anchor its menu left so
+   it never extends past the viewport. */
+.pt-tags .kg-picker-menu {
+  right: auto;
+  left: 0;
+}
+
+.site-search-results {
+  scrollbar-width: none;
+}
+.site-search-results::-webkit-scrollbar {
+  display: none;
+}
+
+.pg-tag-more {
+  cursor: pointer;
+  background: none;
+  font: inherit;
+  font-size: 0.7rem;
+  color: var(--light-muted);
+}
+.pg-tag-more:hover {
+  border-color: rgba(var(--accent-rgb), 0.7);
+  color: rgba(var(--text-rgb), 0.95);
 }

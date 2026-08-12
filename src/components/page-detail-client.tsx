@@ -119,8 +119,6 @@ export default function PageDetailClient({
   const [agentOpen, setAgentOpen] = useState(false);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [pastHeader, setPastHeader] = useState(false);
-  const headSentinelRef = useRef<HTMLDivElement>(null);
   const [viewTab, setViewTab] = useState<"preview" | "source">("preview");
   const [srcDirty, setSrcDirty] = useState(false);
   const [srcSaving, setSrcSaving] = useState(false);
@@ -151,14 +149,6 @@ export default function PageDetailClient({
     document.body.classList.add(cls);
     return () => { document.body.classList.remove(cls); };
   }, [printFlow]);
-
-  useEffect(() => {
-    const el = headSentinelRef.current;
-    if (!el || viewTab !== "preview") return;
-    const io = new IntersectionObserver(([entry]) => setPastHeader(!entry.isIntersecting));
-    io.observe(el);
-    return () => io.disconnect();
-  }, [viewTab]);
 
   useEffect(() => {
     if (!autoConnect) return;
@@ -414,6 +404,7 @@ export default function PageDetailClient({
         run: () => setFormState({ mode: "note", section: "", target: "", componentId: "", y: 0 }),
       },
       { id: "agent", label: "Add agent", run: () => setAgentOpen(true) },
+      { id: "tags", label: "Add tags", run: () => window.dispatchEvent(new Event("curata-open-tags")) },
       {
         id: "visibility",
         label: "Change visibility",
@@ -489,59 +480,40 @@ export default function PageDetailClient({
           </div>
         </div>
       ) : (
-        <>
-          <div ref={headSentinelRef} aria-hidden />
-          <header className="doc-head">
-            <div className="doc-head-row">
-              <h1 className="doc-head-title">{pageTitle}</h1>
-              <div className="doc-head-actions">
-                {shell === "deck" && (
-                  <button
-                    className="deck-present-btn"
-                    onClick={() => {
-                      const root = document.querySelector(".deck-root") as HTMLElement | null;
-                      if (root?.requestFullscreen) root.requestFullscreen();
-                      else {
-                        const wk = root as HTMLElement & { webkitRequestFullscreen?: () => void };
-                        if (wk.webkitRequestFullscreen) wk.webkitRequestFullscreen();
-                      }
-                    }}
-                  >
-                    Present
-                  </button>
-                )}
-                <button className="view-tab" onClick={() => setViewTab("source")}>
-                  Edit
-                </button>
-                <button
-                  className="doc-actions-btn"
-                  onClick={() => window.dispatchEvent(new Event("curata-open-palette"))}
-                >
-                  Actions <kbd>⌘K</kbd>
-                </button>
-              </div>
-            </div>
-            <div className="doc-head-meta">
-              {tagsRow}
-              <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} />
-              {updatedAt && <span className="doc-head-updated">updated {relativeTime(updatedAt)}</span>}
-            </div>
-          </header>
-          {pastHeader && (
-            <div className="doc-minibar">
-              <span className="doc-minibar-title">{pageTitle}</span>
-              <button className="view-tab" onClick={() => setViewTab("source")}>
-                Edit
-              </button>
+        <div className="page-toolbar">
+          <div className="pt-identity">
+            {pageTitle && <span className="pt-title">{pageTitle}</span>}
+            <span className="pt-tags">{tagsRow}</span>
+          </div>
+          <div className="page-toolbar-spacer" />
+          <div className="page-toolbar-right">
+            {shell === "deck" && (
               <button
-                className="doc-actions-btn"
-                onClick={() => window.dispatchEvent(new Event("curata-open-palette"))}
+                className="deck-present-btn"
+                onClick={() => {
+                  const root = document.querySelector(".deck-root") as HTMLElement | null;
+                  if (root?.requestFullscreen) root.requestFullscreen();
+                  else {
+                    const wk = root as HTMLElement & { webkitRequestFullscreen?: () => void };
+                    if (wk.webkitRequestFullscreen) wk.webkitRequestFullscreen();
+                  }
+                }}
               >
-                Actions <kbd>⌘K</kbd>
+                Present
               </button>
-            </div>
-          )}
-        </>
+            )}
+            <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} hideTrigger />
+            <button className="view-tab" onClick={() => setViewTab("source")}>
+              Edit
+            </button>
+            <button
+              className="doc-actions-btn"
+              onClick={() => window.dispatchEvent(new Event("curata-open-palette"))}
+            >
+              Actions <kbd>⌘K</kbd>
+            </button>
+          </div>
+        </div>
       )}
       {agentOpen &&
         createPortal(
@@ -641,22 +613,6 @@ export default function PageDetailClient({
         </PageContent>
 
         <div className="ann-margin" aria-label="Annotations">
-          <div className="ann-marker" style={{ top: 0 }}>
-            <button
-              className="ann-bubble ann-bubble--add"
-              onClick={() => {
-                setFormState({ mode: "note", section: "", target: "", componentId: "", y: 0 });
-                setFormText("");
-                setExpandedId(null);
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <line x1="7" y1="2" x2="7" y2="12" />
-                <line x1="2" y1="7" x2="12" y2="7" />
-              </svg>
-              <span className="ann-bubble-tooltip">Add annotation</span>
-            </button>
-          </div>
           {activeAnns.map((ann) => {
             const y = hlPositions.get(ann.id);
             if (y === undefined) return null;

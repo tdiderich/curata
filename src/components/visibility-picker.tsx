@@ -16,9 +16,12 @@ interface VisibilityPickerProps {
   orgSlug: string;
   visibility: string;
   authMode?: string;
+  /** Hide the trigger button; the picker then opens only via the palette's
+   *  curata-open-visibility event, anchored to wherever it is mounted. */
+  hideTrigger?: boolean;
 }
 
-export function VisibilityPicker({ slug, orgSlug, visibility, authMode }: VisibilityPickerProps) {
+export function VisibilityPicker({ slug, orgSlug, visibility, authMode, hideTrigger }: VisibilityPickerProps) {
   const router = useRouter();
   const [current, setCurrent] = useState(visibility);
   const [open, setOpen] = useState(false);
@@ -84,6 +87,7 @@ export function VisibilityPicker({ slug, orgSlug, visibility, authMode }: Visibi
 
   return (
     <div className="vis-picker" ref={ref}>
+      {!hideTrigger && (
       <button
         className={`vis-picker-trigger vis-picker-trigger--${current}`}
         onClick={() => setOpen((v) => !v)}
@@ -94,6 +98,7 @@ export function VisibilityPicker({ slug, orgSlug, visibility, authMode }: Visibi
         <span className="vis-picker-label">{currentLevel.label}</span>
         <span className="vis-picker-chevron" aria-hidden>&#9662;</span>
       </button>
+      )}
       {open && (
         <div className="vis-picker-menu">
           {available.map((l) => (

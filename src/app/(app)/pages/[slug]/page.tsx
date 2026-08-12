@@ -183,7 +183,7 @@ export default async function PageDetailView({
         autoConnect={slug === "getting-started"}
         authMode={AUTH_MODE}
         printFlow={(pageData.json.print_flow as string) || undefined}
-        shell={(pageData.json.shell as string) || "standard"}
+        shell={hubContext ? "hub" : (pageData.json.shell as string) || "standard"}
         inheritedRules={inheritedRules}
         pageRules={pageRules}
         pageSlug={slug}
@@ -200,6 +200,8 @@ export default async function PageDetailView({
               initialTags={pageTags}
               tagOptions={tagOptions}
               canEdit={canEditPage}
+              pickerViaPalette
+              maxVisible={5}
             />
           ) : undefined
         }

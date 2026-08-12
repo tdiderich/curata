@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /**
  * Dropdown multi-select over the org's known tags plus type-to-create.
@@ -10,10 +10,16 @@ export function TagPicker({
   options,
   onSave,
   label = "add tags",
+  hideTrigger,
+  openOnEvent,
 }: {
   options: string[];
   onSave: (tags: string[]) => Promise<boolean>;
   label?: string;
+  /** Hide the trigger button (the picker then opens only via openOnEvent). */
+  hideTrigger?: boolean;
+  /** Window event name that opens this picker, for command-palette actions. */
+  openOnEvent?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -22,6 +28,13 @@ export function TagPicker({
   const [busy, setBusy] = useState(false);
 
   const all = useMemo(() => [...new Set([...options, ...created])], [options, created]);
+
+  useEffect(() => {
+    if (!openOnEvent) return;
+    const openIt = () => setOpen(true);
+    window.addEventListener(openOnEvent, openIt);
+    return () => window.removeEventListener(openOnEvent, openIt);
+  }, [openOnEvent]);
 
   const toggle = (tag: string) =>
     setSelected((s) => (s.includes(tag) ? s.filter((t) => t !== tag) : [...s, tag]));
@@ -48,9 +61,11 @@ export function TagPicker({
 
   return (
     <span className="kg-picker">
-      <button type="button" className="kg-picker-btn" onClick={() => setOpen(!open)}>
-        {label} <span aria-hidden>▾</span>
-      </button>
+      {!hideTrigger && (
+        <button type="button" className="kg-picker-btn" onClick={() => setOpen(!open)}>
+          {label} <span aria-hidden>▾</span>
+        </button>
+      )}
       {open && (
         <>
           <span className="kg-picker-backdrop" onClick={() => setOpen(false)} />

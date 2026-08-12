@@ -13,13 +13,20 @@ export function PageTags({
   initialTags,
   tagOptions,
   canEdit,
+  pickerViaPalette,
+  maxVisible,
 }: {
   pageId: string;
   initialTags: string[];
   tagOptions: string[];
   canEdit: boolean;
+  /** Hide the add-tags trigger; the picker opens from the command palette. */
+  pickerViaPalette?: boolean;
+  /** Show at most this many chips, collapsing the rest behind a +N toggle. */
+  maxVisible?: number;
 }) {
   const [tags, setTags] = useState(initialTags);
+  const [showAll, setShowAll] = useState(false);
 
   const add = async (newTags: string[]) => {
     const res = await fetch("/api/tags", {
@@ -46,9 +53,12 @@ export function PageTags({
 
   if (!canEdit && tags.length === 0) return null;
 
+  const visible = maxVisible && !showAll ? tags.slice(0, maxVisible) : tags;
+  const hidden = tags.length - visible.length;
+
   return (
     <div className="pg-tags">
-      {tags.map((t) => (
+      {visible.map((t) => (
         <span key={t} className="pg-tag">
           {t}
           {canEdit && (
@@ -63,7 +73,24 @@ export function PageTags({
           )}
         </span>
       ))}
-      {canEdit && <TagPicker options={tagOptions.filter((o) => !tags.includes(o))} onSave={add} />}
+      {hidden > 0 && (
+        <button type="button" className="pg-tag pg-tag-more" onClick={() => setShowAll(true)}>
+          +{hidden}
+        </button>
+      )}
+      {maxVisible && showAll && tags.length > maxVisible && (
+        <button type="button" className="pg-tag pg-tag-more" onClick={() => setShowAll(false)}>
+          show less
+        </button>
+      )}
+      {canEdit && (
+        <TagPicker
+          options={tagOptions.filter((o) => !tags.includes(o))}
+          onSave={add}
+          hideTrigger={pickerViaPalette}
+          openOnEvent={pickerViaPalette ? "curata-open-tags" : undefined}
+        />
+      )}
     </div>
   );
 }
