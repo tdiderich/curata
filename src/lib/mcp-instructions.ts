@@ -1,13 +1,7 @@
 import { db } from "./db";
 import { DEFAULT_TAGS } from "./default-tags";
 import { ORG_TAGS_RULE_ID, extractOrgTags } from "./org-tags";
-
-interface TagRow {
-  tag: string;
-  pages: number;
-  tokens: bigint;
-  sample: string[];
-}
+import { buildKnowledgeGraph } from "./graph";
 
 const MAP_TAG_LIMIT = 15;
 
@@ -37,47 +31,30 @@ export async function buildServerInstructions(
   ];
 
   try {
-    const [tags, totals] = await Promise.all([
-      db.$queryRaw<TagRow[]>`
-        SELECT c.display_name AS tag,
-               COUNT(DISTINCT p.id)::int AS pages,
-               (SUM(LENGTH(pv.yaml_content)) / 4)::bigint AS tokens,
-               (ARRAY_AGG(DISTINCT p.title))[1:3] AS sample
-        FROM concepts c
-        JOIN page_concepts pc ON pc.concept_id = c.id
-        JOIN pages p ON p.id = pc.page_id
-        JOIN LATERAL (
-          SELECT yaml_content FROM page_versions
-          WHERE page_id = p.id ORDER BY created_at DESC LIMIT 1
-        ) pv ON TRUE
-        WHERE p.org_id = ${orgId} AND p.status = 'active'
-        GROUP BY c.id, c.display_name
-        ORDER BY pages DESC, tokens DESC
-        LIMIT ${MAP_TAG_LIMIT}
-      `,
-      db.$queryRaw<{ count: number }[]>`
-        SELECT COUNT(DISTINCT pc.concept_id)::int AS count
-        FROM page_concepts pc
-        JOIN pages p ON p.id = pc.page_id
-        WHERE p.org_id = ${orgId} AND p.status = 'active'
-      `,
-    ]);
+    const graph = await buildKnowledgeGraph(orgId);
+    const titleById = new Map(graph.pages.map((p) => [p.id, p.title]));
+    const samplesByTag = new Map<string, string[]>();
+    for (const e of graph.edges) {
+      const list = samplesByTag.get(e.tagId) ?? [];
+      const title = titleById.get(e.pageId);
+      if (title && list.length < 3) list.push(title);
+      samplesByTag.set(e.tagId, list);
+    }
 
-    if (tags.length > 0) {
-      const rows = tags.map(
+    const top = graph.tags.slice(0, MAP_TAG_LIMIT);
+    if (top.length > 0) {
+      const rows = top.map(
         (t) =>
-          `${t.tag}\t${t.pages}\t${Number(t.tokens)}\t${t.sample
-            .slice(0, 3)
-            .map((s) => `"${s}"`)
+          `${t.name}\t${t.pages}\t${t.tokens}\t${(samplesByTag.get(t.id) ?? [])
+            .map((title) => `"${title}"`)
             .join(", ")}`
       );
-      const total = totals[0]?.count ?? tags.length;
       const overflow =
-        total > tags.length
-          ? `\n…and ${total - tags.length} more tags - get_vocabulary for the full list.`
+        graph.tags.length > top.length
+          ? `\n…and ${graph.tags.length - top.length} more tags - get_vocabulary for the full list.`
           : "";
       sections.push(
-        `BRAIN MAP (tagged content only; tokens = cost of pulling every page under the tag):\ntag\tpages\ttokens\tsample\n${rows.join("\n")}${overflow}\nDrill down: get_related <concept> for pages under a tag, list_folders for structure, get_semantic_map for the full graph.`
+        `BRAIN MAP (tagged content - explicit tags and folder membership both count; tokens = cost of pulling every page under the tag):\ntag\tpages\ttokens\tsample\n${rows.join("\n")}${overflow}\nDrill down: get_related <concept> for pages under a tag, list_folders for structure, get_semantic_map for the full graph.`
       );
     }
   } catch {

@@ -14,10 +14,10 @@ src/components/dashboard-tabs.tsx	914	0	dashboard-tabs component
 src/components/folder-actions.tsx	7821	0	folder-actions component
 src/components/knowledge-graph.tsx	2490	0	knowledge-graph component
 src/components/member-list.tsx	1184	0	member-list component
-src/components/new-page-button.tsx	1576	0	new-page-button component
+src/components/new-page-button.tsx	1623	0	new-page-button component
 src/components/org-settings.tsx	2003	0	org-settings component
 src/components/org-tags-manager.tsx	599	0	org-tags-manager component
-src/components/page-detail-client.tsx	7390	0	page-detail-client component
+src/components/page-detail-client.tsx	7295	0	page-detail-client component
 src/components/page-editor.tsx	801	0	page-editor component
 src/components/page-folder-select.tsx	752	0	page-folder-select component
 src/components/page-prompt-dialog.tsx	1051	0	page-prompt-dialog component

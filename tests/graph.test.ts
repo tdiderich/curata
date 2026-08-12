@@ -53,12 +53,34 @@ describe("buildKnowledgeGraph", () => {
 
   it("returns edges linking tags to pages and positive token weights", async () => {
     const a = await createTestPage(orgId, { slug: "a", title: "A" });
-    const concept = await tagPage(a.id, "faq");
+    await tagPage(a.id, "faq");
 
     const g = await buildKnowledgeGraph(orgId);
-    expect(g.edges).toContainEqual({ tagId: concept.id, pageId: a.id });
+    expect(g.edges).toContainEqual({ tagId: "tag:faq", pageId: a.id });
     expect(g.tags[0].tokens).toBeGreaterThan(0);
     expect(g.pages.map((p) => p.slug)).toContain("a");
+  });
+
+  it("derives tags from folder membership and merges them with concept tags", async () => {
+    const folder = await testDb.folder.create({
+      data: { orgId, name: "Sales", createdBy: "test-user" },
+    });
+    const inFolder = await createTestPage(orgId, { slug: "deal-notes", title: "Deal Notes", folderId: folder.id });
+    const tagged = await createTestPage(orgId, { slug: "pitch", title: "Pitch" });
+    await tagPage(tagged.id, "sales");
+
+    const g = await buildKnowledgeGraph(orgId);
+    const sales = g.tags.find((t) => t.name === "sales");
+    expect(sales).toBeDefined();
+    // one page via folder, one via concept, merged under one tag
+    expect(sales!.pages).toBe(2);
+    expect(sales!.fromFolder).toBe(true);
+    expect(g.edges).toContainEqual({ tagId: "tag:sales", pageId: inFolder.id });
+    expect(g.edges).toContainEqual({ tagId: "tag:sales", pageId: tagged.id });
+    // foldered page is not untagged
+    expect(g.untagged.map((p) => p.slug)).not.toContain("deal-notes");
+    // sales is a DEFAULT_TAG so it is no longer suggested
+    expect(g.suggestedTags).not.toContain("sales");
   });
 
   it("lists untagged active pages as the queue and excludes them from the graph", async () => {

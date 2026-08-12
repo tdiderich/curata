@@ -89,6 +89,14 @@ export default async function PageDetailView({
 
   let pageTags: string[] = [];
   let tagOptions: string[] = [];
+  let folderTag: string | undefined;
+  if (pageRow?.folderId) {
+    const folder = await db.folder.findUnique({
+      where: { id: pageRow.folderId },
+      select: { name: true },
+    });
+    folderTag = folder?.name.trim().toLowerCase() || undefined;
+  }
   if (pageRow) {
     const [concepts, orgConcepts] = await Promise.all([
       getPageConcepts(pageRow.id),
@@ -189,7 +197,6 @@ export default async function PageDetailView({
         pageSlug={slug}
         canManageRules={canManageRules}
         canEditPageRules={canEditPage}
-        updatedAt={pageRow?.updatedAt.toISOString()}
         archived={pageRow?.status === "archived"
           ? { since: pageRow.updatedAt.toISOString().slice(0, 10), supersededBy: pageRow.supersededBy }
           : undefined}
@@ -202,6 +209,7 @@ export default async function PageDetailView({
               canEdit={canEditPage}
               pickerViaPalette
               maxVisible={5}
+              folderTag={folderTag}
             />
           ) : undefined
         }

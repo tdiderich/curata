@@ -6867,6 +6867,9 @@ i.kg-circle-page {
   display: flex;
   align-items: center;
   min-width: 0;
+  /* Optical centering: chips are shorter than the 30px title line, and pure
+     flex centering reads a hair high against the title's baseline. */
+  padding-top: 2px;
 }
 .pt-tags .pg-tags {
   padding: 0;
@@ -6917,4 +6920,10 @@ body:has(.nav-reveal) .page-toolbar {
 .pg-tag-more:hover {
   border-color: rgba(var(--accent-rgb), 0.7);
   color: rgba(var(--text-rgb), 0.95);
+}
+
+.pg-tag-folder {
+  background: rgba(var(--text-rgb), 0.08);
+  border-color: rgba(var(--text-rgb), 0.2);
+  color: var(--light-muted);
 }

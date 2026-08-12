@@ -15,6 +15,7 @@ export function PageTags({
   canEdit,
   pickerViaPalette,
   maxVisible,
+  folderTag,
 }: {
   pageId: string;
   initialTags: string[];
@@ -24,6 +25,8 @@ export function PageTags({
   pickerViaPalette?: boolean;
   /** Show at most this many chips, collapsing the rest behind a +N toggle. */
   maxVisible?: number;
+  /** Folder-derived tag: shown as a structural chip, removable only by moving the page. */
+  folderTag?: string;
 }) {
   const [tags, setTags] = useState(initialTags);
   const [showAll, setShowAll] = useState(false);
@@ -58,6 +61,11 @@ export function PageTags({
 
   return (
     <div className="pg-tags">
+      {folderTag && !tags.includes(folderTag) && (
+        <span className="pg-tag pg-tag-folder" title={`from folder "${folderTag}" - move the page to change it`}>
+          {folderTag}
+        </span>
+      )}
       {visible.map((t) => (
         <span key={t} className="pg-tag">
           {t}

@@ -52,18 +52,6 @@ interface ContentRuleDisplay {
   patterns?: string[];
 }
 
-function relativeTime(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
-}
-
 export default function PageDetailClient({
   slug,
   children,
@@ -82,7 +70,6 @@ export default function PageDetailClient({
   canManageRules = false,
   canEditPageRules = false,
   tagsRow,
-  updatedAt,
 }: {
   slug: string;
   children?: React.ReactNode;
@@ -102,7 +89,6 @@ export default function PageDetailClient({
   canManageRules?: boolean;
   canEditPageRules?: boolean;
   tagsRow?: React.ReactNode;
-  updatedAt?: string;
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);

@@ -12,9 +12,12 @@ export interface GraphTag {
   /**
    * default = curata's canonical starter tags; org = recommended by an
    * owner/admin in settings (the org-tags entry in content rules);
-   * personal = everything else.
+   * personal = everything else. Folder-derived tags resolve through the
+   * same ladder by name.
    */
   tier: TagTier;
+  /** True when at least part of this tag's membership comes from a folder. */
+  fromFolder?: boolean;
 }
 
 export interface GraphPage {
@@ -48,90 +51,131 @@ export interface KnowledgeGraph {
 const MAX_TAGS = 60;
 const MAX_PAGES = 400;
 
+interface PageRow {
+  id: string;
+  slug: string;
+  title: string;
+  folder_id: string | null;
+  updated_at: Date;
+  tokens: bigint;
+}
+
 /**
- * The dashboard knowledge graph: tag nodes weighted by page count and token
- * mass (same chars/4 estimate the MCP brain map uses — one substrate, agent
- * TSV and human graph), page nodes, tag→page edges, plus the untagged queue
- * (pages invisible to agents until tagged) and unused default tags rendered
- * as suggestions.
+ * The dashboard knowledge graph and the MCP brain map's shared substrate.
+ *
+ * Tags come from two sources merged by normalized name: explicit concept
+ * tags, and the page's folder — putting a page in a Sales folder makes it a
+ * member of the sales tag. Folder tags are derived at query time, never
+ * materialized: renames propagate instantly and nothing can drift. Direct
+ * folder only (no ancestor rollup) for now.
+ *
+ * Token weights are the same chars/4 estimate everywhere — one substrate,
+ * agent TSV and human graph. Untagged = no concept tags AND no folder.
  */
 export async function buildKnowledgeGraph(orgId: string): Promise<KnowledgeGraph> {
-  const org = await db.organization.findUnique({
-    where: { id: orgId },
-    select: { rules: true },
-  });
+  const [org, folders, pageRows] = await Promise.all([
+    db.organization.findUnique({ where: { id: orgId }, select: { rules: true } }),
+    db.folder.findMany({ where: { orgId }, select: { id: true, name: true } }),
+    db.$queryRaw<PageRow[]>`
+      SELECT p.id, p.slug, p.title, p.folder_id, p.updated_at,
+             (LENGTH(pv.yaml_content) / 4)::bigint AS tokens
+      FROM pages p
+      JOIN LATERAL (
+        SELECT yaml_content FROM page_versions
+        WHERE page_id = p.id ORDER BY created_at DESC LIMIT 1
+      ) pv ON TRUE
+      WHERE p.org_id = ${orgId} AND p.status = 'active'
+      ORDER BY p.updated_at DESC
+    `,
+  ]);
   const blessed = new Set(extractOrgTags(org?.rules));
-
-  const tagRows = await db.$queryRaw<
-    { id: string; name: string; pages: number; tokens: bigint }[]
-  >`
-    SELECT c.id, c.display_name AS name,
-           COUNT(DISTINCT p.id)::int AS pages,
-           (SUM(LENGTH(pv.yaml_content)) / 4)::bigint AS tokens
-    FROM concepts c
-    JOIN page_concepts pc ON pc.concept_id = c.id
-    JOIN pages p ON p.id = pc.page_id
-    JOIN LATERAL (
-      SELECT yaml_content FROM page_versions
-      WHERE page_id = p.id ORDER BY created_at DESC LIMIT 1
-    ) pv ON TRUE
-    WHERE p.org_id = ${orgId} AND p.status = 'active'
-    GROUP BY c.id, c.display_name
-    ORDER BY pages DESC, tokens DESC
-    LIMIT ${MAX_TAGS}
-  `;
   const defaultNames = new Set<string>(DEFAULT_TAGS);
-  const tags: GraphTag[] = tagRows.map((t) => ({
-    id: t.id,
-    name: t.name,
-    pages: t.pages,
-    tokens: Number(t.tokens),
-    tier: defaultNames.has(t.name.toLowerCase())
-      ? "default"
-      : blessed.has(t.name.toLowerCase())
-        ? "org"
-        : "personal",
-  }));
-  const tagIds = tags.map((t) => t.id);
+  const folderName = new Map(folders.map((f) => [f.id, f.name.trim().toLowerCase()]));
 
-  const taggedPages =
-    tagIds.length === 0
+  const conceptRows =
+    pageRows.length === 0
       ? []
-      : await db.page.findMany({
-          where: {
-            orgId,
-            status: "active",
-            concepts: { some: { conceptId: { in: tagIds } } },
-          },
-          select: {
-            id: true,
-            slug: true,
-            title: true,
-            concepts: { select: { conceptId: true }, where: { conceptId: { in: tagIds } } },
-          },
-          orderBy: { updatedAt: "desc" },
-          take: MAX_PAGES,
+      : await db.pageConcept.findMany({
+          where: { pageId: { in: pageRows.map((p) => p.id) } },
+          select: { pageId: true, concept: { select: { displayName: true } } },
         });
+  const conceptsByPage = new Map<string, string[]>();
+  for (const row of conceptRows) {
+    const name = row.concept.displayName.trim().toLowerCase();
+    if (!name) continue;
+    const list = conceptsByPage.get(row.pageId) ?? [];
+    if (!list.includes(name)) list.push(name);
+    conceptsByPage.set(row.pageId, list);
+  }
 
-  const pages: GraphPage[] = taggedPages.map((p) => ({ id: p.id, slug: p.slug, title: p.title }));
-  const edges: GraphEdge[] = taggedPages.flatMap((p) =>
-    [...new Set(p.concepts.map((c) => c.conceptId))].map((tagId) => ({ tagId, pageId: p.id }))
-  );
+  // Merge concept + folder membership per tag name.
+  interface TagAgg {
+    pageIds: Set<string>;
+    tokens: number;
+    fromFolder: boolean;
+  }
+  const tagMap = new Map<string, TagAgg>();
+  const untagged: UntaggedPage[] = [];
+  const taggedPageIds = new Set<string>();
 
-  const untaggedRows = await db.page.findMany({
-    where: { orgId, status: "active", concepts: { none: {} } },
-    select: { id: true, slug: true, title: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
+  const addMembership = (name: string, page: PageRow, fromFolder: boolean) => {
+    const agg = tagMap.get(name) ?? { pageIds: new Set<string>(), tokens: 0, fromFolder: false };
+    if (!agg.pageIds.has(page.id)) {
+      agg.pageIds.add(page.id);
+      agg.tokens += Number(page.tokens);
+    }
+    agg.fromFolder = agg.fromFolder || fromFolder;
+    tagMap.set(name, agg);
+  };
+
+  for (const page of pageRows) {
+    const conceptNames = conceptsByPage.get(page.id) ?? [];
+    const fName = page.folder_id ? folderName.get(page.folder_id) : undefined;
+    for (const name of conceptNames) addMembership(name, page, false);
+    if (fName) addMembership(fName, page, true);
+    if (conceptNames.length === 0 && !fName) {
+      untagged.push({
+        id: page.id,
+        slug: page.slug,
+        title: page.title,
+        updatedAt: page.updated_at.toISOString(),
+      });
+    } else {
+      taggedPageIds.add(page.id);
+    }
+  }
+
+  const tags: GraphTag[] = [...tagMap.entries()]
+    .sort((a, b) => b[1].pageIds.size - a[1].pageIds.size || b[1].tokens - a[1].tokens)
+    .slice(0, MAX_TAGS)
+    .map(([name, agg]) => ({
+      id: `tag:${name}`,
+      name,
+      pages: agg.pageIds.size,
+      tokens: agg.tokens,
+      tier: defaultNames.has(name) ? "default" : blessed.has(name) ? "org" : "personal",
+      fromFolder: agg.fromFolder || undefined,
+    }));
+  const keptTags = new Map(tags.map((t) => [t.name, t]));
+
+  const pageById = new Map(pageRows.map((p) => [p.id, p]));
+  const shownPageIds = [...taggedPageIds].slice(0, MAX_PAGES);
+  const shownSet = new Set(shownPageIds);
+  const pages: GraphPage[] = shownPageIds.map((id) => {
+    const p = pageById.get(id)!;
+    return { id: p.id, slug: p.slug, title: p.title };
   });
-  const untagged: UntaggedPage[] = untaggedRows.map((p) => ({
-    id: p.id,
-    slug: p.slug,
-    title: p.title,
-    updatedAt: p.updatedAt.toISOString(),
-  }));
 
-  const usedNames = new Set(tags.map((t) => t.name.toLowerCase()));
-  const suggestedTags = DEFAULT_TAGS.filter((t) => !usedNames.has(t));
+  const edges: GraphEdge[] = [];
+  for (const [name, agg] of tagMap) {
+    const tag = keptTags.get(name);
+    if (!tag) continue;
+    for (const pageId of agg.pageIds) {
+      if (shownSet.has(pageId)) edges.push({ tagId: tag.id, pageId });
+    }
+  }
+
+  const suggestedTags = DEFAULT_TAGS.filter((t) => !tagMap.has(t));
 
   return { tags, pages, edges, untagged, suggestedTags };
 }
