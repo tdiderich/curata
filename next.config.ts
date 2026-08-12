@@ -49,7 +49,11 @@ const nextConfig: NextConfig = {
       },
       // Short alias for the MCP endpoint. Some edge configurations exempt /mcp
       // from bot rules that would otherwise block an agent mid-session.
-      { source: "/mcp", destination: "/api/mcp" },
+      // /mcp is the URL connector docs advertise, so it must speak the real
+      // streamable-HTTP MCP transport — a JSON-RPC initialize against the REST
+      // shim 400s with "missing tool". The shim stays at its literal /api/mcp
+      // path (kazam's REST fetcher calls that directly).
+      { source: "/mcp", destination: "/api/mcp/stream" },
       { source: "/mcp/:path*", destination: "/api/mcp/:path*" },
     ];
   },
