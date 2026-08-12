@@ -171,7 +171,10 @@ function applySecurityHeaders(request: NextRequest, response: NextResponse): voi
 async function middlewareClerk(request: NextRequest) {
   const { clerkMiddleware, createRouteMatcher } = await import("@clerk/nextjs/server");
   const isPublicRoute = createRouteMatcher(
-    PUBLIC_PREFIXES_CLERK.map((p) => `${p}(.*)`).concat(["/", "/sign-in(.*)"])
+    // Bare "/api/mcp" needs an exact entry: the "/api/mcp/" prefix expands to
+    // "/api/mcp/(.*)" which only matches subroutes (kz-0e26, same bug the
+    // isPublic() exact-match fixed for the non-clerk branches).
+    PUBLIC_PREFIXES_CLERK.map((p) => `${p}(.*)`).concat(["/", "/sign-in(.*)", "/api/mcp"])
   );
 
   const handler = clerkMiddleware(async (auth, req) => {

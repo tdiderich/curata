@@ -67,9 +67,34 @@ async function resolveAuth(request: Request) {
   if (!authHeader.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7).trim();
   if (!token) return null;
+
+  // Curata API keys are always `ck_`-prefixed; anything else in clerk mode is
+  // treated as a Clerk OAuth access token (MCP connector flow).
+  if (process.env.AUTH_MODE === "clerk" && !token.startsWith("ck_")) {
+    const { resolveOrgFromClerkOAuth } = await import("@/lib/auth");
+    const oauth = await resolveOrgFromClerkOAuth(token);
+    if (!oauth) return null;
+    return { orgId: oauth.orgId, orgSlug: oauth.orgSlug, actorId: oauth.keyPrefix, userId: oauth.userId };
+  }
+
   const result = await resolveOrgFromApiKey(token);
   if (!result) return null;
   return { orgId: result.orgId, orgSlug: result.orgSlug, actorId: result.keyPrefix || "apikey", userId: result.userId };
+}
+
+/**
+ * RFC 9728: a 401 from a protected MCP resource advertises where its
+ * protected-resource metadata lives so OAuth-capable clients (Claude.ai,
+ * ChatGPT connectors) can discover the authorization server and start the
+ * flow. Only meaningful in clerk mode; other modes keep the plain 401.
+ */
+function unauthorizedHeaders(request: Request): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (process.env.AUTH_MODE === "clerk") {
+    const origin = new URL(request.url).origin;
+    headers["WWW-Authenticate"] = `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource"`;
+  }
+  return headers;
 }
 
 function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId?: string): McpServer {
@@ -581,7 +606,7 @@ export async function POST(request: Request) {
   const ctx = await resolveAuth(request);
   if (!ctx) {
     return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message: "unauthorized — in tailscale auth mode, identity headers only exist on the https:// Tailscale-served URL (plain http:// always 401s); otherwise pass Authorization: Bearer <api key>" }, id: null }), {
-      status: 401, headers: { "Content-Type": "application/json" },
+      status: 401, headers: unauthorizedHeaders(request),
     });
   }
 
@@ -595,7 +620,7 @@ export async function GET(request: Request) {
   const ctx = await resolveAuth(request);
   if (!ctx) {
     return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message: "unauthorized — in tailscale auth mode, identity headers only exist on the https:// Tailscale-served URL (plain http:// always 401s); otherwise pass Authorization: Bearer <api key>" }, id: null }), {
-      status: 401, headers: { "Content-Type": "application/json" },
+      status: 401, headers: unauthorizedHeaders(request),
     });
   }
 

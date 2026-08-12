@@ -245,6 +245,88 @@ export async function resolveCurrentUser(): Promise<CurrentUser | null> {
   return DEFAULT_USER;
 }
 
+/**
+ * Extracts the `org_id` claim from a Clerk OAuth access token. Clerk's SDK
+ * verifies the token's signature in `auth({ acceptsToken: "oauth_token" })`
+ * but does not surface org claims on the machine auth object, so the claim is
+ * read from the (already verified) payload here. Present only when the OAuth
+ * app requests the `user:org:read` scope and the user selects an organization
+ * on the consent screen.
+ */
+export function decodeOrgIdClaim(token: string): string | null {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const json: unknown = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (typeof json !== "object" || json === null) return null;
+    const orgId = (json as Record<string, unknown>).org_id;
+    return typeof orgId === "string" && orgId ? orgId : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolves org context from a Clerk OAuth access token (MCP clients arriving
+ * through the OAuth 2.1 connector flow, as opposed to curata API keys).
+ * Requires AUTH_MODE=clerk and a request that passed through clerkMiddleware.
+ *
+ * Org resolution order:
+ * 1. `org_id` claim on the token (user picked an org at consent).
+ * 2. The user's sole OrgMember row, when they belong to exactly one org.
+ * Ambiguous membership without an org claim fails closed.
+ */
+export async function resolveOrgFromClerkOAuth(
+  bearerToken: string
+): Promise<ApiKeyContext | null> {
+  if (AUTH_MODE !== "clerk") return null;
+
+  const { auth } = await import("@clerk/nextjs/server");
+  let machine;
+  try {
+    machine = await auth({ acceptsToken: "oauth_token" });
+  } catch {
+    return null;
+  }
+  if (!machine.isAuthenticated || machine.tokenType !== "oauth_token" || !machine.userId) {
+    return null;
+  }
+  const userId = machine.userId;
+  const clientId = machine.clientId ?? "unknown";
+
+  const clerkOrgId = decodeOrgIdClaim(bearerToken);
+  let org: { id: string; slug: string } | null = null;
+
+  if (clerkOrgId) {
+    org = await db.organization.findUnique({
+      where: { clerkOrgId },
+      select: { id: true, slug: true },
+    });
+  } else {
+    const memberships = await db.orgMember.findMany({
+      where: { userId },
+      select: { orgId: true, org: { select: { slug: true } } },
+      take: 2,
+    });
+    if (memberships.length === 1) {
+      org = { id: memberships[0].orgId, slug: memberships[0].org.slug };
+    }
+  }
+  if (!org) return null;
+
+  const member = await findOrCreateMember(org.id, userId, "member");
+  const role = normalizeClerkRole(member.role);
+
+  return {
+    orgId: org.id,
+    orgSlug: org.slug,
+    userId,
+    role,
+    scopes: role === "viewer" ? ["read"] : ["read", "write"],
+    keyPrefix: `oauth:${clientId.slice(0, 12)}`,
+  };
+}
+
 export async function resolveOrgFromApiKey(
   bearerToken: string
 ): Promise<ApiKeyContext | null> {

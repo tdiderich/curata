@@ -27,6 +27,26 @@ const nextConfig: NextConfig = {
         destination: "/api/well-known/agent-skills",
       },
       { source: "/.well-known/api-catalog", destination: "/api/well-known/api-catalog" },
+      // OAuth 2.1 discovery for the MCP connector flow (clerk mode). Clients
+      // derive the protected-resource metadata path from the resource URL they
+      // were given (/mcp, /api/mcp/stream, or the bare origin), so every
+      // path-suffixed variant serves the same document.
+      {
+        source: "/.well-known/oauth-protected-resource",
+        destination: "/api/well-known/oauth-protected-resource",
+      },
+      {
+        source: "/.well-known/oauth-protected-resource/:path*",
+        destination: "/api/well-known/oauth-protected-resource",
+      },
+      {
+        source: "/.well-known/oauth-authorization-server",
+        destination: "/api/well-known/oauth-authorization-server",
+      },
+      {
+        source: "/.well-known/oauth-authorization-server/:path*",
+        destination: "/api/well-known/oauth-authorization-server",
+      },
       // Short alias for the MCP endpoint. Some edge configurations exempt /mcp
       // from bot rules that would otherwise block an agent mid-session.
       { source: "/mcp", destination: "/api/mcp" },

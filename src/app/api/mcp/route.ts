@@ -32,7 +32,21 @@ async function resolveAuth(request: NextRequest) {
   const token = authHeader.slice(7).trim();
   if (!token) return null;
 
+  // Curata API keys are always `ck_`-prefixed; anything else in clerk mode is
+  // treated as a Clerk OAuth access token (MCP connector flow).
+  if (process.env.AUTH_MODE === "clerk" && !token.startsWith("ck_")) {
+    const { resolveOrgFromClerkOAuth } = await import("@/lib/auth");
+    return resolveOrgFromClerkOAuth(token);
+  }
+
   return resolveOrgFromApiKey(token);
+}
+
+/** RFC 9728 challenge so OAuth-capable MCP clients can discover the auth server. */
+function unauthorizedHeaders(request: NextRequest): Record<string, string> {
+  if (process.env.AUTH_MODE !== "clerk") return {};
+  const origin = new URL(request.url).origin;
+  return { "WWW-Authenticate": `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource"` };
 }
 
 export async function POST(request: NextRequest) {
@@ -41,7 +55,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       error: "unauthorized",
       hint: "In tailscale auth mode, identity headers only exist on the https:// Tailscale-served URL — plain http:// will always 401. Otherwise pass Authorization: Bearer <api key>.",
-    }, { status: 401 });
+    }, { status: 401, headers: unauthorizedHeaders(request) });
   }
 
   let body: { tool?: string; args?: Record<string, string> };
@@ -87,7 +101,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       error: "unauthorized",
       hint: "In tailscale auth mode, identity headers only exist on the https:// Tailscale-served URL — plain http:// will always 401. Otherwise pass Authorization: Bearer <api key>.",
-    }, { status: 401 });
+    }, { status: 401, headers: unauthorizedHeaders(request) });
   }
 
   // Build preflight context
