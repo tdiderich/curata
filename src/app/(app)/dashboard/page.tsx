@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { ActivityFeed } from "@/components/activity-feed";
 import { buildActivitySessions } from "@/lib/activity";
+import { buildKnowledgeGraph } from "@/lib/graph";
+import { DashboardTabs } from "@/components/dashboard-tabs";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
@@ -19,7 +21,8 @@ export default async function DashboardPage() {
   }
   if (!ctx) redirect(AUTH_MODE === "clerk" ? "/onboarding" : "/sign-in");
 
-  const [pageTitles, auditRows] = await Promise.all([
+  const [graph, pageTitles, auditRows] = await Promise.all([
+    buildKnowledgeGraph(ctx.orgId),
     db.page.findMany({ where: { orgId: ctx.orgId }, select: { slug: true, title: true } }),
     db.auditLog.findMany({ where: { orgId: ctx.orgId }, orderBy: { createdAt: "desc" }, take: 100 }),
   ]);
@@ -30,9 +33,9 @@ export default async function DashboardPage() {
   return (
     <div className="dash-root">
       <div className="cleanup-header">
-        <h1 className="cleanup-heading">Activity</h1>
+        <h1 className="cleanup-heading">Brain</h1>
       </div>
-      <ActivityFeed entries={activityFeed} />
+      <DashboardTabs graph={graph} activity={<ActivityFeed entries={activityFeed} />} />
     </div>
   );
 }

@@ -7,3 +7,7 @@ learnings:
   text: An Edit that inserted a template literal wrote a literal NUL byte where a space was intended, which made git report src/lib/concepts.ts as 'Bin' in diff --stat and file(1) call it 'data'. Check 'git diff --stat' for Bin on a text file after edits, then grep for NUL before committing.
   category: correction
   created: 2026-07-28T21:58:14.940709-05:00
+- id: kz-ab14a2
+  text: curata-app/.env is a stale local copy - it carries the Railway PRODUCTION DATABASE_URL (quoted, greps miss it) but only dev pk_test Clerk keys; the real prod Clerk PROD-tenant keys are set as Railway env vars (Tyler 2026-08-12), so never infer prod config from this file. Never blanket-source curata-app/.env for local test servers; export DATABASE_URL explicitly.
+  category: correction
+  created: 2026-08-12T10:26:48.535484-05:00

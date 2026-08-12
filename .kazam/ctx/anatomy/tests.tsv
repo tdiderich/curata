@@ -7,6 +7,8 @@ tests/content-negotiation.test.ts	788	0	content-negotiation.test tests
 tests/glance-prompts.test.ts	3522	0	glance-prompts.test tests
 tests/global-setup.ts	298	0	global-setup tests
 tests/helpers.ts	537	0	helpers tests
+tests/mcp-instructions.test.ts	1023	0	mcp-instructions.test tests
+tests/mcp-oauth.test.ts	1666	0	Tests for decodeOrgIdClaim + resolveOrgFromClerkOAuth: org claim resolution, sole-membership fallback, fail-closed ambiguity, viewer scopes
 tests/mcp-tool-parity.test.ts	439	0	mcp-tool-parity.test tests
 tests/page-markdown.test.ts	2222	0	page-markdown.test tests
 tests/pages.test.ts	1957	0	pages.test tests

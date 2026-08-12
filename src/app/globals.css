@@ -6339,3 +6339,173 @@ body .c-section.align-right > * { max-width: none !important; }
   font-size: 12px; color: var(--teal); text-decoration: none;
 }
 .rules-panel-manage:hover { text-decoration: underline; }
+
+/* ── Knowledge graph dashboard ── */
+.kg-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.kg-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.kg-tab-active {
+  color: var(--text);
+  border-bottom-color: rgba(var(--accent-rgb), 0.9);
+}
+.kg-wrap {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.kg-svg {
+  width: 100%;
+  height: 560px;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.kg-svg:active {
+  cursor: grabbing;
+}
+.kg-node {
+  cursor: pointer;
+}
+.kg-edge {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+/* Tag tiers: fill style is the secondary encoding, color never carries
+   identity alone. org = solid accent, curata default = solid neutral,
+   personal = hollow, suggested = dashed ghost. */
+.kg-circle-tag-org {
+  fill: rgba(var(--accent-rgb), 0.85);
+  stroke: rgba(var(--accent-rgb), 1);
+  stroke-width: 1.5;
+}
+.kg-circle-tag-default {
+  fill: rgba(var(--text-rgb), 0.35);
+  stroke: rgba(var(--text-rgb), 0.55);
+  stroke-width: 1.5;
+}
+.kg-circle-tag-personal {
+  fill: var(--surface);
+  stroke: rgba(var(--accent-rgb), 0.9);
+  stroke-width: 2;
+}
+.kg-circle-suggested {
+  fill: transparent;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+.kg-circle-page {
+  fill: rgba(var(--text-rgb), 0.5);
+}
+.kg-label {
+  font-size: 11px;
+  fill: var(--text);
+  pointer-events: none;
+}
+.kg-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.kg-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: -1px;
+}
+i.kg-circle-tag-org {
+  background: rgba(var(--accent-rgb), 0.85);
+}
+i.kg-circle-tag-default {
+  background: rgba(var(--text-rgb), 0.35);
+}
+i.kg-circle-tag-personal {
+  background: var(--surface);
+  border: 2px solid rgba(var(--accent-rgb), 0.9);
+}
+i.kg-circle-suggested {
+  border: 1.5px dashed var(--muted);
+}
+i.kg-circle-page {
+  background: rgba(var(--text-rgb), 0.5);
+  width: 7px;
+  height: 7px;
+}
+.kg-clear {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.kg-tooltip {
+  position: fixed;
+  z-index: 50;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  color: var(--text);
+  pointer-events: none;
+  max-width: 280px;
+}
+.kg-tooltip div {
+  color: var(--muted);
+}
+.kg-empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--muted);
+}
+.kg-untagged-note {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 4px 0 12px;
+}
+.kg-untagged-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.kg-untagged-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.kg-untagged-list li:last-child {
+  border-bottom: none;
+}
+.kg-untagged-date {
+  color: var(--muted);
+  font-size: 0.78rem;
+}

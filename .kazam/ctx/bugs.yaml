@@ -3,3 +3,7 @@ bugs:
   symptom: 'Mobile: sidebar and nav-reveal both display:none below 900px — no way to access navigation on mobile'
   file_path: curata/src/app/globals.css
   created: 2026-07-05T10:12:02.238675-05:00
+- id: kz-5701ea
+  symptom: /mcp short alias rewrote to the REST shim (/api/mcp) - real MCP clients' JSON-RPC initialize got 400 'missing tool'; connector URL must target /api/mcp/stream
+  file_path: next.config.ts
+  created: 2026-08-12T10:19:47.350172-05:00

@@ -5,7 +5,7 @@ src/lib/agent-prompt.ts	1929	0	Exports buildAgentPrompt({baseUrl, token?, slug?}
 src/lib/api-fetch.ts	16	0	api-fetch library module
 src/lib/api-key.ts	113	0	generateApiKey() mints ck_ prefixed random key + sha256 hash + prefix; hashApiKey() re-hashes a key for lookup/verification
 src/lib/audit.ts	183	0	audit library module
-src/lib/auth.ts	2030	0	auth library module
+src/lib/auth.ts	2716	0	auth library module
 src/lib/component-ids.ts	1865	0	component-ids library module
 src/lib/concepts.ts	2283	0	concepts library module
 src/lib/content-negotiation.ts	557	0	content-negotiation library module
@@ -17,6 +17,7 @@ src/lib/export.ts	1105	0	export library module
 src/lib/glance-prompts.ts	3629	0	glance-prompts library module
 src/lib/kazam.ts	1076	0	kazam library module
 src/lib/mcp-dispatch.ts	12289	0	mcp-dispatch library module
+src/lib/mcp-instructions.ts	1133	0	mcp-instructions library module
 src/lib/next-auth.ts	229	0	next-auth library module
 src/lib/page-markdown.ts	6268	0	page-markdown library module
 src/lib/pages.ts	4480	0	pages library module
