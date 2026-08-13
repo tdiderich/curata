@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { CONCEPT_KINDS } from "./concept-kinds";
+import { Prisma } from "@/generated/prisma/client";
 
 export interface ConceptInput {
   term: string;
@@ -42,6 +43,31 @@ export function normalizeTerm(term: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/**
+ * Pre-slug normalization (lowercase + trim + collapse whitespace, spaces
+ * kept) — the algorithm normalizeTerm replaced. Rows written before terms
+ * became slugs may still be keyed on this form in an environment where
+ * scripts/normalize-concept-terms.ts hasn't run yet. Used only as a lookup
+ * fallback so a multi-word legacy tag ("Prisma Cloud") merges into its
+ * existing row instead of spawning a hyphenated duplicate. Safe to delete
+ * once every environment has run the migration.
+ */
+function legacyNormalizeTerm(term: string): string {
+  return term.toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+/**
+ * Finds a concept by its current slug name, falling back to the pre-slug
+ * legacy form so not-yet-migrated rows still match.
+ */
+async function findConceptForTerm(rawTerm: string, normalized: string) {
+  const bySlug = await db.concept.findUnique({ where: { normalizedName: normalized } });
+  if (bySlug) return bySlug;
+  const legacy = legacyNormalizeTerm(rawTerm);
+  if (legacy === normalized) return null;
+  return db.concept.findUnique({ where: { normalizedName: legacy } });
+}
+
 export async function upsertConcepts(
   pageId: string,
   concepts: ConceptInput[],
@@ -51,8 +77,9 @@ export async function upsertConcepts(
     const normalized = normalizeTerm(c.term);
     if (!normalized) continue;
 
+    const existing = await findConceptForTerm(c.term, normalized);
+
     if (c.remove) {
-      const existing = await db.concept.findUnique({ where: { normalizedName: normalized } });
       if (!existing) continue;
       await db.pageConcept.deleteMany({ where: { pageId, conceptId: existing.id } });
       await db.concept.update({
@@ -62,19 +89,38 @@ export async function upsertConcepts(
       continue;
     }
 
-    const concept = await db.concept.upsert({
-      where: { normalizedName: normalized },
-      create: {
-        normalizedName: normalized,
-        displayName: normalized,
-        kind: c.kind || "",
-        usageCount: 1,
-      },
-      update: {
-        kind: c.kind || undefined,
-        updatedAt: new Date(),
-      },
-    });
+    let concept;
+    if (existing) {
+      // Also migrates a legacy multi-word row to the slug form the first
+      // time it's touched, so it stops needing this fallback afterward.
+      concept = await db.concept.update({
+        where: { id: existing.id },
+        data: {
+          normalizedName: normalized,
+          displayName: normalized,
+          kind: c.kind || undefined,
+          updatedAt: new Date(),
+        },
+      });
+    } else {
+      try {
+        concept = await db.concept.create({
+          data: { normalizedName: normalized, displayName: normalized, kind: c.kind || "", usageCount: 1 },
+        });
+      } catch (err) {
+        // Two concurrent writers can both miss the lookup above and race to
+        // create the same slug; the loser falls back to the row the winner
+        // just created instead of surfacing a constraint error.
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+          concept = await db.concept.update({
+            where: { normalizedName: normalized },
+            data: { kind: c.kind || undefined, updatedAt: new Date() },
+          });
+        } else {
+          throw err;
+        }
+      }
+    }
 
     await db.pageConcept.upsert({
       where: {
