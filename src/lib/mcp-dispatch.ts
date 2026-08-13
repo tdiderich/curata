@@ -84,7 +84,7 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   update_folder: { known: new Set(["id", "name", "parent_id", "visibility", "rules"]), aliases: { parentId: "parent_id" } },
   get_versions: { known: new Set(["slug", "limit"]) },
   validate_page: { known: new Set(["slug", "content"]) },
-  create_page: { known: new Set(["slug", "content", "folder_id", "visibility", "rules"]), aliases: { folderId: "folder_id" } },
+  create_page: { known: new Set(["slug", "content", "folder_id", "visibility", "rules", "concepts", "links"]), aliases: { folderId: "folder_id" } },
   move_page: { known: new Set(["slug", "folder_id"]), aliases: { folderId: "folder_id" } },
   write_page: { known: new Set(["slug", "content", "expected_hash", "visibility", "folder_id", "concepts", "links", "rules"]), aliases: { folderId: "folder_id" } },
   annotate_page: { known: new Set(["slug", "text", "section", "kind", "replacement"]) },
@@ -94,8 +94,8 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   create_from_template: { known: new Set(["template_slug", "slug", "variables", "folder_id"]), aliases: { templateSlug: "template_slug", folderId: "folder_id" } },
   list_workflows: { known: new Set() },
   list_templates: { known: new Set() },
-  get_vocabulary: { known: new Set() },
-  get_related: { known: new Set(["slug"]) },
+  get_vocabulary: { known: new Set(["kind", "query"]) },
+  get_related: { known: new Set(["slug", "term"]) },
   get_semantic_map: { known: new Set(["kind"]) },
   export_page: { known: new Set(["slug", "format"]) },
   export_report: { known: new Set(["slugs", "title", "subtitle"]) },
@@ -519,6 +519,22 @@ export async function dispatch(
       }
       const createResult = await writePage(orgId, orgSlug, args.slug, args.content, userId || "agent", undefined, undefined, cpVis);
       if (!createResult.ok) throw new Error(createResult.error);
+      if (args.concepts || args.links) {
+        const cpPage = await db.page.findUnique({
+          where: { orgId_slug: { orgId, slug: args.slug } },
+          select: { id: true },
+        });
+        if (cpPage) {
+          if (args.concepts) {
+            const conceptInputs: ConceptInput[] = JSON.parse(args.concepts);
+            await upsertConcepts(cpPage.id, conceptInputs, actorId);
+          }
+          if (args.links) {
+            const linkInputs: LinkInput[] = JSON.parse(args.links);
+            await upsertLinks(orgId, cpPage.id, linkInputs, actorId);
+          }
+        }
+      }
       if (args.folder_id || cpPageRules !== undefined) {
         const cpUpdate: Record<string, unknown> = {};
         if (args.folder_id) cpUpdate.folderId = args.folder_id;
@@ -751,8 +767,38 @@ export async function dispatch(
     case "patch_page": {
       if (!args.slug) throw new Error("slug is required");
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
-      if (!args.expected_hash) throw new Error("expected_hash is required");
-      if (!args.operations) throw new Error("operations (JSON array) is required");
+      if (!args.operations && !args.concepts && !args.links) {
+        throw new Error("nothing to do — provide operations, concepts, or links");
+      }
+
+      if (!args.operations) {
+        // Tag/link-only patch: no content rewrite, no hash check needed.
+        const tagPage = await db.page.findUnique({
+          where: { orgId_slug: { orgId, slug: args.slug } },
+          select: { id: true },
+        });
+        if (!tagPage) throw new Error(`page not found: ${args.slug}`);
+        if (args.concepts) {
+          const conceptInputs: ConceptInput[] = JSON.parse(args.concepts);
+          await upsertConcepts(tagPage.id, conceptInputs, actorId);
+        }
+        if (args.links) {
+          const linkInputs: LinkInput[] = JSON.parse(args.links);
+          await upsertLinks(orgId, tagPage.id, linkInputs, actorId);
+        }
+        logAudit({
+          orgId,
+          action: "page.patch",
+          resourceType: "page",
+          resourceId: args.slug,
+          actorType: "apikey",
+          actorId,
+          metadata: { slug: args.slug, operationCount: 0, tagsOnly: true },
+        });
+        return { message: `Patched "${args.slug}" (concepts/links only)` };
+      }
+
+      if (!args.expected_hash) throw new Error("expected_hash is required when operations are given");
 
       let operations: PatchOperation[];
       try {

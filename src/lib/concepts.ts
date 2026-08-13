@@ -1,9 +1,12 @@
 import { db } from "./db";
+import { CONCEPT_KINDS } from "./concept-kinds";
 
 export interface ConceptInput {
   term: string;
   kind?: string;
   section?: string;
+  /** Detach this concept from the page instead of adding it. Never deletes the Concept itself. */
+  remove?: boolean;
 }
 
 export interface LinkInput {
@@ -24,8 +27,19 @@ export interface LinkOutput {
   description: string | null;
 }
 
+/**
+ * Terms are slugs: lowercase letters, digits, and hyphens only. Spaces and
+ * underscores convert to hyphens, everything else is stripped, so
+ * "Noise Reduction" and "noise-reduction" are the same concept.
+ */
 export function normalizeTerm(term: string): string {
-  return term.toLowerCase().trim().replace(/\s+/g, " ");
+  return term
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 export async function upsertConcepts(
@@ -37,11 +51,22 @@ export async function upsertConcepts(
     const normalized = normalizeTerm(c.term);
     if (!normalized) continue;
 
+    if (c.remove) {
+      const existing = await db.concept.findUnique({ where: { normalizedName: normalized } });
+      if (!existing) continue;
+      await db.pageConcept.deleteMany({ where: { pageId, conceptId: existing.id } });
+      await db.concept.update({
+        where: { id: existing.id },
+        data: { usageCount: await db.pageConcept.count({ where: { conceptId: existing.id } }) },
+      });
+      continue;
+    }
+
     const concept = await db.concept.upsert({
       where: { normalizedName: normalized },
       create: {
         normalizedName: normalized,
-        displayName: c.term.trim(),
+        displayName: normalized,
         kind: c.kind || "",
         usageCount: 1,
       },
@@ -186,7 +211,8 @@ export async function getVocabulary(
       kind: c.kind,
       usageCount: c.usageCount,
     })),
-    kinds: allKinds.map((k) => k.kind),
+    // Curated kinds first so agents converge on them; in-use extras follow.
+    kinds: [...new Set([...CONCEPT_KINDS, ...allKinds.map((k) => k.kind)])],
   };
 }
 

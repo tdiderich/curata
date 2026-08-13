@@ -72,7 +72,7 @@ server.tool(
     content: z.string().describe("Full page content in kazam YAML format"),
     slug: z.string().optional().describe("Optional explicit slug. If omitted, derived from title."),
     folder_id: z.string().optional().describe("Optional folder ID to place the page in. Use list_folders to find folder IDs."),
-    concepts: z.string().optional().describe("JSON array of concepts to tag on this page. Each: {term, kind?, section?}. Call get_vocabulary first to reuse existing terms."),
+    concepts: z.string().optional().describe("JSON array of concepts to tag on this page. Each: {term, kind?, section?, remove?}. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework. remove: true detaches the tag. Call get_vocabulary first to reuse existing terms."),
     links: z.string().optional().describe("JSON array of cross-page links. Each: {target (slug), rel (informs|references|supersedes|conflicts), description?}"),
   },
   async ({ title, content, slug: explicitSlug, folder_id, concepts, links }) => {
@@ -98,17 +98,21 @@ server.tool(
 
 server.tool(
   "create_page",
-  "Create a new page in your team's knowledge base. Fails if a page with the same slug already exists. Content should be valid kazam YAML. Call get_component_reference first to learn the YAML syntax.",
+  "Create a new page in your team's knowledge base. Fails if a page with the same slug already exists. Content should be valid kazam YAML. Call get_component_reference first to learn the YAML syntax. Tag concepts at creation so the page appears in the brain map.",
   {
     title: z.string().describe("Page title"),
     content: z.string().describe("Full page content in kazam YAML format"),
     slug: z.string().optional().describe("Optional explicit slug. If omitted, derived from title."),
     folder_id: z.string().optional().describe("Optional folder ID to place the page in. Use list_folders to find folder IDs."),
+    concepts: z.string().optional().describe("JSON array of concepts to tag on this page. Each: {term, kind?, section?}. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework. Call get_vocabulary first to reuse existing terms."),
+    links: z.string().optional().describe("JSON array of cross-page links. Each: {target (slug), rel (informs|references|supersedes|conflicts), description?}"),
   },
-  async ({ title, content, slug: explicitSlug, folder_id }) => {
+  async ({ title, content, slug: explicitSlug, folder_id, concepts, links }) => {
     const slug = explicitSlug || slugify(title);
     const args: Record<string, string> = { slug, content };
     if (folder_id) args.folder_id = folder_id;
+    if (concepts) args.concepts = concepts;
+    if (links) args.links = links;
     const result = await callApi(CURATA_URL, CURATA_API_KEY, "create_page", args);
     if (result.error) {
       return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };

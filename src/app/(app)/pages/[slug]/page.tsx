@@ -11,7 +11,7 @@ import { PageRenderer } from "@/generated/kazam-renderer";
 import PageDetailClient from "@/components/page-detail-client";
 import PageEditor from "@/components/page-editor";
 import { PageTags } from "@/components/page-tags";
-import { getPageConcepts } from "@/lib/concepts";
+import { getPageConcepts, normalizeTerm } from "@/lib/concepts";
 import { DEFAULT_TAGS } from "@/lib/default-tags";
 
 export async function generateMetadata({
@@ -87,29 +87,38 @@ export default async function PageDetailView({
     );
   }
 
-  let pageTags: string[] = [];
-  let tagOptions: string[] = [];
+  const pageTags: Array<{ term: string; kind: string }> = [];
+  let tagOptions: Array<{ term: string; kind: string }> = [];
   let folderTag: string | undefined;
   if (pageRow?.folderId) {
     const folder = await db.folder.findUnique({
       where: { id: pageRow.folderId },
       select: { name: true },
     });
-    folderTag = folder?.name.trim().toLowerCase() || undefined;
+    folderTag = normalizeTerm(folder?.name ?? "") || undefined;
   }
   if (pageRow) {
     const [concepts, orgConcepts] = await Promise.all([
       getPageConcepts(pageRow.id),
       db.concept.findMany({
         where: { pages: { some: { page: { orgId: ctx.orgId, status: "active" } } } },
-        select: { displayName: true },
+        select: { displayName: true, kind: true },
         take: 200,
       }),
     ]);
-    pageTags = [...new Set(concepts.map((c) => c.term.toLowerCase()))];
-    tagOptions = [
-      ...new Set([...DEFAULT_TAGS, ...orgConcepts.map((c) => c.displayName.toLowerCase())]),
-    ];
+    const seen = new Set<string>();
+    for (const c of concepts) {
+      const term = normalizeTerm(c.term);
+      if (!term || seen.has(term)) continue;
+      seen.add(term);
+      pageTags.push({ term, kind: c.kind });
+    }
+    const optionMap = new Map<string, string>(DEFAULT_TAGS.map((t) => [t, ""]));
+    for (const c of orgConcepts) {
+      const term = normalizeTerm(c.displayName);
+      if (term) optionMap.set(term, c.kind);
+    }
+    tagOptions = [...optionMap.entries()].map(([term, kind]) => ({ term, kind }));
   }
 
   const rawAnnotations = await getAnnotations(ctx.orgId, slug);

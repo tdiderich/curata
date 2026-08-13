@@ -3,9 +3,10 @@
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { KnowledgeGraph } from "./knowledge-graph";
-import { TagPicker } from "./tag-picker";
+import { TagPicker, type TagOption } from "./tag-picker";
 import type { KnowledgeGraph as GraphData, UntaggedPage } from "@/lib/graph";
 import { DEFAULT_TAGS } from "@/lib/default-tags";
+import { basePath } from "@/lib/api-fetch";
 
 interface Props {
   graph: GraphData;
@@ -27,11 +28,11 @@ function UntaggedRow({
   onTagged,
 }: {
   page: UntaggedPage;
-  tagOptions: string[];
+  tagOptions: TagOption[];
   onTagged: (id: string) => void;
 }) {
-  const save = async (tags: string[]) => {
-    const res = await fetch("/api/tags", {
+  const save = async (tags: TagOption[]) => {
+    const res = await fetch(`${basePath}/api/tags`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pageId: page.id, tags }),
@@ -68,10 +69,11 @@ export function DashboardTabs({ graph, activity }: Props) {
   const [tab, setTab] = useState<Tab>("graph");
   const [untagged, setUntagged] = useState(graph.untagged);
 
-  const tagOptions = useMemo(
-    () => [...new Set([...DEFAULT_TAGS, ...graph.tags.map((t) => t.name.toLowerCase())])],
-    [graph.tags]
-  );
+  const tagOptions = useMemo(() => {
+    const map = new Map<string, string>(DEFAULT_TAGS.map((t) => [t, ""]));
+    for (const t of graph.tags) map.set(t.name.toLowerCase(), t.conceptKind ?? "");
+    return [...map.entries()].map(([term, kind]) => ({ term, kind }));
+  }, [graph.tags]);
 
   const untaggedPanel =
     untagged.length === 0 ? (
