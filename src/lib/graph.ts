@@ -23,6 +23,8 @@ export interface GraphTag {
   conceptKind?: string;
   /** True when at least part of this tag's membership comes from a folder. */
   fromFolder?: boolean;
+  /** True when the tag is purely folder-derived — no Concept row backs it, so it has no kind to color by. */
+  folderOnly?: boolean;
 }
 
 export interface GraphPage {
@@ -106,9 +108,11 @@ export async function buildKnowledgeGraph(orgId: string): Promise<KnowledgeGraph
         });
   const conceptsByPage = new Map<string, string[]>();
   const kindByName = new Map<string, string>();
+  const conceptNames = new Set<string>();
   for (const row of conceptRows) {
     const name = row.concept.displayName.trim().toLowerCase();
     if (!name) continue;
+    conceptNames.add(name);
     if (row.concept.kind && !kindByName.get(name)) kindByName.set(name, row.concept.kind);
     const list = conceptsByPage.get(row.pageId) ?? [];
     if (!list.includes(name)) list.push(name);
@@ -163,6 +167,7 @@ export async function buildKnowledgeGraph(orgId: string): Promise<KnowledgeGraph
       tier: defaultNames.has(name) ? "default" : blessed.has(name) ? "org" : "personal",
       conceptKind: kindByName.get(name) || undefined,
       fromFolder: agg.fromFolder || undefined,
+      folderOnly: (agg.fromFolder && !conceptNames.has(name)) || undefined,
     }));
   const keptTags = new Map(tags.map((t) => [t.name, t]));
 

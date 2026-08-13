@@ -88,10 +88,8 @@ export async function DELETE(request: NextRequest) {
   }
 
   const normalized = normalizeTerm(tag);
-  const concept = await db.concept.findUnique({ where: { normalizedName: normalized } });
-  if (concept) {
-    await db.pageConcept.deleteMany({ where: { pageId: page.id, conceptId: concept.id } });
-  }
+  // Route through upsertConcepts' remove path so usage_count is recounted.
+  await upsertConcepts(page.id, [{ term: normalized, remove: true }], ctx.userId);
   logAudit({
     orgId: ctx.orgId,
     action: "untag_page",

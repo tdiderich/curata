@@ -18,6 +18,8 @@ interface SimNode extends SimulationNodeDatum {
   tier?: TagTier;
   /** Backing Concept.kind for tag nodes — colors the bubble in kind mode. */
   conceptKind?: string;
+  /** Purely folder-derived: no Concept row, renders neutral in kind mode. */
+  folderOnly?: boolean;
   label: string;
   r: number;
   slug?: string;
@@ -62,6 +64,7 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
       kind: "tag",
       tier: t.tier,
       conceptKind: t.conceptKind,
+      folderOnly: t.folderOnly,
       label: t.name,
       r: radius(weights[i]),
       pages: t.pages,
@@ -223,7 +226,9 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
                   n.kind !== "tag"
                     ? `kg-circle-${n.kind}`
                     : colorBy === "kind"
-                      ? `kg-circle-kind-${kindSlug(n.conceptKind)}`
+                      ? n.folderOnly
+                        ? "kg-circle-kind-folder"
+                        : `kg-circle-kind-${kindSlug(n.conceptKind)}`
                       : `kg-circle-tag-${n.tier}`
                 }
               />
@@ -284,11 +289,16 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
           </button>
         </span>
         {colorBy === "kind" ? (
-          CONCEPT_KINDS.map((k) => (
-            <span key={k}>
-              <i className={`kg-dot kg-circle-kind-${k}`} /> {k[0].toUpperCase() + k.slice(1)}
+          <>
+            {CONCEPT_KINDS.map((k) => (
+              <span key={k}>
+                <i className={`kg-dot kg-circle-kind-${k}`} /> {k[0].toUpperCase() + k.slice(1)}
+              </span>
+            ))}
+            <span>
+              <i className="kg-dot kg-circle-kind-folder" /> Folder
             </span>
-          ))
+          </>
         ) : (
           <>
             <span>
