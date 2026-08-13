@@ -19,7 +19,15 @@ async function main() {
 
   for (const c of concepts) {
     const slug = normalizeTerm(c.normalizedName);
-    if (!slug || slug === c.normalizedName) continue;
+    if (!slug) continue;
+    if (slug === c.normalizedName) {
+      // Name already a slug; still align a legacy pretty displayName ("CrowdStrike").
+      if (c.displayName !== slug) {
+        await db.concept.update({ where: { id: c.id }, data: { displayName: slug } });
+        renamed++;
+      }
+      continue;
+    }
 
     const survivor = await db.concept.findUnique({ where: { normalizedName: slug } });
     if (!survivor) {
