@@ -38,6 +38,7 @@ const PUBLIC_PREFIXES_CLERK = [
   "/docs",
   "/try",
   "/playground",
+  "/how-it-works",
   "/privacy",
   "/terms",
 ];
