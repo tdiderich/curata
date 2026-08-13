@@ -143,11 +143,18 @@ const GETTING_STARTED_PAGE = {
   ],
 };
 
-export async function seedGettingStartedPage(orgId: string, createdBy: string): Promise<void> {
+export async function seedGettingStartedPage(orgId: string, createdBy: string, folderId?: string): Promise<void> {
   const existing = await db.page.findUnique({
     where: { orgId_slug: { orgId, slug: GETTING_STARTED_SLUG } },
   });
-  if (existing) return;
+  if (existing) {
+    // Backfill: adopt a pre-existing loose getting-started page into the
+    // Getting Started folder without touching its content.
+    if (folderId && !existing.folderId) {
+      await db.page.update({ where: { id: existing.id }, data: { folderId } });
+    }
+    return;
+  }
 
   const yamlContent = yaml.dump(GETTING_STARTED_PAGE, { lineWidth: -1, noRefs: true });
   const contentHash = createHash("sha256").update(yamlContent).digest("hex");
@@ -157,6 +164,7 @@ export async function seedGettingStartedPage(orgId: string, createdBy: string): 
       orgId,
       slug: GETTING_STARTED_SLUG,
       title: GETTING_STARTED_PAGE.title,
+      folderId,
       createdBy,
       versions: {
         create: {

@@ -43,6 +43,73 @@ components:
               color: green
 
   - type: section
+    eyebrow: Phases
+    heading: Phases and gates
+    components:
+      - type: graph
+        title: "{{plan_title}} - phase plan"
+        height: 460
+        direction: top_to_bottom
+        row_labels:
+          - 01 / Phases
+          - 02 / Done when
+          - 03 / What it unlocks
+        nodes:
+          - id: phase1
+            label: "{{phase_1_name}}"
+            detail: "{{phase_1_scope}}"
+            row: 0
+            column: 0
+            color: teal
+            status: active
+          - id: phase2
+            label: "{{phase_2_name}}"
+            detail: "{{phase_2_scope}}"
+            row: 0
+            column: 1
+            color: teal
+            status: upcoming
+          - id: gate1
+            label: Gate 1 check
+            detail: "{{phase_1_done_when}}"
+            row: 1
+            column: 0
+            color: yellow
+          - id: gate2
+            label: Gate 2 check
+            detail: "{{phase_2_done_when}}"
+            row: 1
+            column: 1
+            color: yellow
+          - id: unlock1
+            label: "{{phase_1_unlocks}}"
+            detail: What finishing this phase makes possible
+            row: 2
+            column: 0
+            color: green
+          - id: unlock2
+            label: "{{phase_2_unlocks}}"
+            detail: What finishing this phase makes possible
+            row: 2
+            column: 1
+            color: green
+        edges:
+          - from: phase1
+            to: phase2
+          - from: phase1
+            to: gate1
+            style: dashed
+          - from: phase2
+            to: gate2
+            style: dashed
+          - from: gate1
+            to: unlock1
+            style: dashed
+          - from: gate2
+            to: unlock2
+            style: dashed
+
+  - type: section
     eyebrow: Tasks
     heading: Work Breakdown
     components:
@@ -101,4 +168,4 @@ components:
   - type: callout
     variant: info
     title: This is a curata template.
-    body: "Populate all {{placeholder}} variables with your project's actual data. The split_compare should reflect real current-state observations — the gap between current and target is what drives your plan. Update tree node statuses as work progresses."
+    body: "The Plan skill builds this page for you - it interviews you for every {{placeholder}} variable, then publishes through create_from_template. Filling it by hand works too. The split_compare should reflect real current-state observations. The gap between current and target drives the plan. Add phase columns to the graph if the real plan has more than two, and update tree node statuses as work progresses."

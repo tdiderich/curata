@@ -1,0 +1,96 @@
+title: "Skill - Plan"
+subtitle: Interview, draft, iterate, publish. Turn a fuzzy goal into a plan page built from the Plan template.
+shell: standard
+skill:
+  trigger: "make a plan, plan this out, planning doc, project plan"
+  setup:
+    - key: longform_tool
+      ask: "Which tool holds the long-form context a plan should read first - specs, docs, project tickets - if any?"
+    - key: plans_folder
+      ask: "Which folder should finished plans land in? Name it so every plan ends up in one predictable place."
+dashboard:
+  prompt: |
+    Run the Plan skill. Ask me what we're planning, then follow the flow on
+    this page - interview me, draft from the Plan template, iterate until I
+    approve, publish.
+  description: "Interview to published plan page"
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this skill does
+    components:
+      - type: callout
+        variant: info
+        title: The interview is the work
+        body: |
+          Reads the Plan template to learn what a finished plan needs, then interviews you until every variable has a real answer: current state, target state, phases, gates, risks. Drafts, iterates with you, and publishes through the template so every plan lands with the same shape.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual - any time work is big enough to outlive one conversation.
+          - term: Data Sources
+            definition: You, mostly. Plus long-form context - specs, docs, tickets - if you have a tool for it connected. See the Data Model reference.
+          - term: Output
+            definition: A published plan page from the Plan template - current vs target, phased work breakdown, risks, and verification steps.
+
+  - type: section
+    eyebrow: Setup
+    heading: Answer this before you run this skill for your org
+    components:
+      - type: callout
+        variant: warn
+        title: One-time setup, deliberately small
+        body: |
+          This skill needs almost nothing: no CRM, no chatter. Two answers and it's configured.
+      - type: definition_list
+        items:
+          - term: Long-form context
+            definition: Which tool holds the specs, docs, or project tickets a plan should read first, if any?
+          - term: Plans folder
+            definition: Which folder should finished plans land in? Name it so every plan ends up in one predictable place.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this skill
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - A topic - what the plan is for
+          - 10-15 minutes for the interview. Rushed answers make thin plans.
+
+  - type: section
+    eyebrow: Flow
+    heading: Validated Flow
+    components:
+      - type: markdown
+        body: |
+          This flow publishes through `create_from_template`, so the interview answers become the template variables directly - no copy-paste step. Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
+
+          ```agl
+          spec Plan {
+            in: topic: str
+            out: plan_published: bool
+            description: "Interview, draft, iterate, publish. Turn a fuzzy goal into a plan page built from the Plan template."
+            requires: read_page, create_from_template
+
+            flow {
+              state READ_TEMPLATE -> call(read_page, "the Plan template, to know what the interview must fill") -> next
+              state RUN_INTERVIEW -> evaluate(template_variables vs interview_questions) -> next
+              state DRAFT_PLAN -> evaluate(interview_answers vs plan_shape) -> next
+              state REVIEW_DRAFT -> gate(human_approval) -> PUBLISH
+              state PUBLISH -> call(create_from_template, "the Plan template, interview answers passed as variables") -> TERMINATE("Plan page published")
+            }
+          }
+          ```
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this skill
+    components:
+      - type: callout
+        variant: info
+        title: No placeholder survives publish
+        body: |
+          A plan with an unanswered variable is incomplete. Go back to the interview. If you genuinely can't answer something yet, that's a risk: put it in the risks table with an owner and a date, not a blank.

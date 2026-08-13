@@ -1,0 +1,270 @@
+title: Page Structure
+subtitle: How curata pages are structured - shells, components, and the YAML format.
+shell: standard
+components:
+  - type: markdown
+    body: |
+      Every curata page is defined in [kazam](https://github.com/tdiderich/kazam) YAML format. This is the same format used by the static site generator, but curata stores and renders it dynamically. Understanding the format helps you write better prompts and gives your agents a vocabulary for producing structured output.
+
+  - type: section
+    heading: Anatomy of a page
+    components:
+      - type: markdown
+        body: |
+          A page has four top-level fields:
+
+      - type: code
+        language: yaml
+        code: |
+          title: Quarterly Business Review    # required
+          subtitle: Q2 2026                   # optional
+          shell: standard                     # standard | document | deck
+          components:                         # list of content blocks
+            - type: markdown
+              body: |
+                Your content here.
+            - type: stat_grid
+              columns: 3
+              stats:
+                - label: Revenue
+                  value: "$2.4M"
+                  color: green
+
+      - type: markdown
+        body: |
+          - **title** - displayed at the top of the page and in the dashboard list.
+          - **subtitle** - optional secondary text below the title.
+          - **shell** - the layout frame. Determines how the page looks and how components are arranged.
+          - **components** - an ordered list of content blocks. Each has a `type` and type-specific properties.
+
+          Two optional top-level fields carry page metadata rather than content: `visibility` (who can see the page) and `pack` (marks the page as an installable AI tool pack). Both are covered below.
+
+  - type: section
+    heading: Shells
+    components:
+      - type: markdown
+        body: |
+          The shell controls the overall layout and feel of the page.
+
+      - type: card_grid
+        min_width: 280
+        cards:
+          - title: standard
+            badge:
+              label: Default
+              color: teal
+            description: "Full-width container with a 1200px max. Best for dashboards, reference pages, wikis, and general content."
+          - title: document
+            description: "Centered 720px card with a bordered header. Best for meeting agendas, one-pagers, briefs, and anything you'd print."
+          - title: deck
+            description: "Full-viewport slides with arrow-key navigation. Best for QBRs, pitch decks, and strategy reviews. Uses slides: instead of components:."
+
+  - type: section
+    heading: Visibility
+    components:
+      - type: markdown
+        body: |
+          The optional top-level `visibility` field controls who can reach a page. It takes one of three values:
+
+          - **org** (default) - anyone in your organization.
+          - **shared** - reachable by anyone with the page's share link.
+          - **public** - reachable by anyone, including unauthenticated visitors, at the public `/p/<org>/<slug>` URL.
+
+          A page's visibility can never be broader than the folder it lives in. If you omit the field, the page is `org`.
+
+      - type: code
+        language: yaml
+        code: |
+          title: Company Coding Standards
+          shell: standard
+          visibility: public
+          components:
+            - type: markdown
+              body: |
+                Your content here.
+
+  - type: section
+    heading: Templates
+    components:
+      - type: markdown
+        body: |
+          A template is an ordinary page that lives in a folder named **Templates**. That folder membership is what makes it a template - there is no separate template type or flag. Any page in a Templates folder shows up to the `list_templates` and `create_from_template` MCP tools, which interpolate `{{variable}}` placeholders when instantiating a new page.
+
+          To publish a new template, create a page with `{{placeholders}}` where the caller should fill in values, and move it into a Templates folder. To use one, call `create_from_template` with the template's slug, a target slug for the new page, and the variable values.
+
+      - type: callout
+        variant: info
+        title: Templates gallery vs. Templates folder
+        body: |
+          The template picker in the web dashboard is a separate curated list from the folder-based system the MCP tools use. A page added to a Templates folder is immediately available to agents via `create_from_template`, but will not appear in the dashboard gallery unless it is also registered there.
+
+  - type: section
+    heading: Pack pages
+    components:
+      - type: markdown
+        body: |
+          A page with a top-level `pack` block is an **AI tool pack**. It can be installed straight into a code repository with the kazam CLI:
+
+          ```
+          kazam install <instance-url>/pages/<slug>
+          ```
+
+          The page's markdown components are concatenated in order and written into a managed block in the repo's AI tool config files (`CLAUDE.md`, `.cursorrules`). This is how org knowledge authored in curata flows into your engineers' AI coding tools.
+
+      - type: code
+        language: yaml
+        code: |
+          title: Company Coding Standards
+          shell: standard
+          visibility: public
+          pack:
+            targets: [claude, cursor]   # optional - omit to write every target
+          components:
+            - type: section
+              heading: Rules
+              components:
+                - type: markdown
+                  body: |
+                    ## Commits
+                    Imperative subject, under 72 chars, no trailing period.
+
+      - type: markdown
+        body: |
+          `targets` selects which config files to write: `claude` maps to `CLAUDE.md`, `cursor` maps to `.cursorrules`. Omit `targets` (or use `pack: {}`) to write all of them.
+
+          Only markdown components are installed - other component types are treated as page metadata. A pack page must have at least one non-empty markdown component, and installs are refused if any `{{variable}}` is left unfilled. The install is idempotent: reinstalling replaces the managed block in place, and the block header records the source URL and a content hash so drift from the source page is detectable.
+
+      - type: callout
+        variant: info
+        title: Start from the template
+        body: |
+          The **ai-tool-pack** template (in the Templates folder) scaffolds a pack page with the `pack:` block and placeholder rules already in place. Create from it, fill in your rules, and install.
+
+  - type: section
+    heading: Component catalog
+    components:
+      - type: markdown
+        body: |
+          Components are the building blocks of a page. Every component has a `type` field (snake_case) plus type-specific props. Here are the most commonly used ones:
+
+      - type: section
+        heading: Content components
+        components:
+          - type: table
+            filterable: false
+            columns:
+              - key: type
+                label: Type
+              - key: description
+                label: Description
+              - key: key_props
+                label: Key Props
+            rows:
+              - type: markdown
+                description: Rich prose - CommonMark with tables and strikethrough.
+                key_props: "body (string)"
+              - type: header
+                description: Section title block with optional subtitle and eyebrow label.
+                key_props: "title, subtitle, eyebrow"
+              - type: code
+                description: Syntax-highlighted code block.
+                key_props: "language, code"
+              - type: callout
+                description: "Highlighted message box - info, warn, success, or danger."
+                key_props: "variant, title, body"
+              - type: meta
+                description: Key-value strip for metadata (author, date, status).
+                key_props: "fields[].key, fields[].value"
+              - type: image
+                description: Figure with alt text, caption, and max width.
+                key_props: "src, alt, caption, max_width"
+              - type: blockquote
+                description: Testimonial or quote with optional attribution.
+                key_props: "body, attribution"
+
+      - type: section
+        heading: Grid components
+        components:
+          - type: table
+            filterable: false
+            columns:
+              - key: type
+                label: Type
+              - key: description
+                label: Description
+              - key: key_props
+                label: Key Props
+            rows:
+              - type: card_grid
+                description: Responsive cards with optional badges, descriptions, and links.
+                key_props: "cards[].title, cards[].description, min_width"
+              - type: stat_grid
+                description: Big-number metric tiles.
+                key_props: "columns, stats[].label, stats[].value, stats[].color"
+              - type: table
+                description: Sortable and filterable data table.
+                key_props: "columns[].key, columns[].label, rows[], filterable"
+
+      - type: section
+        heading: Layout components
+        components:
+          - type: table
+            filterable: false
+            columns:
+              - key: type
+                label: Type
+              - key: description
+                label: Description
+              - key: key_props
+                label: Key Props
+            rows:
+              - type: section
+                description: Groups components under an eyebrow + heading.
+                key_props: "eyebrow, heading, components[]"
+              - type: columns
+                description: Multi-column row. Each column is a list of components.
+                key_props: "columns[][], equal_heights"
+              - type: tabs
+                description: Tabbed panels with arbitrary content.
+                key_props: "tabs[].label, tabs[].components[]"
+              - type: accordion
+                description: Collapsible sections.
+                key_props: "items[].title, items[].components[]"
+              - type: steps
+                description: Numbered or bulleted ordered list.
+                key_props: "numbered, items[].title, items[].detail"
+              - type: divider
+                description: Horizontal rule with optional center label.
+                key_props: "label"
+              - type: timeline
+                description: Horizontal phase tracker.
+                key_props: "items[].name, items[].status"
+
+  - type: section
+    heading: Colors
+    components:
+      - type: markdown
+        body: |
+          Components that accept a `color` prop use a shared 5-value palette:
+
+          - **default** / **teal** - brand accent
+          - **green** - success, healthy
+          - **yellow** - warning, at-risk
+          - **red** - danger, critical
+
+  - type: section
+    heading: Tips for agents
+    components:
+      - type: callout
+        variant: info
+        title: Writing good page YAML
+        body: |
+          - Use `|` (literal block) for multi-line body fields to preserve newlines.
+          - Quote any string that looks like a number: `"47"` not `47`.
+          - Sections with `eyebrow` + `heading` create visual hierarchy - use them to organize long pages.
+          - `stat_grid` is great for KPIs at the top of any report.
+          - `callout` with `variant: warn` or `variant: success` draws attention to key takeaways.
+
+      - type: markdown
+        body: |
+          For the complete component reference with all props and examples, see the [AGENTS.md](https://github.com/tdiderich/kazam) file in the kazam repository.

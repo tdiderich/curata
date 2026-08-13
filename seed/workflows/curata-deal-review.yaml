@@ -1,0 +1,131 @@
+title: "Skill - Deal Review"
+subtitle: Review a live deal against your qualification framework, surface the gaps, and keep the deal page and CRM current.
+shell: standard
+skill:
+  trigger: "deal review, review this deal, qualification check, pipeline review for a deal"
+  setup:
+    - key: crm_tool
+      ask: "Which tool holds deal records - stage, close date, amount? Name the exact MCP tool."
+    - key: crm_fields
+      ask: "Confirm the exact field names for stage, close date, amount, and any qualification fields you track (MEDDPICC letters, forecast category) - don't assume, these vary a lot by org."
+    - key: qualification_framework
+      ask: "Which qualification framework do you score deals against - MEDDPICC, BANT, something homegrown? Name the dimensions so the review scores the right things."
+    - key: chatter_tools
+      ask: "Which tools have this deal's chatter - Slack, Teams, email? Name each one you want pulled in."
+    - key: chatter_channels
+      ask: "What's the channel naming pattern for deal channels (like int-deal-acme)?"
+    - key: chatter_domains
+      ask: "Which email domains count as this prospect, if you're pulling from email?"
+dashboard:
+  prompt: |
+    Run the Deal Review skill. Ask me which deal, then follow the flow on this
+    page to score it, grill me on the gaps, and update the deal page.
+  description: "Score a deal, surface gaps, update the page and CRM"
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this skill does
+    components:
+      - type: callout
+        variant: info
+        title: The gaps are the output
+        body: |
+          Pulls the deal record and recent chatter, scores the deal against your qualification framework, then asks you the coaching questions the gaps raise. The deal page and CRM get updated with what you actually know, not what the last update hoped.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual - run before a forecast call, a stage change, or any deal you haven't touched in two weeks.
+          - term: Data Sources
+            definition: Your CRM's deal record plus deal-channel chatter. See the Data Model reference for how each gets used differently.
+          - term: Output
+            definition: A scored deal review page, answered coaching questions, and CRM fields synced to reality.
+
+  - type: section
+    eyebrow: Setup
+    heading: Answer this before you run this skill for your org
+    components:
+      - type: callout
+        variant: warn
+        title: One-time setup
+        body: |
+          Every {{placeholder}}-style tool name in the flow below stands in for a real MCP tool. Answer this once, replace the placeholder, and you're done - not something you re-answer per run.
+      - type: definition_list
+        items:
+          - term: CRM tool
+            definition: Which tool holds deal records - stage, close date, amount? Name the exact MCP tool.
+          - term: CRM fields
+            definition: Confirm the exact field names for stage, close date, amount, and any qualification fields you track - don't assume, these vary a lot by org.
+          - term: Qualification framework
+            definition: Which framework do you score deals against - MEDDPICC, BANT, something homegrown? Name the dimensions so the review scores the right things.
+
+  - type: section
+    eyebrow: Setup
+    heading: Customer Context
+    components:
+      - type: callout
+        variant: warn
+        title: Slack, email, tickets - the chatter layer
+        body: |
+          Different from CRM base data: confirm which tools and patterns actually identify this deal before pulling anything in. Deal chatter often holds the qualification truth.
+      - type: definition_list
+        items:
+          - term: Tools
+            definition: Which tools have this deal's chatter - Slack, Teams, email? Name each one you want pulled in.
+          - term: Channel pattern
+            definition: What's the channel naming pattern for deal channels (like int-deal-acme)?
+          - term: Email domains
+            definition: Which email domains count as this prospect, if you're pulling from email?
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this skill
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - Deal or company name
+          - A deal record in your CRM
+
+          A deal page in curata helps but isn't required - the review creates one if it's missing.
+
+  - type: section
+    eyebrow: Flow
+    heading: Validated Flow
+    components:
+      - type: markdown
+        body: |
+          `YourCRM`/`YourChatterTool` below stand in for whatever tools you named in answer to the setup questions above - replace them with the real tool names before running this for your org. Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
+
+          ```agl
+          spec DealReview {
+            in: deal: str
+            out: review_complete: bool
+            description: "Review a live deal against your qualification framework, surface the gaps, and keep the deal page and CRM current."
+            requires: read_page, write_page, YourCRM, YourChatterTool
+
+            flow {
+              state PULL_DEAL -> call(YourCRM, "stage, close date, amount, and qualification fields from the confirmed field names") -> next
+              state READ_PAGES -> call(read_page, "the deal's existing pages, if any") -> next
+              state PULL_CHATTER -> call(YourChatterTool, "deal channels and emails from the confirmed patterns, past 30 days") -> next
+              state SCORE_QUALIFICATION -> evaluate(gathered_intel vs qualification_framework) -> next
+              state GRILL_OWNER -> evaluate(qualification_gaps vs coaching_questions) -> next
+              state DRAFT_UPDATES -> evaluate(scores_and_answers vs deal_page_shape) -> next
+              state PROPOSE_UPDATES -> gate(human_approval) -> WRITE_PAGES
+              state WRITE_PAGES -> call(write_page, "the deal review page") -> next
+              state SYNC_CRM -> call(YourCRM, "stage, next steps, and qualification fields that changed") -> TERMINATE("Deal review complete: gaps surfaced, page and CRM current")
+            }
+          }
+          ```
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this skill
+    components:
+      - type: callout
+        variant: info
+        title: Score what you can prove
+        body: |
+          A qualification dimension only scores well if there's evidence in the record or the chatter - a hopeful memory doesn't count. When the review and the CRM disagree, the review asks you which is right before writing anything.
+
+          Always present proposed updates for human review before writing them.

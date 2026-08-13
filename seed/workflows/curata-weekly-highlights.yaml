@@ -1,36 +1,64 @@
-title: "Workflow — Weekly Highlights"
-subtitle: Scan all customer pages for recent changes and produce a cross-account digest for standups.
+title: "Skill - Weekly Highlights"
+subtitle: Scan the week across every account and publish a WIN/WATCH digest the team reads in five minutes.
 shell: standard
+skill:
+  trigger: "weekly highlights, weekly digest, what happened this week"
+  setup:
+    - key: chatter_tools
+      ask: "Which tools have customer chatter worth scanning weekly - Slack, Teams, email? Name each one."
+    - key: chatter_channels
+      ask: "What's the channel naming pattern that identifies customer channels, so the scan covers all of them without you listing each?"
+    - key: recording_tool
+      ask: "Which tool has call recordings or transcripts, if you want last week's calls in the scan?"
+    - key: team_channel
+      ask: "Which channel should the recap message land in, if you want the digest posted and not just written to a page?"
 dashboard:
   prompt: |
-    Run the Weekly Highlights workflow. Follow the workflow steps on this page
-    to scan all customer pages for recent changes and produce a cross-account
-    digest for the team standup.
-  description: "Generate a weekly cross-account digest for standups"
+    Run the Weekly Highlights skill. Follow the flow on this page to scan the
+    past 7 days across all accounts and publish the WIN/WATCH digest.
+  description: "Cross-account WIN/WATCH digest, weekly"
 components:
   - type: section
     eyebrow: Overview
-    heading: What this workflow does
+    heading: What this skill does
     components:
       - type: callout
         variant: info
-        title: 5-minute Monday morning briefing — generated, not written
+        title: Five-minute Monday briefing, generated for you
         body: |
-          This workflow scans all customer pages in curata for changes, annotations, and notable events from the past 7 days. It synthesizes the most relevant items into a single digest page that the account team can read in under 5 minutes. Run it before your Monday standup or weekly team sync.
+          Scans every customer's pages and chatter for the past 7 days, splits what it finds into WINs (momentum worth naming) and WATCHes (risks worth acting on), and publishes a dated digest page. Run it before the Monday standup.
       - type: definition_list
         items:
           - term: Trigger
-            definition: Scheduled (weekly) or manual. Typically run Monday morning before the team standup. Can also be run ad hoc before a leadership review or quarterly business update.
-          - term: Cadence
-            definition: Weekly. Each run produces a new dated digest page or appends a new week's section to a running highlights page.
+            definition: Scheduled weekly or manual - Monday morning before the team standup.
           - term: Data Sources
-            definition: All customer pages in this curata instance — priorities pages, account plans, deployment trackers, and meeting notes. Looks at page updates, new annotations, and status changes from the past 7 days.
+            definition: All customer pages in this curata instance, plus chatter and calls from the past 7 days. See the Data Model reference for how each gets used differently.
           - term: Output
-            definition: A weekly highlights page (or updated section) listing the most important developments across all accounts — milestones hit, risks surfaced, action items due, and any accounts needing attention.
+            definition: A dated weekly highlights page with WINs, WATCHes, and any account needing attention before next standup - plus a draft recap message for your team channel.
+
+  - type: section
+    eyebrow: Setup
+    heading: Customer Context
+    components:
+      - type: callout
+        variant: warn
+        title: One-time setup, mostly chatter
+        body: |
+          No per-customer setup here: the channel pattern is what lets one run cover every account. Every {{placeholder}}-style tool name in the flow below stands in for a real MCP tool. Answer once, replace, done.
+      - type: definition_list
+        items:
+          - term: Tools
+            definition: Which tools have customer chatter worth scanning weekly - Slack, Teams, email? Name each one.
+          - term: Channel pattern
+            definition: What's the channel naming pattern that identifies customer channels, so the scan covers all of them without you listing each?
+          - term: Recording tool
+            definition: Which tool has call recordings or transcripts, if you want last week's calls in the scan?
+          - term: Team channel
+            definition: Which channel should the recap message land in, if you want the digest posted and not just written to a page?
 
   - type: section
     eyebrow: Prerequisites
-    heading: Before you run this workflow
+    heading: Before you run this skill
     components:
       - type: callout
         variant: warn
@@ -39,67 +67,44 @@ components:
           - At least one customer page set in curata to scan
           - The date range to cover (defaults to the past 7 days)
 
-          This workflow is read-only — it does not modify any customer pages. It only produces a new digest page. No external tool access is required if customer pages are kept up to date.
+          Customer pages stay untouched - this skill only writes the digest page and drafts the recap message.
 
   - type: section
-    eyebrow: Workflow Steps
-    heading: Steps
+    eyebrow: Flow
+    heading: Validated Flow
     components:
-      - type: steps
-        numbered: true
-        items:
-          - title: Scan all customer pages for recent activity
-            detail: |
-              Read all customer priorities pages, account plans, deployment trackers, and meeting notes pages. Look for pages that were updated in the past 7 days, new annotations added, status changes (e.g., deployment stage advanced, health score changed), and new action items or open commitments.
-          - title: Identify the most important developments
-            detail: |
-              From the full scan, surface the items that matter most: go-lives that happened or are imminent, escalations or risks that were flagged, deals that closed or moved stage, action items that are overdue, and any customer that had significant activity. Filter out routine updates that don't require team attention.
-          - title: Organize by category
-            detail: |
-              Group the highlights into categories: Milestones & Wins, Active Risks & Escalations, Upcoming Deadlines, and General Updates. Within each category, order accounts by urgency or ARR. Limit each category to the 3–5 most important items to keep the digest skimmable.
-          - title: Write the digest page
-            detail: |
-              Create or update the weekly highlights page. Include the date range, a summary stat (accounts active, milestones this week, open risks), and the categorized highlights. Each highlight should be one to two sentences with a link to the relevant customer page. Keep the total reading time under 5 minutes.
-          - title: Flag any accounts needing immediate attention
-            detail: |
-              If any account has a critical risk, overdue commitment, or escalation that requires action before the next standup, call it out at the top of the digest with a callout component. Do not bury urgent items in the general highlights.
+      - type: markdown
+        body: |
+          `YourChatterTool` below stands in for whatever tools you named in answer to the setup questions above - replace it with the real tool names before running this for your org. Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
+
+          ```agl
+          spec WeeklyHighlights {
+            in: none: str
+            out: digest_published: bool
+            description: "Scan the week across every account and publish a WIN/WATCH digest the team reads in five minutes."
+            requires: list_pages, read_page, write_page, YourChatterTool
+
+            flow {
+              state SCAN_PAGES -> call(list_pages, "customer pages changed in the past 7 days") -> next
+              state READ_CHANGES -> call(read_page, "each changed page, plus open annotations") -> next
+              state SCAN_CHATTER -> call(YourChatterTool, "customer channels from the confirmed pattern, past 7 days") -> next
+              state SYNTHESIZE_WIN_WATCH -> evaluate(week_activity vs win_watch_shape) -> next
+              state DRAFT_DIGEST -> evaluate(win_watch_items vs five_minute_read) -> next
+              state PROPOSE_DIGEST -> gate(human_approval) -> WRITE_DIGEST
+              state WRITE_DIGEST -> call(write_page, "the dated weekly highlights page") -> next
+              state POST_RECAP -> call(YourChatterTool, "draft the recap message to the team channel, a human sends it") -> TERMINATE("Weekly highlights published")
+            }
+          }
+          ```
 
   - type: section
     eyebrow: Key Rules
-    heading: Rules for this workflow
+    heading: Rules for this skill
     components:
       - type: callout
         variant: info
         title: Digest, don't dump
         body: |
-          The value of this workflow is curation, not completeness. A digest that lists every change to every page is useless. Filter aggressively — only surface things that require team awareness or action. If in doubt, leave it out of the digest and let people read the customer page directly.
+          Pick the three to five items per bucket that matter, ordered by urgency or ARR. Anything urgent goes in a callout at the top, never buried in the list. Link every highlight to its customer page.
 
-          Link everything. Every highlight should link to the relevant customer page so readers can get full context with one click.
-
-  - type: section
-    eyebrow: Related Workflows
-    heading: Related Workflows
-    components:
-      - type: card_grid
-        min_width: 240
-        cards:
-          - title: Call Prep & Debrief
-            badge:
-              label: Workflow
-              color: teal
-            description: Keeps customer pages fresh so the highlights scan has current data to work with.
-          - title: Account Health Report
-            badge:
-              label: Workflow
-              color: teal
-            description: Build a detailed health dashboard for a specific account. Use when the weekly highlights surface a concern that needs deeper investigation.
-          - title: Customer Onboarding
-            badge:
-              label: Workflow
-              color: teal
-            description: Creates the customer page set that the highlights workflow scans. Accounts with no pages will not appear in the digest.
-          - title: Feature Request & Bug Filing
-            badge:
-              label: Workflow
-              color: teal
-            description: Filed issues appear in the customer's priorities page and will surface in the next highlights run.
+          Skip anything you're unsure belongs and link the customer page instead.

@@ -130,9 +130,13 @@ export async function seedOrg(name: string, slug?: string): Promise<{ id: string
 }
 
 export async function seedOrgContent(orgId: string): Promise<void> {
-  await seedGettingStartedPage(orgId, "system").catch(err =>
-    console.error("[seed] getting-started page failed:", err)
-  );
+  try {
+    const gettingStartedFolderId = await findOrCreateFolder(orgId, "Getting Started", true);
+    await seedGettingStartedPage(orgId, "system", gettingStartedFolderId);
+    await seedPagesFromDir(orgId, gettingStartedFolderId, path.join(process.cwd(), "seed", "getting-started"));
+  } catch (err) {
+    console.error("[seed] getting-started folder/pages failed:", err);
+  }
 
   try {
     const skillsFolderId = await findOrCreateFolder(orgId, "Skills", true);

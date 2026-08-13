@@ -1,0 +1,125 @@
+title: "Skill - Call Debrief"
+subtitle: Turn a call recording or notes into a structured debrief and propose page updates.
+shell: standard
+skill:
+  trigger: "call debrief, post-call notes, debrief a call"
+  setup:
+    - key: crm_tool
+      ask: "Which tool holds this customer's base data - domain, deal stage, contract dates? Name the exact MCP tool."
+    - key: crm_fields
+      ask: "Confirm the exact field names in that tool for deal stage and next steps - don't assume, these vary a lot by org."
+    - key: recording_tool
+      ask: "Which tool has call recordings or transcripts, if you have one connected?"
+    - key: chatter_tools
+      ask: "Which tools have this customer's chatter - Slack, Teams, email, a ticketing system? Name each one, in case a debrief needs to cross-check what was already said elsewhere."
+    - key: chatter_channels
+      ask: "What's the channel naming pattern for this customer's Slack/Teams channels?"
+    - key: chatter_domains
+      ask: "Which email domains count as this customer, if you're pulling from email?"
+dashboard:
+  prompt: |
+    Run the Call Debrief skill. Ask me which customer and give me the call
+    recording or notes, then follow the flow on this page.
+  description: "Post-call debrief and page updates"
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this skill does
+    components:
+      - type: callout
+        variant: info
+        title: Capture what happened within 24 hours
+        body: |
+          Turns a call recording or notes into decisions, action items, and open questions, then proposes updates to the customer's pages. Run it within 24 hours of the call so nothing gets lost.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual - run right after any customer call.
+          - term: Data Sources
+            definition: Your call recording tool if connected, otherwise notes taken during the call. See the Data Model reference for how recordings differ from CRM base data.
+          - term: Output
+            definition: Updated customer pages (priorities, account plan, deployment tracker) with notes, decisions, and next steps captured.
+
+  - type: section
+    eyebrow: Setup
+    heading: Answer this before you run this skill for your org
+    components:
+      - type: callout
+        variant: warn
+        title: One-time setup
+        body: |
+          Every {{placeholder}}-style tool name in the flow below stands in for a real MCP tool. Answer this once, replace the placeholder, and you're done - not something you re-answer per run.
+      - type: definition_list
+        items:
+          - term: CRM tool
+            definition: Which tool holds this customer's base data - domain, deal stage, contract dates? Name the exact MCP tool.
+          - term: CRM fields
+            definition: Confirm the exact field names in that tool for deal stage and next steps - don't assume, these vary a lot by org.
+          - term: Recording tool
+            definition: Which tool has call recordings or transcripts, if you have one connected?
+
+  - type: section
+    eyebrow: Setup
+    heading: Customer Context
+    components:
+      - type: callout
+        variant: warn
+        title: Slack, email, tickets - the chatter layer
+        body: |
+          Different from CRM base data: confirm which tools and patterns actually identify this customer before cross-checking anything against them.
+      - type: definition_list
+        items:
+          - term: Tools
+            definition: Which tools have this customer's chatter - Slack, Teams, email, a ticketing system? Name each one, in case a debrief needs to cross-check what was already said elsewhere.
+          - term: Channel pattern
+            definition: What's the channel naming pattern for this customer's Slack/Teams channels?
+          - term: Email domains
+            definition: Which email domains count as this customer, if you're pulling from email?
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this skill
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - Customer name or account identifier
+          - The call recording, transcript, or notes from the call
+
+  - type: section
+    eyebrow: Skill
+    heading: Validated Flow
+    components:
+      - type: markdown
+        body: |
+          `YourCRM` below stands in for whatever tool you named in answer to the setup questions above - replace it with the real tool name before running this for your org. `WRITE_UPDATES` covers priorities, account plan, and deployment tracker in one write; extend it if your account pages carry more. Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
+
+          ```agl
+          spec CallDebrief {
+            in: customer: str, call_notes: str
+            out: debrief_complete: bool
+            description: "Turn a call recording or notes into a structured debrief and propose page updates."
+            requires: patch_page, YourCRM
+
+            flow {
+              state EXTRACT -> evaluate(call_notes vs decisions_actions_open_questions) -> next
+              state DRAFT_DEBRIEF -> evaluate(extracted_items vs debrief_shape) -> next
+              state PROPOSE_UPDATES -> gate(human_approval) -> WRITE_UPDATES
+              state WRITE_UPDATES -> call(patch_page, "priorities, account plan, and deployment tracker pages") -> next
+              state SYNC_CRM -> call(YourCRM, "deal stage or next steps, if this call changed them") -> TERMINATE("Debrief complete: pages updated")
+            }
+          }
+          ```
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this skill
+    components:
+      - type: callout
+        variant: info
+        title: Human review before applying updates
+        body: |
+          Always present proposed page updates for human review before writing them. Never overwrite existing page content without approval.
+
+          Meeting notes pages are append-only - add a new dated section rather than editing prior notes.

@@ -1,0 +1,47 @@
+title: "Data Model Reference"
+subtitle: "How to think about the tools a skill's flow calls out to."
+shell: standard
+components:
+  - type: section
+    eyebrow: Reference
+    heading: Four roles, not four tools
+    components:
+      - type: markdown
+        body: |
+          A skill's `requires:` list isn't a flat bag of tools. Each one plays a different role in the flow, and knowing the role tells you how to use it, how much to trust it, and how stale it can get before that matters.
+      - type: table
+        filterable: false
+        columns:
+          - key: role
+            label: Role
+          - key: examples
+            label: Example tools
+          - key: character
+            label: Character
+          - key: usage
+            label: How a flow should use it
+        rows:
+          - role: Base data
+            examples: CRM (HubSpot, Salesforce)
+            character: Long-lived, tracked fields. Domain, deal stage, contract dates, ARR.
+            usage: Read for ground truth at the start of a flow. Write back sparingly, and only fields you're confident about.
+          - role: Chatter
+            examples: Slack, Teams, email
+            character: High-volume, ephemeral, unstructured. Signal buried in noise.
+            usage: Scan a bounded window (last 7-30 days), summarize before acting on it. Never treat a single message as ground truth.
+          - role: Recent updates
+            examples: Call recordings, transcripts
+            character: Point-in-time, high-fidelity, but a snapshot. It ages the moment the call ends.
+            usage: Pull for the specific call or window a flow cares about. Don't re-summarize old recordings as if they're current state.
+          - role: Long-form context
+            examples: Project trackers, Drive, wikis
+            character: Structured but slow-moving. Specs, docs, decisions.
+            usage: Read when a flow needs the "why," not the "what changed." Cite it, don't paraphrase from memory.
+
+  - type: section
+    eyebrow: Applying it
+    heading: When you're filling in a skill's setup
+    components:
+      - type: markdown
+        body: |
+          When a skill's setup questions ask "which tool holds your CRM data" or "what's your Slack channel naming pattern," they're asking you to name the real tool for each role, not just any tool that happens to touch this customer. A flow that reads `{{crm_tool}}` expecting base data will misbehave if you point it at a chatter tool instead. Stage and close date should come from the CRM, not inferred from a Slack thread.
