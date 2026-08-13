@@ -8,126 +8,144 @@ const GETTING_STARTED_SLUG = "getting-started";
 const GETTING_STARTED_PAGE = {
   title: "Getting Started with Curata",
   shell: "standard",
-  subtitle: "Your AI-native knowledge base — personalized for your team",
+  subtitle: "From empty brain to running loop in about 30 minutes.",
   components: [
     {
       type: "header",
       title: "Getting Started with Curata",
-      subtitle: "Connect an agent to personalize this page for your company",
+      subtitle: "Five steps, in order. Your agents do most of the work.",
     },
     {
       type: "markdown",
-      body: "This page is a starting point. Connect an AI agent and ask it to **update this page based on what it knows about your company** — it will replace the generic content below with specifics about your team, your tools, and your workflows.",
+      body: "Curata is the company brain: agents and humans write validated knowledge into it, and everything learned flows back to both. This page walks you through the first loop.",
     },
     {
       type: "divider",
-      label: "The Problem",
+      label: "Step 1",
     },
     {
       type: "section",
-      heading: "Knowledge breaks down as you grow",
+      heading: "Connect an agent",
       components: [
         {
-          type: "card_grid",
-          cards: [
-            {
-              title: "Scattered context",
-              description: "Decisions live in Slack threads, meeting notes, email chains, and CRM fields. Nobody has the full picture.",
-            },
-            {
-              title: "Stale docs",
-              description: "Wiki pages go out of date the day they're written. Nobody owns the refresh cycle.",
-            },
-            {
-              title: "Manual reporting",
-              description: "Someone spends hours pulling data from 5 tools to build a status update that's outdated by the time it's shared.",
-            },
-            {
-              title: "Tribal knowledge",
-              description: "Critical context lives in people's heads. When they're out or leave, it leaves with them.",
-            },
-          ],
+          type: "markdown",
+          body: "Add your curata instance as an MCP connector and sign in when the browser opens. OAuth handles the rest - no keys to copy for interactive use.",
+        },
+        {
+          type: "code",
+          language: "bash",
+          code: "# Claude Code\nclaude mcp add --transport http curata https://curata.ai/api/mcp/stream\n\n# Claude.ai or ChatGPT: add a connector with this URL\nhttps://curata.ai/api/mcp/stream",
+        },
+        {
+          type: "markdown",
+          body: "Self-hosted? Swap in your instance URL. Headless agents and CI can still use an API key from **Settings → API Keys** on the same endpoint.",
         },
       ],
     },
     {
       type: "divider",
-      label: "How Curata Works",
+      label: "Step 2",
     },
     {
       type: "section",
-      heading: "Three steps to a living knowledge base",
+      heading: "Ask before you write",
       components: [
         {
-          type: "steps",
-          numbered: true,
-          items: [
-            {
-              title: "Connect your agent",
-              detail: "Generate an API key and paste the agent prompt into Claude, ChatGPT, or any AI tool. The agent gets read/write access to your knowledge base via a simple REST API.",
-            },
-            {
-              title: "Agent builds and updates pages",
-              detail: "Your agent pulls from your connected tools — CRM, email, Slack, calendar, ticketing — and writes structured pages with real data. No manual copy-paste.",
-            },
-            {
-              title: "Team reviews and annotates",
-              detail: "Your team reviews agent-written pages in the browser. Add annotations for corrections, approve changes, or flag gaps. The agent incorporates feedback on its next pass.",
-            },
-          ],
+          type: "markdown",
+          body: "Prove the read path with one question:",
+        },
+        {
+          type: "code",
+          language: "text",
+          code: "> Search curata for \"how do skills work\"",
+        },
+        {
+          type: "markdown",
+          body: "The answer comes from pages already in this brain. That habit, search first and answer from approved pages, is the whole point.",
         },
       ],
     },
     {
       type: "divider",
-      label: "Use Cases",
+      label: "Step 3",
     },
     {
       type: "section",
-      heading: "How your team will use Curata",
-      eyebrow: "Ask your agent to fill these in",
+      heading: "Capture your first page",
       components: [
         {
-          type: "card_grid",
-          cards: [
-            {
-              title: "Sales & GTM",
-              description: "Deal reviews, account briefs, competitive intel, pipeline snapshots — always current, built from CRM + call data.",
-            },
-            {
-              title: "Engineering",
-              description: "Architecture docs, incident postmortems, sprint summaries, on-call runbooks — kept in sync with Linear/Jira and code changes.",
-            },
-            {
-              title: "Product",
-              description: "Feature specs, customer feedback digests, launch checklists, roadmap status — one source of truth across tools.",
-            },
-            {
-              title: "People & HR",
-              description: "Org charts, onboarding guides, team directories, policy docs — auto-updated as the company evolves.",
-            },
-            {
-              title: "Operations",
-              description: "Vendor trackers, process docs, compliance checklists, budget summaries — structured and auditable.",
-            },
-          ],
+          type: "markdown",
+          body: "Tell your agent something your team knows that isn't written anywhere, and ask it to save it:",
+        },
+        {
+          type: "code",
+          language: "text",
+          code: "> Our staging deploys freeze every Friday at noon. Save that to curata so\n> other agents stop suggesting Friday releases.",
+        },
+        {
+          type: "markdown",
+          body: "The page lands in your workspace, validated against your org's rules. From now on every connected agent knows it.",
         },
       ],
     },
     {
       type: "divider",
-      label: "Your Company",
+      label: "Step 4",
     },
     {
       type: "section",
-      heading: "How [Your Company] will use Curata",
-      eyebrow: "Agent-personalized section",
+      heading: "Run your first skill",
       components: [
+        {
+          type: "markdown",
+          body: "Open **Skill - FAQ Capture** in the Skills folder and ask your agent to run it. It scans your help channels for questions asked more than once and proposes one approved FAQ page per question. Run it once now, then schedule a weekly sweep.",
+        },
         {
           type: "callout",
           variant: "info",
-          title: "This section is for your agent to fill in",
-          body: "Once you connect an agent, ask it: \"Update this page with everything you think I'd use Curata for based on what you know about me.\" The agent will replace this callout with specifics about your company, your tools, and your team's workflows.",
+          title: "No chat tool connected yet?",
+          body: "Skip this for now. Step 3 already proved capture works. Come back once Slack or Teams is connected via MCP.",
+        },
+      ],
+    },
+    {
+      type: "divider",
+      label: "Step 5",
+    },
+    {
+      type: "section",
+      heading: "Invite your team",
+      components: [
+        {
+          type: "markdown",
+          body: "Invite one teammate from **Settings → Members**. The brain is multiplayer by default: every agent and every human works off the same validated pages, and one person's capture becomes everyone's context.",
+        },
+      ],
+    },
+    {
+      type: "divider",
+      label: "What's already here",
+    },
+    {
+      type: "section",
+      heading: "Your brain ships stocked",
+      components: [
+        {
+          type: "card_grid",
+          cards: [
+            {
+              title: "Getting Started",
+              description: "Product docs: connecting agents, the MCP tools reference, page structure, self-hosting, and architecture.",
+            },
+            {
+              title: "Skills",
+              description: "Validated agent procedures: call prep, deal review, FAQ capture, weekly highlights, and more. Copy and adapt.",
+            },
+            {
+              title: "Templates",
+              description: "Page structures agents fill through create_from_template: plans, proposals, FAQs, deployment status.",
+            },
+          ],
         },
       ],
     },
@@ -137,8 +155,8 @@ const GETTING_STARTED_PAGE = {
     {
       type: "callout",
       variant: "success",
-      title: "You're running curata self-hosted",
-      body: "Connect an agent via the MCP server to start the knowledge loop. Generate an API key in Settings, wire up the MCP server, and ask your agent to update this page.",
+      title: "Make it yours",
+      body: "Ask your agent: \"Update this page based on what you know about my company.\" It will swap the generic examples for your tools, your channels, and your workflows.",
     },
   ],
 };
@@ -179,19 +197,19 @@ export async function seedGettingStartedPage(orgId: string, createdBy: string, f
           {
             text: "This is an annotation. Your team and agents leave these on pages to suggest changes, flag issues, or add context. Try clicking Approve or Ignore below.",
             author: "curata",
-            section: "Knowledge breaks down as you grow",
-            target: "Scattered context",
+            section: "Capture your first page",
+            target: "validated against your org's rules",
             kind: "note",
             status: "pending",
             source: "agent",
           },
           {
-            text: "Annotations can also be edits — specific text replacements an agent suggests. Approve to accept, ignore to dismiss.",
+            text: "Annotations can also be edits: specific text replacements an agent suggests. Approve to accept, ignore to dismiss.",
             author: "curata",
-            section: "How your team will use Curata",
-            target: "Deal reviews, account briefs, competitive intel, pipeline snapshots",
+            section: "Run your first skill",
+            target: "Run it once now, then schedule a weekly sweep.",
             kind: "edit",
-            replacement: "Deal reviews, account briefs, competitive intel, pipeline snapshots — always current, pulled from your CRM and call recordings",
+            replacement: "Run it once now, then schedule a weekly sweep for Monday mornings.",
             status: "pending",
             source: "agent",
           },

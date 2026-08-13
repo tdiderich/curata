@@ -26,6 +26,20 @@ export default async function DashboardPage() {
   // existing orgs would otherwise never pick up new seed content.
   await seedOrgContent(ctx.orgId);
 
+  // First-run: while the brain holds nothing but seed content, land people on
+  // the getting-started walkthrough instead of an empty dashboard. The first
+  // captured page flips the dashboard back to normal.
+  const humanPages = await db.page.count({
+    where: { orgId: ctx.orgId, createdBy: { not: "system" } },
+  });
+  if (humanPages === 0) {
+    const gettingStarted = await db.page.findUnique({
+      where: { orgId_slug: { orgId: ctx.orgId, slug: "getting-started" } },
+      select: { id: true },
+    });
+    if (gettingStarted) redirect("/pages/getting-started");
+  }
+
   const [graph, org, pageTitles, auditRows] = await Promise.all([
     buildKnowledgeGraph(ctx.orgId),
     db.organization.findUnique({ where: { id: ctx.orgId }, select: { name: true } }),
