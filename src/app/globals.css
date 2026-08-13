@@ -6603,6 +6603,8 @@ i.kg-circle-page {
   font-weight: 600;
   padding: 3px 11px;
   cursor: pointer;
+  white-space: nowrap;
+  flex: none;
 }
 .kg-tag-save:disabled {
   opacity: 0.35;
@@ -6712,6 +6714,14 @@ i.kg-circle-page {
   width: 14px;
   color: var(--teal);
   font-size: 0.75rem;
+}
+.kg-picker-create {
+  color: rgba(var(--text-rgb), 0.95);
+  font-style: italic;
+}
+.kg-picker-create .kg-picker-check {
+  color: var(--teal);
+  font-weight: 600;
 }
 .kg-picker-kind {
   margin-left: auto;

@@ -68,21 +68,34 @@ export function TagPicker({
   const toggle = (tag: string) =>
     setSelected((s) => (s.includes(tag) ? s.filter((t) => t !== tag) : [...s, tag]));
 
+  // Live slug of whatever is in the input — shown as a "create" row and
+  // folded into save automatically, no Enter required.
+  const draftSlug = slugifyTerm(draft);
+  const draftIsNew = !!draftSlug && !all.includes(draftSlug);
+
   const addDraft = () => {
-    const t = slugifyTerm(draft);
-    if (!t) return;
-    if (!all.includes(t)) setCreated((c) => [...c, t]);
-    if (!selected.includes(t)) setSelected((s) => [...s, t]);
+    if (!draftSlug) return;
+    if (!all.includes(draftSlug)) setCreated((c) => [...c, draftSlug]);
+    if (!selected.includes(draftSlug)) setSelected((s) => [...s, draftSlug]);
     setDraft("");
   };
 
+  const pendingCount = selected.length + (draftSlug && !selected.includes(draftSlug) ? 1 : 0);
+
   const save = async () => {
-    if (selected.length === 0 || busy) return;
+    if (pendingCount === 0 || busy) return;
+    // Fold an un-committed draft into the save so typing + save just works.
+    const terms = [...selected];
+    const extraCreated = [...created];
+    if (draftSlug && !terms.includes(draftSlug)) {
+      terms.push(draftSlug);
+      if (!all.includes(draftSlug)) extraCreated.push(draftSlug);
+    }
     setBusy(true);
     const ok = await onSave(
-      selected.map((term) => ({
+      terms.map((term) => ({
         term,
-        kind: created.includes(term) ? newKind : kindByTerm.get(term) || DEFAULT_KIND,
+        kind: extraCreated.includes(term) ? newKind : kindByTerm.get(term) || DEFAULT_KIND,
       }))
     );
     setBusy(false);
@@ -90,6 +103,7 @@ export function TagPicker({
       setOpen(false);
       setSelected([]);
       setCreated([]);
+      setDraft("");
       setNewKind(DEFAULT_KIND);
     }
   };
@@ -106,6 +120,13 @@ export function TagPicker({
           <span className="kg-picker-backdrop" onClick={() => setOpen(false)} />
           <span className="kg-picker-menu">
             <span className="kg-picker-list">
+              {draftIsNew && (
+                <button type="button" className="kg-picker-item kg-picker-create" onClick={addDraft}>
+                  <span className="kg-picker-check">+</span>
+                  <span className={`pg-tag-kind-dot pg-dot-${newKind}`} aria-hidden />
+                  create &ldquo;{draftSlug}&rdquo;
+                </button>
+              )}
               {all.map((t) => (
                 <button
                   key={t}
@@ -125,7 +146,7 @@ export function TagPicker({
                 </button>
               ))}
             </span>
-            {created.length > 0 && (
+            {(created.length > 0 || draftIsNew) && (
               <span className="kg-picker-kindrow">
                 <span className="kg-picker-kindrow-label">kind for new tags</span>
                 <span className="kg-picker-kinds">
@@ -159,10 +180,10 @@ export function TagPicker({
               <button
                 type="button"
                 className="kg-tag-save"
-                disabled={busy || selected.length === 0}
+                disabled={busy || pendingCount === 0}
                 onClick={save}
               >
-                {busy ? "…" : `save${selected.length ? ` (${selected.length})` : ""}`}
+                {busy ? "…" : pendingCount > 1 ? `save ${pendingCount}` : "save"}
               </button>
             </span>
           </span>
