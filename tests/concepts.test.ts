@@ -17,6 +17,7 @@ import {
   normalizeTerm,
 } from "@/lib/concepts";
 import { CONCEPT_KINDS } from "@/lib/concept-kinds";
+import { testDb } from "./setup";
 
 describe("concepts", () => {
   let orgId: string;
@@ -83,6 +84,61 @@ describe("concepts", () => {
       const page = await createTestPage(orgId, { slug: "remove-unknown" });
       await upsertConcepts(page.id, [{ term: "never-existed", remove: true }], "agent");
       expect(await getPageConcepts(page.id)).toHaveLength(0);
+    });
+
+    describe("legacy (pre-slug) rows", () => {
+      // Rows written before terms became slugs are keyed on the old
+      // "lowercase, spaces kept" normalization (e.g. "prisma cloud"). Insert
+      // one directly, bypassing normalizeTerm, to reproduce an
+      // un-migrated production row.
+      async function seedLegacyConcept(displayName: string, kind = "") {
+        return testDb.concept.create({
+          data: {
+            normalizedName: displayName.toLowerCase().trim(),
+            displayName,
+            kind,
+            usageCount: 0,
+          },
+        });
+      }
+
+      it("re-adding a legacy multi-word term merges into the existing row instead of duplicating", async () => {
+        const legacy = await seedLegacyConcept("Prisma Cloud", "vendor");
+        const page = await createTestPage(orgId, { slug: "legacy-add-page" });
+
+        await upsertConcepts(page.id, [{ term: "Prisma Cloud" }], "agent");
+
+        const all = await testDb.concept.findMany({ where: { normalizedName: { contains: "prisma" } } });
+        expect(all).toHaveLength(1);
+        expect(all[0].id).toBe(legacy.id);
+        expect(all[0].normalizedName).toBe("prisma-cloud");
+        expect(all[0].kind).toBe("vendor");
+      });
+
+      it("removing a legacy multi-word term detaches it instead of no-op'ing", async () => {
+        await seedLegacyConcept("Amazon Inspector");
+        const page = await createTestPage(orgId, { slug: "legacy-remove-page" });
+        await upsertConcepts(page.id, [{ term: "Amazon Inspector" }], "agent");
+        expect(await getPageConcepts(page.id)).toHaveLength(1);
+
+        await upsertConcepts(page.id, [{ term: "Amazon Inspector", remove: true }], "agent");
+        expect(await getPageConcepts(page.id)).toHaveLength(0);
+      });
+
+      it("re-kinding a legacy multi-word term updates the existing row everywhere it's used", async () => {
+        const legacy = await seedLegacyConcept("Endor Labs");
+        const pageA = await createTestPage(orgId, { slug: "legacy-rekind-a" });
+        const pageB = await createTestPage(orgId, { slug: "legacy-rekind-b" });
+        await upsertConcepts(pageA.id, [{ term: "Endor Labs" }], "agent");
+        await upsertConcepts(pageB.id, [{ term: "endor-labs" }], "agent");
+
+        await upsertConcepts(pageA.id, [{ term: "Endor Labs", kind: "vendor" }], "agent");
+
+        const all = await testDb.concept.findMany({ where: { id: legacy.id } });
+        expect(all).toHaveLength(1);
+        expect(all[0].kind).toBe("vendor");
+        expect((await getPageConcepts(pageB.id))[0].kind).toBe("vendor");
+      });
     });
   });
 
