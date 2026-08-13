@@ -7,12 +7,12 @@ src/components/api-key-manager.tsx	1470	0	api-key-manager component
 src/components/cleanup-client.tsx	4098	0	cleanup-client component
 src/components/command-palette.tsx	2091	0	command-palette component
 src/components/confirm-delete-modal.tsx	704	0	confirm-delete-modal component
+src/components/content-index.tsx	2811	0	content-index component
 src/components/content-rules-editor.tsx	3094	0	content-rules-editor component
 src/components/dashboard-client.tsx	4260	0	dashboard-client component
 src/components/dashboard-feed.tsx	812	0	dashboard-feed component
-src/components/dashboard-tabs.tsx	969	0	dashboard-tabs component
+src/components/dashboard-tabs.tsx	1088	0	dashboard-tabs component
 src/components/folder-actions.tsx	7821	0	folder-actions component
-src/components/knowledge-graph.tsx	2889	0	knowledge-graph component
 src/components/member-list.tsx	1184	0	member-list component
 src/components/new-page-button.tsx	1623	0	new-page-button component
 src/components/org-settings.tsx	2003	0	org-settings component
@@ -27,7 +27,7 @@ src/components/public-annotation-client.tsx	2869	0	public-annotation-client comp
 src/components/public-toggle.tsx	399	0	Private-page-editor toggle for visibility public/org + Copy link button using navigator.clipboard.writeText; appears currently unreferenced in JSX
 src/components/report-builder.tsx	5145	0	report-builder component
 src/components/settings-tabs.tsx	395	0	settings-tabs component
-src/components/sidebar.tsx	5650	0	sidebar component
+src/components/sidebar.tsx	5756	0	sidebar component
 src/components/source-editor.tsx	2232	0	source-editor component
 src/components/tag-picker.tsx	1665	0	tag-picker component
 src/components/theme-script.tsx	189	0	theme-script component

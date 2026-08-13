@@ -8,6 +8,7 @@ import { toast } from "@/components/toast";
 import { isPinned, togglePin } from "@/lib/pins";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { copyPagesForAgent } from "@/lib/copy-for-agent";
 
 interface Folder {
   id: string;
@@ -240,6 +241,13 @@ export function PageMenu({ slug, title, folderId, folders, visibility = "org", o
     setOpen(false);
   }
 
+  async function copyForAgent() {
+    setOpen(false);
+    const result = await copyPagesForAgent(title, [{ slug, title }]);
+    if (result === "ok") toast.success(`Copied "${title}" for an agent`);
+    else toast.error("Couldn't copy — check your connection and try again");
+  }
+
   function startDelete() {
     setOpen(false);
     setConfirmOpen(true);
@@ -293,6 +301,9 @@ export function PageMenu({ slug, title, folderId, folders, visibility = "org", o
         <AnchoredMenu anchorRef={btnRef} menuRef={portalRef} className="dash-page-actions-menu">
           <button className="dash-page-actions-item" onClick={copyLink}>
             Copy link
+          </button>
+          <button className="dash-page-actions-item" onClick={copyForAgent}>
+            Copy for agent
           </button>
           <div className="dash-page-actions-divider" />
           {!moveOpen ? (
@@ -549,6 +560,23 @@ export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRu
     return allPages.filter((p) => p.folderId && descFolderIds.has(p.folderId));
   }, [folder.id, allFolders, allPages]);
 
+  async function copyForAgent() {
+    setOpen(false);
+    const result = await copyPagesForAgent(
+      folder.name,
+      descendantPages.map((p) => ({ slug: p.slug, title: p.title })),
+    );
+    if (result === "ok") {
+      toast.success(
+        `Copied ${descendantPages.length} page${descendantPages.length === 1 ? "" : "s"} for an agent`,
+      );
+    } else if (result === "empty") {
+      toast.info("This folder has no pages yet");
+    } else {
+      toast.error("Couldn't copy — check your connection and try again");
+    }
+  }
+
   function startDelete() {
     setOpen(false);
     setConfirmOpen(true);
@@ -717,6 +745,9 @@ export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRu
             disabled={busy}
           >
             + Add page
+          </button>
+          <button className="dash-folder-actions-item" onClick={copyForAgent}>
+            Copy for agent
           </button>
           {addingChild ? (
             <div className="dash-folder-actions-inline-create">

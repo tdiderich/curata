@@ -7,3 +7,7 @@ bugs:
   symptom: /mcp short alias rewrote to the REST shim (/api/mcp) - real MCP clients' JSON-RPC initialize got 400 'missing tool'; connector URL must target /api/mcp/stream
   file_path: next.config.ts
   created: 2026-08-12T10:19:47.350172-05:00
+- id: kz-73a12f
+  symptom: dev.sh's npx prisma db push step fails with 'datasource.url property required' because prisma.config.ts reads process.env[DATABASE_URL] directly and dev.sh never exports/sources .env into the shell before that step
+  file_path: dev.sh
+  created: 2026-08-13T14:30:16.220599-05:00

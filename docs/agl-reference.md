@@ -25,7 +25,7 @@ task compiled into a static directed graph, not a free-form instruction.
   indefinitely.
 - `invariant { deny: ACTION(TARGET) without gate(NAME) ... }`: a hard rule.
   Never perform an action an `invariant` denies, even if a later step
-  seems to require it — this holds regardless of what any state says.
+  seems to require it - this holds regardless of what any state says.
 - `TERMINATE("msg")`: stop immediately and return `msg` as the result.
 
 Execute this graph exactly as written. Do not skip states, do not reorder

@@ -2,7 +2,7 @@ path	tokens	reads	description
 tests/api-key.test.ts	240	0	api-key.test tests
 tests/auth.test.ts	1121	0	auth.test tests
 tests/component-ids.test.ts	2323	0	component-ids.test tests
-tests/concepts.test.ts	2173	0	concepts.test tests
+tests/concepts.test.ts	2833	0	concepts.test tests
 tests/content-negotiation.test.ts	788	0	content-negotiation.test tests
 tests/glance-prompts.test.ts	3522	0	glance-prompts.test tests
 tests/global-setup.ts	298	0	global-setup tests
