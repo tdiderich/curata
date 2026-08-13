@@ -1,0 +1,101 @@
+title: "Skill - FAQ Capture"
+subtitle: Find the questions your team keeps answering in chat and promote them to approved FAQ pages.
+shell: standard
+skill:
+  trigger: "capture faqs, faq sweep, what keeps getting asked"
+  setup:
+    - key: chatter_tools
+      ask: "Which tools have the recurring questions - Slack, Teams? Name the exact MCP tool."
+    - key: chatter_channels
+      ask: "Which channels collect the questions - help channels, support channels, team ask-me-anything channels? Name them or give the naming pattern."
+    - key: faq_folder
+      ask: "Which folder should FAQ pages land in? Name it so every FAQ ends up in one predictable place."
+dashboard:
+  prompt: |
+    Run the FAQ Capture skill. Follow the flow on this page to scan the
+    confirmed channels for recurring questions and publish approved FAQ pages.
+  description: "Promote recurring chat questions to approved FAQs"
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this skill does
+    components:
+      - type: callout
+        variant: info
+        title: Stop re-answering the same question
+        body: |
+          Scans the channels where questions pile up, finds the ones asked more than once, matches them with the answers people gave in thread, and publishes each as an approved FAQ page. Next time the question comes up, agents cite the page instead of guessing from chatter.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual or scheduled - a weekly sweep keeps the FAQ set current without anyone curating by hand.
+          - term: Data Sources
+            definition: Your chat tool's help and support channels. See the Data Model reference for why chatter needs different handling than base data.
+          - term: Output
+            definition: One FAQ page per recurring question, built from the FAQ template, with the source thread and an owner attached.
+
+  - type: section
+    eyebrow: Setup
+    heading: Customer Context
+    components:
+      - type: callout
+        variant: warn
+        title: One-time setup, chatter only
+        body: |
+          Every {{placeholder}}-style tool name in the flow below stands in for a real MCP tool. Answer this once, replace the placeholder, and you're done.
+      - type: definition_list
+        items:
+          - term: Tools
+            definition: Which tools have the recurring questions - Slack, Teams? Name the exact MCP tool.
+          - term: Channels
+            definition: Which channels collect the questions - help channels, support channels, team ask-me-anything channels? Name them or give the naming pattern.
+          - term: FAQ folder
+            definition: Which folder should FAQ pages land in? Name it so every FAQ ends up in one predictable place.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this skill
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - At least one chat tool connected via MCP
+          - The channels to scan (from setup) and a lookback window - 30 days is a good default
+
+  - type: section
+    eyebrow: Flow
+    heading: Validated Flow
+    components:
+      - type: markdown
+        body: |
+          `YourChatterTool` below stands in for whatever tool you named in answer to the setup questions above - replace it with the real tool name before running this for your org. Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
+
+          ```agl
+          spec FaqCapture {
+            in: channels: str
+            out: faqs_published: bool
+            description: "Find the questions your team keeps answering in chat and promote them to approved FAQ pages."
+            requires: search_pages, create_from_template, YourChatterTool
+
+            flow {
+              state SCAN_CHATTER -> call(YourChatterTool, "the confirmed channels, past 30 days, questions asked more than once") -> next
+              state MATCH_ANSWERS -> evaluate(recurring_questions vs answers_given_in_thread) -> next
+              state CHECK_EXISTING -> call(search_pages, "each question, so an existing FAQ gets updated instead of duplicated") -> next
+              state PROPOSE_FAQS -> gate(human_approval) -> WRITE_FAQS
+              state WRITE_FAQS -> call(create_from_template, "the FAQ template, one page per approved question") -> TERMINATE("FAQs published, chatter promoted to approved answers")
+            }
+          }
+          ```
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this skill
+    components:
+      - type: callout
+        variant: info
+        title: Every FAQ cites its source thread
+        body: |
+          Every proposed FAQ carries the thread it came from and the person who answered it. A recurring question with no good answer in the thread gets flagged to a human as an open question, never answered by inference.
+
+          Search before writing. Update existing FAQs instead of creating duplicates.

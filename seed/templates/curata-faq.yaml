@@ -1,0 +1,23 @@
+title: "FAQ: {{question}}"
+shell: document
+components:
+  - type: header
+    eyebrow: FAQ
+    title: "{{question}}"
+    subtitle: "Approved answer. Last verified {{last_verified}}."
+  - type: markdown
+    body: |
+      {{answer_markdown}}
+  - type: definition_list
+    items:
+      - term: Source
+        definition: "{{source_link - the thread or doc this answer came from}}"
+      - term: Owner
+        definition: "{{owner - who verifies this stays true}}"
+      - term: Last verified
+        definition: "{{last_verified}}"
+
+  - type: callout
+    variant: info
+    title: This is a curata template.
+    body: "One page per question. The FAQ Capture skill creates these from recurring Slack/Teams questions through create_from_template, and agents cite this page instead of re-deriving the answer from chatter. When the answer changes, update this page and bump the verified date - the old threads stay wrong, this page stays right."
