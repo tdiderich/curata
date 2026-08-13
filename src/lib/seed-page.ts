@@ -17,7 +17,7 @@ const GETTING_STARTED_PAGE = {
     },
     {
       type: "markdown",
-      body: "Curata is the company brain: agents and humans write validated knowledge into it, and everything learned flows back to both. This page walks you through the first loop.",
+      body: "Curata is the company brain: agents and humans write validated knowledge into it, and everything learned flows back to both.",
     },
     {
       type: "divider",
@@ -61,7 +61,7 @@ const GETTING_STARTED_PAGE = {
         },
         {
           type: "markdown",
-          body: "The answer comes from pages already in this brain. That habit, search first and answer from approved pages, is the whole point.",
+          body: "The answer comes from pages already in this brain. Search first, answer from approved pages.",
         },
       ],
     },
