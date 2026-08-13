@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { KnowledgeGraph } from "./knowledge-graph";
+import { IndexView, ScaleView } from "./content-index";
 import { TagPicker, type TagOption } from "./tag-picker";
 import type { KnowledgeGraph as GraphData, UntaggedPage } from "@/lib/graph";
 import { DEFAULT_TAGS } from "@/lib/default-tags";
@@ -13,7 +13,7 @@ interface Props {
   activity: ReactNode;
 }
 
-type Tab = "graph" | "activity";
+type Tab = "index" | "scale" | "activity";
 
 const PageIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -66,7 +66,7 @@ function UntaggedRow({
 }
 
 export function DashboardTabs({ graph, activity }: Props) {
-  const [tab, setTab] = useState<Tab>("graph");
+  const [tab, setTab] = useState<Tab>("index");
   const [untagged, setUntagged] = useState(graph.untagged);
 
   const tagOptions = useMemo(() => {
@@ -102,11 +102,19 @@ export function DashboardTabs({ graph, activity }: Props) {
       <div className="kg-tabs" role="tablist">
         <button
           role="tab"
-          aria-selected={tab === "graph"}
-          className={tab === "graph" ? "kg-tab kg-tab-active" : "kg-tab"}
-          onClick={() => setTab("graph")}
+          aria-selected={tab === "index"}
+          className={tab === "index" ? "kg-tab kg-tab-active" : "kg-tab"}
+          onClick={() => setTab("index")}
         >
-          Knowledge graph
+          Index
+        </button>
+        <button
+          role="tab"
+          aria-selected={tab === "scale"}
+          className={tab === "scale" ? "kg-tab kg-tab-active" : "kg-tab"}
+          onClick={() => setTab("scale")}
+        >
+          Scale
         </button>
         <button
           role="tab"
@@ -118,8 +126,18 @@ export function DashboardTabs({ graph, activity }: Props) {
         </button>
       </div>
 
-      {tab === "graph" && (
-        <KnowledgeGraph
+      {tab === "index" && (
+        <IndexView
+          tags={graph.tags}
+          pages={graph.pages}
+          edges={graph.edges}
+          untaggedCount={untagged.length}
+          untaggedPanel={untaggedPanel}
+        />
+      )}
+
+      {tab === "scale" && (
+        <ScaleView
           tags={graph.tags}
           pages={graph.pages}
           edges={graph.edges}

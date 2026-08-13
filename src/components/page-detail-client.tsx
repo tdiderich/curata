@@ -12,6 +12,7 @@ import AgentConnectModal from "./agent-connect-modal";
 import SourceEditor, { type SourceEditorControls } from "./source-editor";
 import { toast } from "./toast";
 import { basePath } from "@/lib/api-fetch";
+import { copyPagesForAgent } from "@/lib/copy-for-agent";
 import { useHighlights } from "@/hooks/use-highlights";
 import { DeckControlContext } from "@/generated/kazam-renderer";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
@@ -383,13 +384,23 @@ export default function PageDetailClient({
     if (viewTab !== "preview") return;
     return registerPageActions([
       { id: "edit", label: "Edit page", hint: "source", run: () => setViewTab("source") },
+      {
+        id: "copy-agent",
+        label: "Copy for agent",
+        hint: "with MCP info",
+        run: () => {
+          copyPagesForAgent(pageTitle ?? slug, [{ slug, title: pageTitle ?? slug }]).then((result) => {
+            if (result === "ok") toast.success(`Copied "${pageTitle ?? slug}" for an agent`);
+            else toast.error("Couldn't copy — check your connection and try again");
+          });
+        },
+      },
       { id: "form", label: "Form editor", run: () => router.push(`/pages/${slug}?edit=1`) },
       {
         id: "annotate",
         label: "Add annotation",
         run: () => setFormState({ mode: "note", section: "", target: "", componentId: "", y: 0 }),
       },
-      { id: "agent", label: "Add agent", run: () => setAgentOpen(true) },
       { id: "tags", label: "Add tags", run: () => window.dispatchEvent(new Event("curata-open-tags")) },
       {
         id: "visibility",

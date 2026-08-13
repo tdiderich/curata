@@ -1,4 +1,4 @@
-# scanned: 2026-08-13T11:09:07.799105-05:00
+# scanned: 2026-08-13T14:35:33.346085-05:00
 # root_files
 path	tokens	reads	description
 CONTRIBUTING.md	389	0	Markdown document
@@ -12,22 +12,22 @@ entrypoint.sh	92	0	Shell script
 eslint.config.mjs	114	0	
 next-env.d.ts	62	0	TypeScript source
 next.config.ts	644	0	TypeScript source
-package.json	540	0	Node.js package manifest
-pnpm-lock.yaml	55358	0	YAML configuration/data
+package.json	525	0	Node.js package manifest
+pnpm-lock.yaml	55058	0	YAML configuration/data
 pnpm-workspace.yaml	39	0	YAML configuration/data
 prisma.config.ts	56	0	TypeScript source
 tsconfig.json	169	0	TypeScript configuration
-tsconfig.tsbuildinfo	87903	0	
+tsconfig.tsbuildinfo	85835	0	
 vitest.config.ts	113	0	TypeScript source
 
 # directories
 path	files	tokens	description
 demos	21	64620	
-docs	6	19828	
+docs	6	20320	
 packages	19	27763	
-prisma	4	2209	migrations
+prisma	5	2309	migrations
 scripts	8	2526	
-seed	19	26027	
+seed	20	28097	
 skills	7	2801	
-src	170	655517	
-tests	16	21131	tests
+src	170	657938	
+tests	16	21791	tests
