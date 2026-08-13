@@ -192,7 +192,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   });
 
   server.tool("write_page", "Create or update a page",
-    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe("JSON array of concept objects: [{term, kind?, section?}]"), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]") },
+    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?, remove?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework — call get_vocabulary to see kinds in use. remove: true detaches the tag from this page. Supplying kind on an existing term re-kinds the concept everywhere it is used.'), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]") },
     async ({ slug, content, folder_id, visibility, sort_order, concepts: conceptsJson, links: linksJson }) => {
       validateSlug(slug);
       const unsupported = checkUnsupportedComponents(content);
@@ -250,14 +250,52 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       return { content: [{ type: "text", text: JSON.stringify(wpResponse) }] };
     });
 
-  server.tool("patch_page", "Apply targeted operations to a page without rewriting full YAML. Requires component IDs from read_page.",
+  server.tool("patch_page", "Apply targeted operations to a page without rewriting full YAML. Requires component IDs from read_page. Can also tag/untag concepts via the concepts param — concepts alone (no operations) is valid for tag-only changes.",
     {
       slug: z.string().describe("Page slug"),
-      expected_hash: z.string().describe("Content hash from last read_page — rejects if page was modified"),
-      operations: z.string().describe('JSON array of operations. Each operation has: "op" (required), "id" (required for replace/insert_before/insert_after/remove — the component ID to target), "components" or "value" (the new component(s) — required for all ops except remove and set_field), "field" (required for set_field). Example: [{"op":"insert_after","id":"intro-section","components":[{"type":"text","body":"New content"}]}]'),
+      expected_hash: z.string().optional().describe("Content hash from last read_page — rejects if page was modified. Required when operations are given."),
+      operations: z.string().optional().describe('JSON array of operations. Each operation has: "op" (required), "id" (required for replace/insert_before/insert_after/remove — the component ID to target), "components" or "value" (the new component(s) — required for all ops except remove and set_field), "field" (required for set_field). Example: [{"op":"insert_after","id":"intro-section","components":[{"type":"text","body":"New content"}]}]'),
+      concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?, remove?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework. remove: true detaches the tag from this page. Supplying kind on an existing term re-kinds the concept everywhere it is used.'),
+      links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]"),
     },
-    async ({ slug, expected_hash, operations: opsJson }) => {
+    async ({ slug, expected_hash, operations: opsJson, concepts: conceptsJson, links: linksJson }) => {
       validateSlug(slug);
+
+      if (!opsJson && !conceptsJson && !linksJson) {
+        return { content: [{ type: "text", text: "Error: nothing to do — provide operations, concepts, or links" }], isError: true };
+      }
+
+      const ppTagPage = await db.page.findUnique({
+        where: { orgId_slug: { orgId, slug } },
+        select: { id: true },
+      });
+      if (!ppTagPage) return { content: [{ type: "text", text: `Error: page not found: ${slug}` }], isError: true };
+
+      const applyTagsAndLinks = async () => {
+        if (conceptsJson) {
+          const conceptInputs: ConceptInput[] = JSON.parse(conceptsJson);
+          await upsertConcepts(ppTagPage.id, conceptInputs, actorId);
+        }
+        if (linksJson) {
+          const linkInputs: LinkInput[] = JSON.parse(linksJson);
+          await upsertLinks(orgId, ppTagPage.id, linkInputs, actorId);
+        }
+      };
+
+      if (!opsJson) {
+        // Tag/link-only patch: no content rewrite, no hash check needed.
+        try {
+          await applyTagsAndLinks();
+        } catch (err) {
+          return { content: [{ type: "text", text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        }
+        logAudit({ orgId, action: "page.patch", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug, operationCount: 0, tagsOnly: true } });
+        return { content: [{ type: "text", text: JSON.stringify({ message: `Patched "${slug}" (concepts/links only)` }) }] };
+      }
+
+      if (!expected_hash) {
+        return { content: [{ type: "text", text: "Error: expected_hash is required when operations are given" }], isError: true };
+      }
 
       let operations: PatchOperation[];
       try {
@@ -307,6 +345,8 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
         const result = await writePage(orgId, orgSlug, slug, newYaml, userId || "agent", current.contentHash);
         if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
 
+        await applyTagsAndLinks();
+
         logAudit({ orgId, action: "page.patch", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug, operationCount: operations.length } });
         const ppResponse: Record<string, unknown> = { message: `Patched "${slug}" (${operations.length} operations applied)` };
         if (ppRuleCheck.warnings.length > 0) {
@@ -320,8 +360,8 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     });
 
   server.tool("create_page", "Create a new knowledge page in the brain. Search for duplicates FIRST (search_pages + get_related) — if an existing page covers the topic, patch_page it instead of creating a near-duplicate. Tag the page with concepts so it appears in the brain map",
-    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages.") },
-    async ({ slug, content, folder_id, visibility, sort_order }) => {
+    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework.'), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]") },
+    async ({ slug, content, folder_id, visibility, sort_order, concepts: conceptsJson, links: linksJson }) => {
       validateSlug(slug);
       const existing = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
       if (existing) return { content: [{ type: "text", text: `Error: page already exists: ${slug}` }], isError: true };
@@ -348,6 +388,19 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
       if (folder_id) {
         await db.page.update({ where: { orgId_slug: { orgId, slug } }, data: { folderId: folder_id } });
+      }
+      if (conceptsJson || linksJson) {
+        const cpPage = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } }, select: { id: true } });
+        if (cpPage) {
+          if (conceptsJson) {
+            const conceptInputs: ConceptInput[] = JSON.parse(conceptsJson);
+            await upsertConcepts(cpPage.id, conceptInputs, actorId);
+          }
+          if (linksJson) {
+            const linkInputs: LinkInput[] = JSON.parse(linksJson);
+            await upsertLinks(orgId, cpPage.id, linkInputs, actorId);
+          }
+        }
       }
       logAudit({ orgId, action: "page.create", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug, folderId: folder_id } });
       const cpResponse: Record<string, unknown> = { message: `Created page "${slug}"` };

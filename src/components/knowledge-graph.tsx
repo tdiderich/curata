@@ -10,11 +10,14 @@ import {
   type SimulationNodeDatum,
 } from "d3-force";
 import type { GraphTag, GraphPage, GraphEdge, TagTier } from "@/lib/graph";
+import { CONCEPT_KINDS, kindSlug } from "@/lib/concept-kinds";
 
 interface SimNode extends SimulationNodeDatum {
   id: string;
   kind: "tag" | "page" | "untagged";
   tier?: TagTier;
+  /** Backing Concept.kind for tag nodes — colors the bubble in kind mode. */
+  conceptKind?: string;
   label: string;
   r: number;
   slug?: string;
@@ -39,6 +42,7 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
   const router = useRouter();
   const [hover, setHover] = useState<{ node: SimNode; x: number; y: number } | null>(null);
   const [focusTag, setFocusTag] = useState<string | null>(null);
+  const [colorBy, setColorBy] = useState<"kind" | "tier">("kind");
   const [view, setView] = useState({ x: 0, y: 0, k: 1 });
   const [interactive, setInteractive] = useState(false);
   const dragRef = useRef<{ x: number; y: number } | null>(null);
@@ -57,6 +61,7 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
       id: t.id,
       kind: "tag",
       tier: t.tier,
+      conceptKind: t.conceptKind,
       label: t.name,
       r: radius(weights[i]),
       pages: t.pages,
@@ -212,7 +217,16 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
               onClick={() => setFocusTag(focusTag === n.id ? null : n.id)}
             >
               <circle r={n.r + 5} className="kg-halo" />
-              <circle r={n.r} className={n.kind === "tag" ? `kg-circle-tag-${n.tier}` : `kg-circle-${n.kind}`} />
+              <circle
+                r={n.r}
+                className={
+                  n.kind !== "tag"
+                    ? `kg-circle-${n.kind}`
+                    : colorBy === "kind"
+                      ? `kg-circle-kind-${kindSlug(n.conceptKind)}`
+                      : `kg-circle-tag-${n.tier}`
+                }
+              />
               {n.r >= 30 ? (
                 <>
                   <text y={-2} textAnchor="middle" className="kg-label kg-label-in" style={{ fontSize: Math.min(16, n.r / 2.6) }}>
@@ -253,15 +267,41 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
       {sidePanel}
       </div>
       <div className="kg-legend">
-        <span>
-          <i className="kg-dot kg-circle-tag-default" /> Curata
+        <span className="kg-colorby" role="group" aria-label="Color bubbles by">
+          <button
+            type="button"
+            className={colorBy === "kind" ? "kg-colorby-btn kg-colorby-on" : "kg-colorby-btn"}
+            onClick={() => setColorBy("kind")}
+          >
+            by kind
+          </button>
+          <button
+            type="button"
+            className={colorBy === "tier" ? "kg-colorby-btn kg-colorby-on" : "kg-colorby-btn"}
+            onClick={() => setColorBy("tier")}
+          >
+            by tier
+          </button>
         </span>
-        <span>
-          <i className="kg-dot kg-circle-tag-org" /> Organization
-        </span>
-        <span>
-          <i className="kg-dot kg-circle-tag-personal" /> Personal
-        </span>
+        {colorBy === "kind" ? (
+          CONCEPT_KINDS.map((k) => (
+            <span key={k}>
+              <i className={`kg-dot kg-circle-kind-${k}`} /> {k[0].toUpperCase() + k.slice(1)}
+            </span>
+          ))
+        ) : (
+          <>
+            <span>
+              <i className="kg-dot kg-circle-tag-default" /> Curata
+            </span>
+            <span>
+              <i className="kg-dot kg-circle-tag-org" /> Organization
+            </span>
+            <span>
+              <i className="kg-dot kg-circle-tag-personal" /> Personal
+            </span>
+          </>
+        )}
         {untaggedCount > 0 && (
           <span>
             <i className="kg-dot kg-circle-untagged" /> Untagged
@@ -273,7 +313,7 @@ export function KnowledgeGraph({ tags, pages, edges, untaggedCount, untaggedPane
           <strong>{hover.node.label}</strong>
           {hover.node.kind === "tag" && (
             <div>
-              {hover.node.tier} tag · {hover.node.pages} pages · ~{hover.node.tokens} tokens to pull
+              {kindSlug(hover.node.conceptKind)} · {hover.node.tier} tag · {hover.node.pages} pages · ~{hover.node.tokens} tokens to pull
             </div>
           )}
           {hover.node.kind === "page" && <div>open page</div>}

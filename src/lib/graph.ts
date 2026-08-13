@@ -16,6 +16,11 @@ export interface GraphTag {
    * same ladder by name.
    */
   tier: TagTier;
+  /**
+   * The backing Concept's kind (topic/vendor/finding/framework or free-form).
+   * Empty for folder-only tags and legacy rows — both render as topic.
+   */
+  conceptKind?: string;
   /** True when at least part of this tag's membership comes from a folder. */
   fromFolder?: boolean;
 }
@@ -97,12 +102,14 @@ export async function buildKnowledgeGraph(orgId: string): Promise<KnowledgeGraph
       ? []
       : await db.pageConcept.findMany({
           where: { pageId: { in: pageRows.map((p) => p.id) } },
-          select: { pageId: true, concept: { select: { displayName: true } } },
+          select: { pageId: true, concept: { select: { displayName: true, kind: true } } },
         });
   const conceptsByPage = new Map<string, string[]>();
+  const kindByName = new Map<string, string>();
   for (const row of conceptRows) {
     const name = row.concept.displayName.trim().toLowerCase();
     if (!name) continue;
+    if (row.concept.kind && !kindByName.get(name)) kindByName.set(name, row.concept.kind);
     const list = conceptsByPage.get(row.pageId) ?? [];
     if (!list.includes(name)) list.push(name);
     conceptsByPage.set(row.pageId, list);
@@ -154,6 +161,7 @@ export async function buildKnowledgeGraph(orgId: string): Promise<KnowledgeGraph
       pages: agg.pageIds.size,
       tokens: agg.tokens,
       tier: defaultNames.has(name) ? "default" : blessed.has(name) ? "org" : "personal",
+      conceptKind: kindByName.get(name) || undefined,
       fromFolder: agg.fromFolder || undefined,
     }));
   const keptTags = new Map(tags.map((t) => [t.name, t]));

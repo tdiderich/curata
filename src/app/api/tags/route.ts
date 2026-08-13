@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { upsertConcepts } from "@/lib/concepts";
+import { normalizeTerm, upsertConcepts } from "@/lib/concepts";
 import { logAudit } from "@/lib/audit";
+import { DEFAULT_KIND } from "@/lib/concept-kinds";
 
-/** Adds concept tags to a page — the dashboard untagged queue's inline tagger. */
+/**
+ * Adds or re-kinds concept tags on a page — the dashboard untagged queue's
+ * inline tagger and the page detail chip row. Tags may be plain strings
+ * (kind defaults to topic) or { term, kind } objects.
+ */
 export async function POST(request: NextRequest) {
   const ctx = await resolveOrg();
   if (!ctx) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  let body: { pageId?: string; tags?: string[] };
+  let body: { pageId?: string; tags?: Array<string | { term?: string; kind?: string }> };
   try {
     body = await request.json();
   } catch {
@@ -20,8 +25,16 @@ export async function POST(request: NextRequest) {
 
   const { pageId, tags } = body;
   const cleaned = (Array.isArray(tags) ? tags : [])
-    .map((t) => (typeof t === "string" ? t.trim() : ""))
-    .filter(Boolean)
+    .map((t) => {
+      const raw = typeof t === "string" ? { term: t } : t && typeof t === "object" ? t : {};
+      const term = typeof raw.term === "string" ? normalizeTerm(raw.term) : "";
+      const kind =
+        typeof raw.kind === "string" && raw.kind.trim()
+          ? normalizeTerm(raw.kind)
+          : DEFAULT_KIND;
+      return { term, kind };
+    })
+    .filter((t) => t.term)
     .slice(0, 20);
   if (!pageId || cleaned.length === 0) {
     return NextResponse.json({ error: "pageId and at least one tag required" }, { status: 400 });
@@ -35,7 +48,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "page not found" }, { status: 404 });
   }
 
-  await upsertConcepts(page.id, cleaned.map((term) => ({ term, kind: "topic" })), ctx.userId);
+  await upsertConcepts(page.id, cleaned, ctx.userId);
   logAudit({
     orgId: ctx.orgId,
     action: "tag_page",
@@ -74,7 +87,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "page not found" }, { status: 404 });
   }
 
-  const normalized = tag.trim().toLowerCase();
+  const normalized = normalizeTerm(tag);
   const concept = await db.concept.findUnique({ where: { normalizedName: normalized } });
   if (concept) {
     await db.pageConcept.deleteMany({ where: { pageId: page.id, conceptId: concept.id } });

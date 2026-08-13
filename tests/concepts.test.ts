@@ -7,7 +7,16 @@ vi.mock("@/lib/db", async () => {
   return { db: testDb };
 });
 
-import { upsertConcepts, upsertLinks, getRelated, getPageLinks } from "@/lib/concepts";
+import {
+  upsertConcepts,
+  upsertLinks,
+  getRelated,
+  getPageLinks,
+  getPageConcepts,
+  getVocabulary,
+  normalizeTerm,
+} from "@/lib/concepts";
+import { CONCEPT_KINDS } from "@/lib/concept-kinds";
 
 describe("concepts", () => {
   let orgId: string;
@@ -15,6 +24,77 @@ describe("concepts", () => {
   beforeEach(async () => {
     const org = await createTestOrg({ name: "Concepts Test Org", slug: "concepts-test-org" });
     orgId = org.id;
+  });
+
+  describe("normalizeTerm", () => {
+    it("slugs terms to lowercase letters, digits, and hyphens", () => {
+      expect(normalizeTerm("Noise Reduction")).toBe("noise-reduction");
+      expect(normalizeTerm("  yada   yada  ")).toBe("yada-yada");
+      expect(normalizeTerm("SOC2!")).toBe("soc2");
+      expect(normalizeTerm("already-good")).toBe("already-good");
+      expect(normalizeTerm("under_score")).toBe("under-score");
+      expect(normalizeTerm("--edge--case--")).toBe("edge-case");
+      expect(normalizeTerm("???")).toBe("");
+    });
+  });
+
+  describe("upsertConcepts", () => {
+    it("merges spaced and hyphenated spellings into one concept", async () => {
+      const page = await createTestPage(orgId, { slug: "spelling-page" });
+      await upsertConcepts(page.id, [{ term: "Noise Reduction" }], "agent");
+      await upsertConcepts(page.id, [{ term: "noise-reduction" }], "agent");
+
+      const concepts = await getPageConcepts(page.id);
+      expect(concepts).toHaveLength(1);
+      expect(concepts[0].term).toBe("noise-reduction");
+    });
+
+    it("re-kinds an existing concept when a kind is supplied", async () => {
+      const page = await createTestPage(orgId, { slug: "rekind-page" });
+      await upsertConcepts(page.id, [{ term: "jira" }], "agent");
+      expect((await getPageConcepts(page.id))[0].kind).toBe("");
+
+      await upsertConcepts(page.id, [{ term: "jira", kind: "vendor" }], "agent");
+      expect((await getPageConcepts(page.id))[0].kind).toBe("vendor");
+    });
+
+    it("keeps the existing kind when none is supplied", async () => {
+      const page = await createTestPage(orgId, { slug: "keep-kind-page" });
+      await upsertConcepts(page.id, [{ term: "jira", kind: "vendor" }], "agent");
+      await upsertConcepts(page.id, [{ term: "jira" }], "agent");
+      expect((await getPageConcepts(page.id))[0].kind).toBe("vendor");
+    });
+
+    it("remove detaches from the page without deleting the concept", async () => {
+      const pageA = await createTestPage(orgId, { slug: "remove-a" });
+      const pageB = await createTestPage(orgId, { slug: "remove-b" });
+      await upsertConcepts(pageA.id, [{ term: "stale-tag", kind: "topic" }], "agent");
+      await upsertConcepts(pageB.id, [{ term: "stale-tag" }], "agent");
+
+      await upsertConcepts(pageA.id, [{ term: "stale-tag", remove: true }], "agent");
+
+      expect(await getPageConcepts(pageA.id)).toHaveLength(0);
+      const bConcepts = await getPageConcepts(pageB.id);
+      expect(bConcepts).toHaveLength(1);
+      expect(bConcepts[0].kind).toBe("topic");
+    });
+
+    it("remove of an unknown term is a no-op", async () => {
+      const page = await createTestPage(orgId, { slug: "remove-unknown" });
+      await upsertConcepts(page.id, [{ term: "never-existed", remove: true }], "agent");
+      expect(await getPageConcepts(page.id)).toHaveLength(0);
+    });
+  });
+
+  describe("getVocabulary", () => {
+    it("lists curated kinds first, then in-use extras", async () => {
+      const page = await createTestPage(orgId, { slug: "vocab-page" });
+      await upsertConcepts(page.id, [{ term: "acme", kind: "custom-kind" }], "agent");
+
+      const vocab = await getVocabulary();
+      expect(vocab.kinds.slice(0, CONCEPT_KINDS.length)).toEqual([...CONCEPT_KINDS]);
+      expect(vocab.kinds).toContain("custom-kind");
+    });
   });
 
   describe("upsertLinks", () => {

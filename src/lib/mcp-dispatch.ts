@@ -518,6 +518,22 @@ export async function dispatch(
       }
       const createResult = await writePage(orgId, orgSlug, args.slug, args.content, userId || "agent", undefined, undefined, cpVis);
       if (!createResult.ok) throw new Error(createResult.error);
+      if (args.concepts || args.links) {
+        const cpPage = await db.page.findUnique({
+          where: { orgId_slug: { orgId, slug: args.slug } },
+          select: { id: true },
+        });
+        if (cpPage) {
+          if (args.concepts) {
+            const conceptInputs: ConceptInput[] = JSON.parse(args.concepts);
+            await upsertConcepts(cpPage.id, conceptInputs, actorId);
+          }
+          if (args.links) {
+            const linkInputs: LinkInput[] = JSON.parse(args.links);
+            await upsertLinks(orgId, cpPage.id, linkInputs, actorId);
+          }
+        }
+      }
       if (args.folder_id || cpPageRules !== undefined) {
         const cpUpdate: Record<string, unknown> = {};
         if (args.folder_id) cpUpdate.folderId = args.folder_id;
@@ -746,8 +762,38 @@ export async function dispatch(
     case "patch_page": {
       if (!args.slug) throw new Error("slug is required");
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
-      if (!args.expected_hash) throw new Error("expected_hash is required");
-      if (!args.operations) throw new Error("operations (JSON array) is required");
+      if (!args.operations && !args.concepts && !args.links) {
+        throw new Error("nothing to do — provide operations, concepts, or links");
+      }
+
+      if (!args.operations) {
+        // Tag/link-only patch: no content rewrite, no hash check needed.
+        const tagPage = await db.page.findUnique({
+          where: { orgId_slug: { orgId, slug: args.slug } },
+          select: { id: true },
+        });
+        if (!tagPage) throw new Error(`page not found: ${args.slug}`);
+        if (args.concepts) {
+          const conceptInputs: ConceptInput[] = JSON.parse(args.concepts);
+          await upsertConcepts(tagPage.id, conceptInputs, actorId);
+        }
+        if (args.links) {
+          const linkInputs: LinkInput[] = JSON.parse(args.links);
+          await upsertLinks(orgId, tagPage.id, linkInputs, actorId);
+        }
+        logAudit({
+          orgId,
+          action: "page.patch",
+          resourceType: "page",
+          resourceId: args.slug,
+          actorType: "apikey",
+          actorId,
+          metadata: { slug: args.slug, operationCount: 0, tagsOnly: true },
+        });
+        return { message: `Patched "${args.slug}" (concepts/links only)` };
+      }
+
+      if (!args.expected_hash) throw new Error("expected_hash is required when operations are given");
 
       let operations: PatchOperation[];
       try {

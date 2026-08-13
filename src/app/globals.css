@@ -6415,6 +6415,27 @@ body .c-section.align-right > * { max-width: none !important; }
   stroke: rgba(var(--accent-rgb), 0.95);
   stroke-width: 1.5;
 }
+/* Kind mode: color channel carries the concept's kind, size still = usage. */
+.kg-circle-kind-topic {
+  fill: rgba(var(--kind-topic-rgb), 0.55);
+  stroke: rgba(var(--kind-topic-rgb), 0.95);
+  stroke-width: 1.5;
+}
+.kg-circle-kind-vendor {
+  fill: rgba(var(--kind-vendor-rgb), 0.55);
+  stroke: rgba(var(--kind-vendor-rgb), 0.95);
+  stroke-width: 1.5;
+}
+.kg-circle-kind-finding {
+  fill: rgba(var(--kind-finding-rgb), 0.55);
+  stroke: rgba(var(--kind-finding-rgb), 0.95);
+  stroke-width: 1.5;
+}
+.kg-circle-kind-framework {
+  fill: rgba(var(--kind-framework-rgb), 0.55);
+  stroke: rgba(var(--kind-framework-rgb), 0.95);
+  stroke-width: 1.5;
+}
 .kg-circle-untagged {
   fill: rgba(var(--text-rgb), 0.14);
   stroke: var(--light-muted);
@@ -6453,6 +6474,42 @@ body .c-section.align-right > * { max-width: none !important; }
   border-radius: 50%;
   margin-right: 6px;
   vertical-align: -1px;
+}
+/* Legend color-mode toggle */
+.kg-colorby {
+  display: inline-flex;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.kg-colorby-btn {
+  background: none;
+  border: none;
+  color: var(--light-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  padding: 3px 12px;
+  cursor: pointer;
+}
+.kg-colorby-on {
+  background: rgba(var(--accent-rgb), 0.18);
+  color: rgba(var(--text-rgb), 0.95);
+}
+i.kg-circle-kind-topic {
+  background: rgba(var(--kind-topic-rgb), 0.55);
+  border: 1.5px solid rgba(var(--kind-topic-rgb), 0.95);
+}
+i.kg-circle-kind-vendor {
+  background: rgba(var(--kind-vendor-rgb), 0.55);
+  border: 1.5px solid rgba(var(--kind-vendor-rgb), 0.95);
+}
+i.kg-circle-kind-finding {
+  background: rgba(var(--kind-finding-rgb), 0.55);
+  border: 1.5px solid rgba(var(--kind-finding-rgb), 0.95);
+}
+i.kg-circle-kind-framework {
+  background: rgba(var(--kind-framework-rgb), 0.55);
+  border: 1.5px solid rgba(var(--kind-framework-rgb), 0.95);
 }
 i.kg-circle-tag-org {
   background: rgba(var(--accent-rgb), 0.92);
@@ -6646,6 +6703,51 @@ i.kg-circle-page {
   color: var(--teal);
   font-size: 0.75rem;
 }
+.kg-picker-kind {
+  margin-left: auto;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.kg-picker-kindrow {
+  display: block;
+  padding: 8px;
+  border-top: 1px solid var(--card-border);
+}
+.kg-picker-kindrow-label {
+  display: block;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.kg-picker-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.kg-kind-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  color: var(--light-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  padding: 3px 11px;
+  cursor: pointer;
+}
+.kg-kind-seg-on {
+  border-color: rgba(var(--accent-rgb), 0.6);
+  background: rgba(var(--accent-rgb), 0.12);
+  color: rgba(var(--text-rgb), 0.95);
+}
 .kg-picker-foot {
   display: flex;
   gap: 6px;
@@ -6771,6 +6873,87 @@ i.kg-circle-page {
 }
 .pg-tag-x:hover {
   color: var(--red);
+}
+
+/* Kind tints: the chip keeps its pill shape, kind adds a dot + tint. Unknown
+   and legacy ("") kinds fall back to the topic (accent) treatment. */
+.pg-tag-k-vendor {
+  background: rgba(var(--kind-vendor-rgb), 0.13);
+  border-color: rgba(var(--kind-vendor-rgb), 0.4);
+}
+.pg-tag-k-finding {
+  background: rgba(var(--kind-finding-rgb), 0.13);
+  border-color: rgba(var(--kind-finding-rgb), 0.4);
+}
+.pg-tag-k-framework {
+  background: rgba(var(--kind-framework-rgb), 0.13);
+  border-color: rgba(var(--kind-framework-rgb), 0.4);
+}
+.pg-tag-kind-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  padding: 0;
+  border: none;
+  background: rgba(var(--kind-topic-rgb), 0.95);
+}
+button.pg-tag-kind-dot {
+  cursor: pointer;
+}
+button.pg-tag-kind-dot:hover {
+  outline: 2px solid rgba(var(--text-rgb), 0.35);
+  outline-offset: 1px;
+}
+.pg-dot-topic { background: rgba(var(--kind-topic-rgb), 0.95); }
+.pg-dot-vendor { background: rgba(var(--kind-vendor-rgb), 0.95); }
+.pg-dot-finding { background: rgba(var(--kind-finding-rgb), 0.95); }
+.pg-dot-framework { background: rgba(var(--kind-framework-rgb), 0.95); }
+.pg-tag-k-vendor .pg-tag-kind-dot { background: rgba(var(--kind-vendor-rgb), 0.95); }
+.pg-tag-k-finding .pg-tag-kind-dot { background: rgba(var(--kind-finding-rgb), 0.95); }
+.pg-tag-k-framework .pg-tag-kind-dot { background: rgba(var(--kind-framework-rgb), 0.95); }
+
+/* Kind edit popover, anchored to the chip. */
+.pg-tag {
+  position: relative;
+}
+.pg-kind-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px;
+  background: var(--bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.pg-kind-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  color: rgba(var(--text-rgb), 0.9);
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pg-kind-opt:hover {
+  background: rgba(var(--text-rgb), 0.08);
+}
+.pg-kind-opt-on {
+  background: rgba(var(--accent-rgb), 0.14);
+}
+.pg-kind-opt .pg-tag-kind-dot {
+  width: 6px;
+  height: 6px;
 }
 
 

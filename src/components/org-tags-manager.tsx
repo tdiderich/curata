@@ -70,8 +70,8 @@ export function OrgTagsManager({
         {canManage && (
           <TagPicker
             label="recommend tags"
-            options={suggestions.filter((s) => !tags.includes(s))}
-            onSave={(added) => put([...tags, ...added])}
+            options={suggestions.filter((s) => !tags.includes(s)).map((term) => ({ term, kind: "" }))}
+            onSave={(added) => put([...tags, ...added.map((a) => a.term)])}
           />
         )}
       </div>
