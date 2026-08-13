@@ -1,4 +1,4 @@
-# scanned: 2026-08-12T13:10:39.406600-05:00
+# scanned: 2026-08-13T11:09:07.799105-05:00
 # root_files
 path	tokens	reads	description
 CONTRIBUTING.md	389	0	Markdown document
@@ -10,24 +10,24 @@ docker-compose.test.yml	85	0	YAML configuration/data
 docker-compose.yml	174	0	YAML configuration/data
 entrypoint.sh	92	0	Shell script
 eslint.config.mjs	114	0	
-next-env.d.ts	61	0	TypeScript source
+next-env.d.ts	62	0	TypeScript source
 next.config.ts	644	0	TypeScript source
-package.json	512	0	Node.js package manifest
+package.json	540	0	Node.js package manifest
 pnpm-lock.yaml	55358	0	YAML configuration/data
 pnpm-workspace.yaml	39	0	YAML configuration/data
 prisma.config.ts	56	0	TypeScript source
 tsconfig.json	169	0	TypeScript configuration
-tsconfig.tsbuildinfo	87979	0	
+tsconfig.tsbuildinfo	87903	0	
 vitest.config.ts	113	0	TypeScript source
 
 # directories
 path	files	tokens	description
 demos	21	64620	
-docs	5	19817	
-packages	19	27572	
+docs	6	19828	
+packages	19	27763	
 prisma	4	2209	migrations
-scripts	9	2998	
-seed	18	25687	
+scripts	8	2526	
+seed	19	26027	
 skills	7	2801	
-src	167	649362	
-tests	16	20269	tests
+src	170	655517	
+tests	16	21131	tests

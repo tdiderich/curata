@@ -6777,6 +6777,9 @@ i.kg-circle-page {
 .kg-picker-foot .kg-tag-input {
   flex: 1;
   width: auto;
+  /* inputs have an intrinsic min-width that pushes the save button out of
+     the 210px menu — let it shrink instead */
+  min-width: 0;
 }
 
 /* kg rows are built from spans (valid inside <li> links); restore block flow */
