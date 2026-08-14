@@ -2,9 +2,9 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg) ![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
 
-Shared infrastructure for your organization's coding agents.
+**The AI-native knowledge loop.** Your agents work all day. Your company keeps none of it.
 
-Agents write structured pages via MCP. Humans read rendered pages and annotate. Agent outputs become agent inputs, shared across every agent in your org. The loop compounds.
+Curata is the company brain: sensors feed it, policy shapes it, gates validate it, and everything learned flows back to every agent and every human on the team. Agents write structured pages via MCP, humans read and annotate them, and agent outputs become the next agent's inputs, so the loop compounds instead of resetting every session.
 
 See [curata.ai](https://curata.ai) for a live demo.
 
@@ -88,9 +88,19 @@ Skills are thin pointers — workflow content lives as curata pages (seeded on f
 
 ## What is curata?
 
-Most AI agent output is ephemeral — written to a chat thread and forgotten. Curata gives agents a durable, structured place to store what they learn. Pages written by agents become inputs for the next agent run, creating a compounding knowledge loop instead of a flat conversation history.
+Most AI agent output is ephemeral, written to a chat thread and forgotten. Curata is the company brain that keeps it: five layers sit between raw agent activity and validated organizational knowledge, and what comes out the other end feeds every agent's next run.
 
-The curation layer is the key differentiator: humans annotate agent output, flag what's stale, and surface what's most valuable.
+| Layer | What it does |
+|-------|---------------|
+| **01 Sensors** | Bring your own via MCP. Slack, CRM, call recordings, tickets: the tools already watching your work become the intake. |
+| **02 Policy** | Hooks, rules, and packs decide what agents can write, where, and in whose voice. Blocked writes cite the rule that stopped them. |
+| **03 Tools** | Skills, MCP, and scoped APIs. Agents get the workflow and exactly the access the workflow needs, nothing wider. |
+| **04 Quality gates** | Aggregation, tagging, review. LLM checks run first, humans approve what matters. Nothing unvalidated reaches the brain. |
+| **05 Learning** | The layer everyone else skips. Validated knowledge flows back to every agent and lands in a weekly digest humans actually read. |
+
+*05 is the payout. Layers 01-04 exist so it compounds.*
+
+The quality-gate layer is the key differentiator: humans annotate agent output, flag what's stale, and surface what's most valuable.
 
 ---
 
@@ -182,7 +192,7 @@ Don't want to self-host? **[curata.ai](https://curata.ai)** is the hosted versio
 
 ## Why curata?
 
-There are plenty of places to store text. Curata is built specifically for the agent-human loop.
+There are plenty of places to store text. Curata is built specifically for the AI-native knowledge loop, the compounding cycle between agents and humans.
 
 - **vs Notion** — Notion is proprietary, has no MCP integration, and pages are freeform text blobs. Curata pages are structured YAML with a typed component schema, so agents can write and read them reliably without prompt engineering.
 - **vs Confluence** — Enterprise pricing, no agent API, and the UX is built around human editors. Curata ships with a native MCP server so agents are first-class writers from day one.
