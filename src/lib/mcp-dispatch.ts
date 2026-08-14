@@ -18,12 +18,14 @@ import {
   getSiteConfig,
   bumpViewCount,
 } from "@/lib/pages";
+import type { Channel } from "@/lib/pages";
 import { getOrgTheme } from "@/lib/theme";
 import { buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
 import { getChromium, previewUrl, screenshotPage, renderHtmlToPng } from "@/lib/export-render";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
 import { checkFolderBoundary, mcpDefaultVisibility } from "@/lib/access";
 import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
+import { validateApprovalRule } from "@/lib/approval";
 import type { Prisma } from "@/generated/prisma/client";
 import {
   upsertConcepts,
@@ -37,6 +39,15 @@ import {
 import type { ConceptInput, LinkInput } from "@/lib/concepts";
 import { ensureComponentIds, applyPatchOperations } from "@/lib/component-ids";
 import type { PatchOperation } from "@/lib/component-ids";
+import {
+  createGroup,
+  renameGroup,
+  deleteGroup,
+  listGroupsWithMembers,
+  addGroupMembers,
+  removeGroupMember,
+  assertGroupManager,
+} from "@/lib/groups";
 import yaml from "js-yaml";
 import fs from "fs";
 import path from "path";
@@ -62,16 +73,17 @@ export const READ_TOOLS = [
   "export_page",
   "export_report",
   "list_rules",
+  "list_groups",
 ];
-export const WRITE_TOOLS = ["write_page", "create_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules"];
+export const WRITE_TOOLS = ["write_page", "create_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member"];
 export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 
 const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string, string> }> = {
-  list_pages: { known: new Set() },
-  read_page: { known: new Set(["slug"]) },
-  search: { known: new Set(["query"]) },
+  list_pages: { known: new Set(["channel"]) },
+  read_page: { known: new Set(["slug", "channel"]) },
+  search: { known: new Set(["query", "channel"]) },
   get_config: { known: new Set() },
   list_annotations: { known: new Set(["slug"]) },
   list_open_annotations: { known: new Set(["slug"]) },
@@ -101,6 +113,12 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   export_report: { known: new Set(["slugs", "title", "subtitle"]) },
   list_rules: { known: new Set(["slug"]) },
   set_rules: { known: new Set(["scope", "scope_id", "rules"]) },
+  list_groups: { known: new Set() },
+  create_group: { known: new Set(["name"]) },
+  update_group: { known: new Set(["group_id", "name"]), aliases: { groupId: "group_id" } },
+  delete_group: { known: new Set(["group_id"]), aliases: { groupId: "group_id" } },
+  add_group_member: { known: new Set(["group_id", "user_ids", "role"]), aliases: { groupId: "group_id", userIds: "user_ids" } },
+  remove_group_member: { known: new Set(["group_id", "user_id"]), aliases: { groupId: "group_id", userId: "user_id" } },
 };
 
 function validateParams(tool: string, args: Record<string, string>): Record<string, string> {
@@ -126,6 +144,15 @@ function validateParams(tool: string, args: Record<string, string>): Record<stri
   return corrected;
 }
 
+/// Agents default to "trusted" (with the labeled fallback when nothing's
+/// been marked yet) — the whole point of the channel is that agents get the
+/// human-approved content unless they explicitly ask for latest.
+function resolveChannelArg(args: Record<string, string>): Channel {
+  if (!args.channel || args.channel === "trusted") return "trusted";
+  if (args.channel === "latest") return "latest";
+  throw new Error(`channel must be "trusted" or "latest", got "${args.channel}"`);
+}
+
 export async function dispatch(
   tool: string,
   args: Record<string, string>,
@@ -137,8 +164,9 @@ export async function dispatch(
   args = validateParams(tool, args);
   switch (tool) {
     case "list_pages": {
+      const channel = resolveChannelArg(args);
       const [pages, folders] = await Promise.all([
-        listPages(orgId, userId),
+        listPages(orgId, userId, channel),
         db.folder.findMany({ where: { orgId }, select: { id: true, name: true } }),
       ]);
       const folderMap = new Map(folders.map((f) => [f.id, f.name]));
@@ -148,7 +176,8 @@ export async function dispatch(
     case "read_page": {
       if (!args.slug) throw new Error("slug is required");
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
-      const result = await readPageYaml(orgId, args.slug);
+      const channel = resolveChannelArg(args);
+      const result = await readPageYaml(orgId, args.slug, channel);
       if (!result) throw new Error(`page not found: ${args.slug}`);
 
       const parsed = yaml.load(result.yaml) as Record<string, unknown>;
@@ -163,7 +192,7 @@ export async function dispatch(
       });
 
       const [sections, annotations] = await Promise.all([
-        getPageSections(orgId, args.slug),
+        getPageSections(orgId, args.slug, channel),
         getAnnotations(orgId, args.slug),
       ]);
 
@@ -183,6 +212,8 @@ export async function dispatch(
         annotations,
         concepts,
         links,
+        trusted: result.trusted,
+        trustedBehind: result.trustedBehind,
       };
 
       const visibleRules = page?.visibility === "public"
@@ -202,7 +233,8 @@ export async function dispatch(
 
     case "search": {
       if (!args.query) throw new Error("query is required");
-      return searchPages(orgId, args.query, userId);
+      const channel = resolveChannelArg(args);
+      return searchPages(orgId, args.query, userId, {}, channel);
     }
 
     case "get_config":
@@ -1165,6 +1197,16 @@ export async function dispatch(
       try { parsedRules = JSON.parse(args.rules ?? "[]"); } catch { throw new Error("rules must be valid JSON array"); }
       if (!Array.isArray(parsedRules)) throw new Error("rules must be an array");
 
+      // Approval-kind entries get shape-validated (malformed approvers reject
+      // the whole write); other rule kinds keep the existing pass-through
+      // behavior of this tool.
+      for (const candidate of parsedRules) {
+        if (candidate && typeof candidate === "object" && (candidate as Record<string, unknown>).kind === "approval") {
+          const validated = validateApprovalRule(candidate);
+          if (!validated.ok) throw new Error(`invalid approval rule: ${validated.error}`);
+        }
+      }
+
       switch (args.scope) {
         case "global": {
           await db.organization.update({
@@ -1200,6 +1242,65 @@ export async function dispatch(
         default:
           throw new Error(`invalid scope: ${args.scope} (must be global, folder, or page)`);
       }
+    }
+
+    // Groups: the primitive only — CRUD + membership, owner/admin-gated on
+    // the requester's org role (assertGroupManager). Not wired into folder
+    // rules, the review queue, or approvals yet.
+    case "list_groups": {
+      return listGroupsWithMembers(orgId);
+    }
+
+    case "create_group": {
+      await assertGroupManager(orgId, userId, "create groups");
+      if (!args.name) throw new Error("name is required");
+      const group = await createGroup(orgId, args.name);
+      logAudit({ orgId, action: "group.create", resourceType: "group", resourceId: group.id, actorType: "apikey", actorId, metadata: { name: group.name } });
+      return { ok: true, id: group.id, name: group.name, slug: group.slug };
+    }
+
+    case "update_group": {
+      await assertGroupManager(orgId, userId, "rename groups");
+      if (!args.group_id) throw new Error("group_id is required");
+      if (!args.name) throw new Error("name is required");
+      const group = await renameGroup(orgId, args.group_id, args.name);
+      logAudit({ orgId, action: "group.rename", resourceType: "group", resourceId: group.id, actorType: "apikey", actorId, metadata: { name: group.name } });
+      return { ok: true, id: group.id, name: group.name, slug: group.slug };
+    }
+
+    case "delete_group": {
+      await assertGroupManager(orgId, userId, "delete groups");
+      if (!args.group_id) throw new Error("group_id is required");
+      await deleteGroup(orgId, args.group_id);
+      logAudit({ orgId, action: "group.delete", resourceType: "group", resourceId: args.group_id, actorType: "apikey", actorId });
+      return { ok: true, id: args.group_id };
+    }
+
+    case "add_group_member": {
+      await assertGroupManager(orgId, userId, "manage group membership");
+      if (!args.group_id) throw new Error("group_id is required");
+      if (!args.user_ids) throw new Error("user_ids is required (JSON array or comma-separated list of user IDs)");
+      let userIds: string[];
+      try {
+        const parsed = JSON.parse(args.user_ids);
+        userIds = Array.isArray(parsed) ? parsed : [String(parsed)];
+      } catch {
+        userIds = args.user_ids.split(",").map((s) => s.trim()).filter(Boolean);
+      }
+      if (userIds.length === 0) throw new Error("user_ids must be a non-empty array or comma-separated list");
+      const groupRole = args.role === "owner" ? "owner" : "member";
+      const result = await addGroupMembers(orgId, args.group_id, userIds, groupRole);
+      logAudit({ orgId, action: "group.member.add", resourceType: "group", resourceId: args.group_id, actorType: "apikey", actorId, metadata: { added: result.added, alreadyMember: result.alreadyMember, invalid: result.invalid } });
+      return result;
+    }
+
+    case "remove_group_member": {
+      await assertGroupManager(orgId, userId, "manage group membership");
+      if (!args.group_id) throw new Error("group_id is required");
+      if (!args.user_id) throw new Error("user_id is required");
+      await removeGroupMember(orgId, args.group_id, args.user_id);
+      logAudit({ orgId, action: "group.member.remove", resourceType: "group", resourceId: args.group_id, actorType: "apikey", actorId, metadata: { userId: args.user_id } });
+      return { ok: true };
     }
 
     default:

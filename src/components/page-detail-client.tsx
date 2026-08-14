@@ -11,11 +11,13 @@ import { VersionHistoryPanel } from "./version-history";
 import AgentConnectModal from "./agent-connect-modal";
 import SourceEditor, { type SourceEditorControls } from "./source-editor";
 import { toast } from "./toast";
+import { TrustBanner, type TrustBannerProps } from "./trust-banner";
 import { basePath } from "@/lib/api-fetch";
 import { copyPagesForAgent } from "@/lib/copy-for-agent";
 import { useHighlights } from "@/hooks/use-highlights";
 import { DeckControlContext } from "@/generated/kazam-renderer";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
+import { ApprovalRuleEditor, type ApprovalApproverInput } from "@/components/approval-rule-editor";
 
 interface Annotation {
   id: string;
@@ -70,7 +72,10 @@ export default function PageDetailClient({
   pageSlug,
   canManageRules = false,
   canEditPageRules = false,
+  pageApprovers = null,
+  approvalEffectiveNote = null,
   tagsRow,
+  trustBanner,
 }: {
   slug: string;
   children?: React.ReactNode;
@@ -89,7 +94,10 @@ export default function PageDetailClient({
   pageSlug?: string;
   canManageRules?: boolean;
   canEditPageRules?: boolean;
+  pageApprovers?: ApprovalApproverInput[] | null;
+  approvalEffectiveNote?: string | null;
   tagsRow?: React.ReactNode;
+  trustBanner?: Omit<TrustBannerProps, "slug">;
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -383,7 +391,6 @@ export default function PageDetailClient({
   useEffect(() => {
     if (viewTab !== "preview") return;
     return registerPageActions([
-      { id: "edit", label: "Edit page", hint: "source", run: () => setViewTab("source") },
       {
         id: "copy-agent",
         label: "Copy for agent",
@@ -395,13 +402,9 @@ export default function PageDetailClient({
           });
         },
       },
-      { id: "form", label: "Form editor", run: () => router.push(`/pages/${slug}?edit=1`) },
-      {
-        id: "annotate",
-        label: "Add annotation",
-        run: () => setFormState({ mode: "note", section: "", target: "", componentId: "", y: 0 }),
-      },
+      { id: "edit", label: "Edit page", hint: "source", run: () => setViewTab("source") },
       { id: "tags", label: "Add tags", run: () => window.dispatchEvent(new Event("curata-open-tags")) },
+      { id: "trusted-versions", label: "Trusted versions", run: () => setVersionHistoryOpen(true) },
       {
         id: "visibility",
         label: "Change visibility",
@@ -413,9 +416,13 @@ export default function PageDetailClient({
         label: `Content rules (${inheritedRules.length + pageRules.length})`,
         run: () => setRulesOpen(true),
       },
-      { id: "revert", label: "Revert to past version", run: () => setVersionHistoryOpen(true) },
       { id: "export-png", label: "Export PNG", run: () => handleExport("png") },
       { id: "export-pdf", label: "Export PDF", run: () => handleExport("pdf") },
+      {
+        id: "annotate",
+        label: "Add annotation",
+        run: () => setFormState({ mode: "note", section: "", target: "", componentId: "", y: 0 }),
+      },
       ...(resolvedCount > 0
         ? [{
             id: "resolved",
@@ -448,6 +455,7 @@ export default function PageDetailClient({
           <button className="archived-banner-restore" onClick={restorePage}>Restore</button>
         </div>
       )}
+      {trustBanner && <TrustBanner slug={slug} {...trustBanner} />}
       {viewTab === "source" ? (
         <div className="page-toolbar">
           {pageTitle && <span className="page-toolbar-title">{pageTitle}</span>}
@@ -519,7 +527,12 @@ export default function PageDetailClient({
         )}
       {versionHistoryOpen &&
         createPortal(
-          <VersionHistoryPanel slug={slug} onClose={() => setVersionHistoryOpen(false)} />,
+          <VersionHistoryPanel
+            slug={slug}
+            onClose={() => setVersionHistoryOpen(false)}
+            canApprove={trustBanner?.canApprove ?? true}
+            approversNote={trustBanner?.approversNote ?? null}
+          />,
           document.body,
         )}
       {rulesOpen &&
@@ -570,6 +583,17 @@ export default function PageDetailClient({
                     </div>
                   )}
                 </div>
+                {pageSlug && (
+                  <div className="rules-panel-section">
+                    <div className="rules-panel-section-label">Approval</div>
+                    <ApprovalRuleEditor
+                      scopeParam={`scope=page:${pageSlug}`}
+                      initialApprovers={pageApprovers}
+                      effectiveNote={approvalEffectiveNote}
+                      canManage={canEditPageRules}
+                    />
+                  </div>
+                )}
               </div>
               {canManageRules && (
                 <div className="rules-panel-footer">

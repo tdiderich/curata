@@ -137,14 +137,18 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     }
   };
 
-  server.tool("search_pages", "Search this organization's validated knowledge brain: approved customer answers, how-things-work pages, best practices. Call this FIRST, before answering from general knowledge, whenever a question touches this organization's product, customers, pricing, or internal process — an approved answer may already exist", { query: z.string() }, async ({ query }) => {
-    const results = await searchPages(orgId, query, userId);
+  const CHANNEL_SCHEMA = z.enum(["trusted", "latest"]).optional().describe(
+    "Which version to read: \"trusted\" (default) serves the version a human pinned via markTrusted, falling back to latest (labeled trusted: false) when nothing's been marked yet. \"latest\" always serves the newest version regardless of trust."
+  );
+
+  server.tool("search_pages", "Search this organization's validated knowledge brain: approved customer answers, how-things-work pages, best practices. Call this FIRST, before answering from general knowledge, whenever a question touches this organization's product, customers, pricing, or internal process — an approved answer may already exist", { query: z.string(), channel: CHANNEL_SCHEMA }, async ({ query, channel }) => {
+    const results = await searchPages(orgId, query, userId, {}, channel ?? "trusted");
     return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
   });
 
-  server.tool("list_pages", "List all pages", {}, async () => {
+  server.tool("list_pages", "List all pages", { channel: CHANNEL_SCHEMA }, async ({ channel }) => {
     const [pages, folders] = await Promise.all([
-      listPages(orgId, userId),
+      listPages(orgId, userId, channel ?? "trusted"),
       db.folder.findMany({ where: { orgId }, select: { id: true, name: true } }),
     ]);
     const folderMap = new Map(folders.map((f) => [f.id, f.name]));
@@ -152,9 +156,9 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   });
 
-  server.tool("read_page", "Read a knowledge page's full content by slug. Use after search_pages or get_related surfaces a promising page — the full page carries caveats and provenance the search snippet omits", { slug: z.string() }, async ({ slug }) => {
+  server.tool("read_page", "Read a knowledge page's full content by slug. Use after search_pages or get_related surfaces a promising page — the full page carries caveats and provenance the search snippet omits", { slug: z.string(), channel: CHANNEL_SCHEMA }, async ({ slug, channel }) => {
     validateSlug(slug);
-    const result = await readPageYaml(orgId, slug);
+    const result = await readPageYaml(orgId, slug, channel ?? "trusted");
     if (!result) return { content: [{ type: "text", text: `Error: page not found: ${slug}` }], isError: true };
 
     const parsed = yaml.load(result.yaml) as Record<string, unknown>;
@@ -169,7 +173,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     });
 
     const [sections, annotations] = await Promise.all([
-      getPageSections(orgId, slug),
+      getPageSections(orgId, slug, channel ?? "trusted"),
       getAnnotations(orgId, slug),
     ]);
 
@@ -183,7 +187,17 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     const visibleRules = page?.visibility === "public"
       ? rules.page
       : [...rules.inherited, ...rules.page];
-    const response: Record<string, unknown> = { slug, yaml: result.yaml, contentHash: result.contentHash, sections, annotations, concepts, links };
+    const response: Record<string, unknown> = {
+      slug,
+      yaml: result.yaml,
+      contentHash: result.contentHash,
+      sections,
+      annotations,
+      concepts,
+      links,
+      trusted: result.trusted,
+      trustedBehind: result.trustedBehind,
+    };
     if (visibleRules.length > 0) {
       response.contentRules = visibleRules.map((r) => ({ id: r.id, text: r.text, mode: r.mode, scope: r.scope }));
     }
@@ -669,6 +683,34 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       rules: z.string().describe("JSON array of rule objects: [{id, text, mode: 'warn'|'block', patterns?: string[]}]"),
     },
     viaDispatch("set_rules"));
+
+  server.tool("list_groups", "List org groups with their members. Groups are a many-to-many primitive (a user can be in several groups) for future features like folder approval groups and per-group digests — read-only here.",
+    {},
+    viaDispatch("list_groups"));
+
+  server.tool("create_group", "Create a group. Owner/admin only.",
+    { name: z.string() },
+    viaDispatch("create_group"));
+
+  server.tool("update_group", "Rename a group. Owner/admin only.",
+    { group_id: z.string(), name: z.string() },
+    viaDispatch("update_group"));
+
+  server.tool("delete_group", "Delete a group (and its memberships). Owner/admin only.",
+    { group_id: z.string() },
+    viaDispatch("delete_group"));
+
+  server.tool("add_group_member", "Add one or many members to a group by user ID. Owner/admin only.",
+    {
+      group_id: z.string(),
+      user_ids: z.string().describe("JSON array or comma-separated list of user IDs to add"),
+      role: z.enum(["member", "owner"]).optional().describe("Group-level role for the added member(s) — defaults to member"),
+    },
+    viaDispatch("add_group_member"));
+
+  server.tool("remove_group_member", "Remove a member from a group. Owner/admin only.",
+    { group_id: z.string(), user_id: z.string() },
+    viaDispatch("remove_group_member"));
 
   return server;
 }

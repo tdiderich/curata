@@ -4,20 +4,28 @@ import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import type { ContentRule } from "@/lib/content-rules";
+import { validateApprovalRule, type ApprovalRule } from "@/lib/approval";
 import { Prisma } from "@/generated/prisma/client";
 
-function parseRulesJson(raw: unknown): ContentRule[] {
+type StoredRule = ContentRule | ApprovalRule;
+
+function parseRulesJson(raw: unknown): StoredRule[] {
   if (!raw || !Array.isArray(raw)) return [];
-  return raw.filter(
-    (r): r is ContentRule =>
-      typeof r === "object" && r !== null &&
-      typeof r.id === "string" && typeof r.text === "string"
-  );
+  return raw.filter((r): r is StoredRule => {
+    if (typeof r !== "object" || r === null) return false;
+    const obj = r as Record<string, unknown>;
+    if (typeof obj.id !== "string") return false;
+    if (obj.kind === "approval") return Array.isArray(obj.approvers);
+    return typeof obj.text === "string";
+  });
 }
 
-function validateRule(rule: unknown): { ok: true; rule: ContentRule } | { ok: false; error: string } {
+function validateRule(rule: unknown): { ok: true; rule: StoredRule } | { ok: false; error: string } {
   if (!rule || typeof rule !== "object") return { ok: false, error: "rule must be an object" };
   const r = rule as Record<string, unknown>;
+
+  if (r.kind === "approval") return validateApprovalRule(r);
+
   if (!r.text || typeof r.text !== "string" || r.text.trim().length === 0) {
     return { ok: false, error: "rule text is required" };
   }
