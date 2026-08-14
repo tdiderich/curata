@@ -9,6 +9,7 @@ export type Action =
   | "key:manage"
   | "member:manage"
   | "rules:manage"
+  | "group:manage"
   | "annotate";
 
 export const VALID_PAGE_VISIBILITY = ["private", "org", "public"] as const;
@@ -30,6 +31,7 @@ export function can(role: Role, action: Action, isOwner?: boolean): boolean {
     case "key:manage":
     case "member:manage":
     case "rules:manage":
+    case "group:manage":
       return role === "owner" || role === "admin";
     default:
       return false;

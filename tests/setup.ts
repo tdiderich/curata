@@ -16,7 +16,7 @@ export const testDb = createTestClient();
 beforeEach(async () => {
   // Truncate all tables in dependency order
   await testDb.$executeRawUnsafe(
-    `TRUNCATE annotations, api_keys, page_versions, pages, folders, org_members, organizations CASCADE`
+    `TRUNCATE annotations, api_keys, page_versions, pages, folders, group_members, groups, org_members, organizations CASCADE`
   );
 });
 
