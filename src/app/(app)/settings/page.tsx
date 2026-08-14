@@ -7,14 +7,14 @@ import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { isPersonalEmailDomain } from "@/lib/personal-domains";
 import { MemberList } from "@/components/member-list";
+import { GroupManager } from "@/components/group-manager";
 import { OrgSettings } from "@/components/org-settings";
 import { ThemeSettings } from "@/components/theme-settings";
 import { ApiKeyManager } from "@/components/api-key-manager";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
-import { OrgTagsManager } from "@/components/org-tags-manager";
-import { extractOrgTags } from "@/lib/org-tags";
-import { DEFAULT_TAGS } from "@/lib/default-tags";
+import { TagsManager } from "@/components/tags-manager";
 import { SettingsTabs } from "@/components/settings-tabs";
+import { SettingsSection } from "@/components/settings/settings-section";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
@@ -56,15 +56,6 @@ export default async function SettingsPage() {
     }));
   })();
 
-  const orgTagNames = canManageRules
-    ? (
-        await db.concept.findMany({
-          where: { pages: { some: { page: { orgId: ctx.orgId, status: "active" } } } },
-          select: { displayName: true },
-          take: 200,
-        })
-      ).map((c) => c.displayName.toLowerCase())
-    : [];
 
   const currentUser = await resolveCurrentUser();
   const userEmail = currentUser?.email ?? "";
@@ -96,30 +87,36 @@ export default async function SettingsPage() {
         />
       ),
     },
-    ...(canManageKeys ? [{
-      label: "API Keys",
-      content: <ApiKeyManager />,
-    }] : []),
+    {
+      label: "Groups",
+      content: <GroupManager canManage={canManage} />,
+    },
     {
       label: "Members",
       content: <MemberList canManage={canManage} currentUserId={ctx.userId} />,
     },
     ...(canManageRules ? [{
+      label: "Tags",
+      content: <TagsManager canManage={canManageRules} />,
+    }] : []),
+    ...(canManageRules ? [{
       label: "Content Rules",
       content: (
-        <>
-          <OrgTagsManager
-            initialTags={extractOrgTags(org?.rules)}
-            suggestions={[...new Set([...DEFAULT_TAGS, ...orgTagNames])]}
-            canManage={canManageRules}
-          />
+        <SettingsSection
+          title="Content rules"
+          description="Checked on every save. Blocked writes cite the rule that stopped them."
+        >
           <ContentRulesEditor
             scopeParam="scope=global"
             initialRules={globalRules}
             canManage={canManageRules}
           />
-        </>
+        </SettingsSection>
       ),
+    }] : []),
+    ...(canManageKeys ? [{
+      label: "API Keys",
+      content: <ApiKeyManager />,
     }] : []),
   ];
 

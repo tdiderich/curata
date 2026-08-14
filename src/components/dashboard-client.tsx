@@ -148,7 +148,7 @@ function EmptyWelcome({ orgName }: { orgName?: string }) {
       });
       const data = await res.json();
       if (res.ok) {
-        router.push(`/pages/${data.slug}?edit=1`);
+        router.push(`/pages/${data.slug}`);
       } else {
         toast.error(`Couldn't create page: ${data.error ?? "unknown error"}`);
         setCreating(null);

@@ -81,7 +81,7 @@ export function NewPageButton({
     }
 
     setOpen(false);
-    router.push(templateSlug ? `/pages/${data.slug}` : `/pages/${data.slug}?edit=1`);
+    router.push(`/pages/${data.slug}`);
   }
 
   if (!open) {

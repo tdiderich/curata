@@ -654,7 +654,7 @@ export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRu
       if (!moveRes.ok) {
         toast.error(`Page created but couldn't move it into "${folder.name}" — find it under No Folder.`);
       }
-      router.push(`/pages/${data.slug}?edit=1`);
+      router.push(`/pages/${data.slug}`);
     } catch {
       toast.error("Couldn't create page — check your connection and try again.");
     } finally {

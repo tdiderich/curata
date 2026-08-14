@@ -2099,6 +2099,11 @@ body .c-section.align-right > * { max-width: none !important; }
   color: var(--teal);
 }
 
+.vh-list-badge--trusted {
+  background: rgba(var(--text-rgb), 0.08);
+  color: var(--green);
+}
+
 .vh-preview {
   display: flex;
   flex-direction: column;
@@ -2144,6 +2149,44 @@ body .c-section.align-right > * { max-width: none !important; }
 .vh-restore-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.vh-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.vh-trust-btn {
+  background: none;
+  border: 1px solid rgba(var(--text-rgb), 0.20);
+  border-radius: 5px;
+  color: var(--light-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.vh-trust-btn:hover {
+  color: var(--green);
+  border-color: rgba(var(--green-rgb, 34, 197, 94), 0.4);
+}
+
+.vh-trust-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.vh-approvers-note {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: italic;
+  flex-shrink: 0;
 }
 
 .vh-preview-yaml {
@@ -2260,6 +2303,64 @@ body .c-section.align-right > * { max-width: none !important; }
 .members-remove-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.members-groups-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.bulk-bar-note {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* ── Group manager (settings) ── */
+
+.group-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.group-expand-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.group-rename-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.group-member-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.group-member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.group-member-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
 }
 
 /* ── Search bar ── */
@@ -2658,9 +2759,45 @@ body .c-section.align-right > * { max-width: none !important; }
 }
 
 .dash-th-check input,
-.dash-td-check input {
-  accent-color: var(--teal);
+.dash-td-check input,
+.cleanup-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
+  border-radius: 4px;
+  background: rgba(var(--accent-rgb), 0.08);
   cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  vertical-align: middle;
+}
+
+.dash-th-check input:hover,
+.dash-td-check input:hover,
+.cleanup-check:hover {
+  border-color: rgba(var(--accent-rgb), 0.7);
+  background: rgba(var(--accent-rgb), 0.15);
+}
+
+.dash-th-check input:checked,
+.dash-td-check input:checked,
+.cleanup-check:checked {
+  background: rgba(var(--accent-rgb), 0.3);
+  border-color: rgba(var(--accent-rgb), 0.6);
+}
+
+.dash-th-check input:checked::after,
+.dash-td-check input:checked::after,
+.cleanup-check:checked::after {
+  content: "";
+  width: 8px;
+  height: 5px;
+  border-left: 2px solid var(--snow);
+  border-bottom: 2px solid var(--snow);
+  transform: rotate(-45deg) translateY(-1px);
 }
 
 .dash-row--selected {
@@ -3546,47 +3683,6 @@ body .c-section.align-right > * { max-width: none !important; }
   color: var(--muted);
 }
 
-.pe-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 12px 24px;
-  background: var(--bg);
-  border-top: 1px solid rgba(var(--text-rgb), 0.06);
-  z-index: 20;
-}
-
-.pe-save-btn {
-  padding: 8px 32px;
-  border-radius: 8px;
-  border: none;
-  background: var(--teal);
-  color: var(--bg);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.pe-save-btn:hover:not(:disabled) {
-  opacity: 0.85;
-}
-
-.pe-save-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.pe-error {
-  font-size: 12px;
-  color: var(--red);
-}
-
 .pe-saved {
   font-size: 12px;
   color: var(--green);
@@ -4249,10 +4345,6 @@ body .c-section.align-right > * { max-width: none !important; }
 
   .key-create-name {
     width: 100%;
-  }
-
-  .pe-footer {
-    flex-wrap: wrap;
   }
 
   .agent-modal {
@@ -5217,21 +5309,6 @@ body .c-section.align-right > * { max-width: none !important; }
 
 .toast-dismiss:hover { color: var(--snow); }
 
-/* ── Editor discard button ───────────────────────────────────────────────── */
-
-.pe-discard-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid rgba(var(--text-rgb), 0.15);
-  background: none;
-  color: var(--muted);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.pe-discard-btn:hover { color: var(--snow); border-color: rgba(var(--text-rgb), 0.3); }
-
 /* ── Error page recovery actions ─────────────────────────────────────────── */
 
 .error-page-actions {
@@ -5924,7 +6001,7 @@ body .c-section.align-right > * { max-width: none !important; }
 .cleanup-row--previewing { border-color: rgba(var(--accent-rgb), 0.5); }
 .cleanup-row--cluster { margin-left: 16px; }
 
-.cleanup-check { margin-top: 4px; accent-color: var(--teal); }
+.cleanup-check { margin-top: 4px; }
 
 .cleanup-row-main {
   flex: 1;
@@ -6077,6 +6154,117 @@ body .c-section.align-right > * { max-width: none !important; }
 }
 
 .archived-banner-restore:hover { background: rgba(228, 230, 195, 0.1); }
+
+/* ── Trust banner (approval gate) ─────────────────────────────────────────── */
+
+.trust-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  font-size: 13px;
+}
+
+.trust-banner--stale {
+  color: var(--yellow);
+  background: rgba(228, 230, 195, 0.08);
+  border-bottom: 1px solid rgba(228, 230, 195, 0.2);
+}
+
+.trust-banner--preview {
+  color: var(--teal);
+  background: rgba(var(--accent-rgb), 0.08);
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.25);
+}
+
+.trust-banner--none {
+  color: var(--muted);
+  background: rgba(var(--text-rgb), 0.03);
+  border-bottom: 1px solid rgba(var(--text-rgb), 0.08);
+  font-size: 12px;
+}
+
+.trust-banner-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.trust-banner-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.trust-banner-link { color: var(--teal); text-decoration: underline; white-space: nowrap; }
+
+.trust-banner-approve {
+  padding: 4px 14px;
+  border-radius: 7px;
+  border: 1px solid rgba(var(--green-rgb, 34, 197, 94), 0.4);
+  background: none;
+  color: var(--green);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.trust-banner-approve:hover:not(:disabled) { background: rgba(var(--green-rgb, 34, 197, 94), 0.1); }
+.trust-banner-approve:disabled { opacity: 0.5; cursor: default; }
+
+.trust-banner-note {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+/* ── Review queue ──────────────────────────────────────────────────────────── */
+
+.rq-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.cleanup-btn--active {
+  border-color: rgba(var(--accent-rgb), 0.6);
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--snow);
+}
+
+.rq-diff-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.rq-approvers-note {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.rq-diff-col { display: flex; flex-direction: column; gap: 6px; }
+
+.rq-diff-col-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
 
 .dash-attention-chip--cleanup { border-color: rgba(228, 230, 195, 0.3); }
 .dash-attention-chip--cleanup:hover { border-color: rgba(228, 230, 195, 0.6); }
@@ -6287,6 +6475,17 @@ body .c-section.align-right > * { max-width: none !important; }
 }
 .cr-defaults-btn:hover:not(:disabled) { background: var(--bg-subtle); color: var(--text); }
 .cr-defaults-btn:disabled { opacity: 0.4; cursor: default; }
+
+.approval-editor-lists { display: flex; flex-direction: column; gap: 10px; }
+.approval-editor-section { display: flex; flex-direction: column; gap: 2px; }
+.approval-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 2px 0;
+  cursor: pointer;
+}
 
 /* Pattern pills (used in edit form) */
 .pattern-pills-wrap {
@@ -7197,6 +7396,289 @@ body:has(.nav-reveal) .page-toolbar {
   background: rgba(var(--text-rgb), 0.08);
   border-color: rgba(var(--text-rgb), 0.2);
   color: var(--light-muted);
+}
+
+/* ── Settings UI kit (SettingsSection / SettingsTable / StatusBadge /
+   ChipInput / FormRow / SegmentedControl) — shared across every settings
+   tab per kz-3389b2's design pass. Tokens are the real ones defined in
+   kazam.css (var(--muted), var(--text-rgb), etc.) — the design comp used
+   its own scratch token names (--border, --text-muted, --bg-subtle,
+   --font-mono) that don't exist in this repo's generated theme, so the
+   equivalents below are the closest real match. ────────────────────── */
+
+.stg-section + .stg-section {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(var(--text-rgb), 0.08);
+}
+.stg-section-head { margin-bottom: 4px; }
+.stg-section-title { font-size: 15px; font-weight: 600; color: var(--snow); margin: 0; }
+.stg-section-desc { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+
+/* Table shell: a thin wrapper around dash-table so Members/Groups/Content
+   Rules/Tags share one component instead of four hand-rolled tables. */
+.stg-table { margin-top: 12px; }
+.stg-th-right { text-align: right; }
+.stg-td-right { text-align: right; }
+
+/* Hover-reveal row actions — opt-in per row via this class, used by the new
+   tables and backported onto Members/Groups for a consistent right rail. */
+.stg-row-actions {
+  display: inline-flex;
+  gap: 6px;
+  opacity: 0.3;
+  transition: opacity 0.12s;
+}
+.dash-row:hover .stg-row-actions,
+.stg-row-actions--pinned {
+  opacity: 1;
+}
+.stg-qbtn {
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--light-muted);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.stg-qbtn:hover:not(:disabled) {
+  border-color: rgba(var(--text-rgb), 0.14);
+  background: rgba(var(--text-rgb), 0.05);
+  color: var(--snow);
+}
+.stg-qbtn:disabled { opacity: 0.4; cursor: default; }
+.stg-qbtn--danger { color: #E0A9B5; }
+.stg-qbtn--danger:hover:not(:disabled) { border-color: rgba(201, 123, 138, 0.5); }
+
+/* StatusBadge: dot + label chip. Enforcement tones (block/review/guidance/
+   approval) plus the four concept kinds, each keyed to its own color so the
+   Tags tab badge matches the knowledge-graph legend exactly. */
+.stg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: "SF Mono", Monaco, "Cascadia Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.stg-badge-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.stg-badge--block { background: rgba(201, 123, 138, 0.14); color: #E0A9B5; }
+.stg-badge--block .stg-badge-dot { background: var(--red); }
+.stg-badge--review { background: rgba(228, 230, 195, 0.14); color: var(--yellow); }
+.stg-badge--review .stg-badge-dot { background: var(--yellow); }
+.stg-badge--guidance { background: rgba(var(--text-rgb), 0.09); color: var(--light-muted); }
+.stg-badge--guidance .stg-badge-dot { background: var(--light-muted); }
+.stg-badge--approval { background: rgba(var(--accent-rgb), 0.16); color: var(--snow); }
+.stg-badge--approval .stg-badge-dot { background: var(--teal); }
+.stg-badge--topic { background: rgba(var(--kind-topic-rgb), 0.14); color: var(--snow); }
+.stg-badge--topic .stg-badge-dot { background: rgba(var(--kind-topic-rgb), 0.95); }
+.stg-badge--vendor { background: rgba(var(--kind-vendor-rgb), 0.14); color: var(--snow); }
+.stg-badge--vendor .stg-badge-dot { background: rgba(var(--kind-vendor-rgb), 0.95); }
+.stg-badge--finding { background: rgba(var(--kind-finding-rgb), 0.14); color: var(--snow); }
+.stg-badge--finding .stg-badge-dot { background: rgba(var(--kind-finding-rgb), 0.95); }
+.stg-badge--framework { background: rgba(var(--kind-framework-rgb), 0.14); color: var(--snow); }
+.stg-badge--framework .stg-badge-dot { background: rgba(var(--kind-framework-rgb), 0.95); }
+
+.stg-pcount { font-family: "SF Mono", Monaco, "Cascadia Mono", monospace; font-size: 11px; color: var(--light-muted); white-space: nowrap; }
+
+/* Chips + typeahead (approvers today; org tags/tags-tab reuse the .stg-chip
+   look without adopting the typeahead machinery — see component report). */
+.stg-chip-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.stg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--snow);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+.stg-chip-x {
+  border: none;
+  background: none;
+  color: rgba(var(--accent-rgb), 0.9);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.stg-chip-input-wrap { position: relative; display: inline-flex; }
+.stg-chip-input {
+  width: 220px;
+  background: rgba(var(--text-rgb), 0.04);
+  border: 1px solid rgba(var(--text-rgb), 0.12);
+  color: var(--snow);
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font: inherit;
+}
+.stg-chip-input:focus { outline: none; border-color: rgba(var(--accent-rgb), 0.4); }
+.stg-picker-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  margin-top: 0;
+  border: 1px solid rgba(var(--text-rgb), 0.14);
+  background: var(--bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  padding: 6px;
+  width: 280px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.stg-picker-empty { padding: 8px; font-size: 12px; color: var(--muted); }
+.stg-picker-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--snow);
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.stg-picker-opt:hover { background: rgba(var(--text-rgb), 0.06); }
+.stg-picker-opt-tag {
+  margin-left: auto;
+  font-family: "SF Mono", Monaco, "Cascadia Mono", monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* FormRow: labeled field wrapper. */
+.stg-form-row { display: flex; flex-direction: column; gap: 6px; }
+.stg-form-row-label {
+  font-family: "SF Mono", Monaco, "Cascadia Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stg-form-row-hint { font-size: 12px; color: var(--muted); }
+.stg-input,
+.stg-textarea {
+  width: 100%;
+  background: rgba(var(--text-rgb), 0.04);
+  border: 1px solid rgba(var(--text-rgb), 0.12);
+  color: var(--snow);
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font: inherit;
+  resize: vertical;
+}
+.stg-input:focus, .stg-textarea:focus { outline: none; border-color: rgba(var(--accent-rgb), 0.4); }
+
+/* SegmentedControl: 2–4 fixed choices. */
+.stg-seg { display: inline-flex; border: 1px solid rgba(var(--text-rgb), 0.12); border-radius: 8px; overflow: hidden; }
+.stg-seg-btn {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 6px 16px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-right: 1px solid rgba(var(--text-rgb), 0.12);
+  color: var(--light-muted);
+}
+.stg-seg-btn:last-child { border-right: none; }
+.stg-seg-btn--on { background: rgba(var(--accent-rgb), 0.18); color: var(--snow); }
+.stg-seg-btn:disabled { opacity: 0.4; cursor: default; }
+.stg-seg-hint { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* Editor card: bordered form used by the Content Rules and Tags editors. */
+.stg-editor {
+  margin-top: 14px;
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  background: rgba(var(--accent-rgb), 0.04);
+  border-radius: 10px;
+  padding: 18px 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.stg-editor-foot {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid rgba(var(--text-rgb), 0.08);
+  padding-top: 12px;
+}
+.stg-editor-foot-spacer { flex: 1; }
+.stg-btn {
+  font: inherit;
+  font-size: 13px;
+  border-radius: 7px;
+  padding: 6px 14px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.stg-btn--primary { background: rgba(var(--accent-rgb), 0.22); border-color: rgba(var(--accent-rgb), 0.5); color: var(--snow); }
+.stg-btn--primary:hover:not(:disabled) { background: rgba(var(--accent-rgb), 0.3); }
+.stg-btn--primary:disabled { opacity: 0.4; cursor: default; }
+.stg-btn--ghost { background: none; border-color: rgba(var(--text-rgb), 0.14); color: var(--light-muted); }
+.stg-btn--ghost:hover:not(:disabled) { color: var(--snow); }
+
+/* Regex pattern rows: mono input + icon-button remove, replaces the old
+   chip-style pattern pills so each pattern reads as its own row. */
+.stg-pat-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.stg-pat-row .stg-input { font-family: "SF Mono", Monaco, "Cascadia Mono", monospace; font-size: 12.5px; flex: 1; }
+.stg-icon-btn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-content: center;
+  background: none;
+  border: 1px solid rgba(var(--text-rgb), 0.12);
+  border-radius: 6px;
+  color: var(--light-muted);
+  cursor: pointer;
+  font-size: 13px;
+  flex: none;
+}
+.stg-icon-btn:hover { color: #E0A9B5; border-color: rgba(201, 123, 138, 0.5); }
+.stg-addpat {
+  font-size: 12.5px;
+  color: var(--teal);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+  font: inherit;
+  align-self: flex-start;
+}
+
+/* Composer row: quick "type + pick + add" affordance at the bottom of a
+   SettingsTable (Content Rules, Tags). */
+.stg-composer { display: flex; gap: 10px; margin-top: 14px; align-items: center; }
+.stg-composer .stg-input { flex: 1; }
+.stg-composer select {
+  background: rgba(var(--text-rgb), 0.04);
+  border: 1px solid rgba(var(--text-rgb), 0.12);
+  color: var(--light-muted);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font: inherit;
 }
 
 .kg-label-in {

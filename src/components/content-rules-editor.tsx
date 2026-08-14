@@ -1,8 +1,18 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
+import { SettingsTable } from "@/components/settings/settings-table";
+import { StatusBadge, type StatusBadgeTone } from "@/components/settings/status-badge";
+import { FormRow } from "@/components/settings/form-row";
+import { SegmentedControl } from "@/components/settings/segmented-control";
+import { ChipInput, type ChipInputChip, type ChipInputOption } from "@/components/settings/chip-input";
+import {
+  useApprovalDirectory,
+  approverLabel,
+  type ApprovalApproverInput,
+} from "@/hooks/use-approval-directory";
 
 interface ContentRule {
   id: string;
@@ -11,116 +21,172 @@ interface ContentRule {
   patterns?: string[];
 }
 
+/** Client-side mirror of ApprovalRule from @/lib/approval — kept local so this
+ * "use client" component doesn't pull the server-only db import into the bundle. */
+interface ApprovalRuleData {
+  id: string;
+  kind: "approval";
+  approvers: ApprovalApproverInput[];
+}
+
 interface ContentRulesEditorProps {
   scopeParam: string;
   initialRules: ContentRule[];
   canManage: boolean;
 }
 
-function PatternPills({
-  patterns,
-  onChange,
-}: {
-  patterns: string[];
-  onChange: (patterns: string[]) => void;
-}) {
-  const [input, setInput] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+type Enforcement = "block" | "review" | "guidance";
+type EditingKind = "content" | "approval" | null;
 
-  function addPattern() {
-    const trimmed = input.trim();
-    if (!trimmed || patterns.includes(trimmed)) return;
-    onChange([...patterns, trimmed]);
-    setInput("");
-  }
+function enforcementOf(rule: ContentRule): Enforcement {
+  if (!rule.patterns || rule.patterns.length === 0) return "guidance";
+  return rule.mode === "block" ? "block" : "review";
+}
 
-  function removePattern(idx: number) {
-    onChange(patterns.filter((_, i) => i !== idx));
-  }
+const ENFORCEMENT_BADGE: Record<Enforcement, { tone: StatusBadgeTone; label: string }> = {
+  block: { tone: "block", label: "Block" },
+  review: { tone: "review", label: "Review" },
+  guidance: { tone: "guidance", label: "Guidance" },
+};
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addPattern();
-    }
-    if (e.key === "Backspace" && !input && patterns.length > 0) {
-      removePattern(patterns.length - 1);
-    }
-  }
+const ENFORCEMENT_HINT: Record<Enforcement, string> = {
+  block: "Block: saves with matches are rejected and the error cites this rule.",
+  review: "Review: matches are flagged in write results but the save still succeeds.",
+  guidance: "Guidance: shown to agents on read, not enforced on save (no patterns).",
+};
 
-  return (
-    <div className="pattern-pills-wrap" onClick={() => inputRef.current?.focus()}>
-      {patterns.map((p, i) => (
-        <span key={i} className="pattern-pill">
-          <code>{p}</code>
-          <button
-            className="pattern-pill-x"
-            onClick={(e) => { e.stopPropagation(); removePattern(i); }}
-            tabIndex={-1}
-          >
-            x
-          </button>
-        </span>
-      ))}
-      <input
-        ref={inputRef}
-        className="pattern-pills-input"
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={() => { if (input.trim()) addPattern(); }}
-        placeholder={patterns.length === 0 ? "Type regex, press Enter" : ""}
-      />
-    </div>
-  );
+const KIND_HINT: Record<"content" | "approval", string> = {
+  content: "A content rule checks page saves against regex patterns and an enforcement level.",
+  approval: "Approval: changes to matching pages only serve as trusted after an approver signs off.",
+};
+
+function splitApproverId(prefixed: string): ApprovalApproverInput {
+  if (prefixed.startsWith("group:")) return { type: "group", id: prefixed.slice(6) };
+  return { type: "user", id: prefixed.slice(5) };
 }
 
 export function ContentRulesEditor({ scopeParam, initialRules, canManage }: ContentRulesEditorProps) {
   const router = useRouter();
   const [rules, setRules] = useState<ContentRule[]>(initialRules);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [approvalRule, setApprovalRule] = useState<ApprovalRuleData | null>(null);
+
+  const [editingKind, setEditingKind] = useState<EditingKind>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [inlineText, setInlineText] = useState("");
-  const inlineRef = useRef<HTMLInputElement>(null);
 
   const [formText, setFormText] = useState("");
   const [formMode, setFormMode] = useState<"warn" | "block">("warn");
   const [formPatterns, setFormPatterns] = useState<string[]>([]);
 
-  function resetForm() {
+  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+
+  const { groups, members } = useApprovalDirectory(canManage);
+
+  // Approval-kind rules ride the same rules array but are excluded from the
+  // server-computed `initialRules` prop (globalRules in settings/page.tsx only
+  // keeps `text`-shaped rules), so fetch the full scope once to pick it up.
+  useEffect(() => {
+    if (!canManage) return;
+    let cancelled = false;
+    async function load() {
+      const res = await fetch(`${basePath}/api/rules?${scopeParam}`);
+      if (cancelled || !res.ok) return;
+      const data = (await res.json()) as { rules: Array<ContentRule | ApprovalRuleData> };
+      const approval = data.rules.find((r): r is ApprovalRuleData => "kind" in r && r.kind === "approval");
+      setApprovalRule(approval ?? null);
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [scopeParam, canManage]);
+
+  function resetContentForm() {
     setFormText("");
     setFormMode("warn");
     setFormPatterns([]);
-    setEditingId(null);
   }
 
-  function startEdit(rule: ContentRule) {
+  function resetApprovalForm() {
+    setSelectedGroups(new Set());
+    setSelectedUsers(new Set());
+  }
+
+  function cancelEdit() {
+    setEditingKind(null);
+    setEditingId(null);
+    resetContentForm();
+    resetApprovalForm();
+  }
+
+  function startEditContent(rule: ContentRule) {
+    setEditingKind("content");
     setEditingId(rule.id);
     setFormText(rule.text);
     setFormMode(rule.mode);
-    setFormPatterns(rule.patterns || []);
-    setExpandedId(rule.id);
+    setFormPatterns(rule.patterns && rule.patterns.length > 0 ? rule.patterns : []);
   }
 
-  function toggleExpand(id: string) {
-    if (editingId === id) return;
-    setExpandedId(expandedId === id ? null : id);
+  function startEditApproval() {
+    setEditingKind("approval");
+    setEditingId(approvalRule?.id ?? null);
+    setSelectedGroups(new Set((approvalRule?.approvers ?? []).filter((a) => a.type === "group").map((a) => a.id)));
+    setSelectedUsers(new Set((approvalRule?.approvers ?? []).filter((a) => a.type === "user").map((a) => a.id)));
   }
 
-  async function saveRule() {
-    if (!formText.trim()) return;
+  /** "Add rule" entry point — always opens a blank content draft; the kind
+   * control inside the draft lets the user switch to Approval before saving. */
+  function openNewDraft() {
+    setEditingKind("content");
+    setEditingId(null);
+    setFormText("");
+    setFormMode("warn");
+    setFormPatterns([""]);
+    resetApprovalForm();
+  }
+
+  function enforcementSegValue(): Enforcement {
+    return formPatterns.map((p) => p.trim()).filter(Boolean).length === 0
+      ? "guidance"
+      : formMode === "block"
+      ? "block"
+      : "review";
+  }
+
+  function handleEnforcementChange(next: Enforcement) {
+    if (next === "guidance") {
+      setFormPatterns([]);
+      setFormMode("warn");
+    } else {
+      setFormMode(next === "block" ? "block" : "warn");
+    }
+  }
+
+  function handleKindSwitch(next: "content" | "approval") {
+    // Only reachable while drafting a brand-new rule — kind is locked once
+    // a rule is persisted (existing rows never show this control at all).
+    if (editingId !== null) return;
+    if (next === "content") {
+      setEditingKind("content");
+      resetApprovalForm();
+      setFormPatterns((prev) => (prev.length > 0 ? prev : [""]));
+    } else {
+      setEditingKind("approval");
+      resetContentForm();
+    }
+  }
+
+  async function saveContentRule() {
+    const text = formText.trim();
+    if (!text) return;
+    const patterns = formPatterns.map((p) => p.trim()).filter(Boolean);
     setBusy(true);
     setError(null);
-
-    const mode = formPatterns.length > 0 ? formMode : "warn";
-    const body: Record<string, unknown> = {
-      text: formText.trim(),
-      mode,
-    };
-    if (formPatterns.length > 0) body.patterns = formPatterns;
+    const mode = patterns.length > 0 ? formMode : "warn";
+    const body: Record<string, unknown> = { text, mode };
+    if (patterns.length > 0) body.patterns = patterns;
 
     try {
       if (editingId) {
@@ -131,12 +197,12 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
           body: JSON.stringify(body),
         });
         if (!res.ok) {
-          const json = await res.json() as { error?: string };
+          const json = (await res.json()) as { error?: string };
           setError(json.error || "Failed to update rule.");
           return;
         }
-        const data = await res.json() as { rule: ContentRule };
-        setRules((prev) => prev.map((r) => r.id === editingId ? data.rule : r));
+        const data = (await res.json()) as { rule: ContentRule };
+        setRules((prev) => prev.map((r) => (r.id === editingId ? data.rule : r)));
       } else {
         const res = await fetch(`${basePath}/api/rules?${scopeParam}`, {
           method: "POST",
@@ -144,14 +210,14 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
           body: JSON.stringify(body),
         });
         if (!res.ok) {
-          const json = await res.json() as { error?: string };
+          const json = (await res.json()) as { error?: string };
           setError(json.error || "Failed to add rule.");
           return;
         }
-        const data = await res.json() as { rule: ContentRule };
+        const data = (await res.json()) as { rule: ContentRule };
         setRules((prev) => [...prev, data.rule]);
       }
-      resetForm();
+      cancelEdit();
       router.refresh();
     } catch {
       setError("Network error.");
@@ -160,27 +226,39 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
     }
   }
 
-  async function inlineAdd() {
-    const text = inlineText.trim();
-    if (!text) return;
+  async function saveApprovalRule() {
+    const approvers: ApprovalApproverInput[] = [
+      ...[...selectedGroups].map((id) => ({ type: "group" as const, id })),
+      ...[...selectedUsers].map((id) => ({ type: "user" as const, id })),
+    ];
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`${basePath}/api/rules?${scopeParam}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, mode: "warn" }),
-      });
-      if (!res.ok) {
-        const json = await res.json() as { error?: string };
-        setError(json.error || "Failed to add rule.");
-        return;
+      if (approvers.length === 0) {
+        const res = await fetch(`${basePath}/api/rules?${scopeParam}&ruleId=approval`, { method: "DELETE" });
+        if (!res.ok && res.status !== 404) {
+          const json = (await res.json().catch(() => ({}))) as { error?: string };
+          setError(json.error || "Failed to clear approval rule.");
+          return;
+        }
+        setApprovalRule(null);
+      } else {
+        const method = approvalRule ? "PUT" : "POST";
+        const res = await fetch(`${basePath}/api/rules?${scopeParam}`, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: "approval", kind: "approval", approvers }),
+        });
+        if (!res.ok) {
+          const json = (await res.json().catch(() => ({}))) as { error?: string };
+          setError(json.error || "Failed to save approval rule.");
+          return;
+        }
+        const data = (await res.json()) as { rule: ApprovalRuleData };
+        setApprovalRule(data.rule);
       }
-      const data = await res.json() as { rule: ContentRule };
-      setRules((prev) => [...prev, data.rule]);
-      setInlineText("");
+      cancelEdit();
       router.refresh();
-      inlineRef.current?.focus();
     } catch {
       setError("Network error.");
     } finally {
@@ -192,38 +270,18 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`${basePath}/api/rules?${scopeParam}&ruleId=${ruleId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`${basePath}/api/rules?${scopeParam}&ruleId=${ruleId}`, { method: "DELETE" });
       if (!res.ok) {
-        const json = await res.json() as { error?: string };
+        const json = (await res.json()) as { error?: string };
         setError(json.error || "Failed to delete rule.");
         return;
       }
-      setRules((prev) => prev.filter((r) => r.id !== ruleId));
-      if (editingId === ruleId) resetForm();
-      if (expandedId === ruleId) setExpandedId(null);
-      router.refresh();
-    } catch {
-      setError("Network error.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function loadDefaults() {
-    if (!confirm("Load recommended content rules? Existing rules with the same ID will be replaced.")) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch(`${basePath}/api/rules/defaults?${scopeParam}`, { method: "POST" });
-      if (!res.ok) {
-        const json = await res.json() as { error?: string };
-        setError(json.error || "Failed to load defaults.");
-        return;
+      if (ruleId === "approval") {
+        setApprovalRule(null);
+      } else {
+        setRules((prev) => prev.filter((r) => r.id !== ruleId));
       }
-      const data = await res.json() as { rules: ContentRule[] };
-      setRules(data.rules);
+      if (editingId === ruleId) cancelEdit();
       router.refresh();
     } catch {
       setError("Network error.");
@@ -232,127 +290,275 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
     }
   }
 
-  const isExpanded = (id: string) => expandedId === id;
-  const isEditing = (id: string) => editingId === id;
+  function addApprover(prefixedId: string) {
+    const approver = splitApproverId(prefixedId);
+    if (approver.type === "group") setSelectedGroups((prev) => new Set(prev).add(approver.id));
+    else setSelectedUsers((prev) => new Set(prev).add(approver.id));
+  }
+
+  function removeApprover(prefixedId: string) {
+    const approver = splitApproverId(prefixedId);
+    if (approver.type === "group") {
+      setSelectedGroups((prev) => {
+        const next = new Set(prev);
+        next.delete(approver.id);
+        return next;
+      });
+    } else {
+      setSelectedUsers((prev) => {
+        const next = new Set(prev);
+        next.delete(approver.id);
+        return next;
+      });
+    }
+  }
+
+  const approverChips: ChipInputChip[] = [
+    ...[...selectedGroups].map((id) => ({ id: `group:${id}`, label: groups.find((g) => g.id === id)?.name ?? id })),
+    ...[...selectedUsers].map((id) => ({ id: `user:${id}`, label: members.find((m) => m.userId === id)?.email ?? id })),
+  ];
+  const approverOptions: ChipInputOption[] = [
+    ...groups.map((g) => ({
+      id: `group:${g.id}`,
+      label: g.name,
+      sublabel: `group${g.memberCount != null ? ` · ${g.memberCount} member${g.memberCount === 1 ? "" : "s"}` : ""}`,
+    })),
+    ...members.map((m) => ({ id: `user:${m.userId}`, label: m.email ?? m.userId, sublabel: "member" })),
+  ];
+
+  /** Shared field set for both the "edit an existing content rule" row and the new-draft row. */
+  function contentFields() {
+    return (
+      <>
+        <FormRow label="Rule" hint="Shown to agents in write errors and to humans here. Write it as an instruction.">
+          <textarea
+            className="stg-textarea"
+            rows={2}
+            value={formText}
+            onChange={(e) => setFormText(e.target.value)}
+          />
+        </FormRow>
+        <FormRow label="Regex patterns" hint="Content matching any pattern triggers this rule on save.">
+          {formPatterns.map((p, idx) => (
+            <div className="stg-pat-row" key={idx}>
+              <input
+                className="stg-input"
+                value={p}
+                onChange={(e) => setFormPatterns((prev) => prev.map((v, i2) => (i2 === idx ? e.target.value : v)))}
+              />
+              <button
+                type="button"
+                className="stg-icon-btn"
+                title="Remove pattern"
+                onClick={() => setFormPatterns((prev) => prev.filter((_, i2) => i2 !== idx))}
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+          <button type="button" className="stg-addpat" onClick={() => setFormPatterns((prev) => [...prev, ""])}>
+            + Add pattern
+          </button>
+        </FormRow>
+        <FormRow label="Enforcement" hint={ENFORCEMENT_HINT[enforcementSegValue()]}>
+          <SegmentedControl<Enforcement>
+            value={enforcementSegValue()}
+            onChange={handleEnforcementChange}
+            options={[
+              { value: "block", label: "Block" },
+              { value: "review", label: "Review" },
+              { value: "guidance", label: "Guidance" },
+            ]}
+          />
+        </FormRow>
+      </>
+    );
+  }
+
+  /** Shared field set for both the "edit the existing approval rule" row and the new-draft row. */
+  function approvalFields() {
+    return (
+      <FormRow
+        label="Approvers"
+        hint="Org owners and admins can always approve. Everyone else needs to be listed here or be in a listed group."
+      >
+        <ChipInput
+          chips={approverChips}
+          onRemove={removeApprover}
+          options={approverOptions}
+          onAdd={addApprover}
+          placeholder="Add a group or person…"
+          disabled={busy}
+        />
+      </FormRow>
+    );
+  }
+
+  const isNewDraft = editingKind !== null && editingId === null;
+  const showApprovalRow = !!approvalRule;
+  const hasAnyRows = rules.length > 0 || showApprovalRow || isNewDraft;
 
   return (
     <div className="cr-editor">
       {error && <div className="cr-error">{error}</div>}
 
-      {rules.length === 0 && (
-        <div className="cr-empty">No content rules configured.</div>
-      )}
-
-      <div className="cr-list dash-table">
-        {rules.length > 0 && (
-          <div className="dash-row cr-head-row">
-            <span className="dash-th dash-th-title">Rule</span>
-            <span className="dash-th cr-th-enforcement">Enforcement</span>
-            <span className="dash-th dash-th-right">Actions</span>
-          </div>
-        )}
-        {rules.map((rule) => (
-          <div key={rule.id} className={`cr-row${isExpanded(rule.id) ? " cr-row--expanded" : ""}`}>
-            <div className="cr-row-summary" onClick={() => toggleExpand(rule.id)}>
-              <span className={`cr-dot cr-dot--${rule.mode}`} />
-              <span className="cr-row-text">{rule.text}</span>
-              <span className="cr-row-meta">
-                {rule.patterns?.length
-                  ? <span className="cr-chip cr-chip--enforced">{rule.patterns.length} pattern{rule.patterns.length !== 1 ? "s" : ""}</span>
-                  : <span className="cr-chip cr-chip--guidance">guidance</span>
-                }
-              </span>
-              {canManage && (
-                <span className="cr-row-actions">
-                  <button onClick={(e) => { e.stopPropagation(); startEdit(rule); }}>Edit</button>
-                  <button className="cr-row-delete" onClick={(e) => { e.stopPropagation(); deleteRule(rule.id); }}>Delete</button>
-                </span>
-              )}
-            </div>
-
-            {isExpanded(rule.id) && (
-              <div className="cr-detail">
-                {isEditing(rule.id) ? (
-                  <div className="cr-edit-form">
-                    <textarea
-                      className="pe-input cr-edit-text"
-                      value={formText}
-                      onChange={(e) => setFormText(e.target.value)}
-                      rows={2}
-                    />
-                    <label className="cr-field-label">
-                      Regex patterns
-                      <span className="cr-field-hint">Content matching any pattern triggers this rule on save</span>
-                    </label>
-                    <PatternPills patterns={formPatterns} onChange={(p) => {
-                      setFormPatterns(p);
-                      if (p.length === 0) setFormMode("warn");
-                    }} />
-                    {formPatterns.length > 0 && (
-                      <div className="cr-mode-row">
-                        <select
-                          className="pe-input cr-mode-select"
-                          value={formMode}
-                          onChange={(e) => setFormMode(e.target.value as "warn" | "block")}
-                        >
-                          <option value="warn">Warn</option>
-                          <option value="block">Block</option>
-                        </select>
-                        <span className="cr-mode-hint">
-                          {formMode === "block" ? "Saves with matches will be rejected" : "Matches flagged but save allowed"}
-                        </span>
-                      </div>
+      <SettingsTable
+        head={
+          <>
+            <th className="dash-th dash-th-title" style={{ width: "52%" }}>Rule</th>
+            <th className="dash-th">Enforcement</th>
+            <th className="dash-th">Patterns</th>
+            {canManage && <th className="dash-th stg-th-right">&nbsp;</th>}
+          </>
+        }
+        empty={!hasAnyRows ? "No content rules configured." : undefined}
+      >
+        {rules.map((rule) => {
+          const badge = ENFORCEMENT_BADGE[enforcementOf(rule)];
+          const isEditing = editingKind === "content" && editingId === rule.id;
+          return (
+            <Fragment key={rule.id}>
+              <tr className="dash-row">
+                <td className="dash-td dash-td-title">{rule.text}</td>
+                <td className="dash-td">
+                  <StatusBadge tone={badge.tone} label={badge.label} />
+                </td>
+                <td className="dash-td">
+                  {rule.patterns && rule.patterns.length > 0 ? (
+                    <span className="stg-pcount">
+                      {rule.patterns.length} pattern{rule.patterns.length !== 1 ? "s" : ""}
+                    </span>
+                  ) : (
+                    <span className="stg-pcount">&mdash;</span>
+                  )}
+                </td>
+                {canManage && (
+                  <td className="dash-td stg-td-right">
+                    {isEditing ? (
+                      <span className="stg-row-actions stg-row-actions--pinned">
+                        <span className="stg-qbtn" style={{ opacity: 0.6, cursor: "default" }}>Editing&hellip;</span>
+                      </span>
+                    ) : (
+                      <span className="stg-row-actions">
+                        <button className="stg-qbtn" onClick={() => startEditContent(rule)} disabled={busy}>Edit</button>
+                        <button className="stg-qbtn stg-qbtn--danger" onClick={() => deleteRule(rule.id)} disabled={busy}>Delete</button>
+                      </span>
                     )}
-                    <div className="cr-edit-actions">
-                      <button className="cr-save-btn" onClick={saveRule} disabled={busy || !formText.trim()}>
-                        {busy ? "Saving..." : "Save"}
+                  </td>
+                )}
+              </tr>
+              {isEditing && (
+                <tr className="dash-row">
+                  <td className="dash-td" colSpan={canManage ? 4 : 3}>
+                    <div className="stg-editor">
+                      {contentFields()}
+                      <div className="stg-editor-foot">
+                        <button className="stg-btn stg-btn--primary" onClick={saveContentRule} disabled={busy || !formText.trim()}>
+                          {busy ? "Saving…" : "Save rule"}
+                        </button>
+                        <button className="stg-btn stg-btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
+                        <span className="stg-editor-foot-spacer" />
+                        <button className="stg-qbtn stg-qbtn--danger" onClick={() => deleteRule(rule.id)} disabled={busy}>
+                          Delete rule
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </Fragment>
+          );
+        })}
+
+        {showApprovalRow && (
+          <>
+            <tr className="dash-row">
+              <td className="dash-td dash-td-title">Changes to matching pages need approval before they serve as trusted.</td>
+              <td className="dash-td">
+                <StatusBadge tone="approval" label="Approval" />
+              </td>
+              <td className="dash-td">
+                {approvalRule!.approvers.length > 0 ? (
+                  <span className="stg-chip-row">
+                    {approvalRule!.approvers.map((a) => (
+                      <span key={`${a.type}:${a.id}`} className="stg-chip" style={{ padding: "1px 8px", fontSize: 11.5 }}>
+                        {approverLabel(a, groups, members)}
+                      </span>
+                    ))}
+                  </span>
+                ) : (
+                  <span className="stg-pcount">&mdash;</span>
+                )}
+              </td>
+              {canManage && (
+                <td className="dash-td stg-td-right">
+                  {editingKind === "approval" && editingId === approvalRule!.id ? (
+                    <span className="stg-row-actions stg-row-actions--pinned">
+                      <span className="stg-qbtn" style={{ opacity: 0.6, cursor: "default" }}>Editing&hellip;</span>
+                    </span>
+                  ) : (
+                    <span className="stg-row-actions">
+                      <button className="stg-qbtn" onClick={startEditApproval} disabled={busy}>Edit</button>
+                      <button className="stg-qbtn stg-qbtn--danger" onClick={() => deleteRule("approval")} disabled={busy}>Delete</button>
+                    </span>
+                  )}
+                </td>
+              )}
+            </tr>
+            {editingKind === "approval" && editingId === approvalRule!.id && (
+              <tr className="dash-row">
+                <td className="dash-td" colSpan={canManage ? 4 : 3}>
+                  <div className="stg-editor">
+                    {approvalFields()}
+                    <div className="stg-editor-foot">
+                      <button className="stg-btn stg-btn--primary" onClick={saveApprovalRule} disabled={busy}>
+                        {busy ? "Saving…" : "Save rule"}
                       </button>
-                      <button className="cr-cancel-btn" onClick={() => { resetForm(); setExpandedId(null); }}>Cancel</button>
+                      <button className="stg-btn stg-btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
                     </div>
                   </div>
-                ) : (
-                  <div className="cr-detail-view">
-                    {rule.patterns && rule.patterns.length > 0 ? (
-                      <>
-                        <div className="cr-detail-label">
-                          {rule.mode === "block" ? "Blocks saves matching:" : "Warns on saves matching:"}
-                        </div>
-                        <div className="cr-detail-patterns">
-                          {rule.patterns.map((p, i) => (
-                            <code key={i} className="cr-pattern-chip">{p}</code>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="cr-detail-label">
-                        Guidance only. Shown to agents on read, not enforced on save.
-                        {canManage && " Edit to add regex patterns for enforcement."}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                </td>
+              </tr>
             )}
-          </div>
-        ))}
-      </div>
+          </>
+        )}
+
+        {isNewDraft && (
+          <tr className="dash-row">
+            <td className="dash-td" colSpan={canManage ? 4 : 3}>
+              <div className="stg-editor">
+                <FormRow label="Rule kind" hint={KIND_HINT[editingKind!]}>
+                  <SegmentedControl<"content" | "approval">
+                    value={editingKind!}
+                    onChange={handleKindSwitch}
+                    disabledOptions={approvalRule ? ["approval"] : []}
+                    options={[
+                      { value: "content", label: "Content" },
+                      { value: "approval", label: "Approval" },
+                    ]}
+                  />
+                </FormRow>
+                {editingKind === "content" ? contentFields() : approvalFields()}
+                <div className="stg-editor-foot">
+                  <button
+                    className="stg-btn stg-btn--primary"
+                    onClick={editingKind === "content" ? saveContentRule : saveApprovalRule}
+                    disabled={busy || (editingKind === "content" && !formText.trim())}
+                  >
+                    {busy ? "Saving…" : "Save rule"}
+                  </button>
+                  <button className="stg-btn stg-btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
+                </div>
+              </div>
+            </td>
+          </tr>
+        )}
+      </SettingsTable>
 
       {canManage && (
-        <div className="cr-bottom">
-          <div className="cr-inline-add">
-            <input
-              ref={inlineRef}
-              className="cr-inline-input"
-              type="text"
-              value={inlineText}
-              onChange={(e) => setInlineText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); inlineAdd(); } }}
-              placeholder="Type a rule, press Enter"
-              disabled={busy}
-            />
-          </div>
-          <button className="cr-defaults-btn" onClick={loadDefaults} disabled={busy}>
-            Load Recommended
+        <div className="stg-composer">
+          <button className="stg-btn stg-btn--ghost" onClick={openNewDraft} disabled={busy || editingKind !== null}>
+            + Add rule
           </button>
         </div>
       )}

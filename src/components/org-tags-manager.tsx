@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
 import { TagPicker } from "./tag-picker";
+import { SettingsSection } from "@/components/settings/settings-section";
 
 /**
  * Owner/admin surface for the recommended organization tags. They render as
@@ -41,27 +42,23 @@ export function OrgTagsManager({
   };
 
   return (
-    <div className="org-tags">
-      <div className="org-tags-head">
-        <span className="org-tags-title">Organization tags</span>
-        <span className="org-tags-hint">
-          Recommended tags show as the Organization tier in the knowledge graph and are suggested
-          to every connected agent.
-        </span>
-      </div>
+    <SettingsSection
+      title="Organization tags"
+      description="Recommended tags show as the Organization tier in the knowledge graph and are suggested to every connected agent."
+    >
       {error && <div className="members-error">{error}</div>}
-      <div className="pg-tags">
+      <div className="stg-chip-row">
         {tags.map((t) => (
-          <span key={t} className="pg-tag">
+          <span key={t} className="stg-chip">
             {t}
             {canManage && (
               <button
                 type="button"
-                className="pg-tag-x"
+                className="stg-chip-x"
                 aria-label={`remove ${t}`}
                 onClick={() => put(tags.filter((x) => x !== t))}
               >
-                ✕
+                &times;
               </button>
             )}
           </span>
@@ -75,6 +72,6 @@ export function OrgTagsManager({
           />
         )}
       </div>
-    </div>
+    </SettingsSection>
   );
 }
