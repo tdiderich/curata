@@ -104,6 +104,19 @@ export function ensureComponentIds(components: Component[]): Component[] {
   return stampIds(components, usedIds);
 }
 
+/**
+ * Recursively collects every explicit `id` set on a components tree
+ * (sections, nested `components`/`items[].components`/`tabs[].components`/
+ * `columns[]` arrays included) without stamping anything. Used by
+ * required-components.ts to check "does this page have a component with id
+ * X" without mutating the page.
+ */
+export function collectComponentIds(components: Component[]): Set<string> {
+  const ids = new Set<string>();
+  collectUsedIds(components, ids);
+  return ids;
+}
+
 export interface PatchOperation {
   op: "replace" | "insert_before" | "insert_after" | "remove" | "prepend" | "append" | "set_field";
   id?: string;

@@ -359,13 +359,32 @@ export interface SearchResult {
   trustedBehind?: boolean;
 }
 
-export async function searchPages(
+export interface SearchIndexEntry {
+  slug: string;
+  title: string;
+  /** Raw YAML content of the served version (respects the requested channel). */
+  content: string;
+  json: Record<string, unknown> | null;
+  dashboardEnabled: boolean;
+  label: ChannelLabel;
+}
+
+/**
+ * Loads every page in `orgId` this caller can see, resolved to whichever
+ * version the requested channel should serve — one DB round trip (plus, for
+ * "trusted", a second batch fetch of trusted-pointer overrides) regardless of
+ * how many queries the caller then runs against it in memory.
+ *
+ * Factored out of searchPages so callers that need to run several queries
+ * against the same org (capture-dedup's phrase/term passes) can fetch this
+ * once instead of once per query — the trust-channel resolution here is
+ * byte-identical to what searchPages does inline.
+ */
+export async function loadSearchIndex(
   orgId: string,
-  query: string,
   userId?: string,
-  glanceCtx: GlanceContext = {},
   channel: Channel = "latest"
-): Promise<SearchResult[]> {
+): Promise<SearchIndexEntry[]> {
   const where = listPagesWhere(orgId, userId ?? null);
 
   const pages = await db.page.findMany({
@@ -394,19 +413,43 @@ export async function searchPages(
     : [];
   const overrideByPageId = new Map(overrides.map((v) => [v.pageId, v]));
 
-  const q = query.toLowerCase();
-  const results: SearchResult[] = [];
-
+  const entries: SearchIndexEntry[] = [];
   for (const page of pages) {
     if (page.versions.length === 0) continue;
     const latestV = page.versions[0];
     const override = overrideByPageId.get(page.id);
     const servedV = override ?? latestV;
-    const content = servedV.yamlContent;
-    const json = servedV.jsonContent as Record<string, unknown> | null;
     const { label } = resolveChannel(page.trustedVersionId, latestV.id, channel);
+    entries.push({
+      slug: page.slug,
+      title: page.title,
+      content: servedV.yamlContent,
+      json: servedV.jsonContent as Record<string, unknown> | null,
+      dashboardEnabled: page.dashboardEnabled,
+      label,
+    });
+  }
+  return entries;
+}
 
-    const titleMatch = page.title.toLowerCase().includes(q);
+export async function searchPages(
+  orgId: string,
+  query: string,
+  userId?: string,
+  glanceCtx: GlanceContext = {},
+  channel: Channel = "latest"
+): Promise<SearchResult[]> {
+  const entries = await loadSearchIndex(orgId, userId, channel);
+
+  const q = query.toLowerCase();
+  const results: SearchResult[] = [];
+
+  for (const entry of entries) {
+    const content = entry.content;
+    const json = entry.json;
+    const label = entry.label;
+
+    const titleMatch = entry.title.toLowerCase().includes(q);
     const contentMatch = content.toLowerCase().includes(q);
     if (!titleMatch && !contentMatch) continue;
 
@@ -416,25 +459,25 @@ export async function searchPages(
       .slice(0, 5)
       .map((l) => l.trim());
 
-    const isDashboard = page.dashboardEnabled && json && hasDashboardBlock(json);
+    const isDashboard = entry.dashboardEnabled && json && hasDashboardBlock(json);
     const dashBlock = isDashboard ? (json!.dashboard as { prompt: string; title?: string; description?: string }) : null;
 
     const rawPrompt = dashBlock?.prompt;
     const wrappedPrompt = rawPrompt
-      ? `${contextHeader(glanceCtx)}\n\nWorkflow page: read_page("${page.slug}") for full steps.\n\n${rawPrompt.trim()}`
+      ? `${contextHeader(glanceCtx)}\n\nWorkflow page: read_page("${entry.slug}") for full steps.\n\n${rawPrompt.trim()}`
       : undefined;
 
     results.push({
-      slug: page.slug,
-      title: dashBlock?.title ?? page.title,
-      matches: titleMatch && matches.length === 0 ? [dashBlock?.description ?? page.title] : matches,
+      slug: entry.slug,
+      title: dashBlock?.title ?? entry.title,
+      matches: titleMatch && matches.length === 0 ? [dashBlock?.description ?? entry.title] : matches,
       type: isDashboard ? "prompt" : "page",
       prompt: wrappedPrompt,
       trusted: label.trusted,
       trustedBehind: label.trustedBehind,
     });
 
-    if (page.slug === "home" && json) {
+    if (entry.slug === "home" && json) {
       const prompts = json.prompts as Array<{ title: string; prompt: string; description?: string }> | undefined;
       if (Array.isArray(prompts)) {
         for (const p of prompts) {

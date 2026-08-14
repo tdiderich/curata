@@ -2,6 +2,7 @@ import { db } from "./db";
 import { seedGettingStartedPage } from "./seed-page";
 import { generateFunSlug } from "./slug-words";
 import { DEFAULT_CONTENT_RULES } from "./content-rules";
+import { DEFAULT_REQUIRED_COMPONENTS_RULES } from "./required-components";
 import yaml from "js-yaml";
 import { createHash } from "crypto";
 import fs from "fs";
@@ -108,7 +109,7 @@ export async function seedOrg(name: string, slug?: string): Promise<{ id: string
         data: {
           name,
           slug: currentSlug,
-          rules: DEFAULT_CONTENT_RULES as unknown as Prisma.InputJsonValue,
+          rules: [...DEFAULT_CONTENT_RULES, ...DEFAULT_REQUIRED_COMPONENTS_RULES] as unknown as Prisma.InputJsonValue,
         },
       });
       break;

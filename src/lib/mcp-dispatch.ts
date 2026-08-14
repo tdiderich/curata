@@ -17,6 +17,8 @@ import {
   searchPages,
   getSiteConfig,
   bumpViewCount,
+  markTrusted,
+  clearTrusted,
 } from "@/lib/pages";
 import type { Channel } from "@/lib/pages";
 import { getOrgTheme } from "@/lib/theme";
@@ -25,7 +27,12 @@ import { getChromium, previewUrl, screenshotPage, renderHtmlToPng } from "@/lib/
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
 import { checkFolderBoundary, mcpDefaultVisibility } from "@/lib/access";
 import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
-import { validateApprovalRule } from "@/lib/approval";
+import { validateApprovalRule, canApprove, getApprovers, describeApprovalRule } from "@/lib/approval";
+import type { Role } from "@/lib/permissions";
+import { resolveRequiredComponentsRules, validateRequiredComponents, validateRequiredComponentsRule, ensureDefaultRequiredComponentsRules } from "@/lib/required-components";
+import { enforceCaptureGate } from "@/lib/capture-gate";
+import { createCaptureToken, CAPTURE_TOKEN_TTL_MS } from "@/lib/capture-token";
+import { findCaptureDedupCandidates } from "@/lib/capture-dedup";
 import type { Prisma } from "@/generated/prisma/client";
 import {
   upsertConcepts,
@@ -35,6 +42,7 @@ import {
   getVocabulary,
   getRelated,
   getSemanticMap,
+  projectConceptTerms,
 } from "@/lib/concepts";
 import type { ConceptInput, LinkInput } from "@/lib/concepts";
 import { ensureComponentIds, applyPatchOperations } from "@/lib/component-ids";
@@ -47,6 +55,7 @@ import {
   addGroupMembers,
   removeGroupMember,
   assertGroupManager,
+  isOrgManager,
 } from "@/lib/groups";
 import yaml from "js-yaml";
 import fs from "fs";
@@ -74,11 +83,18 @@ export const READ_TOOLS = [
   "export_report",
   "list_rules",
   "list_groups",
+  "capture_thread",
 ];
-export const WRITE_TOOLS = ["write_page", "create_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member"];
+export const WRITE_TOOLS = ["write_page", "create_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted"];
 export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
+
+// capture_thread's content arg is a raw pasted thread/transcript, not a
+// bounded YAML page body — without a cap a single call can push an
+// arbitrarily large payload through the dedup phrase/term extraction and
+// into the capture_token's signed fingerprint.
+const CAPTURE_CONTENT_MAX_BYTES = 200 * 1024;
 
 const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string, string> }> = {
   list_pages: { known: new Set(["channel"]) },
@@ -96,9 +112,9 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   update_folder: { known: new Set(["id", "name", "parent_id", "visibility", "rules"]), aliases: { parentId: "parent_id" } },
   get_versions: { known: new Set(["slug", "limit"]) },
   validate_page: { known: new Set(["slug", "content"]) },
-  create_page: { known: new Set(["slug", "content", "folder_id", "visibility", "rules", "concepts", "links"]), aliases: { folderId: "folder_id" } },
+  create_page: { known: new Set(["slug", "content", "folder_id", "visibility", "rules", "concepts", "links", "capture_token", "dedup_ack"]), aliases: { folderId: "folder_id" } },
   move_page: { known: new Set(["slug", "folder_id"]), aliases: { folderId: "folder_id" } },
-  write_page: { known: new Set(["slug", "content", "expected_hash", "visibility", "folder_id", "concepts", "links", "rules"]), aliases: { folderId: "folder_id" } },
+  write_page: { known: new Set(["slug", "content", "expected_hash", "visibility", "folder_id", "concepts", "links", "rules", "capture_token", "dedup_ack"]), aliases: { folderId: "folder_id" } },
   annotate_page: { known: new Set(["slug", "text", "section", "kind", "replacement"]) },
   update_annotation: { known: new Set(["slug", "annotation_id", "status"]), aliases: { annotationId: "annotation_id" } },
   patch_page: { known: new Set(["slug", "expected_hash", "operations", "concepts", "links"]) },
@@ -114,11 +130,14 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   list_rules: { known: new Set(["slug"]) },
   set_rules: { known: new Set(["scope", "scope_id", "rules"]) },
   list_groups: { known: new Set() },
+  capture_thread: { known: new Set(["content", "source", "page_type", "folder_id"]), aliases: { pageType: "page_type", folderId: "folder_id" } },
   create_group: { known: new Set(["name"]) },
   update_group: { known: new Set(["group_id", "name"]), aliases: { groupId: "group_id" } },
   delete_group: { known: new Set(["group_id"]), aliases: { groupId: "group_id" } },
   add_group_member: { known: new Set(["group_id", "user_ids", "role"]), aliases: { groupId: "group_id", userIds: "user_ids" } },
   remove_group_member: { known: new Set(["group_id", "user_id"]), aliases: { groupId: "group_id", userId: "user_id" } },
+  mark_trusted: { known: new Set(["slug", "version_id"]), aliases: { versionId: "version_id" } },
+  clear_trusted: { known: new Set(["slug"]) },
 };
 
 function validateParams(tool: string, args: Record<string, string>): Record<string, string> {
@@ -151,6 +170,28 @@ function resolveChannelArg(args: Record<string, string>): Channel {
   if (!args.channel || args.channel === "trusted") return "trusted";
   if (args.channel === "latest") return "latest";
   throw new Error(`channel must be "trusted" or "latest", got "${args.channel}"`);
+}
+
+/// mark_trusted/clear_trusted reuse the exact eligibility gate the dashboard's
+/// POST/DELETE /api/versions/trust route enforces (canApprove) — but the
+/// dispatch surface doesn't carry an org role the way resolveOrg() does, only
+/// userId. isOrgManager (groups.ts) already resolves "is this userId an
+/// owner/admin" the same way for group management, including the same
+/// system-id conventions — reuse it rather than inventing a second lookup.
+/// canApprove only branches on owner/admin vs everyone else, so collapsing
+/// non-managers to "member" here is equivalent to the real role.
+async function resolveTrustEligibility(orgId: string, userId: string | undefined, slug: string): Promise<boolean> {
+  const actorUserId = userId || "agent";
+  const orgRole: Role = (await isOrgManager(orgId, actorUserId)) ? "owner" : "member";
+  return canApprove(orgId, actorUserId, orgRole, slug);
+}
+
+/// Same wording as approvalDenialMessage in api/versions/trust/route.ts.
+async function trustDenialMessage(orgId: string, slug: string): Promise<string> {
+  const resolved = await getApprovers(orgId, slug);
+  if (!resolved) return "forbidden";
+  const note = await describeApprovalRule(orgId, resolved.rule);
+  return `forbidden: ${note}`;
 }
 
 export async function dispatch(
@@ -543,23 +584,44 @@ export async function dispatch(
       if (args.rules) {
         try { cpPageRules = JSON.parse(args.rules); } catch { throw new Error("rules must be valid JSON"); }
       }
+      let cpConceptInputs: ConceptInput[] | undefined;
+      if (args.concepts) {
+        try { cpConceptInputs = JSON.parse(args.concepts); } catch { throw new Error("concepts must be valid JSON"); }
+      }
       const cpRules = await resolveRules(orgId, args.folder_id ?? null, cpPageRules);
       const cpAllRules = [...cpRules.inherited, ...cpRules.page];
       const cpRuleCheck = validateContentRules(args.content, cpAllRules);
       if (cpRuleCheck.violations.length > 0) {
         throw new Error(`content rule violation: ${cpRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}`);
       }
+      // Required-components: a brand-new page has no existing concepts, so
+      // the resulting count is whatever this call's `concepts` arg attaches.
+      const cpRcRules = await resolveRequiredComponentsRules(orgId, args.folder_id ?? null, cpPageRules);
+      const cpAllRcRules = [...cpRcRules.inherited, ...cpRcRules.page];
+      const cpResultingConceptCount = projectConceptTerms([], cpConceptInputs).size;
+      const cpRcViolations = validateRequiredComponents(args.content, cpResultingConceptCount, cpAllRcRules);
+      if (cpRcViolations.length > 0) {
+        throw new Error(`required-components rule violation: ${cpRcViolations.map((v) => `[${v.scope}] ${v.message}`).join("; ")}`);
+      }
+      // Capture gate: only fires when the declared pageType's resolved rule
+      // sets captureRequired — a no-op for every other page.
+      enforceCaptureGate({
+        orgId,
+        content: args.content,
+        resolvedRules: cpAllRcRules,
+        captureToken: args.capture_token,
+        dedupAck: args.dedup_ack,
+      });
       const createResult = await writePage(orgId, orgSlug, args.slug, args.content, userId || "agent", undefined, undefined, cpVis);
       if (!createResult.ok) throw new Error(createResult.error);
-      if (args.concepts || args.links) {
+      if (cpConceptInputs || args.links) {
         const cpPage = await db.page.findUnique({
           where: { orgId_slug: { orgId, slug: args.slug } },
           select: { id: true },
         });
         if (cpPage) {
-          if (args.concepts) {
-            const conceptInputs: ConceptInput[] = JSON.parse(args.concepts);
-            await upsertConcepts(cpPage.id, conceptInputs, actorId);
+          if (cpConceptInputs) {
+            await upsertConcepts(cpPage.id, cpConceptInputs, actorId);
           }
           if (args.links) {
             const linkInputs: LinkInput[] = JSON.parse(args.links);
@@ -654,7 +716,7 @@ export async function dispatch(
       if (!["private", "org", "public"].includes(wpVis)) throw new Error("visibility must be private, org, or public");
       const wpExisting = await db.page.findUnique({
         where: { orgId_slug: { orgId, slug: args.slug } },
-        select: { folderId: true, rules: true, folder: { select: { visibility: true } } },
+        select: { id: true, folderId: true, rules: true, folder: { select: { visibility: true } } },
       });
       if (args.folder_id) {
         const folder = await db.folder.findFirst({ where: { id: args.folder_id, orgId } });
@@ -674,6 +736,34 @@ export async function dispatch(
       const wpRuleCheck = validateContentRules(args.content, wpAllRules);
       if (wpRuleCheck.violations.length > 0) {
         throw new Error(`content rule violation: ${wpRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}`);
+      }
+      let wpConceptInputs: ConceptInput[] | undefined;
+      if (args.concepts) {
+        try { wpConceptInputs = JSON.parse(args.concepts); } catch { throw new Error("concepts must be valid JSON"); }
+      }
+      // Required-components: validate the RESULT of this write (existing
+      // concepts merged with whatever this call's `concepts` arg changes),
+      // not just the incoming diff — matches "validate the result, not the
+      // ops" for patch_page below.
+      const wpRcRules = await resolveRequiredComponentsRules(orgId, wpFolderId, wpRulesJson);
+      const wpAllRcRules = [...wpRcRules.inherited, ...wpRcRules.page];
+      const wpExistingConceptTerms = wpExisting?.id ? (await getPageConcepts(wpExisting.id)).map((c) => c.term) : [];
+      const wpResultingConceptCount = projectConceptTerms(wpExistingConceptTerms, wpConceptInputs).size;
+      const wpRcViolations = validateRequiredComponents(args.content, wpResultingConceptCount, wpAllRcRules);
+      if (wpRcViolations.length > 0) {
+        throw new Error(`required-components rule violation: ${wpRcViolations.map((v) => `[${v.scope}] ${v.message}`).join("; ")}`);
+      }
+      // Capture gate only applies when write_page is creating a brand-new
+      // page — editing an existing one is never gated, dedup only guards
+      // against a fresh near-duplicate.
+      if (!wpExisting) {
+        enforceCaptureGate({
+          orgId,
+          content: args.content,
+          resolvedRules: wpAllRcRules,
+          captureToken: args.capture_token,
+          dedupAck: args.dedup_ack,
+        });
       }
       const writeResult = await writePage(
         orgId,
@@ -698,15 +788,14 @@ export async function dispatch(
           data: wpUpdate,
         });
       }
-      if (args.concepts || args.links) {
+      if (wpConceptInputs || args.links) {
         const wpPage = await db.page.findUnique({
           where: { orgId_slug: { orgId, slug: args.slug } },
           select: { id: true },
         });
         if (wpPage) {
-          if (args.concepts) {
-            const conceptInputs: ConceptInput[] = JSON.parse(args.concepts);
-            await upsertConcepts(wpPage.id, conceptInputs, actorId);
+          if (wpConceptInputs) {
+            await upsertConcepts(wpPage.id, wpConceptInputs, actorId);
           }
           if (args.links) {
             const linkInputs: LinkInput[] = JSON.parse(args.links);
@@ -807,12 +896,28 @@ export async function dispatch(
         // Tag/link-only patch: no content rewrite, no hash check needed.
         const tagPage = await db.page.findUnique({
           where: { orgId_slug: { orgId, slug: args.slug } },
-          select: { id: true },
+          select: { id: true, folderId: true, rules: true },
         });
         if (!tagPage) throw new Error(`page not found: ${args.slug}`);
+        let tagConceptInputs: ConceptInput[] | undefined;
         if (args.concepts) {
-          const conceptInputs: ConceptInput[] = JSON.parse(args.concepts);
-          await upsertConcepts(tagPage.id, conceptInputs, actorId);
+          try { tagConceptInputs = JSON.parse(args.concepts); } catch { throw new Error("concepts must be valid JSON"); }
+        }
+        if (tagConceptInputs) {
+          // A concepts-only patch can still trip a requireConcepts rule
+          // (e.g. removing the last tag) even though content is unchanged.
+          const tagRcRules = await resolveRequiredComponentsRules(orgId, tagPage.folderId, tagPage.rules);
+          const tagAllRcRules = [...tagRcRules.inherited, ...tagRcRules.page];
+          if (tagAllRcRules.length > 0) {
+            const tagCurrent = await readPageYaml(orgId, args.slug);
+            const tagExistingConceptTerms = (await getPageConcepts(tagPage.id)).map((c) => c.term);
+            const tagResultingConceptCount = projectConceptTerms(tagExistingConceptTerms, tagConceptInputs).size;
+            const tagRcViolations = tagCurrent ? validateRequiredComponents(tagCurrent.yaml, tagResultingConceptCount, tagAllRcRules) : [];
+            if (tagRcViolations.length > 0) {
+              throw new Error(`required-components rule violation: ${tagRcViolations.map((v) => `[${v.scope}] ${v.message}`).join("; ")}`);
+            }
+          }
+          await upsertConcepts(tagPage.id, tagConceptInputs, actorId);
         }
         if (args.links) {
           const linkInputs: LinkInput[] = JSON.parse(args.links);
@@ -878,14 +983,30 @@ export async function dispatch(
         throw new Error(`content rule violation: ${ppRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}`);
       }
 
+      let ppConceptInputs: ConceptInput[] | undefined;
+      if (args.concepts) {
+        try { ppConceptInputs = JSON.parse(args.concepts); } catch { throw new Error("concepts must be valid JSON"); }
+      }
+      // Required-components validates newYaml — the RESULT of applying the
+      // patch operations — never the ops themselves, so a patch that removes
+      // a required section (or an op sequence that nets out to one missing)
+      // is rejected the same as a from-scratch write with that section gone.
+      const ppRcRules = await resolveRequiredComponentsRules(orgId, ppExisting?.folderId ?? null, ppExisting?.rules);
+      const ppAllRcRules = [...ppRcRules.inherited, ...ppRcRules.page];
+      const ppExistingConceptTerms = ppExisting ? (await getPageConcepts(ppExisting.id)).map((c) => c.term) : [];
+      const ppResultingConceptCount = projectConceptTerms(ppExistingConceptTerms, ppConceptInputs).size;
+      const ppRcViolations = validateRequiredComponents(newYaml, ppResultingConceptCount, ppAllRcRules);
+      if (ppRcViolations.length > 0) {
+        throw new Error(`required-components rule violation: ${ppRcViolations.map((v) => `[${v.scope}] ${v.message}`).join("; ")}`);
+      }
+
       const patchResult = await writePage(orgId, orgSlug, args.slug, newYaml, "agent", current.contentHash);
       if (!patchResult.ok) throw new Error(patchResult.error);
 
-      if (args.concepts || args.links) {
+      if (ppConceptInputs || args.links) {
         if (ppExisting) {
-          if (args.concepts) {
-            const conceptInputs: ConceptInput[] = JSON.parse(args.concepts);
-            await upsertConcepts(ppExisting.id, conceptInputs, actorId);
+          if (ppConceptInputs) {
+            await upsertConcepts(ppExisting.id, ppConceptInputs, actorId);
           }
           if (args.links) {
             const linkInputs: LinkInput[] = JSON.parse(args.links);
@@ -1033,6 +1154,49 @@ export async function dispatch(
       return { ...cftResult, slug: args.target_slug };
     }
 
+    case "capture_thread": {
+      if (!args.content) throw new Error("content is required");
+      if (Buffer.byteLength(args.content, "utf8") > CAPTURE_CONTENT_MAX_BYTES) {
+        throw new Error(`content is too large (${Buffer.byteLength(args.content, "utf8")} bytes) — capture_thread accepts at most ${CAPTURE_CONTENT_MAX_BYTES} bytes (200KB); trim the thread before capturing`);
+      }
+      let ctSource: unknown;
+      if (args.source) {
+        try { ctSource = JSON.parse(args.source); } catch { throw new Error("source must be valid JSON"); }
+      }
+      const ctPageType = args.page_type || "captured-qa";
+      const ctFolderId = args.folder_id || null;
+
+      // Orgs created before required-components existed never got the
+      // default captured-qa rule; backfill here so the gate and checklist
+      // work everywhere, not just on fresh orgs.
+      await ensureDefaultRequiredComponentsRules(orgId);
+
+      const dedupCandidates = await findCaptureDedupCandidates(orgId, args.content, userId);
+
+      const ctRcRules = await resolveRequiredComponentsRules(orgId, ctFolderId, undefined);
+      const ctAllRcRules = [...ctRcRules.inherited, ...ctRcRules.page];
+      const ctApplicable = ctAllRcRules.filter((r) => r.pageType === ctPageType);
+      const checklist = ctApplicable.length > 0
+        ? {
+            pageType: ctPageType,
+            requiredComponentIds: [...new Set(ctApplicable.flatMap((r) => r.requiredComponentIds))],
+            requiredFields: [...new Set(ctApplicable.flatMap((r) => r.requiredFields ?? []))],
+            requireConcepts: ctApplicable.some((r) => r.requireConcepts === true),
+            captureRequired: ctApplicable.some((r) => r.captureRequired === true),
+          }
+        : null;
+
+      const captureToken = createCaptureToken(orgId, args.content);
+
+      return {
+        dedupCandidates,
+        checklist,
+        captureToken,
+        expiresInSeconds: Math.floor(CAPTURE_TOKEN_TTL_MS / 1000),
+        ...(ctSource !== undefined ? { source: ctSource } : {}),
+      };
+    }
+
     case "get_vocabulary": {
       return getVocabulary(args.kind || undefined, args.query || undefined);
     }
@@ -1059,7 +1223,7 @@ export async function dispatch(
 
       const chromium = await getChromium();
       const browser = await chromium.launch();
-      const url = previewUrl(args.slug, orgId);
+      const url = await previewUrl(args.slug, orgId);
       const pngBuffer = await screenshotPage(url, browser);
       await browser.close();
 
@@ -1141,7 +1305,7 @@ export async function dispatch(
 
         await addPng(await renderHtmlToPng(titlePageHtml, browser));
         for (const slug of slugList) {
-          const url = previewUrl(slug, orgId);
+          const url = await previewUrl(slug, orgId);
           await addPng(await screenshotPage(url, browser));
         }
         await addPng(await renderHtmlToPng(appendixHtml, browser));
@@ -1175,10 +1339,15 @@ export async function dispatch(
         });
         if (!lrPage) throw new Error(`page not found: ${args.slug}`);
         const lrRules = await resolveRules(orgId, lrPage.folderId, lrPage.rules);
+        const lrRcRules = await resolveRequiredComponentsRules(orgId, lrPage.folderId, lrPage.rules);
         return {
           slug: args.slug,
           inherited: lrRules.inherited,
           page: lrRules.page,
+          requiredComponents: {
+            inherited: lrRcRules.inherited,
+            page: lrRcRules.page,
+          },
         };
       }
       const lrOrg = await db.organization.findUnique({
@@ -1197,13 +1366,17 @@ export async function dispatch(
       try { parsedRules = JSON.parse(args.rules ?? "[]"); } catch { throw new Error("rules must be valid JSON array"); }
       if (!Array.isArray(parsedRules)) throw new Error("rules must be an array");
 
-      // Approval-kind entries get shape-validated (malformed approvers reject
-      // the whole write); other rule kinds keep the existing pass-through
-      // behavior of this tool.
+      // Approval-kind and required-components-kind entries get shape-validated
+      // (malformed ones reject the whole write); other rule kinds keep the
+      // existing pass-through behavior of this tool.
       for (const candidate of parsedRules) {
         if (candidate && typeof candidate === "object" && (candidate as Record<string, unknown>).kind === "approval") {
           const validated = validateApprovalRule(candidate);
           if (!validated.ok) throw new Error(`invalid approval rule: ${validated.error}`);
+        }
+        if (candidate && typeof candidate === "object" && (candidate as Record<string, unknown>).kind === "required-components") {
+          const validated = validateRequiredComponentsRule(candidate);
+          if (!validated.ok) throw new Error(`invalid required-components rule: ${validated.error}`);
         }
       }
 
@@ -1301,6 +1474,50 @@ export async function dispatch(
       await removeGroupMember(orgId, args.group_id, args.user_id);
       logAudit({ orgId, action: "group.member.remove", resourceType: "group", resourceId: args.group_id, actorType: "apikey", actorId, metadata: { userId: args.user_id } });
       return { ok: true };
+    }
+
+    // mark_trusted/clear_trusted: agents may flip a page's trust pointer, but
+    // only if the human behind the calling key is eligible under the same
+    // approval rule the dashboard's "Mark trusted" button enforces. Audit
+    // logging lives in markTrusted/clearTrusted (pages.ts) — not duplicated
+    // here.
+    case "mark_trusted": {
+      if (!args.slug) throw new Error("slug is required");
+      if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
+      const actorUserId = userId || "agent";
+
+      const eligible = await resolveTrustEligibility(orgId, userId, args.slug);
+      if (!eligible) throw new Error(await trustDenialMessage(orgId, args.slug));
+
+      let versionId = args.version_id;
+      if (!versionId) {
+        const mtPage = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: args.slug } } });
+        if (!mtPage) throw new Error(`page not found: ${args.slug}`);
+        const latest = await db.pageVersion.findFirst({
+          where: { pageId: mtPage.id },
+          orderBy: { createdAt: "desc" },
+          select: { id: true },
+        });
+        if (!latest) throw new Error(`no versions found for page: ${args.slug}`);
+        versionId = latest.id;
+      }
+
+      const result = await markTrusted(orgId, args.slug, versionId, actorUserId);
+      if (!result.ok) throw new Error(result.error);
+      return { ok: true, slug: args.slug, versionId };
+    }
+
+    case "clear_trusted": {
+      if (!args.slug) throw new Error("slug is required");
+      if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
+      const actorUserId = userId || "agent";
+
+      const eligible = await resolveTrustEligibility(orgId, userId, args.slug);
+      if (!eligible) throw new Error(await trustDenialMessage(orgId, args.slug));
+
+      const result = await clearTrusted(orgId, args.slug, actorUserId);
+      if (!result.ok) throw new Error(result.error);
+      return { ok: true, slug: args.slug };
     }
 
     default:

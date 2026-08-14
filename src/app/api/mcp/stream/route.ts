@@ -19,6 +19,8 @@ import {
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
 import { checkFolderBoundary, mcpDefaultVisibility } from "@/lib/access";
 import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
+import { resolveRequiredComponentsRules } from "@/lib/required-components";
+import { enforceCaptureGate } from "@/lib/capture-gate";
 import {
   upsertConcepts,
   upsertLinks,
@@ -206,8 +208,8 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   });
 
   server.tool("write_page", "Create or update a page",
-    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?, remove?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework — call get_vocabulary to see kinds in use. remove: true detaches the tag from this page. Supplying kind on an existing term re-kinds the concept everywhere it is used.'), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]") },
-    async ({ slug, content, folder_id, visibility, sort_order, concepts: conceptsJson, links: linksJson }) => {
+    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?, remove?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework — call get_vocabulary to see kinds in use. remove: true detaches the tag from this page. Supplying kind on an existing term re-kinds the concept everywhere it is used.'), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]"), capture_token: z.string().optional().describe("Required when creating a page whose pageType has captureRequired: true — the token capture_thread returned"), dedup_ack: z.string().optional().describe('Required alongside capture_token: "new", or the candidate slug capture_thread should redirect you to patch_page instead') },
+    async ({ slug, content, folder_id, visibility, sort_order, concepts: conceptsJson, links: linksJson, capture_token, dedup_ack }) => {
       validateSlug(slug);
       const unsupported = checkUnsupportedComponents(content);
       if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
@@ -234,6 +236,21 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       const wpRuleCheck = validateContentRules(content, wpAllRules);
       if (wpRuleCheck.violations.length > 0) {
         return { content: [{ type: "text", text: `Error: content rule violation: ${wpRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}` }], isError: true };
+      }
+      if (!wpExisting) {
+        try {
+          // wpExisting is always falsy in this branch — there are no page-level rules yet.
+          const wpRcRules = await resolveRequiredComponentsRules(orgId, wpFolderId, null);
+          enforceCaptureGate({
+            orgId,
+            content,
+            resolvedRules: [...wpRcRules.inherited, ...wpRcRules.page],
+            captureToken: capture_token,
+            dedupAck: dedup_ack,
+          });
+        } catch (e) {
+          return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        }
       }
       const result = await writePage(orgId, orgSlug, slug, content, userId || "agent", undefined, sort_order, wpVis);
       if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
@@ -374,8 +391,8 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     });
 
   server.tool("create_page", "Create a new knowledge page in the brain. Search for duplicates FIRST (search_pages + get_related) — if an existing page covers the topic, patch_page it instead of creating a near-duplicate. Tag the page with concepts so it appears in the brain map",
-    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework.'), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]") },
-    async ({ slug, content, folder_id, visibility, sort_order, concepts: conceptsJson, links: linksJson }) => {
+    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework.'), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]"), capture_token: z.string().optional().describe("Required when creating a page whose pageType has captureRequired: true — the token capture_thread returned"), dedup_ack: z.string().optional().describe('Required alongside capture_token: "new", or the candidate slug capture_thread should redirect you to patch_page instead') },
+    async ({ slug, content, folder_id, visibility, sort_order, concepts: conceptsJson, links: linksJson, capture_token, dedup_ack }) => {
       validateSlug(slug);
       const existing = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
       if (existing) return { content: [{ type: "text", text: `Error: page already exists: ${slug}` }], isError: true };
@@ -397,6 +414,18 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       const cpRuleCheck = validateContentRules(content, cpAllRules);
       if (cpRuleCheck.violations.length > 0) {
         return { content: [{ type: "text", text: `Error: content rule violation: ${cpRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}` }], isError: true };
+      }
+      try {
+        const cpRcRules = await resolveRequiredComponentsRules(orgId, folder_id ?? null, null);
+        enforceCaptureGate({
+          orgId,
+          content,
+          resolvedRules: [...cpRcRules.inherited, ...cpRcRules.page],
+          captureToken: capture_token,
+          dedupAck: dedup_ack,
+        });
+      } catch (e) {
+        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
       }
       const result = await writePage(orgId, orgSlug, slug, content, userId || "agent", undefined, sort_order, cpVis);
       if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
@@ -607,6 +636,15 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
+  server.tool("capture_thread", "Gate 1 of capturing a raw thread/transcript: run this before create_page for a typed capture page. Returns dedup_candidates (existing pages that may already cover this), a checklist of what the target pageType requires, and a capture_token to pass to create_page/write_page along with dedup_ack.",
+    {
+      content: z.string().describe("The thread/transcript text to capture"),
+      source: z.string().optional().describe('JSON object of source metadata, e.g. {"url": "...", "participants": ["..."], "date": "..."}'),
+      page_type: z.string().optional().describe('Page type to derive the checklist for — defaults to "captured-qa"'),
+      folder_id: z.string().optional().describe("Target folder, if known — used to resolve folder-scoped required-components rules"),
+    },
+    viaDispatch("capture_thread"));
+
   server.tool("get_config", "Get site configuration", {}, viaDispatch("get_config"));
 
   server.tool("list_annotations", "List annotations on a page",
@@ -711,6 +749,14 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   server.tool("remove_group_member", "Remove a member from a group. Owner/admin only.",
     { group_id: z.string(), user_id: z.string() },
     viaDispatch("remove_group_member"));
+
+  server.tool("mark_trusted", "Pin a page version as the human-approved \"trusted\" read (npm dist-tag style). Only succeeds if the calling key's human is eligible under the page's approval rule (same check as the dashboard's Mark trusted button) — errors naming the rule otherwise. Always confirm with your human before calling this.",
+    { slug: z.string(), version_id: z.string().optional().describe("Version to trust; defaults to the page's latest version") },
+    viaDispatch("mark_trusted"));
+
+  server.tool("clear_trusted", "Clear a page's trusted pointer — reads on the \"trusted\" channel fall back to latest (labeled untrusted) until a human marks a version again. Same eligibility gate as mark_trusted.",
+    { slug: z.string() },
+    viaDispatch("clear_trusted"));
 
   return server;
 }

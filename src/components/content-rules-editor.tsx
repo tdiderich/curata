@@ -29,6 +29,16 @@ interface ApprovalRuleData {
   approvers: ApprovalApproverInput[];
 }
 
+/** Client-side mirror of RequiredComponentsRule from @/lib/required-components. */
+interface RequiredComponentsRuleData {
+  id: string;
+  kind: "required-components";
+  pageType: string;
+  requiredComponentIds: string[];
+  requiredFields?: string[];
+  requireConcepts?: boolean;
+}
+
 interface ContentRulesEditorProps {
   scopeParam: string;
   initialRules: ContentRule[];
@@ -36,7 +46,7 @@ interface ContentRulesEditorProps {
 }
 
 type Enforcement = "block" | "review" | "guidance";
-type EditingKind = "content" | "approval" | null;
+type EditingKind = "content" | "approval" | "required-components" | null;
 
 function enforcementOf(rule: ContentRule): Enforcement {
   if (!rule.patterns || rule.patterns.length === 0) return "guidance";
@@ -55,9 +65,10 @@ const ENFORCEMENT_HINT: Record<Enforcement, string> = {
   guidance: "Guidance: shown to agents on read, not enforced on save (no patterns).",
 };
 
-const KIND_HINT: Record<"content" | "approval", string> = {
+const KIND_HINT: Record<"content" | "approval" | "required-components", string> = {
   content: "A content rule checks page saves against regex patterns and an enforcement level.",
   approval: "Approval: changes to matching pages only serve as trusted after an approver signs off.",
+  "required-components": "Required shape: pages that declare a matching pageType must keep a fixed set of component ids (and optionally a concept tag) on every save.",
 };
 
 function splitApproverId(prefixed: string): ApprovalApproverInput {
@@ -69,6 +80,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
   const router = useRouter();
   const [rules, setRules] = useState<ContentRule[]>(initialRules);
   const [approvalRule, setApprovalRule] = useState<ApprovalRuleData | null>(null);
+  const [rcRules, setRcRules] = useState<RequiredComponentsRuleData[]>([]);
 
   const [editingKind, setEditingKind] = useState<EditingKind>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -82,20 +94,28 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
 
+  const [formPageType, setFormPageType] = useState("");
+  const [formRequiredIds, setFormRequiredIds] = useState<string[]>([]);
+  const [formRequiredFields, setFormRequiredFields] = useState<string[]>([]);
+  const [formRequireConcepts, setFormRequireConcepts] = useState(true);
+
   const { groups, members } = useApprovalDirectory(canManage);
 
-  // Approval-kind rules ride the same rules array but are excluded from the
-  // server-computed `initialRules` prop (globalRules in settings/page.tsx only
-  // keeps `text`-shaped rules), so fetch the full scope once to pick it up.
+  // Approval-kind and required-components-kind rules ride the same rules
+  // array but are excluded from the server-computed `initialRules` prop
+  // (globalRules in settings/page.tsx only keeps `text`-shaped rules), so
+  // fetch the full scope once to pick them up.
   useEffect(() => {
     if (!canManage) return;
     let cancelled = false;
     async function load() {
       const res = await fetch(`${basePath}/api/rules?${scopeParam}`);
       if (cancelled || !res.ok) return;
-      const data = (await res.json()) as { rules: Array<ContentRule | ApprovalRuleData> };
+      const data = (await res.json()) as { rules: Array<ContentRule | ApprovalRuleData | RequiredComponentsRuleData> };
       const approval = data.rules.find((r): r is ApprovalRuleData => "kind" in r && r.kind === "approval");
       setApprovalRule(approval ?? null);
+      const rc = data.rules.filter((r): r is RequiredComponentsRuleData => "kind" in r && r.kind === "required-components");
+      setRcRules(rc);
     }
     load();
     return () => {
@@ -114,11 +134,19 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
     setSelectedUsers(new Set());
   }
 
+  function resetRcForm() {
+    setFormPageType("");
+    setFormRequiredIds([]);
+    setFormRequiredFields([]);
+    setFormRequireConcepts(true);
+  }
+
   function cancelEdit() {
     setEditingKind(null);
     setEditingId(null);
     resetContentForm();
     resetApprovalForm();
+    resetRcForm();
   }
 
   function startEditContent(rule: ContentRule) {
@@ -136,8 +164,17 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
     setSelectedUsers(new Set((approvalRule?.approvers ?? []).filter((a) => a.type === "user").map((a) => a.id)));
   }
 
+  function startEditRc(rule: RequiredComponentsRuleData) {
+    setEditingKind("required-components");
+    setEditingId(rule.id);
+    setFormPageType(rule.pageType);
+    setFormRequiredIds(rule.requiredComponentIds.length > 0 ? rule.requiredComponentIds : [""]);
+    setFormRequiredFields(rule.requiredFields ?? []);
+    setFormRequireConcepts(rule.requireConcepts ?? false);
+  }
+
   /** "Add rule" entry point — always opens a blank content draft; the kind
-   * control inside the draft lets the user switch to Approval before saving. */
+   * control inside the draft lets the user switch to Approval or Required shape before saving. */
   function openNewDraft() {
     setEditingKind("content");
     setEditingId(null);
@@ -145,6 +182,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
     setFormMode("warn");
     setFormPatterns([""]);
     resetApprovalForm();
+    resetRcForm();
   }
 
   function enforcementSegValue(): Enforcement {
@@ -164,17 +202,24 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
     }
   }
 
-  function handleKindSwitch(next: "content" | "approval") {
+  function handleKindSwitch(next: "content" | "approval" | "required-components") {
     // Only reachable while drafting a brand-new rule — kind is locked once
     // a rule is persisted (existing rows never show this control at all).
     if (editingId !== null) return;
     if (next === "content") {
       setEditingKind("content");
       resetApprovalForm();
+      resetRcForm();
       setFormPatterns((prev) => (prev.length > 0 ? prev : [""]));
-    } else {
+    } else if (next === "approval") {
       setEditingKind("approval");
       resetContentForm();
+      resetRcForm();
+    } else {
+      setEditingKind("required-components");
+      resetContentForm();
+      resetApprovalForm();
+      setFormRequiredIds((prev) => (prev.length > 0 ? prev : [""]));
     }
   }
 
@@ -266,6 +311,61 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
     }
   }
 
+  async function saveRcRule() {
+    const pageType = formPageType.trim();
+    if (!pageType) return;
+    const requiredComponentIds = formRequiredIds.map((id) => id.trim()).filter(Boolean);
+    const requiredFields = formRequiredFields.map((f) => f.trim()).filter(Boolean);
+    if (requiredComponentIds.length === 0 && requiredFields.length === 0 && !formRequireConcepts) return;
+
+    setBusy(true);
+    setError(null);
+    const body: Record<string, unknown> = {
+      kind: "required-components",
+      pageType,
+      requiredComponentIds,
+      ...(requiredFields.length > 0 ? { requiredFields } : {}),
+      ...(formRequireConcepts ? { requireConcepts: true } : {}),
+    };
+
+    try {
+      if (editingId) {
+        body.id = editingId;
+        const res = await fetch(`${basePath}/api/rules?${scopeParam}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const json = (await res.json().catch(() => ({}))) as { error?: string };
+          setError(json.error || "Failed to update rule.");
+          return;
+        }
+        const data = (await res.json()) as { rule: RequiredComponentsRuleData };
+        setRcRules((prev) => prev.map((r) => (r.id === editingId ? data.rule : r)));
+      } else {
+        const res = await fetch(`${basePath}/api/rules?${scopeParam}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const json = (await res.json().catch(() => ({}))) as { error?: string };
+          setError(json.error || "Failed to add rule.");
+          return;
+        }
+        const data = (await res.json()) as { rule: RequiredComponentsRuleData };
+        setRcRules((prev) => [...prev, data.rule]);
+      }
+      cancelEdit();
+      router.refresh();
+    } catch {
+      setError("Network error.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function deleteRule(ruleId: string) {
     setBusy(true);
     setError(null);
@@ -278,6 +378,8 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
       }
       if (ruleId === "approval") {
         setApprovalRule(null);
+      } else if (rcRules.some((r) => r.id === ruleId)) {
+        setRcRules((prev) => prev.filter((r) => r.id !== ruleId));
       } else {
         setRules((prev) => prev.filter((r) => r.id !== ruleId));
       }
@@ -394,9 +496,71 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
     );
   }
 
+  /** Freeform list editor (add/remove text rows) shared by the required
+   * component ids and required fields inputs — same interaction as the
+   * content rule's "Regex patterns" list above. */
+  function stringListEditor(values: string[], setValues: (fn: (prev: string[]) => string[]) => void, addLabel: string) {
+    return (
+      <>
+        {values.map((v, idx) => (
+          <div className="stg-pat-row" key={idx}>
+            <input
+              className="stg-input"
+              value={v}
+              onChange={(e) => setValues((prev) => prev.map((x, i2) => (i2 === idx ? e.target.value : x)))}
+            />
+            <button
+              type="button"
+              className="stg-icon-btn"
+              title="Remove"
+              onClick={() => setValues((prev) => prev.filter((_, i2) => i2 !== idx))}
+            >
+              &times;
+            </button>
+          </div>
+        ))}
+        <button type="button" className="stg-addpat" onClick={() => setValues((prev) => [...prev, ""])}>
+          {addLabel}
+        </button>
+      </>
+    );
+  }
+
+  /** Shared field set for both the "edit an existing required-components rule" row and the new-draft row. */
+  function rcFields() {
+    return (
+      <>
+        <FormRow label="Page type" hint="Matches the page's own top-level pageType field — only pages that declare this type are checked.">
+          <input
+            className="stg-input"
+            value={formPageType}
+            onChange={(e) => setFormPageType(e.target.value)}
+            placeholder="captured-qa"
+          />
+        </FormRow>
+        <FormRow label="Required component ids" hint="Component ids (see get_component_reference) that must exist somewhere on the page.">
+          {stringListEditor(formRequiredIds, setFormRequiredIds, "+ Add component id")}
+        </FormRow>
+        <FormRow label="Required fields" hint="Top-level page fields (title, subtitle, eyebrow…) that must be present and non-empty. Optional.">
+          {stringListEditor(formRequiredFields, setFormRequiredFields, "+ Add field")}
+        </FormRow>
+        <FormRow label="Concept tag" hint="If required, the page must carry at least one concept tag.">
+          <SegmentedControl<"required" | "optional">
+            value={formRequireConcepts ? "required" : "optional"}
+            onChange={(v) => setFormRequireConcepts(v === "required")}
+            options={[
+              { value: "required", label: "Required" },
+              { value: "optional", label: "Optional" },
+            ]}
+          />
+        </FormRow>
+      </>
+    );
+  }
+
   const isNewDraft = editingKind !== null && editingId === null;
   const showApprovalRow = !!approvalRule;
-  const hasAnyRows = rules.length > 0 || showApprovalRow || isNewDraft;
+  const hasAnyRows = rules.length > 0 || showApprovalRow || rcRules.length > 0 || isNewDraft;
 
   return (
     <div className="cr-editor">
@@ -523,27 +687,90 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
           </>
         )}
 
+        {rcRules.map((rule) => {
+          const isEditing = editingKind === "required-components" && editingId === rule.id;
+          return (
+            <Fragment key={rule.id}>
+              <tr className="dash-row">
+                <td className="dash-td dash-td-title">
+                  Pages of type &quot;{rule.pageType}&quot; require: {rule.requiredComponentIds.join(", ") || "—"}
+                  {rule.requiredFields && rule.requiredFields.length > 0 ? `; fields: ${rule.requiredFields.join(", ")}` : ""}
+                  {rule.requireConcepts ? "; at least one concept tag" : ""}
+                </td>
+                <td className="dash-td">
+                  <StatusBadge tone="framework" label="Required shape" />
+                </td>
+                <td className="dash-td">
+                  <span className="stg-pcount">
+                    {rule.requiredComponentIds.length} component{rule.requiredComponentIds.length !== 1 ? "s" : ""}
+                  </span>
+                </td>
+                {canManage && (
+                  <td className="dash-td stg-td-right">
+                    {isEditing ? (
+                      <span className="stg-row-actions stg-row-actions--pinned">
+                        <span className="stg-qbtn" style={{ opacity: 0.6, cursor: "default" }}>Editing&hellip;</span>
+                      </span>
+                    ) : (
+                      <span className="stg-row-actions">
+                        <button className="stg-qbtn" onClick={() => startEditRc(rule)} disabled={busy}>Edit</button>
+                        <button className="stg-qbtn stg-qbtn--danger" onClick={() => deleteRule(rule.id)} disabled={busy}>Delete</button>
+                      </span>
+                    )}
+                  </td>
+                )}
+              </tr>
+              {isEditing && (
+                <tr className="dash-row">
+                  <td className="dash-td" colSpan={canManage ? 4 : 3}>
+                    <div className="stg-editor">
+                      {rcFields()}
+                      <div className="stg-editor-foot">
+                        <button className="stg-btn stg-btn--primary" onClick={saveRcRule} disabled={busy || !formPageType.trim()}>
+                          {busy ? "Saving…" : "Save rule"}
+                        </button>
+                        <button className="stg-btn stg-btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
+                        <span className="stg-editor-foot-spacer" />
+                        <button className="stg-qbtn stg-qbtn--danger" onClick={() => deleteRule(rule.id)} disabled={busy}>
+                          Delete rule
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </Fragment>
+          );
+        })}
+
         {isNewDraft && (
           <tr className="dash-row">
             <td className="dash-td" colSpan={canManage ? 4 : 3}>
               <div className="stg-editor">
                 <FormRow label="Rule kind" hint={KIND_HINT[editingKind!]}>
-                  <SegmentedControl<"content" | "approval">
+                  <SegmentedControl<"content" | "approval" | "required-components">
                     value={editingKind!}
                     onChange={handleKindSwitch}
                     disabledOptions={approvalRule ? ["approval"] : []}
                     options={[
                       { value: "content", label: "Content" },
                       { value: "approval", label: "Approval" },
+                      { value: "required-components", label: "Required shape" },
                     ]}
                   />
                 </FormRow>
-                {editingKind === "content" ? contentFields() : approvalFields()}
+                {editingKind === "content" && contentFields()}
+                {editingKind === "approval" && approvalFields()}
+                {editingKind === "required-components" && rcFields()}
                 <div className="stg-editor-foot">
                   <button
                     className="stg-btn stg-btn--primary"
-                    onClick={editingKind === "content" ? saveContentRule : saveApprovalRule}
-                    disabled={busy || (editingKind === "content" && !formText.trim())}
+                    onClick={editingKind === "content" ? saveContentRule : editingKind === "approval" ? saveApprovalRule : saveRcRule}
+                    disabled={
+                      busy ||
+                      (editingKind === "content" && !formText.trim()) ||
+                      (editingKind === "required-components" && !formPageType.trim())
+                    }
                   >
                     {busy ? "Saving…" : "Save rule"}
                   </button>

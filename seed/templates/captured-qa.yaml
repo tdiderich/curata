@@ -1,0 +1,36 @@
+title: "{{question}}"
+shell: document
+pageType: captured-qa
+components:
+  - type: section
+    id: question
+    eyebrow: Question
+    heading: "{{question}}"
+    components:
+      - type: markdown
+        body: "{{question}}"
+  - type: section
+    id: answer
+    eyebrow: Answer
+    heading: Answer
+    components:
+      - type: markdown
+        body: |
+          {{answer_markdown}}
+  - type: section
+    id: provenance
+    eyebrow: Provenance
+    heading: Where this came from
+    components:
+      - type: definition_list
+        items:
+          - term: Source
+            definition: "{{source_link - the thread, call, or doc this came from}}"
+          - term: Said by
+            definition: "{{attributed_to - who said it or who verified it}}"
+          - term: Captured
+            definition: "{{captured_date}}"
+  - type: callout
+    variant: info
+    title: This is a curata captured-qa template.
+    body: "One page per captured answer. The pageType: captured-qa field and the question/answer/provenance section ids are load-bearing - a required-components rule enforces this shape (plus at least one concept tag) on every write from here on, not just at creation. Tag the page with at least one concept before or right after creating it, via create_page/patch_page's concepts argument."

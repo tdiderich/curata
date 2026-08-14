@@ -68,6 +68,27 @@ async function findConceptForTerm(rawTerm: string, normalized: string) {
   return db.concept.findUnique({ where: { normalizedName: legacy } });
 }
 
+/**
+ * Projects the resulting *set* of normalized concept terms a page will carry
+ * after applying `incoming` on top of `existingTerms` — used by
+ * required-components validation to check "will this page have at least one
+ * concept tag" before upsertConcepts() actually runs (which happens after
+ * the write, not before). Mirrors upsertConcepts' add/remove logic at the
+ * term-membership level; it doesn't need section granularity, just whether
+ * a term will still be attached.
+ */
+export function projectConceptTerms(existingTerms: string[], incoming?: ConceptInput[]): Set<string> {
+  const terms = new Set(existingTerms.map((t) => normalizeTerm(t)).filter(Boolean));
+  if (!incoming) return terms;
+  for (const c of incoming) {
+    const normalized = normalizeTerm(c.term);
+    if (!normalized) continue;
+    if (c.remove) terms.delete(normalized);
+    else terms.add(normalized);
+  }
+  return terms;
+}
+
 export async function upsertConcepts(
   pageId: string,
   concepts: ConceptInput[],
