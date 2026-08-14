@@ -1,22 +1,17 @@
 title: "Skill - Weekly Highlights"
-subtitle: Scan the week across every account and publish a WIN/WATCH digest the team reads in five minutes.
+subtitle: Scan what became trusted this week and what's still waiting on a human, and publish a five-minute digest.
 shell: standard
 skill:
-  trigger: "weekly highlights, weekly digest, what happened this week"
+  trigger: "weekly highlights, weekly digest, what happened this week, review digest"
   setup:
-    - key: chatter_tools
-      ask: "Which tools have customer chatter worth scanning weekly - Slack, Teams, email? Name each one."
-    - key: chatter_channels
-      ask: "What's the channel naming pattern that identifies customer channels, so the scan covers all of them without you listing each?"
-    - key: recording_tool
-      ask: "Which tool has call recordings or transcripts, if you want last week's calls in the scan?"
-    - key: team_channel
-      ask: "Which channel should the recap message land in, if you want the digest posted and not just written to a page?"
+    - key: digest_folder
+      ask: "Which folder should the digest page land in, if you want a default rather than picking each time? Optional."
 dashboard:
   prompt: |
-    Run the Weekly Highlights skill. Follow the flow on this page to scan the
-    past 7 days across all accounts and publish the WIN/WATCH digest.
-  description: "Cross-account WIN/WATCH digest, weekly"
+    Run the Weekly Highlights skill. Follow the flow on this page to scan
+    what's newly trusted and what's still pending review, then publish the
+    digest page.
+  description: "Weekly digest: what got trusted, what's still pending"
 components:
   - type: section
     eyebrow: Overview
@@ -24,37 +19,31 @@ components:
     components:
       - type: callout
         variant: info
-        title: Five-minute Monday briefing, generated for you
+        title: A five-minute read on the review backlog
         body: |
-          Scans every customer's pages and chatter for the past 7 days, splits what it finds into WINs (momentum worth naming) and WATCHes (risks worth acting on), and publishes a dated digest page. Run it before the Monday standup.
+          Scans every page's trust state, splits what it finds into what a human approved this week and what's still sitting in the review queue, then publishes a dated digest page. Run it manually before the team standup, whenever you want a read on the backlog.
       - type: definition_list
         items:
           - term: Trigger
-            definition: Scheduled weekly or manual - Monday morning before the team standup.
+            definition: Manual - run whenever you want a read on the review backlog, no schedule required.
           - term: Data Sources
-            definition: All customer pages in this curata instance, plus chatter and calls from the past 7 days. See the Data Model reference for how each gets used differently.
+            definition: This curata instance's own trust state, read over MCP. No external tool required.
           - term: Output
-            definition: A dated weekly highlights page with WINs, WATCHes, and any account needing attention before next standup - plus a draft recap message for your team channel.
+            definition: A dated digest page listing what became trusted this week and what's still pending review, oldest-waiting first.
 
   - type: section
     eyebrow: Setup
-    heading: Customer Context
+    heading: Optional Defaults
     components:
       - type: callout
         variant: warn
-        title: One-time setup, mostly chatter
+        title: Nothing required, one thing worth deciding once
         body: |
-          No per-customer setup here: the channel pattern is what lets one run cover every account. Every {{placeholder}}-style tool name in the flow below stands in for a real MCP tool. Answer once, replace, done.
+          This skill has no external tool dependency, it runs on curata alone. The only thing worth fixing per org is where the digest page lands.
       - type: definition_list
         items:
-          - term: Tools
-            definition: Which tools have customer chatter worth scanning weekly - Slack, Teams, email? Name each one.
-          - term: Channel pattern
-            definition: What's the channel naming pattern that identifies customer channels, so the scan covers all of them without you listing each?
-          - term: Recording tool
-            definition: Which tool has call recordings or transcripts, if you want last week's calls in the scan?
-          - term: Team channel
-            definition: Which channel should the recap message land in, if you want the digest posted and not just written to a page?
+          - term: Digest folder
+            definition: Which folder should the digest page land in, if you want a default rather than picking each time? Optional.
 
   - type: section
     eyebrow: Prerequisites
@@ -64,10 +53,10 @@ components:
         variant: warn
         title: Required inputs
         body: |
-          - At least one customer page set in curata to scan
-          - The date range to cover (defaults to the past 7 days)
+          - At least one page in this curata instance
+          - Nothing else - no external MCP tool is required to run this skill
 
-          Customer pages stay untouched - this skill only writes the digest page and drafts the recap message.
+          There's no MCP tool for marking a page trusted. This skill reads that state, it never changes it. If the digest surfaces something that should be approved, say so and point at `/review`, don't act on it here.
 
   - type: section
     eyebrow: Flow
@@ -75,24 +64,22 @@ components:
     components:
       - type: markdown
         body: |
-          `YourChatterTool` below stands in for whatever tools you named in answer to the setup questions above - replace it with the real tool names before running this for your org. Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
+          Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
 
           ```agl
           spec WeeklyHighlights {
             in: none: str
             out: digest_published: bool
-            description: "Scan the week across every account and publish a WIN/WATCH digest the team reads in five minutes."
-            requires: list_pages, read_page, write_page, YourChatterTool
+            description: "Scan what became trusted this week and what's still waiting on a human, and publish a five-minute digest."
+            requires: list_pages, get_versions, write_page
 
             flow {
-              state SCAN_PAGES -> call(list_pages, "customer pages changed in the past 7 days") -> next
-              state READ_CHANGES -> call(read_page, "each changed page, plus open annotations") -> next
-              state SCAN_CHATTER -> call(YourChatterTool, "customer channels from the confirmed pattern, past 7 days") -> next
-              state SYNTHESIZE_WIN_WATCH -> evaluate(week_activity vs win_watch_shape) -> next
-              state DRAFT_DIGEST -> evaluate(win_watch_items vs five_minute_read) -> next
+              state SCAN_TRUST_STATE -> call(list_pages, "channel: latest, every page's trusted and trustedBehind labels") -> next
+              state SPLIT_NEWLY_TRUSTED -> call(get_versions, "for pages showing trusted: true, the trusted version's created date as the closest available proxy for when it was approved - list_pages carries no separate trust timestamp") -> next
+              state SPLIT_PENDING -> evaluate(trusted_false_pages vs never_trusted_or_trusted_behind) -> next
+              state DRAFT_DIGEST -> evaluate(newly_trusted vs still_pending vs five_minute_read) -> next
               state PROPOSE_DIGEST -> gate(human_approval) -> WRITE_DIGEST
-              state WRITE_DIGEST -> call(write_page, "the dated weekly highlights page") -> next
-              state POST_RECAP -> call(YourChatterTool, "draft the recap message to the team channel, a human sends it") -> TERMINATE("Weekly highlights published")
+              state WRITE_DIGEST -> call(write_page, "the dated weekly highlights page") -> TERMINATE("Weekly highlights published")
             }
           }
           ```
@@ -105,6 +92,6 @@ components:
         variant: info
         title: Digest, don't dump
         body: |
-          Pick the three to five items per bucket that matter, ordered by urgency or ARR. Anything urgent goes in a callout at the top, never buried in the list. Link every highlight to its customer page.
+          Lead with anything that's been pending the longest. Link every entry to its page. The "newly trusted" date is a proxy (the trusted version's creation date, not the trust action itself), label it as such rather than stating it as exact.
 
-          Skip anything you're unsure belongs and link the customer page instead.
+          This skill only writes the digest page. It never marks anything trusted, that stays a human action on `/review`.

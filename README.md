@@ -81,6 +81,8 @@ Curata ships as a Claude Code plugin with skills for planning, workflows, and pa
 | `/curata-workflow` | List and run workflows from your instance |
 | `/curata-read` | Search, browse, and read pages |
 | `/curata-write` | Create and update pages |
+| `/curata-capture` | Capture a pasted thread into a deduped, checklist-complete page |
+| `/curata-review` | Summarize what's pending review and what's trusted but behind |
 
 Skills are thin pointers — workflow content lives as curata pages (seeded on first run), so you can customize workflows by editing pages directly.
 

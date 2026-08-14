@@ -11,6 +11,8 @@ Skills for managing your curata instance from Claude Code, Cursor, or any MCP-co
 | `curata-workflow` | `/curata-workflow` | List and run workflows from your curata instance |
 | `curata-read` | `/curata-read` | Read, search, and browse pages |
 | `curata-write` | `/curata-write` | Create and update pages |
+| `curata-capture` | `/curata-capture` | Capture a pasted thread into a deduped, checklist-complete page |
+| `curata-review` | `/curata-review` | Summarize what's pending review and what's trusted but behind |
 
 ## Getting started
 

@@ -1,20 +1,19 @@
 title: "Skill - FAQ Capture"
-subtitle: Find the questions your team keeps answering in chat and promote them to approved FAQ pages.
+subtitle: Turn a pasted thread or transcript into a reviewable curata page, deduped and checklist-complete before anything gets written.
 shell: standard
 skill:
-  trigger: "capture faqs, faq sweep, what keeps getting asked"
+  trigger: "capture this, add to the brain, add to the faq, save this thread"
   setup:
-    - key: chatter_tools
-      ask: "Which tools have the recurring questions - Slack, Teams? Name the exact MCP tool."
-    - key: chatter_channels
-      ask: "Which channels collect the questions - help channels, support channels, team ask-me-anything channels? Name them or give the naming pattern."
-    - key: faq_folder
-      ask: "Which folder should FAQ pages land in? Name it so every FAQ ends up in one predictable place."
+    - key: capture_folder
+      ask: "Which folder should captured pages land in, if you want a default rather than picking each time? Optional - capture_thread and create_page both work without one."
+    - key: capture_page_type
+      ask: "Is captured-qa (the default) the right shape for what you're capturing, or do you have a different page type in mind?"
 dashboard:
   prompt: |
-    Run the FAQ Capture skill. Follow the flow on this page to scan the
-    confirmed channels for recurring questions and publish approved FAQ pages.
-  description: "Promote recurring chat questions to approved FAQs"
+    Run the FAQ Capture skill. Paste the thread or transcript you want captured
+    (or a link, if I have a tool that can fetch it), then follow the flow on
+    this page.
+  description: "Turn a pasted thread into a reviewable, deduped page"
 components:
   - type: section
     eyebrow: Overview
@@ -22,35 +21,33 @@ components:
     components:
       - type: callout
         variant: info
-        title: Stop re-answering the same question
+        title: Stop losing answers to chat history
         body: |
-          Scans the channels where questions pile up, finds the ones asked more than once, matches them with the answers people gave in thread, and publishes each as an approved FAQ page. Next time the question comes up, agents cite the page instead of guessing from chatter.
+          Takes a thread, transcript, or conversation you paste in, checks it against existing pages so the same answer never gets captured twice, fills a rule-derived checklist for the target page type, and creates or updates a page, never both. Every capture keeps its source and who said it.
       - type: definition_list
         items:
           - term: Trigger
-            definition: Manual or scheduled - a weekly sweep keeps the FAQ set current without anyone curating by hand.
+            definition: Manual - run whenever a thread is worth keeping. No scan, no schedule; you decide what gets captured.
           - term: Data Sources
-            definition: Your chat tool's help and support channels. See the Data Model reference for why chatter needs different handling than base data.
+            definition: Whatever you paste. A link works too, if you already have a tool connected that can fetch it - otherwise paste the text.
           - term: Output
-            definition: One FAQ page per recurring question, built from the FAQ template, with the source thread and an owner attached.
+            definition: One page (captured-qa by default), created new or patched onto an existing near-duplicate, tagged with at least one concept.
 
   - type: section
     eyebrow: Setup
-    heading: Customer Context
+    heading: Optional Defaults
     components:
       - type: callout
         variant: warn
-        title: One-time setup, chatter only
+        title: Nothing required, two things worth deciding once
         body: |
-          Every {{placeholder}}-style tool name in the flow below stands in for a real MCP tool. Answer this once, replace the placeholder, and you're done.
+          This skill has no external tool dependency, it runs on curata alone. The only things worth fixing per org are where captures land and what shape they take by default.
       - type: definition_list
         items:
-          - term: Tools
-            definition: Which tools have the recurring questions - Slack, Teams? Name the exact MCP tool.
-          - term: Channels
-            definition: Which channels collect the questions - help channels, support channels, team ask-me-anything channels? Name them or give the naming pattern.
-          - term: FAQ folder
-            definition: Which folder should FAQ pages land in? Name it so every FAQ ends up in one predictable place.
+          - term: Capture folder
+            definition: Which folder should captured pages land in, if you want a default rather than picking each time? Optional.
+          - term: Page type
+            definition: Is captured-qa (the default) the right shape for what you're capturing, or do you have a different page type in mind?
 
   - type: section
     eyebrow: Prerequisites
@@ -60,8 +57,8 @@ components:
         variant: warn
         title: Required inputs
         body: |
-          - At least one chat tool connected via MCP
-          - The channels to scan (from setup) and a lookback window - 30 days is a good default
+          - The thread or transcript itself, pasted in
+          - Nothing else - no external MCP tool is required to run this skill
 
   - type: section
     eyebrow: Flow
@@ -69,21 +66,21 @@ components:
     components:
       - type: markdown
         body: |
-          `YourChatterTool` below stands in for whatever tool you named in answer to the setup questions above - replace it with the real tool name before running this for your org. Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
+          Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
 
           ```agl
-          spec FaqCapture {
-            in: channels: str
-            out: faqs_published: bool
-            description: "Find the questions your team keeps answering in chat and promote them to approved FAQ pages."
-            requires: search_pages, create_from_template, YourChatterTool
+          spec CaptureThread {
+            in: content: str
+            out: page_captured: bool
+            description: "Turn a pasted thread or transcript into a reviewable curata page, deduped and checklist-complete."
+            requires: capture_thread, create_page, patch_page
 
             flow {
-              state SCAN_CHATTER -> call(YourChatterTool, "the confirmed channels, past 30 days, questions asked more than once") -> next
-              state MATCH_ANSWERS -> evaluate(recurring_questions vs answers_given_in_thread) -> next
-              state CHECK_EXISTING -> call(search_pages, "each question, so an existing FAQ gets updated instead of duplicated") -> next
-              state PROPOSE_FAQS -> gate(human_approval) -> WRITE_FAQS
-              state WRITE_FAQS -> call(create_from_template, "the FAQ template, one page per approved question") -> TERMINATE("FAQs published, chatter promoted to approved answers")
+              state RUN_CAPTURE -> call(capture_thread, "the pasted content, source if known, page_type if not the default captured-qa") -> next
+              state REVIEW_CANDIDATES -> gate(human_approval) -> next
+              state FILL_CHECKLIST -> evaluate(returned_checklist vs thread_content) -> next
+              state ASK_MISSING -> gate(human_approval) -> WRITE_PAGE
+              state WRITE_PAGE -> call(create_page, "capture_token plus dedup_ack: new, or patch_page the matched slug instead if the human picked an existing candidate") -> TERMINATE("Thread captured, no duplicate created")
             }
           }
           ```
@@ -94,8 +91,8 @@ components:
     components:
       - type: callout
         variant: info
-        title: Every FAQ cites its source thread
+        title: capture_thread first, always
         body: |
-          Every proposed FAQ carries the thread it came from and the person who answered it. A recurring question with no good answer in the thread gets flagged to a human as an open question, never answered by inference.
+          Never create a captured page without running capture_thread first, the capture_token it returns is required and expires in about 15 minutes. If it flags a near-duplicate, the human decides: a clear match gets patched, anything else becomes a new page.
 
-          Search before writing. Update existing FAQs instead of creating duplicates.
+          Missing provenance (source, who said it) is a stop, not a guess. Ask before writing.

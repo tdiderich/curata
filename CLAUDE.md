@@ -16,7 +16,7 @@ When describing curata in commits, docs, or to a user, use this framing rather t
 - `packages/mcp-server` - standalone MCP server package. The app also has a built-in MCP server under `src/app/api/mcp`
 - `prisma/schema.prisma` and `prisma/migrations` - database schema and migration history
 - `seed/` - seed content: getting-started pages, templates, workflows
-- `skills/` - Claude Code plugin skills (curata-plan, curata-read, curata-write, curata-setup, curata-workflow, send-it)
+- `skills/` - Claude Code plugin skills (curata-plan, curata-read, curata-write, curata-setup, curata-workflow, curata-capture, curata-review, send-it)
 - `scripts/` - maintenance scripts (git hooks install, home seeding, concept normalization)
 - `docs/` - generated reference docs (agents-reference.md, agl-reference.md) plus semantic-tagging.md
 - `tests/` - Vitest suite, one file per feature area
