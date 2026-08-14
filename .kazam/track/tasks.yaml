@@ -950,3 +950,45 @@ tasks:
   note: curata OSS a4b6a9b + curata-app 52ee198 shipped and CI green; maze-apps sync PR 182 open, merge denied by permission classifier, needs Tyler
   created: 2026-07-28T21:49:29.456957-05:00
   updated: 2026-07-28T21:57:20.650429-05:00
+- id: kz-b138d9
+  title: 'UI reorder package: (1) settings tab order Admin/Theme/Groups/Members/Tags/Content Rules/API Keys; (2) page action bar order: Copy for agent, Edit, Add tags, Trusted versions (renamed from version-history/revert framing - revert-to-old isn''t the model now), Change visibility, Content Rules, Export PNG, Export PDF; (3) REMOVE the form editor entirely (component-form editing UI), YAML editor stays'
+  status: closed
+  priority: 1
+  task_type: task
+  assignee: sonnet-reorder
+  note: 'Tyler 2026-08-14 12:40ish. Sequence: immediately after sonnet-settings agent (kz-3389b2/kz-b52520) closes - it owns settings/page files right now. Naming: Tyler suggested ''Manage trusted version (or something like that)'' - going with ''Trusted versions'' unless he objects. Form editor: ''not good enough'', drop completely.'
+  created: 2026-08-14T12:32:19.071796-05:00
+  updated: 2026-08-14T12:52:08.700138-05:00
+  closed: 2026-08-14T12:52:08.700138-05:00
+  close_reason: 'Reordered settings tabs (Admin/Theme/Groups/Members/Tags/Content Rules/API Keys), reordered+renamed page action bar (Copy for agent/Edit/Add tags/Trusted versions/Change visibility/Content Rules/Export PNG/Export PDF, stragglers Add annotation/resolved/expand grouped at end), removed form editor entry points (page-editor.tsx wrapper, isEditing branch in pages/[slug]/page.tsx, ?edit=1 pushes, Form editor palette action) and orphaned pe-footer/pe-save-btn/pe-error/pe-discard-btn CSS. Kept generated PageEditor component and /api/pages/content route untouched. Gate green: lint 0 errors, build succeeds, 268/268 tests pass.'
+- id: kz-5ecd75
+  title: 'Slash component palette in YAML editor: typing / in CodeMirror pops component list (all kazam types + one-line descriptions), inserts well-formed YAML stub with tab-through placeholders. Snippets GENERATED from kazam SDK (kazam sdk emit knows every schema) so they never drift.'
+  status: open
+  priority: 2
+  task_type: feature
+  note: 'Tyler 2026-08-14 approved: useful-not-overbuilt human authoring lane A. Complements template picker at create. Form editor is dead (kz-b138d9), this + YAML editor = the edit surface.'
+  created: 2026-08-14T12:37:47.312318-05:00
+  updated: 2026-08-14T12:37:47.312318-05:00
+- id: kz-516f66
+  title: 'Rendered page is the editor: (1) highlight-to-replace - promote kind:edit annotation flow to direct apply for page:edit users, server = replace_in_page semantics with uniqueness check + context expansion on repeats; (2) drag component reorder - drag handle per top-level component, new move op on patch_page targeting component ids. Every edit lands as latest version, trusted pointer untouched, review queue catches it.'
+  status: open
+  priority: 2
+  task_type: feature
+  note: 'Tyler 2026-08-14 approved. His pain: asking agent to swap sections is mechanical op in agent costume. Trust layer makes direct manipulation safe - Notion can''t say that. Annotation selection machinery + component ids + version stacking all exist.'
+  created: 2026-08-14T12:37:47.342880-05:00
+  updated: 2026-08-14T12:37:47.342880-05:00
+- id: kz-f45e7e
+  title: 'Intent-to-page design pass: new page from typed intent - LLM grounded in org templates + component reference generates kazam YAML draft, human touches up via slash palette / highlight-replace. Design only: write path LLM call, model choice, grounding set, failure modes.'
+  status: open
+  priority: 3
+  task_type: task
+  note: 'Tyler 2026-08-14: lane C, the on-thesis authoring bet - agent-mediated authoring surface. After release settles. Design pass before any build.'
+  created: 2026-08-14T12:37:47.386820-05:00
+  updated: 2026-08-14T12:37:47.386820-05:00
+- id: kz-12d8a1
+  title: Prune dead /api/pages/content route (GET/PUT) - only caller was form editor wrapper, deleted 2026-08-14 in kz-b138d9
+  status: open
+  priority: 3
+  task_type: task
+  created: 2026-08-14T12:56:40.921497-05:00
+  updated: 2026-08-14T12:56:40.921497-05:00

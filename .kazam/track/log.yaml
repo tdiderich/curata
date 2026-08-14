@@ -146,3 +146,34 @@ events:
   detail: curata OSS a4b6a9b + curata-app 52ee198 shipped and CI green; maze-apps sync PR 182 open, merge denied by permission classifier, needs Tyler
   severity: minor
   task_id: kz-8133
+- date: 2026-08-14T12:32:19.071796-05:00
+  title: 'added kz-b138d9: UI reorder package: (1) settings tab order Admin/Theme/Groups/Members/Tags/Content Rules/API Keys; (2) page action bar order: Copy for agent, Edit, Add tags, Trusted versions (renamed from version-history/revert framing - revert-to-old isn''t the model now), Change visibility, Content Rules, Export PNG, Export PDF; (3) REMOVE the form editor entirely (component-form editing UI), YAML editor stays'
+  severity: info
+  task_id: kz-b138d9
+- date: 2026-08-14T12:37:47.312318-05:00
+  title: 'added kz-5ecd75: Slash component palette in YAML editor: typing / in CodeMirror pops component list (all kazam types + one-line descriptions), inserts well-formed YAML stub with tab-through placeholders. Snippets GENERATED from kazam SDK (kazam sdk emit knows every schema) so they never drift.'
+  severity: info
+  task_id: kz-5ecd75
+- date: 2026-08-14T12:37:47.342880-05:00
+  title: 'added kz-516f66: Rendered page is the editor: (1) highlight-to-replace - promote kind:edit annotation flow to direct apply for page:edit users, server = replace_in_page semantics with uniqueness check + context expansion on repeats; (2) drag component reorder - drag handle per top-level component, new move op on patch_page targeting component ids. Every edit lands as latest version, trusted pointer untouched, review queue catches it.'
+  severity: info
+  task_id: kz-516f66
+- date: 2026-08-14T12:37:47.386820-05:00
+  title: 'added kz-f45e7e: Intent-to-page design pass: new page from typed intent - LLM grounded in org templates + component reference generates kazam YAML draft, human touches up via slash palette / highlight-replace. Design only: write path LLM call, model choice, grounding set, failure modes.'
+  severity: info
+  task_id: kz-f45e7e
+- date: 2026-08-14T12:46:06.601908-05:00
+  title: 'sonnet-reorder claimed kz-b138d9: UI reorder package: (1) settings tab order Admin/Theme/Groups/Members/Tags/Content Rules/API Keys; (2) page action bar order: Copy for agent, Edit, Add tags, Trusted versions (renamed from version-history/revert framing - revert-to-old isn''t the model now), Change visibility, Content Rules, Export PNG, Export PDF; (3) REMOVE the form editor entirely (component-form editing UI), YAML editor stays'
+  severity: major
+  source: sonnet-reorder
+  task_id: kz-b138d9
+- date: 2026-08-14T12:52:08.700138-05:00
+  title: 'closed kz-b138d9: UI reorder package: (1) settings tab order Admin/Theme/Groups/Members/Tags/Content Rules/API Keys; (2) page action bar order: Copy for agent, Edit, Add tags, Trusted versions (renamed from version-history/revert framing - revert-to-old isn''t the model now), Change visibility, Content Rules, Export PNG, Export PDF; (3) REMOVE the form editor entirely (component-form editing UI), YAML editor stays'
+  detail: 'Reordered settings tabs (Admin/Theme/Groups/Members/Tags/Content Rules/API Keys), reordered+renamed page action bar (Copy for agent/Edit/Add tags/Trusted versions/Change visibility/Content Rules/Export PNG/Export PDF, stragglers Add annotation/resolved/expand grouped at end), removed form editor entry points (page-editor.tsx wrapper, isEditing branch in pages/[slug]/page.tsx, ?edit=1 pushes, Form editor palette action) and orphaned pe-footer/pe-save-btn/pe-error/pe-discard-btn CSS. Kept generated PageEditor component and /api/pages/content route untouched. Gate green: lint 0 errors, build succeeds, 268/268 tests pass.'
+  severity: major
+  source: sonnet-reorder
+  task_id: kz-b138d9
+- date: 2026-08-14T12:56:40.921497-05:00
+  title: 'added kz-12d8a1: Prune dead /api/pages/content route (GET/PUT) - only caller was form editor wrapper, deleted 2026-08-14 in kz-b138d9'
+  severity: info
+  task_id: kz-12d8a1
