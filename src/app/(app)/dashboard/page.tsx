@@ -48,7 +48,21 @@ export default async function DashboardPage() {
   ]);
 
   const pagesBySlug = new Map(pageTitles.map((p) => [p.slug, p.title]));
-  const activityFeed = buildActivitySessions(auditRows, pagesBySlug).slice(0, 50);
+
+  // Batch-resolve apikey actorIds (the key's `prefix`) to the key's `name` in
+  // one query instead of one lookup per row. Revoked keys are excluded on
+  // purpose — actorLabel falls back to the raw prefix for those, same as a
+  // fully deleted key, rather than naming a key that no longer has access.
+  const apiKeyPrefixes = [...new Set(auditRows.filter((r) => r.actorType === "apikey").map((r) => r.actorId))];
+  const apiKeys = apiKeyPrefixes.length
+    ? await db.apiKey.findMany({
+        where: { orgId: ctx.orgId, prefix: { in: apiKeyPrefixes }, revokedAt: null },
+        select: { prefix: true, name: true },
+      })
+    : [];
+  const apiKeyNamesByPrefix = new Map(apiKeys.map((k) => [k.prefix, k.name]));
+
+  const activityFeed = buildActivitySessions(auditRows, pagesBySlug, apiKeyNamesByPrefix).slice(0, 50);
 
   return (
     <div className="dash-root">

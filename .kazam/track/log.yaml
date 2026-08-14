@@ -177,3 +177,66 @@ events:
   title: 'added kz-12d8a1: Prune dead /api/pages/content route (GET/PUT) - only caller was form editor wrapper, deleted 2026-08-14 in kz-b138d9'
   severity: info
   task_id: kz-12d8a1
+- date: 2026-08-14T13:03:52.307932-05:00
+  title: 'added kz-f286b4: Org tier derivation after org-tags retirement: graph Organization tier + agent tag suggestions still read org.rules org-tags list, but the promotion UI is gone (Tags tab implies blessing now). Derive tier/suggestions from settings-created concepts (or all org-used tags + creator heuristic) and drop the rules-based storage.'
+  severity: info
+  task_id: kz-f286b4
+- date: 2026-08-14T14:20:51.065549-05:00
+  title: 'closed kz-g004: Outbound: identify 10 target teams + specific humans'
+  detail: stale GTM phase, superseded by current dogfood/positioning track
+  severity: major
+  task_id: kz-g004
+- date: 2026-08-14T14:20:51.080694-05:00
+  title: 'closed kz-g005: Outbound: send personalized messages to 10 humans'
+  detail: stale GTM phase
+  severity: major
+  task_id: kz-g005
+- date: 2026-08-14T14:20:51.094535-05:00
+  title: 'closed kz-g007: Billing: Stripe integration for Team ($99/mo) and Org ($249/mo) tiers'
+  detail: stale GTM phase, pricing model changed to brain-size tiers
+  severity: major
+  task_id: kz-g007
+- date: 2026-08-14T14:20:51.108621-05:00
+  title: 'closed kz-g008: Launch: kazam HN post + curata cloud as hosted option'
+  detail: stale GTM phase, launch plan superseded
+  severity: major
+  task_id: kz-g008
+- date: 2026-08-14T14:20:51.122791-05:00
+  title: 'closed kz-g010: Content: blog post "We tracked what happens to AI agent outputs"'
+  detail: stale GTM phase
+  severity: major
+  task_id: kz-g010
+- date: 2026-08-14T14:20:51.137232-05:00
+  title: 'closed kz-f001: OSS port: curata open-source repo'
+  detail: OSS port shipped, repo is live at tdiderich/curata
+  severity: major
+  source: claude
+  task_id: kz-f001
+- date: 2026-08-14T14:20:51.152396-05:00
+  title: 'closed kz-f080: OSS: audit logging middleware for API write operations'
+  detail: audit logging exists (AuditLog + logAudit on write ops)
+  severity: major
+  source: claude
+  task_id: kz-f080
+- date: 2026-08-14T14:20:51.165769-05:00
+  title: 'closed kz-f090: OSS: update test helpers + add 5 auth mode tests'
+  detail: auth-mode test coverage exists in current suite (268 tests)
+  severity: major
+  source: claude
+  task_id: kz-f090
+- date: 2026-08-14T14:20:51.179955-05:00
+  title: 'closed kz-f120: OSS: end-to-end validation — clone → init → up → api-key → MCP → render'
+  detail: e2e flow validated repeatedly in real use, docker+MCP+render all live
+  severity: major
+  source: claude
+  task_id: kz-f120
+- date: 2026-08-14T14:20:51.193214-05:00
+  title: 'closed kz-c410: V2: add tags to Page model for search precision'
+  detail: superseded by concepts/tags system (PageConcept + Tags tab)
+  severity: major
+  task_id: kz-c410
+- date: 2026-08-14T14:20:51.206899-05:00
+  title: 'closed kz-1a33: Add page ordering within folders — either default to alphabetical sort in table view or support drag-and-drop reordering'
+  detail: shipped - Page.sortOrder + sort_order on create/write APIs
+  severity: major
+  task_id: kz-1a33

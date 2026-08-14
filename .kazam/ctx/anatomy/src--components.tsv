@@ -9,7 +9,7 @@ src/components/cleanup-client.tsx	4098	0	cleanup-client component
 src/components/command-palette.tsx	2205	0	command-palette component
 src/components/confirm-delete-modal.tsx	704	0	confirm-delete-modal component
 src/components/content-index.tsx	3199	0	content-index component
-src/components/content-rules-editor.tsx	5633	0	content-rules-editor component
+src/components/content-rules-editor.tsx	7897	0	content-rules-editor component
 src/components/dashboard-client.tsx	4258	0	dashboard-client component
 src/components/dashboard-feed.tsx	812	0	dashboard-feed component
 src/components/dashboard-tabs.tsx	1088	0	dashboard-tabs component
@@ -20,7 +20,7 @@ src/components/member-list.tsx	2624	0	member-list component
 src/components/new-page-button.tsx	1612	0	new-page-button component
 src/components/org-settings.tsx	2003	0	org-settings component
 src/components/org-tags-manager.tsx	601	0	org-tags-manager component
-src/components/page-detail-client.tsx	7562	0	page-detail-client component
+src/components/page-detail-client.tsx	7539	0	page-detail-client component
 src/components/page-folder-select.tsx	752	0	page-folder-select component
 src/components/page-prompt-dialog.tsx	1051	0	page-prompt-dialog component
 src/components/page-tags.tsx	1303	0	page-tags component

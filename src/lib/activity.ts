@@ -69,8 +69,15 @@ function relTime(d: Date): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function actorLabel(row: ActivityRow): string {
-  if (row.actorType === "apikey") return row.actorId;
+// apikey rows carry the ApiKey's `prefix` (an 8-char base64url string, e.g.
+// "_ZdcUBAJ") as actorId — see resolveOrgFromApiKey in auth.ts, threaded
+// through as ctx.keyPrefix into the actorId param on every apikey-tagged
+// logAudit() call. Non-key MCP actors (tailscale/oauth/dev) reuse the same
+// actorType/actorId plumbing with sentinel values ("ts:user", "oauth:...",
+// "noauth", "dev") that never match a real key, so the map lookup harmlessly
+// falls through to the raw id for those too.
+function actorLabel(row: ActivityRow, apiKeyNamesByPrefix?: Map<string, string>): string {
+  if (row.actorType === "apikey") return apiKeyNamesByPrefix?.get(row.actorId) ?? row.actorId;
   return row.actorId.replace(/^ts:/, "");
 }
 
@@ -285,7 +292,11 @@ function renderBucket(action: string, rows: RowInfo[]): ActivityPart[] {
   return parts;
 }
 
-export function buildActivitySessions(rows: ActivityRow[], pagesBySlug: Map<string, string>): ActivityEntry[] {
+export function buildActivitySessions(
+  rows: ActivityRow[],
+  pagesBySlug: Map<string, string>,
+  apiKeyNamesByPrefix?: Map<string, string>,
+): ActivityEntry[] {
   const infos: RowInfo[] = [];
   for (const row of rows) {
     const target = resolveTarget(row, pagesBySlug);
@@ -297,7 +308,7 @@ export function buildActivitySessions(rows: ActivityRow[], pagesBySlug: Map<stri
       id: row.id,
       createdAt: row.createdAt,
       actorKey: `${row.actorType}:${row.actorId}`,
-      actorLabel: actorLabel(row),
+      actorLabel: actorLabel(row, apiKeyNamesByPrefix),
       isAgent: row.actorType === "apikey",
       action: row.action,
       metadata: row.metadata,

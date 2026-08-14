@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PUBLIC_PAGE_PATH, negotiateTarget } from "@/lib/content-negotiation";
+import { verifyExportNonceSignature } from "@/lib/export-nonce";
 
 const AUTH_MODE = process.env.AUTH_MODE ?? "none";
 
@@ -47,12 +48,20 @@ function isProtected(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
-function isPublic(pathname: string, searchParams?: URLSearchParams): boolean {
+// Async because the export-preview nonce is verified via its HMAC signature
+// (crypto.subtle, awaited) rather than by presence alone — a bare "does the
+// param exist" check can't tell a forged nonce from a real one, and this
+// runs from the edge runtime, which has no access to the in-memory
+// single-use store in export-nonce.ts.
+export async function isPublic(pathname: string, searchParams?: URLSearchParams): Promise<boolean> {
   if (pathname === "/" || pathname === "/sign-in") return true;
   // Bare /api/mcp (the REST shim) — the "/api/mcp/" prefix below only matches
   // subroutes, which left the shim auth-walled on clerk deployments.
   if (pathname === "/api/mcp") return true;
-  if (pathname.startsWith("/export-preview/") && searchParams?.has("nonce")) return true;
+  if (pathname.startsWith("/export-preview/")) {
+    const nonce = searchParams?.get("nonce");
+    if (nonce && (await verifyExportNonceSignature(nonce))) return true;
+  }
   const prefixes = AUTH_MODE === "clerk" ? PUBLIC_PREFIXES_CLERK : PUBLIC_PREFIXES_BASE;
   return prefixes.some((p) => pathname.startsWith(p));
 }
@@ -104,11 +113,25 @@ function applyAgentHeaders(request: NextRequest, response: NextResponse): void {
   );
 }
 
+// Cheap, edge-runtime-safe digest (FNV-1a, 32-bit) — not cryptographic, just
+// enough that the in-memory rate-limit map never holds raw bytes of a real
+// Authorization header (that map can be inspected via a debugger/heap dump,
+// and logging it previously would have leaked the first 20 chars of the
+// credential).
+export function hashRateLimitKey(input: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16);
+}
+
 function applyRateLimit(request: NextRequest): NextResponse | null {
-  const key =
-    request.headers.get("authorization")?.slice(0, 20) ||
-    request.headers.get("x-forwarded-for") ||
-    "anon";
+  const authHeader = request.headers.get("authorization");
+  const key = authHeader
+    ? `auth:${hashRateLimitKey(authHeader)}`
+    : request.headers.get("x-forwarded-for") || "anon";
   const now = Date.now();
   const entry = agentHits.get(key);
   if (!entry || now > entry.reset) {
@@ -191,7 +214,10 @@ async function middlewareClerk(request: NextRequest) {
       }
     }
 
-    const isNonceExport = req.nextUrl.pathname.startsWith("/export-preview/") && req.nextUrl.searchParams.has("nonce");
+    const nonceParam = req.nextUrl.pathname.startsWith("/export-preview/")
+      ? req.nextUrl.searchParams.get("nonce")
+      : null;
+    const isNonceExport = !!nonceParam && (await verifyExportNonceSignature(nonceParam));
     if (!isPublicRoute(req) && !isNonceExport) {
       await auth.protect();
     }
@@ -218,7 +244,7 @@ async function middlewareDefault(request: NextRequest) {
     if (limited) return limited;
   }
 
-  if (AUTH_MODE === "tailscale" && isProtected(pathname) && !isPublic(pathname)) {
+  if (AUTH_MODE === "tailscale" && isProtected(pathname) && !(await isPublic(pathname))) {
     const tsLogin = request.headers.get("tailscale-user-login");
     const hasDevFallback = process.env.NODE_ENV === "development" && process.env.TAILSCALE_DEV_USER;
     if (!tsLogin && !hasDevFallback) {
@@ -229,7 +255,7 @@ async function middlewareDefault(request: NextRequest) {
     }
   }
 
-  if (AUTH_MODE === "oauth" && isProtected(pathname) && !isPublic(pathname)) {
+  if (AUTH_MODE === "oauth" && isProtected(pathname) && !(await isPublic(pathname))) {
     const sessionToken =
       request.cookies.get("next-auth.session-token")?.value ||
       request.cookies.get("__Secure-next-auth.session-token")?.value;

@@ -3,8 +3,8 @@ import { basePath } from "@/lib/api-fetch";
 
 const PORT = process.env.PORT || "3000";
 
-export function previewUrl(slug: string, orgId: string, hub?: string): string {
-  const nonce = createExportNonce(orgId);
+export async function previewUrl(slug: string, orgId: string, hub?: string): Promise<string> {
+  const nonce = await createExportNonce(orgId, slug, hub);
   const params = new URLSearchParams({ nonce });
   if (hub) params.set("hub", hub);
   return `http://localhost:${PORT}${basePath}/export-preview/${encodeURIComponent(slug)}?${params}`;

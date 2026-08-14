@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
   const browser = await chromium.launch();
   let pngBuffer: Buffer;
   try {
-    const url = previewUrl(slug, ctx.orgId, hub);
+    const url = await previewUrl(slug, ctx.orgId, hub);
     pngBuffer = await screenshotPage(url, browser);
   } catch (err) {
     console.error("export render error:", err);
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
     await addPngPage(doc, titlePng);
 
     for (const slug of slugs) {
-      const url = previewUrl(slug, ctx.orgId, hub);
+      const url = await previewUrl(slug, ctx.orgId, hub);
       const contentPng = await screenshotPage(url, browser);
       await addPngPage(doc, contentPng);
     }

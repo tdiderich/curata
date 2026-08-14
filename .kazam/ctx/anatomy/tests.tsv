@@ -1,10 +1,15 @@
 path	tokens	reads	description
+tests/activity.test.ts	455	0	activity.test tests
 tests/api-key.test.ts	240	0	api-key.test tests
 tests/approval.test.ts	2614	0	approval.test tests
 tests/auth.test.ts	1121	0	auth.test tests
+tests/capture-thread.test.ts	3630	0	capture-thread.test tests
+tests/capture-token.test.ts	1222	0	capture-token.test tests
 tests/component-ids.test.ts	2323	0	component-ids.test tests
 tests/concepts.test.ts	2833	0	concepts.test tests
 tests/content-negotiation.test.ts	788	0	content-negotiation.test tests
+tests/export-nonce.test.ts	806	0	export-nonce.test tests
+tests/export-preview-page.test.ts	588	0	export-preview-page.test tests
 tests/glance-prompts.test.ts	3522	0	glance-prompts.test tests
 tests/global-setup.ts	298	0	global-setup tests
 tests/graph.test.ts	1216	0	graph.test tests
@@ -13,9 +18,11 @@ tests/helpers.ts	537	0	helpers tests
 tests/mcp-instructions.test.ts	1023	0	mcp-instructions.test tests
 tests/mcp-oauth.test.ts	1666	0	Tests for decodeOrgIdClaim + resolveOrgFromClerkOAuth: org claim resolution, sole-membership fallback, fail-closed ambiguity, viewer scopes
 tests/mcp-tool-parity.test.ts	439	0	mcp-tool-parity.test tests
+tests/middleware-rate-limit.test.ts	170	0	middleware-rate-limit.test tests
 tests/page-markdown.test.ts	2222	0	page-markdown.test tests
 tests/pages.test.ts	4572	0	pages.test tests
+tests/required-components.test.ts	3721	0	required-components.test tests
 tests/setup.ts	194	0	setup tests
 tests/share-prompt.test.ts	1418	0	share-prompt.test tests
-tests/tags-org.test.ts	2590	0	tags-org.test tests
+tests/tags-org.test.ts	2930	0	tags-org.test tests
 tests/versions-trust.test.ts	1007	0	versions-trust.test tests

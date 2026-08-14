@@ -158,6 +158,33 @@ describe("/api/tags/org", () => {
       expect(res.status).toBe(409);
     });
 
+    it("409s (not 500) when a concurrent writer takes the term between the pre-check and the update", async () => {
+      asAdmin();
+      const concept = await makeUsedConcept();
+      // The colliding row already exists in the DB — simulating a second
+      // request that renamed a different concept to this term in the window
+      // between this request's collision check and its update. Bypass just
+      // the collision-check findUnique (by normalizedName) so the pre-check
+      // misses it and the real unique-constraint violation is what the
+      // update's catch block has to handle.
+      await testDb.concept.create({ data: { normalizedName: "raced-term", displayName: "raced-term", kind: "topic" } });
+      const originalFindUnique = testDb.concept.findUnique.bind(testDb.concept);
+      const spy = vi
+        .spyOn(testDb.concept, "findUnique")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .mockImplementation(async (args: any) => {
+          if (args?.where?.normalizedName === "raced-term") return null;
+          return originalFindUnique(args);
+        });
+
+      try {
+        const res = await PATCH(req("PATCH", "http://localhost/api/tags/org", { conceptId: concept.id, term: "raced-term" }));
+        expect(res.status).toBe(409);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
     it("404s a concept this org doesn't use", async () => {
       asAdmin();
       const concept = await testDb.concept.create({

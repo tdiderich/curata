@@ -16,8 +16,14 @@ export default async function ExportPreview({
   const { nonce, hub: hubSlug } = await searchParams;
 
   if (!nonce) notFound();
-  const orgId = consumeExportNonce(nonce);
-  if (!orgId) notFound();
+  const consumed = await consumeExportNonce(nonce);
+  if (!consumed) notFound();
+  // The nonce is only valid for the slug (and hub, if any) it was minted
+  // for — a nonce minted for one page must not unlock a different one, even
+  // within the same org.
+  if (consumed.slug !== slug) notFound();
+  if (consumed.hub && consumed.hub !== hubSlug) notFound();
+  const orgId = consumed.orgId;
 
   const [pageData, theme] = await Promise.all([
     readPage(orgId, slug),

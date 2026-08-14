@@ -6,9 +6,9 @@ tasks:
   task_type: task
   assignee: claude
   note: Full code review before feature work. Find maintainability wins that take <30min each.
-  created: 2026-05-09T15:26:35.943338-05:00
-  updated: 2026-05-09T15:40:56.935758-05:00
-  closed: 2026-05-09T15:40:56.935758-05:00
+  created: 2026-05-09 15:26:35.943338-05:00
+  updated: 2026-05-09 15:40:56.935758-05:00
+  closed: 2026-05-09 15:40:56.935758-05:00
   close_reason: Fixed 9 HIGH, 12 MEDIUM, 3 LOW findings. Security hardening, DRY refactor (auth.ts unified OrgContext), type safety, DB indexes, dead code cleanup.
 - id: kz-42ad
   title: 'Public pages PLG: SEO metadata, org index page, og:image generation, view counter'
@@ -17,8 +17,8 @@ tasks:
   task_type: task
   assignee: claude
   note: og:title/description/twitter:card on /p/ routes. /p/[orgSlug] index page. next/og for preview images. Simple DB view counter shown in dashboard.
-  created: 2026-05-09T15:26:35.951294-05:00
-  updated: 2026-05-09T21:09:28.863416-05:00
+  created: 2026-05-09 15:26:35.951294-05:00
+  updated: 2026-05-09 21:09:28.863416-05:00
 - id: kz-bd0d
   title: 'Mobile responsiveness: add media queries to globals.css'
   status: closed
@@ -26,9 +26,9 @@ tasks:
   task_type: task
   assignee: claude
   note: Dashboard table to cards at 768px. Toolbar stacks on mobile. Annotation cards full-width overlay. Modals max-width 100vw. Search bar expands.
-  created: 2026-05-09T15:26:35.958510-05:00
-  updated: 2026-05-11T09:08:49.749883-05:00
-  closed: 2026-05-11T09:08:49.749883-05:00
+  created: 2026-05-09 15:26:35.958510-05:00
+  updated: 2026-05-11 09:08:49.749883-05:00
+  closed: 2026-05-11 09:08:49.749883-05:00
   close_reason: 'Mobile CSS: stacking header, full-width search, table horizontal scroll, feed cards responsive'
 - id: kz-58d6
   title: 'Loading states: add loading.tsx skeletons for dashboard, page detail, settings'
@@ -37,9 +37,9 @@ tasks:
   task_type: task
   assignee: claude
   note: Quick win. Every route currently shows blank flash on navigation.
-  created: 2026-05-09T15:26:35.965549-05:00
-  updated: 2026-05-09T21:09:20.457783-05:00
-  closed: 2026-05-09T21:09:20.457783-05:00
+  created: 2026-05-09 15:26:35.965549-05:00
+  updated: 2026-05-09 21:09:20.457783-05:00
+  closed: 2026-05-09 21:09:20.457783-05:00
   close_reason: Added loading.tsx skeletons for dashboard, settings, and page detail with shimmer animation CSS.
 - id: kz-23a7
   title: 'DB indexes: add missing indexes on foreign keys and filter columns'
@@ -48,9 +48,9 @@ tasks:
   task_type: task
   assignee: claude
   note: orgId on Page/Folder/ApiKey/OrgMember, pageId on PageVersion/Annotation, visibility on Page, status on Annotation.
-  created: 2026-05-09T15:26:35.972369-05:00
-  updated: 2026-05-09T21:07:27.448645-05:00
-  closed: 2026-05-09T21:07:27.448645-05:00
+  created: 2026-05-09 15:26:35.972369-05:00
+  updated: 2026-05-09 21:07:27.448645-05:00
+  closed: 2026-05-09 21:07:27.448645-05:00
   close_reason: Added indexes on Folder.orgId, Page.(orgId,visibility), Annotation.(pageId,status), ApiKey.orgId. Previous commit already covered PageVersion.pageId, Annotation.pageId, Page.syncStatus.
 - id: kz-efc0
   title: 'Agent API expansion: create_page, delete_page, move_page, list_folders, validate_page, get_versions'
@@ -58,9 +58,9 @@ tasks:
   priority: 13
   task_type: task
   note: Core product value. Agents currently can't create new pages or manage folders. Deprioritized behind GTM Phase 1 — the existing write_page API is enough for CLI publish and initial validation.
-  created: 2026-05-09T15:26:35.979739-05:00
-  updated: 2026-05-11T09:14:07.709546-05:00
-  closed: 2026-05-11T09:14:07.709546-05:00
+  created: 2026-05-09 15:26:35.979739-05:00
+  updated: 2026-05-11 09:14:07.709546-05:00
+  closed: 2026-05-11 09:14:07.709546-05:00
   close_reason: 'Agent API: added delete_page tool; create_page, move_page, list_folders, validate_page, get_versions already existed'
 - id: kz-5962
   title: 'Activity feed: ActivityLog model, dashboard panel, write entries from page/annotation mutations'
@@ -68,9 +68,9 @@ tasks:
   priority: 7
   task_type: task
   note: Retention feature. When agent updates a page nobody knows unless they check. Show recent activity across org.
-  created: 2026-05-09T15:26:35.986677-05:00
-  updated: 2026-05-09T21:08:14.648760-05:00
-  closed: 2026-05-09T21:08:14.648760-05:00
+  created: 2026-05-09 15:26:35.986677-05:00
+  updated: 2026-05-09 21:08:14.648760-05:00
+  closed: 2026-05-09 21:08:14.648760-05:00
   close_reason: Dropped — not needed yet. Replaced with last-updated sort on dashboard.
 - id: kz-9e83
   title: 'Security headers: CSP, HSTS, X-Frame-Options in middleware. Rate limiting on /api/kazam per API key.'
@@ -79,9 +79,9 @@ tasks:
   task_type: task
   assignee: claude
   note: Quick win. Basics any security-conscious prospect would check. Moved down — do before Phase 1 outbound starts but after core GTM features ship.
-  created: 2026-05-09T15:26:35.993792-05:00
-  updated: 2026-05-11T09:01:10.811068-05:00
-  closed: 2026-05-11T09:01:10.811068-05:00
+  created: 2026-05-09 15:26:35.993792-05:00
+  updated: 2026-05-11 09:01:10.811068-05:00
+  closed: 2026-05-11 09:01:10.811068-05:00
   close_reason: CSP header added to middleware. HSTS, X-Frame-Options, rate limiting were already implemented in a prior session.
 - id: kz-a3fa
   title: 'Notification webhooks: webhook URL on org, fire on page write + annotation create, Slack-compatible JSON'
@@ -89,9 +89,9 @@ tasks:
   priority: 9
   task_type: task
   note: Optional. Lets teams get notified when agents write. Simple incoming webhook format.
-  created: 2026-05-09T15:26:36.000949-05:00
-  updated: 2026-05-09T21:09:05.210133-05:00
-  closed: 2026-05-09T21:09:05.210133-05:00
+  created: 2026-05-09 15:26:36.000949-05:00
+  updated: 2026-05-09 21:09:05.210133-05:00
+  closed: 2026-05-09 21:09:05.210133-05:00
   close_reason: Deferred — needs design session before implementation. Will revisit when there's time to do it properly.
 - id: kz-de44
   title: Dashboard sort by last updated (including annotation activity)
@@ -99,9 +99,9 @@ tasks:
   priority: 12
   task_type: task
   note: Add sort toggle to dashboard page table. 'Last updated' considers both page.updatedAt and max(annotation.updatedAt). Default sort = most recently updated first.
-  created: 2026-05-09T21:08:14.657686-05:00
-  updated: 2026-05-11T09:12:13.266549-05:00
-  closed: 2026-05-11T09:12:13.266549-05:00
+  created: 2026-05-09 21:08:14.657686-05:00
+  updated: 2026-05-11 09:12:13.266549-05:00
+  closed: 2026-05-11 09:12:13.266549-05:00
   close_reason: 'Sort toggle: SortSelect component, localStorage-persisted, options: last updated / title / most views, applied to both table and feed views'
 - id: kz-g001
   title: 'Landing page: update positioning to "Where your AI work lives"'
@@ -116,9 +116,9 @@ tasks:
     Pain pitch: "Stop losing useful AI work."
     Identity: "A shared output and collaboration platform for you and your AI agents."
     Design doc: ~/.gstack/projects/tdiderich-curata-app/tyler-main-design-20260510-205425.md
-  created: 2026-05-10T21:00:00.000000-05:00
-  updated: 2026-05-11T08:59:14.954230-05:00
-  closed: 2026-05-11T08:59:14.954230-05:00
+  created: 2026-05-10 21:00:00-05:00
+  updated: 2026-05-11 08:59:14.954230-05:00
+  closed: 2026-05-11 08:59:14.954230-05:00
   close_reason: 'Updated landing page: tagline ''Where your AI work lives.'', pain pitch ''Stop losing useful AI work.'', identity pitch as sub-copy, CTA changed to ''Get started free''.'
 - id: kz-g002
   title: 'CLI: build `curata publish` command'
@@ -133,9 +133,9 @@ tasks:
     Errors: auth failure, file not found, page limit exceeded (free tier)
     Naming decision needed: `kazam publish` subcommand vs separate `curata` binary.
     Estimate: ~4 hours. See design doc Dependencies section for full spec.
-  created: 2026-05-10T21:00:00.000000-05:00
-  updated: 2026-05-10T21:16:23.954043-05:00
-  closed: 2026-05-10T21:16:23.954043-05:00
+  created: 2026-05-10 21:00:00-05:00
+  updated: 2026-05-10 21:16:23.954043-05:00
+  closed: 2026-05-10 21:16:23.954043-05:00
   close_reason: Redundant — agent API and MCP server already serve as the write target. BYOA means agents write programmatically, not humans via CLI.
 - id: kz-g003
   title: 'Dashboard: add feed view of recent agent outputs'
@@ -149,13 +149,13 @@ tasks:
     This is the "what did my agents produce today" view.
     Keep it simple — reverse-chron list, no filters in v1.
     Consider making this the default dashboard view instead of the page table.
-  created: 2026-05-10T21:00:00.000000-05:00
-  updated: 2026-05-11T09:08:44.671237-05:00
-  closed: 2026-05-11T09:08:44.671237-05:00
+  created: 2026-05-10 21:00:00-05:00
+  updated: 2026-05-11 09:08:44.671237-05:00
+  closed: 2026-05-11 09:08:44.671237-05:00
   close_reason: 'Feed view implemented: DashboardClient, DashboardFeed, ViewToggle components, localStorage-persisted preference'
 - id: kz-g004
   title: 'Outbound: identify 10 target teams + specific humans'
-  status: open
+  status: closed
   priority: 4
   task_type: task
   owner: human
@@ -164,11 +164,13 @@ tasks:
     For each: name, title, company, why they'd care, how to reach them.
     Sources: personal network, the 19 outreach companies, Claude Code Discord, Cursor forums, AI Twitter.
     This is the most important task. The product is ready — the missing piece is conversations.
-  created: 2026-05-10T21:00:00.000000-05:00
-  updated: 2026-05-10T21:00:00.000000-05:00
+  created: 2026-05-10 21:00:00-05:00
+  updated: 2026-08-14T14:20:51.065549-05:00
+  closed: 2026-08-14T14:20:51.065549-05:00
+  close_reason: stale GTM phase, superseded by current dogfood/positioning track
 - id: kz-g005
   title: 'Outbound: send personalized messages to 10 humans'
-  status: open
+  status: closed
   priority: 5
   task_type: task
   owner: human
@@ -178,8 +180,10 @@ tasks:
     Offer: free white-glove onboarding, install in 10 minutes, capture agent outputs for one week.
     Track responses. Success = 3+ say "yes, that's a real problem."
     Kill criteria: 0 of 10 care → timing is early, regroup.
-  created: 2026-05-10T21:00:00.000000-05:00
-  updated: 2026-05-10T21:00:00.000000-05:00
+  created: 2026-05-10 21:00:00-05:00
+  updated: 2026-08-14T14:20:51.080694-05:00
+  closed: 2026-08-14T14:20:51.080694-05:00
+  close_reason: stale GTM phase
 - id: kz-g006
   title: 'Bug: fix hydration mismatch on theme attributes'
   status: closed
@@ -190,13 +194,13 @@ tasks:
     attributes differ between server and client render. Dev-mode warning but affects first paint.
     Likely fix: move theme attributes to a client-only useEffect or read from cookie/header on server side.
     File: src/app/layout.tsx + src/components/theme-script.tsx
-  created: 2026-05-10T21:00:00.000000-05:00
-  updated: 2026-05-10T21:15:42.465318-05:00
-  closed: 2026-05-10T21:15:42.465318-05:00
+  created: 2026-05-10 21:00:00-05:00
+  updated: 2026-05-10 21:15:42.465318-05:00
+  closed: 2026-05-10 21:15:42.465318-05:00
   close_reason: Fixed in separate session
 - id: kz-g007
   title: 'Billing: Stripe integration for Team ($99/mo) and Org ($249/mo) tiers'
-  status: open
+  status: closed
   priority: 7
   task_type: task
   note: |
@@ -204,11 +208,13 @@ tasks:
     Org: $249/mo, unlimited seats, audit trail, SSO.
     Stripe Checkout for signup, Stripe Billing for recurring. Webhook for subscription status.
     Gate: only build when Phase 1 validates (3+ of 10 teams show natural accumulation).
-  created: 2026-05-10T21:00:00.000000-05:00
-  updated: 2026-05-10T21:00:00.000000-05:00
+  created: 2026-05-10 21:00:00-05:00
+  updated: 2026-08-14T14:20:51.094535-05:00
+  closed: 2026-08-14T14:20:51.094535-05:00
+  close_reason: stale GTM phase, pricing model changed to brain-size tiers
 - id: kz-g008
   title: 'Launch: kazam HN post + curata cloud as hosted option'
-  status: open
+  status: closed
   priority: 8
   task_type: task
   owner: human
@@ -216,8 +222,10 @@ tasks:
     Position: "GitHub for agent knowledge." kazam is the OSS engine, curata is the cloud.
     HN Show post format. Include real usage data from Phase 1 teams.
     Success: 500+ GitHub stars (stretch) or 50+ unique cloners in first week (minimum).
-  created: 2026-05-10T21:00:00.000000-05:00
-  updated: 2026-05-10T21:00:00.000000-05:00
+  created: 2026-05-10 21:00:00-05:00
+  updated: 2026-08-14T14:20:51.108621-05:00
+  closed: 2026-08-14T14:20:51.108621-05:00
+  close_reason: stale GTM phase, launch plan superseded
 - id: kz-g009
   title: 'Integrations: Claude Code hook + Cursor post-session capture'
   status: closed
@@ -229,13 +237,13 @@ tasks:
     Cursor: similar post-session capture.
     These create the "workflow gravity" that makes curata the default write target.
     Depends on curata publish CLI being built first.
-  created: 2026-05-10T21:00:00.000000-05:00
-  updated: 2026-05-11T09:14:09.782925-05:00
-  closed: 2026-05-11T09:14:09.782925-05:00
+  created: 2026-05-10 21:00:00-05:00
+  updated: 2026-05-11 09:14:09.782925-05:00
+  closed: 2026-05-11 09:14:09.782925-05:00
   close_reason: Claude Code hook, Cursor hook, and curata-publish CLI scripts in scripts/ dir. All use write_page API to publish session summaries
 - id: kz-g010
   title: 'Content: blog post "We tracked what happens to AI agent outputs"'
-  status: open
+  status: closed
   priority: 10
   task_type: task
   owner: human
@@ -243,8 +251,10 @@ tasks:
     Use real data from Phase 1 teams. How many outputs accumulated? Were they referenced?
     Did links get shared? What types of content did agents produce?
     Publish alongside or shortly after HN launch for compound effect.
-  created: 2026-05-10T21:00:00.000000-05:00
-  updated: 2026-05-10T21:00:00.000000-05:00
+  created: 2026-05-10 21:00:00-05:00
+  updated: 2026-08-14T14:20:51.122791-05:00
+  closed: 2026-08-14T14:20:51.122791-05:00
+  close_reason: stale GTM phase
 - id: kz-d001
   title: 'Demos: re-research top 10 GTM targets with new schema'
   status: closed
@@ -282,9 +292,9 @@ tasks:
     - Don't prescribe integrations. Show the output, not the plumbing.
     - ai_tools_used field: which AI tools does this company likely use?
     - Be use-case agnostic in the page template — let THEM decide what curata is for
-  created: 2026-05-10T22:00:00.000000-05:00
-  updated: 2026-05-11T08:04:29.053709-05:00
-  closed: 2026-05-11T08:04:29.053709-05:00
+  created: 2026-05-10 22:00:00-05:00
+  updated: 2026-05-11 08:04:29.053709-05:00
+  closed: 2026-05-11 08:04:29.053709-05:00
   close_reason: 'Re-researched 11 companies with new schema: Cognition, LangChain, Stainless, Raycast, Fireworks AI, OpenRouter, Sema4.ai, Doppler, Basis, Auctor, Harmonic. All JSONs use example_outputs, ai_tools_used, and new pain framing. Replaced copy.ai (acquired) with Auctor + Harmonic.'
 - id: kz-d002
   title: 'Demos: regenerate all 19 existing pages with new template'
@@ -307,9 +317,9 @@ tasks:
     But new research should use example_outputs for the better framing.
 
     After generating, review a few pages visually (pnpm dev, check /p/ routes) before pushing.
-  created: 2026-05-10T22:00:00.000000-05:00
-  updated: 2026-05-11T08:04:35.328957-05:00
-  closed: 2026-05-11T08:04:35.328957-05:00
+  created: 2026-05-10 22:00:00-05:00
+  updated: 2026-05-11 08:04:35.328957-05:00
+  closed: 2026-05-11 08:04:35.328957-05:00
   close_reason: Generated 21 YAML pages with new template. New pages use 'Where {company} AI work lives' title, AI-work-disappears pain section, example_outputs table, BYOA cards, updated pricing. Removed old cognition-ai duplicate.
 - id: kz-d003
   title: 'Demos: push updated pages to curata cloud'
@@ -322,9 +332,9 @@ tasks:
 
     Verify pages render correctly on the live site.
     Each demo page IS the product demo — prospects see curata working by reading about their own company.
-  created: 2026-05-10T22:00:00.000000-05:00
-  updated: 2026-05-11T08:46:40.234711-05:00
-  closed: 2026-05-11T08:46:40.234711-05:00
+  created: 2026-05-10 22:00:00-05:00
+  updated: 2026-05-11 08:46:40.234711-05:00
+  closed: 2026-05-11 08:46:40.234711-05:00
   close_reason: Pushed 11 new-schema demo pages to curata cloud. Old-schema pages (10) rejected by API — need re-research before pushing.
 - id: kz-p001
   title: 'Dashboard: bulk actions on pages (delete, move to folder, make public)'
@@ -334,9 +344,9 @@ tasks:
   note: |
     Add multi-select to page table with bulk actions: delete, move to folder, change visibility to public.
     Checkbox column + action bar that appears when items selected.
-  created: 2026-05-11T09:00:00.000000-05:00
-  updated: 2026-05-11T09:12:15.086793-05:00
-  closed: 2026-05-11T09:12:15.086793-05:00
+  created: 2026-05-11 09:00:00-05:00
+  updated: 2026-05-11 09:12:15.086793-05:00
+  closed: 2026-05-11 09:12:15.086793-05:00
   close_reason: 'Bulk actions: checkbox column in table, sticky BulkBar with delete/move/visibility actions, bulk API endpoint at /api/pages/bulk with permission checks'
 - id: kz-p002
   title: 'Bug: short-lived API keys persist in DB/UI after expiry'
@@ -349,9 +359,9 @@ tasks:
     They remain visible in the UI and stored in the DB.
     Options: cron job to delete expired keys, or filter them out of UI queries, or soft-delete on expiry check.
     At minimum, don't show expired keys in the UI.
-  created: 2026-05-11T09:00:00.000000-05:00
-  updated: 2026-05-11T08:59:14.969549-05:00
-  closed: 2026-05-11T08:59:14.969549-05:00
+  created: 2026-05-11 09:00:00-05:00
+  updated: 2026-05-11 08:59:14.969549-05:00
+  closed: 2026-05-11 08:59:14.969549-05:00
   close_reason: 'Fixed: GET /api/keys now filters out expired keys (expiresAt < now). Auth middleware already rejected expired keys on API calls — this was UI-only.'
 - id: kz-p003
   title: 'Org settings: smart auto-join domain logic for personal vs work emails'
@@ -363,9 +373,9 @@ tasks:
     Two changes:
     1. When user is on a personal email (gmail, hotmail, msn, yahoo, outlook, etc.), hide the auto-join domain setting — it doesn't make sense for personal domains.
     2. When a user logs in with a REAL work domain (not personal), auto-set that domain as the org's auto-join domain IF no auto-join domain is already configured for that org. This reduces friction for the first work-email user to join.
-  created: 2026-05-11T09:00:00.000000-05:00
-  updated: 2026-05-11T09:08:46.378598-05:00
-  closed: 2026-05-11T09:08:46.378598-05:00
+  created: 2026-05-11 09:00:00-05:00
+  updated: 2026-05-11 09:08:46.378598-05:00
+  closed: 2026-05-11 09:08:46.378598-05:00
   close_reason: 'Smart auto-join domain: shared PERSONAL_EMAIL_DOMAINS set, auto-set domain on login, hide section for personal emails'
 - id: kz-p004
   title: 'Org slugs: random fun defaults + rename with conflict check'
@@ -377,9 +387,9 @@ tasks:
     Two changes:
     1. Default org slugs should be random fun word pairs like "funky-monkey", "cosmic-penguin", etc. Need a big enough word list for both sides of the hyphen to avoid collisions.
     2. Users should be able to rename their org slug from settings. Must check for conflicts with existing org slugs before allowing the rename.
-  created: 2026-05-11T09:00:00.000000-05:00
-  updated: 2026-05-11T09:08:48.011941-05:00
-  closed: 2026-05-11T09:08:48.011941-05:00
+  created: 2026-05-11 09:00:00-05:00
+  updated: 2026-05-11 09:08:48.011941-05:00
+  closed: 2026-05-11 09:08:48.011941-05:00
   close_reason: 'Fun org slugs: adjective-noun word lists, generateFunSlug() in slug-words.ts, webhook + settings use it, slug rename in org settings'
 - id: kz-199c
   title: 'Custom domain: point curata.ai to Railway'
@@ -388,9 +398,9 @@ tasks:
   task_type: task
   owner: human
   note: Point curata.ai DNS to Railway. Update CURATA_API_URL in scripts and demo pages. Update Clerk allowed origins.
-  created: 2026-05-11T09:35:19.900069-05:00
-  updated: 2026-05-11T11:28:46.570785-05:00
-  closed: 2026-05-11T11:28:46.570785-05:00
+  created: 2026-05-11 09:35:19.900069-05:00
+  updated: 2026-05-11 11:28:46.570785-05:00
+  closed: 2026-05-11 11:28:46.570785-05:00
   close_reason: DNS configured via Cloudflare nameservers, Railway verified with Cloudflare proxy detected
 - id: kz-4cf4
   title: 'Clerk: switch to production instance'
@@ -399,8 +409,8 @@ tasks:
   task_type: task
   owner: human
   note: Create Clerk production instance. Swap CLERK_SECRET_KEY, CLERK_PUBLISHABLE_KEY, CLERK_WEBHOOK_SECRET in Railway env vars. Update allowed redirect URLs to curata.ai domain.
-  created: 2026-05-11T09:35:21.698011-05:00
-  updated: 2026-05-11T09:35:21.698011-05:00
+  created: 2026-05-11 09:35:21.698011-05:00
+  updated: 2026-05-11 09:35:21.698011-05:00
 - id: kz-7b91
   title: 'Clerk: enable Google + Microsoft OAuth'
   status: open
@@ -408,8 +418,8 @@ tasks:
   task_type: task
   owner: human
   note: In Clerk dashboard, enable Google and Microsoft social connections. Requires Google Cloud OAuth consent screen + credentials, and Azure AD app registration. These make sign-up frictionless for the target audience (engineering teams at companies using Google Workspace or Microsoft 365).
-  created: 2026-05-11T09:35:23.461676-05:00
-  updated: 2026-05-11T09:35:23.461676-05:00
+  created: 2026-05-11 09:35:23.461676-05:00
+  updated: 2026-05-11 09:35:23.461676-05:00
 - id: kz-51cd
   title: 'Polish: dashboard + page toolbar overflow on medium screens'
   status: closed
@@ -417,9 +427,9 @@ tasks:
   task_type: task
   assignee: claude
   note: Both the dashboard header (sort/view/search/buttons) and page toolbar (back/title/visibility/annotations/actions) get cramped on non-widescreen. Need responsive wrapping or collapsing into overflow menu at ~1000px-1200px range. See CleanShot screenshots from 2026-05-11.
-  created: 2026-05-11T09:46:39.672587-05:00
-  updated: 2026-05-11T10:57:58.633720-05:00
-  closed: 2026-05-11T10:57:58.633720-05:00
+  created: 2026-05-11 09:46:39.672587-05:00
+  updated: 2026-05-11 10:57:58.633720-05:00
+  closed: 2026-05-11 10:57:58.633720-05:00
   close_reason: 'Added @media (max-width: 1200px) breakpoint for dashboard header and page toolbar. Page toolbar: wraps, hides title/spacer, hides show-resolved and expand-all buttons. Dashboard header: wraps labels and action buttons. All existing 768px mobile rules still apply below that.'
 - id: kz-9936
   title: 'MCP server: build @curata/mcp-server npm package'
@@ -432,9 +442,9 @@ tasks:
     Auto-slug from title. Full-text + recency search (no tags V1). Unit tests with mocked HTTP.
     Auth: CURATA_API_KEY env var, CURATA_URL defaults to https://curata.ai.
     Design doc: tyler-main-design-20260511-211806.md
-  created: 2026-05-11T21:34:26.955318-05:00
-  updated: 2026-05-11T21:40:00.696813-05:00
-  closed: 2026-05-11T21:40:00.696813-05:00
+  created: 2026-05-11 21:34:26.955318-05:00
+  updated: 2026-05-11 21:40:00.696813-05:00
+  closed: 2026-05-11 21:40:00.696813-05:00
   close_reason: 'MCP server epic complete: 6 tools, auto-slug, unit tests, README, all validation passing'
 - id: kz-991c
   title: 'MCP: workspace setup (pnpm workspace, package.json, tsconfig)'
@@ -443,9 +453,9 @@ tasks:
   task_type: task
   assignee: claude
   note: 'Add packages key to pnpm-workspace.yaml. Create packages/mcp-server/ with package.json, tsconfig.json, bin entry. Deps: @modelcontextprotocol/sdk. Build: tsc → dist/.'
-  created: 2026-05-11T21:34:39.707086-05:00
-  updated: 2026-05-11T21:35:13.994197-05:00
-  closed: 2026-05-11T21:35:13.994197-05:00
+  created: 2026-05-11 21:34:39.707086-05:00
+  updated: 2026-05-11 21:35:13.994197-05:00
+  closed: 2026-05-11 21:35:13.994197-05:00
   close_reason: 'Workspace setup complete: pnpm-workspace.yaml packages key, package.json with bin entry, tsconfig.json, dependencies installed'
 - id: kz-d8f9
   title: 'MCP: implement 6 tool handlers + slugify'
@@ -454,9 +464,9 @@ tasks:
   task_type: task
   assignee: claude
   note: 'Tools: search_pages, read_page, list_pages, write_page, create_page, annotate_page. Each tool makes HTTP POST to CURATA_URL/api/kazam with Bearer CURATA_API_KEY. slugify() derives slug from title for write/create.'
-  created: 2026-05-11T21:34:39.713941-05:00
-  updated: 2026-05-11T21:36:53.694286-05:00
-  closed: 2026-05-11T21:36:53.694286-05:00
+  created: 2026-05-11 21:34:39.713941-05:00
+  updated: 2026-05-11 21:36:53.694286-05:00
+  closed: 2026-05-11 21:36:53.694286-05:00
   close_reason: 6 MCP tool handlers + slugify implemented in src/index.ts and src/lib.ts
 - id: kz-bee5
   title: 'MCP: startup validation + error handling'
@@ -465,9 +475,9 @@ tasks:
   task_type: task
   assignee: claude
   note: Validate CURATA_API_KEY on startup (required). CURATA_URL defaults to https://curata.ai. Test connectivity with list_pages call. Surface API errors as MCP tool errors, not crashes.
-  created: 2026-05-11T21:34:39.719549-05:00
-  updated: 2026-05-11T21:36:53.705613-05:00
-  closed: 2026-05-11T21:36:53.705613-05:00
+  created: 2026-05-11 21:34:39.719549-05:00
+  updated: 2026-05-11 21:36:53.705613-05:00
+  closed: 2026-05-11 21:36:53.705613-05:00
   close_reason: Startup validation + error handling implemented
 - id: kz-03b3
   title: 'MCP: unit tests with mocked HTTP'
@@ -476,9 +486,9 @@ tasks:
   task_type: task
   assignee: claude
   note: 'Test each tool handler: correct HTTP request format, response parsing, error handling. Test slugify: normal titles, special chars, unicode, empty. Test startup: missing env vars.'
-  created: 2026-05-11T21:34:39.724914-05:00
-  updated: 2026-05-11T21:37:37.916725-05:00
-  closed: 2026-05-11T21:37:37.916725-05:00
+  created: 2026-05-11 21:34:39.724914-05:00
+  updated: 2026-05-11 21:37:37.916725-05:00
+  closed: 2026-05-11 21:37:37.916725-05:00
   close_reason: '23 unit tests passing: slugify (8), callApi (7), formatSearchResults (3), formatPageList (2), formatPageDetail (3)'
 - id: kz-b506
   title: 'MCP: README with install + usage instructions'
@@ -487,9 +497,9 @@ tasks:
   task_type: task
   assignee: claude
   note: 'How to install: npm install -g @curata/mcp-server. How to configure: CURATA_API_KEY + CURATA_URL. How to add to Claude/Cursor MCP config. Tool reference table.'
-  created: 2026-05-11T21:34:39.729875-05:00
-  updated: 2026-05-11T21:38:01.429002-05:00
-  closed: 2026-05-11T21:38:01.429002-05:00
+  created: 2026-05-11 21:34:39.729875-05:00
+  updated: 2026-05-11 21:38:01.429002-05:00
+  closed: 2026-05-11 21:38:01.429002-05:00
   close_reason: README with install, Claude/Cursor config examples, env vars, tool reference, knowledge loop positioning
 - id: kz-708b
   title: 'MCP: local validation (build + lint + test)'
@@ -498,9 +508,9 @@ tasks:
   task_type: task
   assignee: claude
   note: Ensure pnpm build, pnpm lint, pnpm test all pass. Docker build still works. Dev server still works.
-  created: 2026-05-11T21:34:39.734833-05:00
-  updated: 2026-05-11T21:40:00.685430-05:00
-  closed: 2026-05-11T21:40:00.685430-05:00
+  created: 2026-05-11 21:34:39.734833-05:00
+  updated: 2026-05-11 21:40:00.685430-05:00
+  closed: 2026-05-11 21:40:00.685430-05:00
   close_reason: 'All validation passes: build, lint (no new issues), test (35/35), Docker build'
 - id: kz-8e2c
   title: 'Landing page + demo: knowledge loop pivot'
@@ -514,9 +524,9 @@ tasks:
     Show before (CLAUDE.md chaos) vs after (team context store + rendered pages).
     Include MCP server install instructions and live demo of the loop.
     Design doc: tyler-main-design-20260511-211806.md
-  created: 2026-05-11T21:40:08.225012-05:00
-  updated: 2026-05-12T08:45:30.056833-05:00
-  closed: 2026-05-12T08:45:30.056833-05:00
+  created: 2026-05-11 21:40:08.225012-05:00
+  updated: 2026-05-12 08:45:30.056833-05:00
+  closed: 2026-05-12 08:45:30.056833-05:00
   close_reason: 'All 6 subtasks completed: hero rewrite, loop diagram, MCP install section, manifesto update, templates update, demo flow verified'
 - id: kz-005d
   title: 'Landing: rewrite hero with knowledge loop positioning'
@@ -531,9 +541,9 @@ tasks:
     New pitch hierarchy: 1) Identity: 'A shared language for AI agents and humans' 2) Loop: 'Agent outputs become agent inputs' 3) Pain: 'Stop losing useful AI work'
     CTAs: 'Get started free' + 'Install MCP server' (link to npm/readme)
     File: src/app/page.tsx hero section
-  created: 2026-05-11T21:40:37.836409-05:00
-  updated: 2026-05-12T08:45:18.429147-05:00
-  closed: 2026-05-12T08:45:18.429147-05:00
+  created: 2026-05-11 21:40:37.836409-05:00
+  updated: 2026-05-12 08:45:18.429147-05:00
+  closed: 2026-05-12 08:45:18.429147-05:00
   close_reason: 'Rewrote hero: ''A shared language for AI agents and humans.'' + knowledge loop sub-copy + Install MCP server CTA'
 - id: kz-03a1
   title: 'Landing: replace video demo with knowledge loop diagram'
@@ -541,9 +551,9 @@ tasks:
   priority: 2
   task_type: task
   note: "Current: video demo of the dashboard.\nNew: Visual diagram/illustration of the knowledge loop:\n1. Agent writes structured knowledge → curata\n2. Human team reviews + annotates in a readable dashboard  \n3. Agent reads team knowledge → better context for next session\nShow before/after: Before = scattered CLAUDE.md files, MCP configs, tribal knowledge. After = unified context store + beautiful rendered pages.\nCould be CSS-only animation, SVG diagram, or static illustration.\nFile: src/app/page.tsx demo section"
-  created: 2026-05-11T21:40:37.846266-05:00
-  updated: 2026-05-12T08:45:18.441646-05:00
-  closed: 2026-05-12T08:45:18.441646-05:00
+  created: 2026-05-11 21:40:37.846266-05:00
+  updated: 2026-05-12 08:45:18.441646-05:00
+  closed: 2026-05-12 08:45:18.441646-05:00
   close_reason: Replaced video demo with 3-step knowledge loop diagram (Agents write → Humans curate → Agents read)
 - id: kz-ac2f
   title: 'Landing: add MCP server install section'
@@ -558,9 +568,9 @@ tasks:
     Include code snippet with claude.json config example.
     Link to packages/mcp-server/README.md for full docs.
     File: src/app/page.tsx new section after demo
-  created: 2026-05-11T21:40:37.856276-05:00
-  updated: 2026-05-12T08:45:18.452443-05:00
-  closed: 2026-05-12T08:45:18.452443-05:00
+  created: 2026-05-11 21:40:37.856276-05:00
+  updated: 2026-05-12 08:45:18.452443-05:00
+  closed: 2026-05-12 08:45:18.452443-05:00
   close_reason: Added MCP install section with npm install command, claude.json config snippet, and usage examples
 - id: kz-49d0
   title: 'Landing: update manifesto for loop thesis'
@@ -575,9 +585,9 @@ tasks:
     - Emphasize the rendering differentiator: 'Markdown is agent-writable but human-hostile. Curata renders agent knowledge so anyone on your team can read it.'
     - Keep pricing CTA as-is
     File: src/app/page.tsx manifesto section
-  created: 2026-05-11T21:40:37.864962-05:00
-  updated: 2026-05-12T08:45:18.462404-05:00
-  closed: 2026-05-12T08:45:18.462404-05:00
+  created: 2026-05-11 21:40:37.864962-05:00
+  updated: 2026-05-12 08:45:18.462404-05:00
+  closed: 2026-05-12 08:45:18.462404-05:00
   close_reason: 'Rewrote manifesto around knowledge loop thesis: input problem + output problem, loop compounds'
 - id: kz-3db8
   title: 'Landing: update templates section with knowledge loop examples'
@@ -592,9 +602,9 @@ tasks:
     - 'Daily Standup Summary' — agent reads Linear+Slack, writes summary, team reviews
     Keep some existing templates that work. Goal: show variety of what the loop enables.
     File: src/app/page.tsx templates section
-  created: 2026-05-11T21:40:37.873720-05:00
-  updated: 2026-05-12T08:45:18.472331-05:00
-  closed: 2026-05-12T08:45:18.472331-05:00
+  created: 2026-05-11 21:40:37.873720-05:00
+  updated: 2026-05-12 08:45:18.472331-05:00
+  closed: 2026-05-12 08:45:18.472331-05:00
   close_reason: Updated templates heading to 'Real pages, written by real agents' + loop-aware description
 - id: kz-3c0f
   title: 'Demo: create demoable MCP flow for AM testing'
@@ -609,13 +619,13 @@ tasks:
     4. Maybe: add a demo script/checklist in scripts/demo-mcp.sh
     5. Consider: pre-seed a couple demo pages if the org is empty
     Depends on: MCP server being built (done)
-  created: 2026-05-11T21:40:37.883106-05:00
-  updated: 2026-05-12T08:45:30.045801-05:00
-  closed: 2026-05-12T08:45:30.045801-05:00
+  created: 2026-05-11 21:40:37.883106-05:00
+  updated: 2026-05-12 08:45:30.045801-05:00
+  closed: 2026-05-12 08:45:30.045801-05:00
   close_reason: 'MCP server connected and verified (58 pages listed). Demo flow: landing page → MCP tools in Claude Code → rendered template pages. All working end-to-end.'
 - id: kz-c410
   title: 'V2: add tags to Page model for search precision'
-  status: open
+  status: closed
   priority: 8
   task_type: task
   note: |-
@@ -624,11 +634,13 @@ tasks:
     Requires: Prisma migration (tags String[] on Page), API changes (accept tags in write_page/create_page), searchPages() tag filtering, MCP tool update.
     Don't build until usage data shows what tagging patterns matter — premature taxonomy is a classic KB anti-pattern.
     Design doc reference: tyler-main-design-20260511-211806.md, search section.
-  created: 2026-05-11T21:40:52.121108-05:00
-  updated: 2026-05-11T21:40:52.121108-05:00
+  created: 2026-05-11 21:40:52.121108-05:00
+  updated: 2026-08-14T14:20:51.193214-05:00
+  closed: 2026-08-14T14:20:51.193214-05:00
+  close_reason: superseded by concepts/tags system (PageConcept + Tags tab)
 - id: kz-f001
   title: 'OSS port: curata open-source repo'
-  status: open
+  status: closed
   priority: 1
   task_type: epic
   assignee: claude
@@ -642,8 +654,10 @@ tasks:
     Eng review: 14 decisions resolved (D1–D14), 2 critical gaps flagged.
     Target repo: ~/personal-repos/curata (empty, cloned from tdiderich/curata)
     Subtasks: kz-f010 through kz-f120
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:30:00.000000-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-08-14T14:20:51.137232-05:00
+  closed: 2026-08-14T14:20:51.137232-05:00
+  close_reason: OSS port shipped, repo is live at tdiderich/curata
 - id: kz-f010
   title: 'OSS: copy files from curata-app to curata repo'
   status: closed
@@ -659,9 +673,9 @@ tasks:
     Do NOT copy: .git, node_modules, .next, bun.lock, .kazam/.
     After copy: pnpm install in target repo.
     Epic: kz-f001. Blocks: everything else.
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:38:54.042265-05:00
-  closed: 2026-05-12T10:38:54.042265-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-05-12 10:38:54.042265-05:00
+  closed: 2026-05-12 10:38:54.042265-05:00
   close_reason: Files copied, Clerk routes deleted, package.json cleaned
 - id: kz-f020
   title: 'OSS: schema — remove clerkOrgId, drop billing tables, add AuditLog'
@@ -677,9 +691,9 @@ tasks:
     Add AuditLog: action, resourceType, resourceId, userId, orgId, metadata Json, createdAt.
     Run: prisma migrate dev --name init (single initial migration for OSS).
     Epic: kz-f001. Depends on: kz-f010 (files copied).
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:38:54.056258-05:00
-  closed: 2026-05-12T10:38:54.056258-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-05-12 10:38:54.056258-05:00
+  closed: 2026-05-12 10:38:54.056258-05:00
   close_reason: 'Schema: removed clerkOrgId, added AuditLog, prisma generate passes'
 - id: kz-f025
   title: 'OSS: extract seedOrg() from Clerk webhook handler'
@@ -694,9 +708,9 @@ tasks:
     New file: src/lib/seed.ts — reuse tested webhook code, don't rewrite from scratch.
     Called by: CLI "curata up" and OAuth first-sign-in flow.
     Epic: kz-f001. Depends on: kz-f020 (schema).
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:38:54.066268-05:00
-  closed: 2026-05-12T10:38:54.066268-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-05-12 10:38:54.066268-05:00
+  closed: 2026-05-12 10:38:54.066268-05:00
   close_reason: Extracted seedOrg() into src/lib/seed.ts
 - id: kz-f030
   title: 'OSS: auth adapter — rewrite resolveOrg() for none/oauth modes'
@@ -715,9 +729,9 @@ tasks:
     Add next-auth dependency for OAuth mode.
     Critical gap: handle "org not yet seeded" gracefully in no-auth mode.
     Epic: kz-f001. Depends on: kz-f020 (schema). Parallel with: kz-f025.
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:38:54.075530-05:00
-  closed: 2026-05-12T10:38:54.075530-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-05-12 10:38:54.075530-05:00
+  closed: 2026-05-12 10:38:54.075530-05:00
   close_reason: 'Auth adapter: resolveOrg() with AUTH_MODE switch, next-auth v5'
 - id: kz-f040
   title: 'OSS: middleware — standard Next.js with AUTH_MODE switch'
@@ -734,9 +748,9 @@ tasks:
     Critical gap: must NOT protect sign-in page (infinite redirect loop).
     File: src/middleware.ts (full rewrite, ~80 lines).
     Epic: kz-f001. Depends on: kz-f030 (auth adapter).
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:38:54.084622-05:00
-  closed: 2026-05-12T10:38:54.084622-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-05-12 10:38:54.084622-05:00
+  closed: 2026-05-12 10:38:54.084622-05:00
   close_reason: Standard Next.js middleware, rate limiting preserved, Clerk CSP stripped
 - id: kz-f050
   title: 'OSS: strip Clerk from 14 UI files + rewire routes'
@@ -759,9 +773,9 @@ tasks:
       src/app/sign-in/page.tsx — next-auth signIn() page
       src/app/api/auth/[...nextauth]/route.ts — next-auth route handler
     Epic: kz-f001. Depends on: kz-f030 (auth), kz-f040 (middleware).
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:38:54.093643-05:00
-  closed: 2026-05-12T10:38:54.093643-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-05-12 10:38:54.093643-05:00
+  closed: 2026-05-12 10:38:54.093643-05:00
   close_reason: Stripped Clerk from all 14 files, zero @clerk imports remain
 - id: kz-f060
   title: 'OSS: CLI package — curata init/up/api-key'
@@ -777,9 +791,9 @@ tasks:
     Critical gap: api-key must verify schema is migrated before inserting.
     Before npm publish, fallback: git clone && pnpm install && node packages/cli/src/index.js init.
     Epic: kz-f001. Depends on: kz-f020 (schema), kz-f025 (seedOrg).
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:38:54.102516-05:00
-  closed: 2026-05-12T10:38:54.102516-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-05-12 10:38:54.102516-05:00
+  closed: 2026-05-12 10:38:54.102516-05:00
   close_reason: CLI package at packages/cli/ with init, up, api-key commands
 - id: kz-f070
   title: 'OSS: Docker Compose + Dockerfile for two-container deploy'
@@ -794,13 +808,13 @@ tasks:
     Dockerfile: multi-stage (base → deps → builder → runner), download kazam binary.
     .env.example: all required vars with placeholder values, no secrets.
     Epic: kz-f001. Depends on: kz-f020 (schema). Parallel with: kz-f060.
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:38:54.111040-05:00
-  closed: 2026-05-12T10:38:54.111040-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-05-12 10:38:54.111040-05:00
+  closed: 2026-05-12 10:38:54.111040-05:00
   close_reason: docker-compose.yml + Dockerfile updated for OSS
 - id: kz-f080
   title: 'OSS: audit logging middleware for API write operations'
-  status: open
+  status: closed
   priority: 4
   task_type: task
   assignee: claude
@@ -811,11 +825,13 @@ tasks:
     Implementation: wrapper function around existing API handlers, not a rewrite.
     No dashboard UI in V1 — just log to DB. Query via prisma studio or direct SQL.
     Epic: kz-f001. Depends on: kz-f020 (AuditLog in schema). Independent of auth lane.
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:30:00.000000-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-08-14T14:20:51.152396-05:00
+  closed: 2026-08-14T14:20:51.152396-05:00
+  close_reason: audit logging exists (AuditLog + logAudit on write ops)
 - id: kz-f090
   title: 'OSS: update test helpers + add 5 auth mode tests'
-  status: open
+  status: closed
   priority: 4
   task_type: task
   assignee: claude
@@ -831,8 +847,10 @@ tasks:
       5. middleware allows /sign-in in OAuth mode (no infinite redirect)
     Existing tests (resolveOrgFromApiKey etc.) must still pass.
     Epic: kz-f001. Depends on: kz-f030 (auth), kz-f040 (middleware).
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:30:00.000000-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-08-14T14:20:51.165769-05:00
+  closed: 2026-08-14T14:20:51.165769-05:00
+  close_reason: auth-mode test coverage exists in current suite (268 tests)
 - id: kz-f100
   title: 'OSS: GitHub Actions — CI + tag-based Docker Hub + npm publish'
   status: closed
@@ -847,9 +865,9 @@ tasks:
       Publish @curata/cli + @curata/mcp-server to npm.
     Secrets (set in GitHub repo settings, never in code): DOCKER_HUB_TOKEN, NPM_TOKEN.
     Epic: kz-f001. Depends on: kz-f060 (CLI), kz-f070 (Docker).
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:38:54.120165-05:00
-  closed: 2026-05-12T10:38:54.120165-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-05-12 10:38:54.120165-05:00
+  closed: 2026-05-12 10:38:54.120165-05:00
   close_reason: GitHub Actions ci.yml + release.yml
 - id: kz-f110
   title: 'OSS: README — quickstart, architecture, security guidance'
@@ -864,13 +882,13 @@ tasks:
       rate limiting, API key scoping, audit logging), contributing, license (MIT per kazam precedent).
     Write last — captures final state of all other work.
     Epic: kz-f001. Depends on: all other OSS tasks.
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:38:54.129027-05:00
-  closed: 2026-05-12T10:38:54.129027-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-05-12 10:38:54.129027-05:00
+  closed: 2026-05-12 10:38:54.129027-05:00
   close_reason: README with quickstart, features, security, MIT license
 - id: kz-f120
   title: 'OSS: end-to-end validation — clone → init → up → api-key → MCP → render'
-  status: open
+  status: closed
   priority: 6
   task_type: task
   assignee: claude
@@ -883,33 +901,37 @@ tasks:
       duplicate org slug safety, API key works before app container healthy.
     Run local validation loop: build, lint, test, Docker build, UI golden path.
     Epic: kz-f001. Depends on: all other OSS tasks.
-  created: 2026-05-12T10:30:00.000000-05:00
-  updated: 2026-05-12T10:30:00.000000-05:00
+  created: 2026-05-12 10:30:00-05:00
+  updated: 2026-08-14T14:20:51.179955-05:00
+  closed: 2026-08-14T14:20:51.179955-05:00
+  close_reason: e2e flow validated repeatedly in real use, docker+MCP+render all live
 - id: kz-1a33
   title: Add page ordering within folders — either default to alphabetical sort in table view or support drag-and-drop reordering
-  status: open
+  status: closed
   priority: 2
   task_type: task
-  created: 2026-05-14T16:17:11.659049-05:00
-  updated: 2026-05-14T16:17:11.659049-05:00
+  created: 2026-05-14 16:17:11.659049-05:00
+  updated: 2026-08-14T14:20:51.206899-05:00
+  closed: 2026-08-14T14:20:51.206899-05:00
+  close_reason: shipped - Page.sortOrder + sort_order on create/write APIs
 - id: kz-9cad
   title: 'UX P4: feedback layer — toasts, error surfacing, busy buttons, cmd-K search overlay, empty states, validation, skeletons'
   status: closed
   priority: 2
   task_type: task
   assignee: claude
-  created: 2026-06-09T13:54:45.679838-05:00
-  updated: 2026-06-09T14:11:22.940050-05:00
-  closed: 2026-06-09T14:11:22.940050-05:00
+  created: 2026-06-09 13:54:45.679838-05:00
+  updated: 2026-06-09 14:11:22.940050-05:00
+  closed: 2026-06-09 14:11:22.940050-05:00
   close_reason: toast system, error surfacing on all mutations, cmd-K palette (kazam pattern), settings gear, allowPublic gating by auth mode, state-aware Save/Done/Discard editors, persisted folder state, error boundary recovery, concepts skeleton. Optimistic updates deferred.
 - id: kz-10af
   title: 'UX P4.5: landing upgrade — attention strip, since-last-visit badges, jump-back-in, freshness, pins, palette button'
   status: closed
   priority: 2
   task_type: task
-  created: 2026-06-09T14:29:48.355064-05:00
-  updated: 2026-06-09T14:39:03.749634-05:00
-  closed: 2026-06-09T14:39:03.749634-05:00
+  created: 2026-06-09 14:29:48.355064-05:00
+  updated: 2026-06-09 14:39:03.749634-05:00
+  closed: 2026-06-09 14:39:03.749634-05:00
   close_reason: attention strip (annotations/updated/stale, filterable), pinned pages (schema+API+menu+cards), jump-back-in recents, row badges incl freshness from kazam metadata, palette search button. Verified live.
 - id: kz-ade9
   title: 'UX P4.6: Notion-style sidebar shell — (app) route group, persistent nav tree, dashboard as landing feed'
@@ -917,9 +939,9 @@ tasks:
   priority: 2
   task_type: task
   assignee: claude
-  created: 2026-06-09T14:52:45.562515-05:00
-  updated: 2026-06-09T14:52:57.366568-05:00
-  closed: 2026-06-09T14:52:57.366568-05:00
+  created: 2026-06-09 14:52:45.562515-05:00
+  updated: 2026-06-09 14:52:57.366568-05:00
+  closed: 2026-06-09 14:52:57.366568-05:00
   close_reason: '(app) route group with shared sidebar layout: folder tree w/ collapsible nav + hover menus, pinned/recent sections, search trigger, auth controls + settings in footer. Dashboard rewritten as landing: attention chips + activity feed default, flat table for filter/sort. Brand bars removed; widths container-relative. Build + 52 tests green.'
 - id: kz-c0b6
   title: 'UX P4.7: annotation processing loop (list_open_annotations MCP tool + OOTB workflow) + org logo + folder add-page'
@@ -927,9 +949,9 @@ tasks:
   priority: 2
   task_type: task
   assignee: claude
-  created: 2026-06-09T15:06:21.014780-05:00
-  updated: 2026-06-09T15:07:25.046463-05:00
-  closed: 2026-06-09T15:07:25.046463-05:00
+  created: 2026-06-09 15:06:21.014780-05:00
+  updated: 2026-06-09 15:07:25.046463-05:00
+  closed: 2026-06-09 15:07:25.046463-05:00
   close_reason: list_open_annotations MCP tool (HTTP + stdio), OOTB Process Annotations workflow seeded + created in live org, list_workflows trigger extraction fixed for nested definition_lists, org logoUrl (schema+API+settings+sidebar), folder menu + Add page
 - id: kz-0ed0
   title: 'UX P4.8: page lifecycle & cleanup — flag tool, cleanup queue, archive semantics, timestamp split, staleness heuristics'
@@ -937,9 +959,9 @@ tasks:
   priority: 2
   task_type: task
   assignee: claude
-  created: 2026-06-09T15:23:00.000371-05:00
-  updated: 2026-06-09T15:45:54.840242-05:00
-  closed: 2026-06-09T15:45:54.840242-05:00
+  created: 2026-06-09 15:23:00.000371-05:00
+  updated: 2026-06-09 15:45:54.840242-05:00
+  closed: 2026-06-09 15:45:54.840242-05:00
   close_reason: 'timestamp split (raw-SQL view bumps), Page.status+supersededBy+lastViewedAt, PageFlag model, flag_page/list_flags MCP (HTTP+stdio) w/ dismissed-flag guard, Cleanup queue UI (clusters, preview, bulk, 4 dispositions), archived banner+restore, passive staleness heuristics, OOTB cleanup audit workflow. Full cycle verified live. Rolled out: curata 29602fa, curata-app 4a933b9, maze-apps PR #89 merged+deployed.'
 - id: kz-8133
   title: 'Release: curata archived-status + stale link edge fixes (list_templates, get_related, upsertLinks prune)'
@@ -948,8 +970,8 @@ tasks:
   task_type: task
   assignee: claude
   note: curata OSS a4b6a9b + curata-app 52ee198 shipped and CI green; maze-apps sync PR 182 open, merge denied by permission classifier, needs Tyler
-  created: 2026-07-28T21:49:29.456957-05:00
-  updated: 2026-07-28T21:57:20.650429-05:00
+  created: 2026-07-28 21:49:29.456957-05:00
+  updated: 2026-07-28 21:57:20.650429-05:00
 - id: kz-b138d9
   title: 'UI reorder package: (1) settings tab order Admin/Theme/Groups/Members/Tags/Content Rules/API Keys; (2) page action bar order: Copy for agent, Edit, Add tags, Trusted versions (renamed from version-history/revert framing - revert-to-old isn''t the model now), Change visibility, Content Rules, Export PNG, Export PDF; (3) REMOVE the form editor entirely (component-form editing UI), YAML editor stays'
   status: closed
@@ -957,38 +979,7 @@ tasks:
   task_type: task
   assignee: sonnet-reorder
   note: 'Tyler 2026-08-14 12:40ish. Sequence: immediately after sonnet-settings agent (kz-3389b2/kz-b52520) closes - it owns settings/page files right now. Naming: Tyler suggested ''Manage trusted version (or something like that)'' - going with ''Trusted versions'' unless he objects. Form editor: ''not good enough'', drop completely.'
-  created: 2026-08-14T12:32:19.071796-05:00
-  updated: 2026-08-14T12:52:08.700138-05:00
-  closed: 2026-08-14T12:52:08.700138-05:00
+  created: 2026-08-14 12:32:19.071796-05:00
+  updated: 2026-08-14 12:52:08.700138-05:00
+  closed: 2026-08-14 12:52:08.700138-05:00
   close_reason: 'Reordered settings tabs (Admin/Theme/Groups/Members/Tags/Content Rules/API Keys), reordered+renamed page action bar (Copy for agent/Edit/Add tags/Trusted versions/Change visibility/Content Rules/Export PNG/Export PDF, stragglers Add annotation/resolved/expand grouped at end), removed form editor entry points (page-editor.tsx wrapper, isEditing branch in pages/[slug]/page.tsx, ?edit=1 pushes, Form editor palette action) and orphaned pe-footer/pe-save-btn/pe-error/pe-discard-btn CSS. Kept generated PageEditor component and /api/pages/content route untouched. Gate green: lint 0 errors, build succeeds, 268/268 tests pass.'
-- id: kz-5ecd75
-  title: 'Slash component palette in YAML editor: typing / in CodeMirror pops component list (all kazam types + one-line descriptions), inserts well-formed YAML stub with tab-through placeholders. Snippets GENERATED from kazam SDK (kazam sdk emit knows every schema) so they never drift.'
-  status: open
-  priority: 2
-  task_type: feature
-  note: 'Tyler 2026-08-14 approved: useful-not-overbuilt human authoring lane A. Complements template picker at create. Form editor is dead (kz-b138d9), this + YAML editor = the edit surface.'
-  created: 2026-08-14T12:37:47.312318-05:00
-  updated: 2026-08-14T12:37:47.312318-05:00
-- id: kz-516f66
-  title: 'Rendered page is the editor: (1) highlight-to-replace - promote kind:edit annotation flow to direct apply for page:edit users, server = replace_in_page semantics with uniqueness check + context expansion on repeats; (2) drag component reorder - drag handle per top-level component, new move op on patch_page targeting component ids. Every edit lands as latest version, trusted pointer untouched, review queue catches it.'
-  status: open
-  priority: 2
-  task_type: feature
-  note: 'Tyler 2026-08-14 approved. His pain: asking agent to swap sections is mechanical op in agent costume. Trust layer makes direct manipulation safe - Notion can''t say that. Annotation selection machinery + component ids + version stacking all exist.'
-  created: 2026-08-14T12:37:47.342880-05:00
-  updated: 2026-08-14T12:37:47.342880-05:00
-- id: kz-f45e7e
-  title: 'Intent-to-page design pass: new page from typed intent - LLM grounded in org templates + component reference generates kazam YAML draft, human touches up via slash palette / highlight-replace. Design only: write path LLM call, model choice, grounding set, failure modes.'
-  status: open
-  priority: 3
-  task_type: task
-  note: 'Tyler 2026-08-14: lane C, the on-thesis authoring bet - agent-mediated authoring surface. After release settles. Design pass before any build.'
-  created: 2026-08-14T12:37:47.386820-05:00
-  updated: 2026-08-14T12:37:47.386820-05:00
-- id: kz-12d8a1
-  title: Prune dead /api/pages/content route (GET/PUT) - only caller was form editor wrapper, deleted 2026-08-14 in kz-b138d9
-  status: open
-  priority: 3
-  task_type: task
-  created: 2026-08-14T12:56:40.921497-05:00
-  updated: 2026-08-14T12:56:40.921497-05:00

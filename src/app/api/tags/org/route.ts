@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { normalizeTerm } from "@/lib/concepts";
 import { DEFAULT_KIND, isCuratedKind } from "@/lib/concept-kinds";
 import { logAudit } from "@/lib/audit";
+import { Prisma } from "@/generated/prisma/client";
 
 /**
  * Org-scoped concept ("Tags tab") management — distinct from /api/tags
@@ -140,7 +141,22 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "nothing to update" }, { status: 400 });
   }
 
-  const updated = await db.concept.update({ where: { id: conceptId }, data });
+  let updated;
+  try {
+    updated = await db.concept.update({ where: { id: conceptId }, data });
+  } catch (err) {
+    // The findUnique collision check above isn't atomic with this update —
+    // a concurrent PATCH can rename another concept to the same term in
+    // between. Fall back to the same 409 the pre-check returns instead of
+    // letting the unique-constraint violation surface as a 500.
+    if (data.normalizedName && err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return NextResponse.json(
+        { error: "a tag with that name already exists — merging tags isn't supported yet" },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
   logAudit({
     orgId: ctx.orgId,
     action: "update_concept",

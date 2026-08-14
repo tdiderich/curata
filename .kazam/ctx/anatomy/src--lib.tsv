@@ -1,42 +1,46 @@
 path	tokens	reads	description
 src/lib/access.ts	1051	0	resolvePageAccess: creator > share > org/shared (needs orgMemberRole) > public (any anonymous) > share-link token; defines visibility rank for folder boundary checks
-src/lib/activity.ts	3640	0	activity library module
+src/lib/activity.ts	3805	0	activity library module
 src/lib/agent-prompt.ts	1929	0	Exports buildAgentPrompt({baseUrl, token?, slug?}) which returns the '# Curata Agent Instructions' markdown prompt with MCP connection info, API format examples, tool table, and workflow steps
 src/lib/api-fetch.ts	16	0	api-fetch library module
 src/lib/api-key.ts	113	0	generateApiKey() mints ck_ prefixed random key + sha256 hash + prefix; hashApiKey() re-hashes a key for lookup/verification
 src/lib/approval.ts	2787	0	approval library module
 src/lib/audit.ts	183	0	audit library module
 src/lib/auth.ts	2716	0	auth library module
-src/lib/component-ids.ts	1865	0	component-ids library module
+src/lib/capture-dedup.ts	1896	0	capture-dedup library module
+src/lib/capture-gate.ts	644	0	capture-gate library module
+src/lib/capture-token.ts	1808	0	capture-token library module
+src/lib/component-ids.ts	1987	0	component-ids library module
 src/lib/concept-kinds.ts	261	0	concept-kinds library module
-src/lib/concepts.ts	3042	0	concepts library module
+src/lib/concepts.ts	3271	0	concepts library module
 src/lib/content-negotiation.ts	557	0	content-negotiation library module
 src/lib/content-rules.ts	1720	0	content-rules library module
 src/lib/copy-for-agent.ts	679	0	copy-for-agent library module
 src/lib/db.ts	145	0	db library module
 src/lib/default-tags.ts	168	0	default-tags library module
-src/lib/export-nonce.ts	168	0	export-nonce library module
-src/lib/export-render.ts	845	0	export-render library module
+src/lib/export-nonce.ts	1458	0	export-nonce library module
+src/lib/export-render.ts	853	0	export-render library module
 src/lib/export.ts	1105	0	export library module
 src/lib/glance-prompts.ts	3629	0	glance-prompts library module
 src/lib/graph.ts	1810	0	graph library module
 src/lib/groups.ts	1522	0	groups library module
 src/lib/kazam.ts	1076	0	kazam library module
-src/lib/mcp-dispatch.ts	14201	0	mcp-dispatch library module
-src/lib/mcp-instructions.ts	1498	0	mcp-instructions library module
+src/lib/mcp-dispatch.ts	16353	0	mcp-dispatch library module
+src/lib/mcp-instructions.ts	1699	0	mcp-instructions library module
 src/lib/next-auth.ts	229	0	next-auth library module
 src/lib/org-tags.ts	387	0	org-tags library module
 src/lib/page-actions.ts	203	0	page-actions library module
 src/lib/page-markdown.ts	6268	0	page-markdown library module
-src/lib/pages.ts	7657	0	pages library module
+src/lib/pages.ts	8002	0	pages library module
 src/lib/permissions.ts	265	0	permissions library module
 src/lib/personal-domains.ts	196	0	personal-domains library module
 src/lib/pins.ts	530	0	pins library module
 src/lib/public-catalog.ts	863	0	public-catalog library module
 src/lib/public-page.ts	407	0	public-page library module
 src/lib/request-origin.ts	164	0	request-origin library module
+src/lib/required-components.ts	3394	0	required-components library module
 src/lib/seed-page.ts	1879	0	seed-page library module
-src/lib/seed.ts	1355	0	seed library module
+src/lib/seed.ts	1384	0	seed library module
 src/lib/share-prompt.ts	1025	0	share-prompt library module
 src/lib/slug-words.ts	755	0	slug-words library module
 src/lib/templates-server.ts	71	0	getTemplateContent(slug) reads demos/templates/<slug>.yaml from disk — backs POST /api/pages (templateSlug) for the web UI's 'create from template' flow
