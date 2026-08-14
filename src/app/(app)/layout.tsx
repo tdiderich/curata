@@ -3,6 +3,7 @@ import { AUTH_MODE, resolveOrg, resolveCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { basePath } from "@/lib/api-fetch";
 import { can } from "@/lib/permissions";
+import { getReviewQueueCount } from "@/lib/pages";
 import { Sidebar, type SidebarFolder, type SidebarPage } from "@/components/sidebar";
 
 function UserAvatar({ name, email }: { name: string; email: string }) {
@@ -53,6 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let orgSlug = "default";
   let logoUrl: string | null = null;
   let cleanupCount = 0;
+  let reviewCount = 0;
   let canManageRules = false;
 
   try {
@@ -132,6 +134,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           ],
         },
       });
+
+      reviewCount = await getReviewQueueCount(ctx.orgId, ctx.userId);
     }
   } catch {
     // DB unavailable (static generation) — render without nav data.
@@ -139,7 +143,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="app-shell">
-      <Sidebar folders={folders} pages={pages} archivedPages={archivedPages} orgName={orgName} orgSlug={orgSlug} authMode={AUTH_MODE} logoUrl={logoUrl} cleanupCount={cleanupCount} canManageRules={canManageRules} authControls={<AuthControls />} />
+      <Sidebar folders={folders} pages={pages} archivedPages={archivedPages} orgName={orgName} orgSlug={orgSlug} authMode={AUTH_MODE} logoUrl={logoUrl} cleanupCount={cleanupCount} reviewCount={reviewCount} canManageRules={canManageRules} authControls={<AuthControls />} />
       <main className="app-main">{children}</main>
     </div>
   );

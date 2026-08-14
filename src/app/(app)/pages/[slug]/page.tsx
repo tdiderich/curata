@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
 import { resolveOrg, AUTH_MODE } from "@/lib/auth";
 import { getAnnotations, getPageSections, readPage, bumpViewCount } from "@/lib/pages";
 import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
 import { resolveRules } from "@/lib/content-rules";
 import type { ResolvedRule } from "@/lib/content-rules";
+import { canApprove, getApprovers, describeApprovalRule, parseApprovalRules } from "@/lib/approval";
+import type { ApprovalApprover } from "@/lib/approval";
 import { PageRenderer } from "@/generated/kazam-renderer";
 import PageDetailClient from "@/components/page-detail-client";
-import PageEditor from "@/components/page-editor";
 import { PageTags } from "@/components/page-tags";
 import { getPageConcepts, normalizeTerm } from "@/lib/concepts";
 import { DEFAULT_TAGS } from "@/lib/default-tags";
@@ -32,16 +32,20 @@ export default async function PageDetailView({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ edit?: string; hub?: string }>;
+  searchParams: Promise<{ hub?: string; latest?: string }>;
 }) {
   const ctx = await resolveOrg();
   if (!ctx) redirect("/sign-in");
 
   const { slug } = await params;
-  const { edit, hub: hubSlug } = await searchParams;
-  const isEditing = edit === "1";
+  const { hub: hubSlug, latest: latestParam } = await searchParams;
+  // Viewers see the trusted (human-approved) version by default — the whole
+  // point of the approval gate. ?latest=1 previews the newest, unapproved
+  // version without changing what anyone else sees.
+  const previewingLatest = latestParam === "1";
+  const channel = previewingLatest ? "latest" : "trusted";
 
-  const pageData = await readPage(ctx.orgId, slug);
+  const pageData = await readPage(ctx.orgId, slug, channel);
   if (!pageData) notFound();
 
   const pageRow = await db.page.findUnique({
@@ -60,32 +64,25 @@ export default async function PageDetailView({
     pageRules = resolved.page;
   }
 
-  const pageTitle = (pageData.json.title as string) || slug;
-
-  if (isEditing) {
-    return (
-      <>
-        <div className="site-bar">
-          <Link className="site-bar-back" href={`/pages/${slug}`}>
-            &larr; Back to preview
-          </Link>
-        </div>
-        <PageEditor
-          slug={slug}
-          initial={{
-            title: (pageData.json.title as string) || "",
-            shell: (pageData.json.shell as string) || "standard",
-            subtitle: (pageData.json.subtitle as string) || undefined,
-            components: (pageData.json.components ?? []) as Array<{
-              type: string;
-              [key: string]: unknown;
-            }>,
-          }}
-          contentHash={pageData.contentHash}
-        />
-      </>
-    );
+  // Approval eligibility: page:edit is still the floor (viewers never get an
+  // approve button); an approval rule further narrows who among editors can
+  // click it. No rule anywhere in the cascade means the pre-existing
+  // behavior stands — any editor can approve.
+  let approvalEligible = true;
+  let approversNote: string | null = null;
+  let pageApprovers: ApprovalApprover[] | null = null;
+  if (pageRow) {
+    approvalEligible = await canApprove(ctx.orgId, ctx.userId, ctx.role, slug);
+    const resolvedApprovers = await getApprovers(ctx.orgId, slug);
+    if (resolvedApprovers) {
+      approversNote = await describeApprovalRule(ctx.orgId, resolvedApprovers.rule);
+    }
+    const pageLevelRule = parseApprovalRules(pageRow.rules)[0];
+    pageApprovers = pageLevelRule ? pageLevelRule.approvers : null;
   }
+  const canApproveEffective = canEditPage && approvalEligible;
+
+  const pageTitle = (pageData.json.title as string) || slug;
 
   const pageTags: Array<{ term: string; kind: string }> = [];
   let tagOptions: Array<{ term: string; kind: string }> = [];
@@ -139,7 +136,7 @@ export default async function PageDetailView({
     slide: a.slide ?? undefined,
     visibility: a.visibility ?? undefined,
   }));
-  const sections = await getPageSections(ctx.orgId, slug);
+  const sections = await getPageSections(ctx.orgId, slug, channel);
 
   type HubShape = { name: string; eyebrow?: string; status?: string; status_color?: string; pages?: Array<{ label: string; href: string }> };
   let effectiveHub = pageData.json.hub as HubShape | undefined;
@@ -206,9 +203,18 @@ export default async function PageDetailView({
         pageSlug={slug}
         canManageRules={canManageRules}
         canEditPageRules={canEditPage}
+        pageApprovers={pageApprovers}
+        approvalEffectiveNote={approversNote}
         archived={pageRow?.status === "archived"
           ? { since: pageRow.updatedAt.toISOString().slice(0, 10), supersededBy: pageRow.supersededBy }
           : undefined}
+        trustBanner={{
+          trusted: pageData.trusted,
+          trustedBehind: pageData.trustedBehind,
+          previewingLatest,
+          canApprove: canApproveEffective,
+          approversNote,
+        }}
         tagsRow={
           pageRow ? (
             <PageTags

@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(versions);
+    return NextResponse.json({ versions, trustedVersionId: page.trustedVersionId });
   } catch (err) {
     console.error("versions error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

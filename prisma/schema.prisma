@@ -29,6 +29,7 @@ model Organization {
   pages     Page[]
   members   OrgMember[]
   auditLogs AuditLog[]
+  groups    Group[]
 
   @@map("organizations")
 }
@@ -43,6 +44,39 @@ model OrgMember {
 
   @@unique([orgId, userId])
   @@map("org_members")
+}
+
+// Groups are a many-to-many primitive: users sit in multiple groups, groups
+// have multiple members. v1 is the primitive only (CRUD + membership) — no
+// wiring into folder approval rules, the review queue, or approvals yet.
+model Group {
+  id        String   @id @default(cuid())
+  orgId     String   @map("org_id")
+  name      String
+  slug      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  org     Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  members GroupMember[]
+
+  @@unique([orgId, slug])
+  @@index([orgId])
+  @@map("groups")
+}
+
+model GroupMember {
+  id        String   @id @default(cuid())
+  groupId   String   @map("group_id")
+  userId    String   @map("user_id")
+  role      String   @default("member")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@map("group_members")
 }
 
 model Folder {
@@ -86,6 +120,10 @@ model Page {
   supersededBy String? @map("superseded_by")
   rules        Json?
   lastViewedAt DateTime? @map("last_viewed_at")
+  // npm dist-tag style trust pointer: a human marks one PageVersion as the
+  // "trusted" read for agents. Null = no trusted version yet (no backfill).
+  // Writes never touch this column — only markTrusted/clearTrusted do.
+  trustedVersionId String? @map("trusted_version_id")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 

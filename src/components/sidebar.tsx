@@ -141,6 +141,7 @@ export function Sidebar({
   authMode = "none",
   logoUrl,
   cleanupCount = 0,
+  reviewCount = 0,
   canManageRules = false,
   authControls,
 }: {
@@ -152,6 +153,7 @@ export function Sidebar({
   authMode?: string;
   logoUrl?: string | null;
   cleanupCount?: number;
+  reviewCount?: number;
   canManageRules?: boolean;
   authControls?: React.ReactNode;
 }) {
@@ -207,6 +209,24 @@ export function Sidebar({
     setRecents(readRecents());
     setMobileOpen(false);
   }, [pathname]);
+
+  // Reveal the active page: expand its folder chain without persisting, so
+  // landing on a page always shows where it lives in the tree.
+  useEffect(() => {
+    if (!pathname.startsWith("/pages/")) return;
+    const slug = decodeURIComponent(pathname.slice("/pages/".length).split("/")[0]);
+    const page = pages.find((p) => p.slug === slug);
+    if (!page?.folderId) return;
+    const byId = new Map(folders.map((f) => [f.id, f]));
+    const chain: string[] = [];
+    let cur: string | null | undefined = page.folderId;
+    while (cur && !chain.includes(cur)) {
+      chain.push(cur);
+      cur = byId.get(cur)?.parentId ?? null;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setExpanded((prev) => (chain.every((id) => prev.has(id)) ? prev : new Set([...prev, ...chain])));
+  }, [pathname, pages, folders]);
 
   useEffect(() => {
     const sync = () => setPins(readPinsSeeded(pages.filter((p) => p.pinned).map((p) => p.slug)));
@@ -518,6 +538,12 @@ export function Sidebar({
           <Link href="/cleanup" className={`nav-link-item${pathname === "/cleanup" ? " nav-link-item--active" : ""}`}>
             Cleanup
             <span className="nav-count-badge">{cleanupTotal}</span>
+          </Link>
+        )}
+        {reviewCount > 0 && (
+          <Link href="/review" className={`nav-link-item${pathname === "/review" ? " nav-link-item--active" : ""}`}>
+            Review
+            <span className="nav-count-badge">{reviewCount}</span>
           </Link>
         )}
       </nav>

@@ -6,6 +6,44 @@ import { ensureComponentIds } from "./component-ids";
 import { hasDashboardBlock, contextHeader } from "./glance-prompts";
 import type { GlanceContext } from "./glance-prompts";
 import { listPagesWhere, defaultPageVisibility } from "./access";
+import { logAudit } from "./audit";
+
+/// npm dist-tag style read channel: "latest" is the current behavior (newest
+/// version); "trusted" resolves to the version a human pinned via
+/// markTrusted, falling back to latest (labeled untrusted) when nothing has
+/// been marked yet. Every function below defaults to "latest" so existing
+/// callers (web UI, export, public pages) are byte-identical unless they
+/// opt in — only the MCP surface defaults its own calls to "trusted".
+export type Channel = "trusted" | "latest";
+
+export interface ChannelLabel {
+  /** Is the served content the trusted version? */
+  trusted: boolean;
+  /** Is there a trusted pointer that the latest version has moved past? */
+  trustedBehind: boolean;
+}
+
+/// Given a page's trust pointer and its latest version id, decide which
+/// version id should be served for the requested channel and how to label
+/// the result. Shared by every read path so the trust semantics can't drift
+/// between read_page / list_pages / search_pages or the two MCP transports.
+function resolveChannel(
+  trustedVersionId: string | null,
+  latestVersionId: string,
+  channel: Channel
+): { versionId: string; label: ChannelLabel } {
+  const hasTrusted = !!trustedVersionId;
+  const trustedIsLatest = hasTrusted && trustedVersionId === latestVersionId;
+  const trustedBehind = hasTrusted && !trustedIsLatest;
+
+  if (channel === "trusted" && hasTrusted) {
+    return { versionId: trustedVersionId as string, label: { trusted: true, trustedBehind } };
+  }
+  // "latest" channel, or "trusted" requested with nothing marked yet — serve
+  // latest either way, but only label it trusted if it happens to be the
+  // pinned version.
+  return { versionId: latestVersionId, label: { trusted: trustedIsLatest, trustedBehind } };
+}
 
 export interface PageMeta {
   slug: string;
@@ -25,6 +63,8 @@ export interface PageMeta {
   status: string;
   freshness: "fresh" | "due" | "overdue" | null;
   staleReason: string | null;
+  trusted: boolean;
+  trustedBehind: boolean;
 }
 
 /// Bump view stats without touching updatedAt. Prisma's @updatedAt fires on
@@ -49,7 +89,11 @@ export interface AnnotationRow {
   createdAt: Date;
 }
 
-export async function listPages(orgId: string, userId?: string): Promise<PageMeta[]> {
+export async function listPages(
+  orgId: string,
+  userId?: string,
+  channel: Channel = "latest"
+): Promise<PageMeta[]> {
   const where = listPagesWhere(orgId, userId ?? null);
 
   const pages = await db.page.findMany({
@@ -68,7 +112,7 @@ export async function listPages(orgId: string, userId?: string): Promise<PageMet
       versions: {
         orderBy: { createdAt: "desc" },
         take: 1,
-        select: { jsonContent: true, createdBy: true },
+        select: { id: true, jsonContent: true, createdBy: true },
       },
     },
     orderBy: [
@@ -76,6 +120,21 @@ export async function listPages(orgId: string, userId?: string): Promise<PageMet
       { title: "asc" },
     ],
   });
+
+  // Batch-resolve the trusted version's content for any page whose trust
+  // pointer has fallen behind latest — avoids an N+1 query per page.
+  const overrideIds = channel === "trusted"
+    ? pages
+        .filter((p) => p.trustedVersionId && p.versions[0] && p.trustedVersionId !== p.versions[0].id)
+        .map((p) => p.trustedVersionId as string)
+    : [];
+  const overrides = overrideIds.length > 0
+    ? await db.pageVersion.findMany({
+        where: { id: { in: overrideIds } },
+        select: { id: true, pageId: true, jsonContent: true, createdBy: true },
+      })
+    : [];
+  const overrideByPageId = new Map(overrides.map((v) => [v.pageId, v]));
 
   const mapped = pages.map((p) => {
     const latestAnnotation = p.annotations[0]?.createdAt;
@@ -86,10 +145,13 @@ export async function listPages(orgId: string, userId?: string): Promise<PageMet
       (a) => a.status !== "incorporated" && a.status !== "ignored"
     ).length;
 
-    let snippet = p.title;
     const latestVersion = p.versions[0];
-    if (latestVersion?.jsonContent) {
-      const json = latestVersion.jsonContent as Record<string, unknown>;
+    const override = overrideByPageId.get(p.id);
+    const servedVersion = override ?? latestVersion;
+
+    let snippet = p.title;
+    if (servedVersion?.jsonContent) {
+      const json = servedVersion.jsonContent as Record<string, unknown>;
       const raw = (json.subtitle as string) || (json.description as string) || "";
       if (raw) {
         snippet = raw.length > 120 ? raw.slice(0, 117) + "..." : raw;
@@ -97,10 +159,12 @@ export async function listPages(orgId: string, userId?: string): Promise<PageMet
     }
 
     const [freshness, staleReason] = staleness(
-      latestVersion?.jsonContent as Record<string, unknown> | null,
+      servedVersion?.jsonContent as Record<string, unknown> | null,
       p.updatedAt,
       p.lastViewedAt
     );
+
+    const { label } = resolveChannel(p.trustedVersionId, latestVersion?.id ?? "", channel);
 
     return {
       slug: p.slug,
@@ -110,7 +174,7 @@ export async function listPages(orgId: string, userId?: string): Promise<PageMet
       viewCount: p.viewCount,
       updatedAt: p.updatedAt,
       lastActivity,
-      lastEditedBy: latestVersion?.createdBy ?? p.createdBy,
+      lastEditedBy: servedVersion?.createdBy ?? p.createdBy,
       folderId: p.folderId,
       visibility: p.visibility,
       snippet,
@@ -120,6 +184,8 @@ export async function listPages(orgId: string, userId?: string): Promise<PageMet
       status: p.status,
       freshness,
       staleReason,
+      trusted: label.trusted,
+      trustedBehind: label.trustedBehind,
     };
   });
 
@@ -218,8 +284,9 @@ function freshnessStatus(
 
 export async function readPageYaml(
   orgId: string,
-  slug: string
-): Promise<{ yaml: string; contentHash: string } | null> {
+  slug: string,
+  channel: Channel = "latest"
+): Promise<{ yaml: string; contentHash: string } & ChannelLabel | null> {
   const page = await db.page.findUnique({
     where: { orgId_slug: { orgId, slug } },
     include: {
@@ -229,14 +296,28 @@ export async function readPageYaml(
 
   if (!page || page.versions.length === 0) return null;
 
-  const v = page.versions[0];
-  return { yaml: v.yamlContent, contentHash: v.contentHash };
+  const latest = page.versions[0];
+  const { versionId, label } = resolveChannel(page.trustedVersionId, latest.id, channel);
+
+  let v = latest;
+  if (versionId !== latest.id) {
+    const trustedRow = await db.pageVersion.findUnique({ where: { id: versionId } });
+    if (trustedRow) {
+      v = trustedRow;
+    } else {
+      v = latest;
+      label.trusted = false;
+    }
+  }
+
+  return { yaml: v.yamlContent, contentHash: v.contentHash, ...label };
 }
 
 export async function readPage(
   orgId: string,
-  slug: string
-): Promise<{ json: Record<string, unknown>; contentHash: string; visibility: string } | null> {
+  slug: string,
+  channel: Channel = "latest"
+): Promise<{ json: Record<string, unknown>; contentHash: string; visibility: string } & ChannelLabel | null> {
   const page = await db.page.findUnique({
     where: { orgId_slug: { orgId, slug } },
     include: {
@@ -246,11 +327,26 @@ export async function readPage(
 
   if (!page || page.versions.length === 0) return null;
 
-  const v = page.versions[0];
+  const latest = page.versions[0];
+  const { versionId, label } = resolveChannel(page.trustedVersionId, latest.id, channel);
+
+  let v = latest;
+  if (versionId !== latest.id) {
+    const trustedRow = await db.pageVersion.findUnique({ where: { id: versionId } });
+    if (trustedRow) {
+      v = trustedRow;
+    } else {
+      // Dangling pointer (trusted version row is gone) — fall back to latest,
+      // and the served content is not actually the trusted one.
+      v = latest;
+      label.trusted = false;
+    }
+  }
+
   const json = v.jsonContent
     ? (v.jsonContent as Record<string, unknown>)
     : (yaml.load(v.yamlContent) as Record<string, unknown>);
-  return { json, contentHash: v.contentHash, visibility: page.visibility };
+  return { json, contentHash: v.contentHash, visibility: page.visibility, ...label };
 }
 
 export interface SearchResult {
@@ -259,33 +355,56 @@ export interface SearchResult {
   matches: string[];
   type: "page" | "prompt";
   prompt?: string;
+  trusted?: boolean;
+  trustedBehind?: boolean;
 }
 
 export async function searchPages(
   orgId: string,
   query: string,
   userId?: string,
-  glanceCtx: GlanceContext = {}
+  glanceCtx: GlanceContext = {},
+  channel: Channel = "latest"
 ): Promise<SearchResult[]> {
   const where = listPagesWhere(orgId, userId ?? null);
 
   const pages = await db.page.findMany({
     where,
     select: {
+      id: true,
       slug: true,
       title: true,
       dashboardEnabled: true,
-      versions: { orderBy: { createdAt: "desc" as const }, take: 1, select: { yamlContent: true, jsonContent: true } },
+      trustedVersionId: true,
+      versions: { orderBy: { createdAt: "desc" as const }, take: 1, select: { id: true, yamlContent: true, jsonContent: true } },
     },
   });
+
+  // Batch-resolve trusted-channel overrides the same way listPages does.
+  const overrideIds = channel === "trusted"
+    ? pages
+        .filter((p) => p.trustedVersionId && p.versions[0] && p.trustedVersionId !== p.versions[0].id)
+        .map((p) => p.trustedVersionId as string)
+    : [];
+  const overrides = overrideIds.length > 0
+    ? await db.pageVersion.findMany({
+        where: { id: { in: overrideIds } },
+        select: { id: true, pageId: true, yamlContent: true, jsonContent: true },
+      })
+    : [];
+  const overrideByPageId = new Map(overrides.map((v) => [v.pageId, v]));
 
   const q = query.toLowerCase();
   const results: SearchResult[] = [];
 
   for (const page of pages) {
     if (page.versions.length === 0) continue;
-    const content = page.versions[0].yamlContent;
-    const json = page.versions[0].jsonContent as Record<string, unknown> | null;
+    const latestV = page.versions[0];
+    const override = overrideByPageId.get(page.id);
+    const servedV = override ?? latestV;
+    const content = servedV.yamlContent;
+    const json = servedV.jsonContent as Record<string, unknown> | null;
+    const { label } = resolveChannel(page.trustedVersionId, latestV.id, channel);
 
     const titleMatch = page.title.toLowerCase().includes(q);
     const contentMatch = content.toLowerCase().includes(q);
@@ -311,6 +430,8 @@ export async function searchPages(
       matches: titleMatch && matches.length === 0 ? [dashBlock?.description ?? page.title] : matches,
       type: isDashboard ? "prompt" : "page",
       prompt: wrappedPrompt,
+      trusted: label.trusted,
+      trustedBehind: label.trustedBehind,
     });
 
     if (page.slug === "home" && json) {
@@ -328,6 +449,8 @@ export async function searchPages(
             matches: [p.description ?? "Custom prompt"],
             type: "prompt",
             prompt: `${contextHeader(glanceCtx)}\n\n${p.prompt.trim()}`,
+            trusted: label.trusted,
+            trustedBehind: label.trustedBehind,
           });
         }
       }
@@ -456,6 +579,228 @@ export async function writePageJson(
   return _writePageInternal(orgId, orgSlug, slug, yamlContent, stamped as Prisma.InputJsonValue, title, createdBy, expectedHash, sortOrder);
 }
 
+/// Pin a specific PageVersion as the "trusted" read for this page (npm
+/// dist-tag style). Never touches the write path — trustedVersionId only
+/// moves here and in clearTrusted.
+export async function markTrusted(
+  orgId: string,
+  slug: string,
+  versionId: string,
+  actorId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
+  if (!page) return { ok: false, error: `page not found: ${slug}` };
+
+  const version = await db.pageVersion.findFirst({ where: { id: versionId, pageId: page.id } });
+  if (!version) return { ok: false, error: `version not found: ${versionId}` };
+
+  await db.page.update({ where: { id: page.id }, data: { trustedVersionId: versionId } });
+
+  await logAudit({
+    orgId,
+    action: "page.trust",
+    resourceType: "page",
+    resourceId: slug,
+    actorId,
+    metadata: { versionId, contentHash: version.contentHash },
+  });
+
+  return { ok: true };
+}
+
+/// Clear a page's trust pointer — reads on the "trusted" channel fall back
+/// to latest, labeled untrusted, until a human marks a version again.
+export async function clearTrusted(
+  orgId: string,
+  slug: string,
+  actorId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
+  if (!page) return { ok: false, error: `page not found: ${slug}` };
+
+  const previousVersionId = page.trustedVersionId;
+  await db.page.update({ where: { id: page.id }, data: { trustedVersionId: null } });
+
+  await logAudit({
+    orgId,
+    action: "page.untrust",
+    resourceType: "page",
+    resourceId: slug,
+    actorId,
+    metadata: { previousVersionId },
+  });
+
+  return { ok: true };
+}
+
+export interface ReviewQueueRow {
+  slug: string;
+  title: string;
+  folderId: string | null;
+  folderName: string | null;
+  createdBy: string;
+  latestEditedBy: string;
+  latestUpdatedAt: Date;
+  /** True when this page has never had a trusted version marked. */
+  neverTrusted: boolean;
+  /** How many versions have landed since the trusted pointer (or since creation, if never trusted). */
+  versionsBehind: number;
+  /** createdAt of the oldest version not yet covered by trust — drives staleness sort. */
+  sinceUnapprovedAt: Date;
+  concepts: string[];
+  createdByMe: boolean;
+  annotatedByMe: boolean;
+}
+
+interface ReviewCandidate {
+  pageId: string;
+  slug: string;
+  title: string;
+  folderId: string | null;
+  createdBy: string;
+  latestVersionId: string;
+  trustedVersionId: string | null;
+  neverTrusted: boolean;
+}
+
+/// Cheap first pass: which pages qualify for the review queue (never trusted,
+/// or trusted pointer behind the latest version)? Mirrors the batching
+/// pattern in listPages — take:1 on versions avoids pulling full history for
+/// pages that don't qualify.
+async function getReviewCandidates(
+  orgId: string,
+  userId?: string
+): Promise<ReviewCandidate[]> {
+  const where = listPagesWhere(orgId, userId ?? null);
+  const pages = await db.page.findMany({
+    where,
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      folderId: true,
+      createdBy: true,
+      trustedVersionId: true,
+      versions: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true } },
+    },
+  });
+
+  const candidates: ReviewCandidate[] = [];
+  for (const p of pages) {
+    const latest = p.versions[0];
+    if (!latest) continue;
+    const neverTrusted = !p.trustedVersionId;
+    if (!neverTrusted && p.trustedVersionId === latest.id) continue;
+
+    candidates.push({
+      pageId: p.id,
+      slug: p.slug,
+      title: p.title,
+      folderId: p.folderId,
+      createdBy: p.createdBy,
+      latestVersionId: latest.id,
+      trustedVersionId: p.trustedVersionId,
+      neverTrusted,
+    });
+  }
+  return candidates;
+}
+
+/// Count of pages awaiting review — powers the sidebar nav badge without
+/// paying for the full enrichment (concepts, annotation authors) the queue
+/// view needs.
+export async function getReviewQueueCount(orgId: string, userId?: string): Promise<number> {
+  const candidates = await getReviewCandidates(orgId, userId);
+  return candidates.length;
+}
+
+/// Pages needing review: never trusted, or the trusted pointer has fallen
+/// behind the latest version. Sorted oldest-unapproved-change first — the
+/// page that's been waiting longest for a human look surfaces at the top.
+/// Purely a read over existing data: no new state, no write-path changes.
+export async function getReviewQueue(orgId: string, userId?: string): Promise<ReviewQueueRow[]> {
+  const candidates = await getReviewCandidates(orgId, userId);
+  if (candidates.length === 0) return [];
+
+  const pageIds = candidates.map((c) => c.pageId);
+
+  const [folders, versions, concepts, annotations] = await Promise.all([
+    db.folder.findMany({ where: { orgId }, select: { id: true, name: true } }),
+    db.pageVersion.findMany({
+      where: { pageId: { in: pageIds } },
+      orderBy: { createdAt: "asc" },
+      select: { pageId: true, id: true, createdAt: true, createdBy: true },
+    }),
+    db.pageConcept.findMany({
+      where: { pageId: { in: pageIds } },
+      select: { pageId: true, concept: { select: { displayName: true } } },
+    }),
+    db.annotation.findMany({
+      where: { pageId: { in: pageIds } },
+      select: { pageId: true, author: true },
+    }),
+  ]);
+
+  const folderNameById = new Map(folders.map((f) => [f.id, f.name]));
+
+  const versionsByPage = new Map<string, typeof versions>();
+  for (const v of versions) {
+    const list = versionsByPage.get(v.pageId) ?? [];
+    list.push(v);
+    versionsByPage.set(v.pageId, list);
+  }
+
+  const conceptsByPage = new Map<string, string[]>();
+  for (const c of concepts) {
+    const list = conceptsByPage.get(c.pageId) ?? [];
+    list.push(c.concept.displayName);
+    conceptsByPage.set(c.pageId, list);
+  }
+
+  const annotationAuthorsByPage = new Map<string, string[]>();
+  for (const a of annotations) {
+    const list = annotationAuthorsByPage.get(a.pageId) ?? [];
+    list.push(a.author);
+    annotationAuthorsByPage.set(a.pageId, list);
+  }
+
+  const rows: ReviewQueueRow[] = [];
+  for (const c of candidates) {
+    const pageVersions = versionsByPage.get(c.pageId) ?? [];
+    if (pageVersions.length === 0) continue;
+    const latest = pageVersions[pageVersions.length - 1];
+
+    // Never trusted: every version is unreviewed. Otherwise, only the
+    // versions created after the trusted one are "behind" — anything before
+    // it was already superseded by a version a human did look at.
+    let unapproved = pageVersions;
+    if (!c.neverTrusted) {
+      const trustedIdx = pageVersions.findIndex((v) => v.id === c.trustedVersionId);
+      unapproved = trustedIdx === -1 ? pageVersions : pageVersions.slice(trustedIdx + 1);
+      if (unapproved.length === 0) continue; // dangling pointer already at latest — nothing to review
+    }
+
+    rows.push({
+      slug: c.slug,
+      title: c.title,
+      folderId: c.folderId,
+      folderName: c.folderId ? folderNameById.get(c.folderId) ?? null : null,
+      createdBy: c.createdBy,
+      latestEditedBy: latest.createdBy,
+      latestUpdatedAt: latest.createdAt,
+      neverTrusted: c.neverTrusted,
+      versionsBehind: unapproved.length,
+      sinceUnapprovedAt: unapproved[0].createdAt,
+      concepts: conceptsByPage.get(c.pageId) ?? [],
+      createdByMe: !!userId && c.createdBy === userId,
+      annotatedByMe: !!userId && (annotationAuthorsByPage.get(c.pageId) ?? []).includes(userId),
+    });
+  }
+
+  rows.sort((a, b) => a.sinceUnapprovedAt.getTime() - b.sinceUnapprovedAt.getTime());
+  return rows;
+}
+
 export async function saveAnnotation(
   orgId: string,
   orgSlug: string,
@@ -538,9 +883,10 @@ export async function getAnnotations(
 
 export async function getPageSections(
   orgId: string,
-  slug: string
+  slug: string,
+  channel: Channel = "latest"
 ): Promise<string[]> {
-  const result = await readPageYaml(orgId, slug);
+  const result = await readPageYaml(orgId, slug, channel);
   if (!result) return [];
 
   const doc = yaml.load(result.yaml) as Record<string, unknown>;

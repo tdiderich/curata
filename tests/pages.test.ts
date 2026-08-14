@@ -27,12 +27,18 @@ vi.mock("@/lib/sync", () => ({
 
 import {
   listPages,
+  readPage,
   readPageYaml,
   writePage,
   searchPages,
   saveAnnotation,
   getAnnotations,
   updateAnnotationStatus,
+  markTrusted,
+  clearTrusted,
+  getPageSections,
+  getReviewQueue,
+  getReviewQueueCount,
 } from "@/lib/pages";
 
 const DEFAULT_YAML = `title: Test Page
@@ -178,6 +184,117 @@ components:
     });
   });
 
+  describe("trust channel", () => {
+    async function versionIdsDesc(slug: string): Promise<string[]> {
+      const page = await testDb.page.findUnique({
+        where: { orgId_slug: { orgId, slug } },
+        include: { versions: { orderBy: { createdAt: "desc" } } },
+      });
+      return page!.versions.map((v) => v.id);
+    }
+
+    it("serves the trusted pointer while latest moves ahead, and labels both channels", async () => {
+      await writePage(orgId, orgSlug, "trust-page", "title: V1\nshell: document\ncomponents: []\n", "user1");
+      const [v1Id] = await versionIdsDesc("trust-page");
+
+      const mark = await markTrusted(orgId, "trust-page", v1Id, "reviewer1");
+      expect(mark.ok).toBe(true);
+
+      await writePage(orgId, orgSlug, "trust-page", "title: V2\nshell: document\ncomponents: []\n", "user1");
+
+      const trusted = await readPageYaml(orgId, "trust-page", "trusted");
+      expect(trusted).not.toBeNull();
+      expect(trusted!.yaml).toContain("V1");
+      expect(trusted!.trusted).toBe(true);
+      expect(trusted!.trustedBehind).toBe(true);
+
+      const latest = await readPageYaml(orgId, "trust-page", "latest");
+      expect(latest).not.toBeNull();
+      expect(latest!.yaml).toContain("V2");
+      expect(latest!.trusted).toBe(false);
+      expect(latest!.trustedBehind).toBe(true);
+    });
+
+    it("falls back to latest labeled untrusted when nothing has been marked", async () => {
+      await writePage(orgId, orgSlug, "untrusted-page", DEFAULT_YAML, "user1");
+
+      const result = await readPageYaml(orgId, "untrusted-page", "trusted");
+      expect(result).not.toBeNull();
+      expect(result!.yaml).toBe(DEFAULT_YAML);
+      expect(result!.trusted).toBe(false);
+      expect(result!.trustedBehind).toBe(false);
+    });
+
+    it("readPage carries the same trust labels as readPageYaml", async () => {
+      await writePage(orgId, orgSlug, "trust-json-page", DEFAULT_YAML, "user1");
+      const result = await readPage(orgId, "trust-json-page", "trusted");
+      expect(result).not.toBeNull();
+      expect(result!.trusted).toBe(false);
+      expect(result!.trustedBehind).toBe(false);
+    });
+
+    it("reflects trust state in listPages and searchPages results", async () => {
+      await writePage(orgId, orgSlug, "trust-list-page", "title: Findable\nshell: document\ncomponents: []\n", "user1");
+      const [v1Id] = await versionIdsDesc("trust-list-page");
+      await markTrusted(orgId, "trust-list-page", v1Id, "reviewer1");
+      await writePage(orgId, orgSlug, "trust-list-page", "title: Findable V2\nshell: document\ncomponents: []\n", "user1");
+
+      const listed = await listPages(orgId, undefined, "trusted");
+      const entry = listed.find((p) => p.slug === "trust-list-page");
+      expect(entry).toBeDefined();
+      expect(entry!.trusted).toBe(true);
+      expect(entry!.trustedBehind).toBe(true);
+
+      const searched = await searchPages(orgId, "findable", undefined, {}, "trusted");
+      const found = searched.find((r) => r.slug === "trust-list-page");
+      expect(found).toBeDefined();
+      expect(found!.trusted).toBe(true);
+      expect(found!.trustedBehind).toBe(true);
+    });
+
+    it("logs an audit entry when a version is marked trusted", async () => {
+      await writePage(orgId, orgSlug, "audit-trust-page", DEFAULT_YAML, "user1");
+      const [v1Id] = await versionIdsDesc("audit-trust-page");
+
+      const result = await markTrusted(orgId, "audit-trust-page", v1Id, "reviewer1");
+      expect(result.ok).toBe(true);
+
+      const entries = await testDb.auditLog.findMany({
+        where: { orgId, action: "page.trust", resourceId: "audit-trust-page" },
+      });
+      expect(entries).toHaveLength(1);
+      expect(entries[0].actorId).toBe("reviewer1");
+      const metadata = entries[0].metadata as { versionId?: string };
+      expect(metadata.versionId).toBe(v1Id);
+    });
+
+    it("logs an audit entry when trust is cleared", async () => {
+      await writePage(orgId, orgSlug, "audit-untrust-page", DEFAULT_YAML, "user1");
+      const [v1Id] = await versionIdsDesc("audit-untrust-page");
+      await markTrusted(orgId, "audit-untrust-page", v1Id, "reviewer1");
+
+      const result = await clearTrusted(orgId, "audit-untrust-page", "reviewer1");
+      expect(result.ok).toBe(true);
+
+      const page = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "audit-untrust-page" } } });
+      expect(page!.trustedVersionId).toBeNull();
+
+      const entries = await testDb.auditLog.findMany({
+        where: { orgId, action: "page.untrust", resourceId: "audit-untrust-page" },
+      });
+      expect(entries).toHaveLength(1);
+    });
+
+    it("returns an error when marking a version that doesn't belong to the page", async () => {
+      await writePage(orgId, orgSlug, "wrong-version-page-a", DEFAULT_YAML, "user1");
+      await writePage(orgId, orgSlug, "wrong-version-page-b", DEFAULT_YAML, "user1");
+      const [bVersionId] = await versionIdsDesc("wrong-version-page-b");
+
+      const result = await markTrusted(orgId, "wrong-version-page-a", bVersionId, "reviewer1");
+      expect(result.ok).toBe(false);
+    });
+  });
+
   describe("saveAnnotation", () => {
     it("creates an annotation on a page", async () => {
       await writePage(orgId, orgSlug, "ann-page", DEFAULT_YAML, "user1");
@@ -236,6 +353,119 @@ components:
         "approved"
       );
       expect(ok).toBe(false);
+    });
+  });
+
+  describe("getPageSections channel alignment", () => {
+    const V1 = "title: V1\nshell: document\ncomponents:\n  - type: section\n    heading: First\n";
+    const V2 = "title: V2\nshell: document\ncomponents:\n  - type: section\n    heading: First\n  - type: section\n    heading: Second\n";
+
+    async function versionIdsDesc(slug: string): Promise<string[]> {
+      const page = await testDb.page.findUnique({
+        where: { orgId_slug: { orgId, slug } },
+        include: { versions: { orderBy: { createdAt: "desc" } } },
+      });
+      return page!.versions.map((v) => v.id);
+    }
+
+    it("computes sections against the trusted version, not always latest", async () => {
+      await writePage(orgId, orgSlug, "sections-page", V1, "user1");
+      const [v1Id] = await versionIdsDesc("sections-page");
+      await markTrusted(orgId, "sections-page", v1Id, "reviewer1");
+      await writePage(orgId, orgSlug, "sections-page", V2, "user1");
+
+      const trustedSections = await getPageSections(orgId, "sections-page", "trusted");
+      expect(trustedSections).toEqual(["First"]);
+
+      const latestSections = await getPageSections(orgId, "sections-page", "latest");
+      expect(latestSections).toEqual(["First", "Second"]);
+    });
+
+    it("defaults to latest when no channel is passed", async () => {
+      await writePage(orgId, orgSlug, "sections-default-page", V2, "user1");
+      const sections = await getPageSections(orgId, "sections-default-page");
+      expect(sections).toEqual(["First", "Second"]);
+    });
+  });
+
+  describe("review queue", () => {
+    async function versionIdsDesc(slug: string): Promise<string[]> {
+      const page = await testDb.page.findUnique({
+        where: { orgId_slug: { orgId, slug } },
+        include: { versions: { orderBy: { createdAt: "desc" } } },
+      });
+      return page!.versions.map((v) => v.id);
+    }
+
+    it("includes pages that have never been trusted", async () => {
+      await writePage(orgId, orgSlug, "never-trusted-page", DEFAULT_YAML, "user1");
+
+      const queue = await getReviewQueue(orgId);
+      const entry = queue.find((r) => r.slug === "never-trusted-page");
+      expect(entry).toBeDefined();
+      expect(entry!.neverTrusted).toBe(true);
+      expect(entry!.versionsBehind).toBe(1);
+    });
+
+    it("includes pages whose trusted pointer has fallen behind latest", async () => {
+      await writePage(orgId, orgSlug, "behind-page", "title: V1\nshell: document\ncomponents: []\n", "user1");
+      const [v1Id] = await versionIdsDesc("behind-page");
+      await markTrusted(orgId, "behind-page", v1Id, "reviewer1");
+      await writePage(orgId, orgSlug, "behind-page", "title: V2\nshell: document\ncomponents: []\n", "user1");
+      await writePage(orgId, orgSlug, "behind-page", "title: V3\nshell: document\ncomponents: []\n", "user1");
+
+      const queue = await getReviewQueue(orgId);
+      const entry = queue.find((r) => r.slug === "behind-page");
+      expect(entry).toBeDefined();
+      expect(entry!.neverTrusted).toBe(false);
+      expect(entry!.versionsBehind).toBe(2);
+    });
+
+    it("excludes pages whose trusted pointer already matches latest", async () => {
+      await writePage(orgId, orgSlug, "synced-page", DEFAULT_YAML, "user1");
+      const [v1Id] = await versionIdsDesc("synced-page");
+      await markTrusted(orgId, "synced-page", v1Id, "reviewer1");
+
+      const queue = await getReviewQueue(orgId);
+      expect(queue.find((r) => r.slug === "synced-page")).toBeUndefined();
+    });
+
+    it("sorts oldest unapproved change first", async () => {
+      await writePage(orgId, orgSlug, "older-unreviewed", DEFAULT_YAML, "user1");
+      await new Promise((r) => setTimeout(r, 5));
+      await writePage(orgId, orgSlug, "newer-unreviewed", DEFAULT_YAML, "user1");
+
+      const queue = await getReviewQueue(orgId);
+      const olderIdx = queue.findIndex((r) => r.slug === "older-unreviewed");
+      const newerIdx = queue.findIndex((r) => r.slug === "newer-unreviewed");
+      expect(olderIdx).toBeGreaterThanOrEqual(0);
+      expect(newerIdx).toBeGreaterThanOrEqual(0);
+      expect(olderIdx).toBeLessThan(newerIdx);
+    });
+
+    it("flags createdByMe and annotatedByMe for the requesting user", async () => {
+      await writePage(orgId, orgSlug, "mine-page", DEFAULT_YAML, "me");
+      await writePage(orgId, orgSlug, "annotated-page", DEFAULT_YAML, "someone-else");
+      await saveAnnotation(orgId, orgSlug, "annotated-page", "note", "me");
+
+      const queue = await getReviewQueue(orgId, "me");
+      const mine = queue.find((r) => r.slug === "mine-page");
+      const annotated = queue.find((r) => r.slug === "annotated-page");
+      expect(mine!.createdByMe).toBe(true);
+      expect(mine!.annotatedByMe).toBe(false);
+      expect(annotated!.createdByMe).toBe(false);
+      expect(annotated!.annotatedByMe).toBe(true);
+    });
+
+    it("getReviewQueueCount matches the queue length", async () => {
+      await writePage(orgId, orgSlug, "count-page-a", DEFAULT_YAML, "user1");
+      await writePage(orgId, orgSlug, "count-page-b", DEFAULT_YAML, "user1");
+
+      const [queue, count] = await Promise.all([
+        getReviewQueue(orgId),
+        getReviewQueueCount(orgId),
+      ]);
+      expect(count).toBe(queue.length);
     });
   });
 });

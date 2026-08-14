@@ -22,12 +22,25 @@ function formatDate(iso: string): string {
   });
 }
 
-export function VersionHistoryPanel({ slug, onClose }: { slug: string; onClose: () => void }) {
+export function VersionHistoryPanel({
+  slug,
+  onClose,
+  canApprove = true,
+  approversNote = null,
+}: {
+  slug: string;
+  onClose: () => void;
+  /** Gates the mark/clear-trusted button — mirrors trust-banner.tsx's gate so both surfaces agree. */
+  canApprove?: boolean;
+  approversNote?: string | null;
+}) {
   const router = useRouter();
   const [versions, setVersions] = useState<PageVersion[] | null>(null);
+  const [trustedVersionId, setTrustedVersionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const [trustBusy, setTrustBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,9 +48,10 @@ export function VersionHistoryPanel({ slug, onClose }: { slug: string; onClose: 
       try {
         const res = await fetch(`${basePath}/api/versions?slug=${encodeURIComponent(slug)}`);
         if (res.ok && !cancelled) {
-          const data = (await res.json()) as PageVersion[];
-          setVersions(data);
-          if (data.length > 0) setSelectedId(data[0].id);
+          const data = (await res.json()) as { versions: PageVersion[]; trustedVersionId: string | null };
+          setVersions(data.versions);
+          setTrustedVersionId(data.trustedVersionId);
+          if (data.versions.length > 0) setSelectedId(data.versions[0].id);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -64,8 +78,37 @@ export function VersionHistoryPanel({ slug, onClose }: { slug: string; onClose: 
     }
   }
 
+  async function markTrusted(versionId: string) {
+    setTrustBusy(true);
+    try {
+      const res = await fetch(`${basePath}/api/versions/trust`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, versionId }),
+      });
+      if (res.ok) setTrustedVersionId(versionId);
+    } finally {
+      setTrustBusy(false);
+    }
+  }
+
+  async function clearTrusted() {
+    setTrustBusy(true);
+    try {
+      const res = await fetch(`${basePath}/api/versions/trust`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      });
+      if (res.ok) setTrustedVersionId(null);
+    } finally {
+      setTrustBusy(false);
+    }
+  }
+
   const selected = versions?.find((v) => v.id === selectedId) ?? null;
   const isCurrent = selected && versions && selected.id === versions[0].id;
+  const isTrusted = selected && selected.id === trustedVersionId;
 
   return (
     <div className="vh-panel">
@@ -96,6 +139,7 @@ export function VersionHistoryPanel({ slug, onClose }: { slug: string; onClose: 
                   <span className="vh-list-author">{v.createdBy}</span>
                   <span className="vh-list-hash">{v.contentHash.slice(0, 8)}</span>
                   {i === 0 && <span className="vh-list-badge">current</span>}
+                  {v.id === trustedVersionId && <span className="vh-list-badge vh-list-badge--trusted">trusted</span>}
                 </span>
               </button>
             ))}
@@ -107,15 +151,38 @@ export function VersionHistoryPanel({ slug, onClose }: { slug: string; onClose: 
                 <span className="vh-preview-label">
                   {isCurrent ? "Current version" : `Version from ${formatDate(selected.createdAt)}`}
                 </span>
-                {!isCurrent && (
-                  <button
-                    className="vh-restore-btn"
-                    disabled={restoring}
-                    onClick={() => restore(selected.id)}
-                  >
-                    {restoring ? "Restoring…" : "Restore this version"}
-                  </button>
-                )}
+                <span className="vh-preview-actions">
+                  {!isCurrent && (
+                    <button
+                      className="vh-restore-btn"
+                      disabled={restoring}
+                      onClick={() => restore(selected.id)}
+                    >
+                      {restoring ? "Restoring…" : "Restore this version"}
+                    </button>
+                  )}
+                  {canApprove ? (
+                    isTrusted ? (
+                      <button
+                        className="vh-trust-btn"
+                        disabled={trustBusy}
+                        onClick={() => clearTrusted()}
+                      >
+                        {trustBusy ? "Clearing…" : "Clear trusted"}
+                      </button>
+                    ) : (
+                      <button
+                        className="vh-trust-btn"
+                        disabled={trustBusy}
+                        onClick={() => markTrusted(selected.id)}
+                      >
+                        {trustBusy ? "Marking…" : "Mark trusted"}
+                      </button>
+                    )
+                  ) : (
+                    approversNote && <span className="vh-approvers-note">{approversNote}</span>
+                  )}
+                </span>
               </div>
               <pre className="vh-preview-yaml">{selected.yamlContent}</pre>
             </div>
