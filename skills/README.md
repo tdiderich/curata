@@ -14,6 +14,10 @@ Skills for managing your curata instance from Claude Code, Cursor, or any MCP-co
 | `curata-capture` | `/curata-capture` | Capture a pasted thread into a deduped, checklist-complete page |
 | `curata-review` | `/curata-review` | Summarize what's pending review and what's trusted but behind |
 | `curata-digest` | `/curata-digest` | Generate the org's brain digest: new pages, trust flips, awaiting review, hot spots |
+| `curata-scout-repos` | `/curata-scout-repos` | Scan accessible repos and propose shareable knowledge as reviewable pages |
+| `curata-import-wiki` | `/curata-import-wiki` | Walk a wiki export and propose its pages, flagging stale content |
+| `curata-map-org` | `/curata-map-org` | Draft an approval-group proposal from CODEOWNERS - propose only, never executes |
+| `curata-brain-health` | `/curata-brain-health` | Read-only sweep for untagged pages, stale trust, orphan concepts, likely duplicates |
 
 ## Getting started
 

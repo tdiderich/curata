@@ -1,0 +1,100 @@
+title: "Skill - Brain Health"
+subtitle: A read-only sweep of tagging gaps, stale trusted pages, single-use concepts, and likely duplicates, published as one report that updates in place.
+shell: standard
+skill:
+  trigger: "brain health, how healthy is our brain, run a brain health check, tagging health sweep"
+  setup:
+    - key: report_folder
+      ask: "Which folder should the brain-health report page land in, if you want a default rather than picking each time? Optional."
+dashboard:
+  prompt: |
+    Run the Brain Health skill. Follow the flow on this page to sweep
+    tagging gaps, stale trusted pages, single-use concepts, and likely
+    duplicates, then publish the report.
+  description: "Read-only sweep: untagged pages, stale trust, orphan concepts"
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this skill does
+    components:
+      - type: callout
+        variant: info
+        title: A structural check, not a weekly pulse
+        body: |
+          Reads every page's folder, trust state, and concept tags, then reports four things: untagged pages grouped by folder, trusted pages nobody has touched in 90 days, concepts attached to a single page, and likely-duplicate pairs that were never merged. Nothing gets changed - this skill only reads, then writes one report page. For the weekly new-pages-and-trust-flips pulse, run curata-digest instead - this skill goes deeper and runs less often.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual - run monthly, or whenever a human wants a structural read on the brain instead of a weekly pulse.
+          - term: Data Sources
+            definition: This curata instance's own pages, concepts, and rules, read over MCP. No external tool required.
+          - term: Output
+            definition: One brain-health report page, same slug every run so it updates in place, plus a short summary for the human.
+
+  - type: section
+    eyebrow: Setup
+    heading: Optional Defaults
+    components:
+      - type: callout
+        variant: warn
+        title: Nothing required, one thing worth deciding once
+        body: |
+          This skill has no external tool dependency, it runs on curata alone. The only thing worth fixing per org is where the report page lands.
+      - type: definition_list
+        items:
+          - term: Report folder
+            definition: Which folder should the brain-health report page land in, if you want a default rather than picking each time? Optional.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this skill
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - At least one page in this curata instance
+          - Nothing else - no external MCP tool is required to run this skill
+
+          This skill only reads page, concept, and rule state. It never marks anything trusted, never merges pages, and never deletes a concept - it reports what it finds and lets a human act on it.
+
+  - type: section
+    eyebrow: Flow
+    heading: Validated Flow
+    components:
+      - type: markdown
+        body: |
+          Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
+
+          ```agl
+          spec BrainHealth {
+            in: none: str
+            out: report_published: bool
+            description: "Read-only sweep of tagging gaps, stale trusted pages, single-use concepts, and likely duplicates, published as one report."
+            requires: list_pages, get_related, get_vocabulary, list_rules, search_pages, write_page
+
+            flow {
+              state SCAN_PAGES -> call(list_pages, "channel: latest, every page's folder, trusted and trustedBehind state, and last-updated date") -> next
+              state CHECK_TAGS -> call(get_related, "each page's slug, to see whether it carries any concept - none returned means untagged") -> next
+              state GROUP_UNTAGGED -> evaluate(untagged_pages vs folder) -> next
+              state FIND_STALE_TRUSTED -> evaluate(trusted_pages vs last_updated_over_90_days) -> next
+              state FIND_SINGLE_USE_CONCEPTS -> call(get_vocabulary, "every concept and its usageCount - a count of one flags a concept attached to a single page") -> next
+              state FIND_DUP_PAIRS -> call(search_pages, "titles and concept overlap across the brain, to spot likely-duplicate pairs never merged") -> next
+              state CHECK_GOVERNANCE -> call(list_rules, "the folders housing flagged pages, so the report can note whether an existing rule already covers the gap") -> next
+              state DRAFT_REPORT -> evaluate(findings vs report_shape) -> next
+              state WRITE_REPORT -> call(write_page, "the brain-health-report page, same slug every run so it updates in place instead of duplicating") -> TERMINATE("Brain health report published, summary given to the human")
+            }
+          }
+          ```
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this skill
+    components:
+      - type: callout
+        variant: info
+        title: Read, report, stop
+        body: |
+          This skill never marks a page trusted, never merges a duplicate pair, and never deletes or renames a concept - it names the finding and lets a human decide. The report page keeps the same slug every run so re-running updates it in place rather than piling up copies.
+
+          Don't repeat curata-digest's job. Digest covers this week's new pages and trust flips; this skill covers the slower-moving structural picture - reference curata-digest for the day-to-day pulse instead of duplicating its counts here.

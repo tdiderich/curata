@@ -1,0 +1,106 @@
+title: "Skill - Import Wiki"
+subtitle: Walk an exported wiki directory and propose its pages against the existing brain, flagging what looks stale instead of copying it blind.
+shell: standard
+skill:
+  trigger: "import our wiki, bring in the notion export, load the confluence export into curata, import gitbook export"
+  setup:
+    - key: export_dir
+      ask: "Where is the exported wiki directory on disk? Notion, Confluence, and GitBook exports all work."
+    - key: import_folder
+      ask: "Which folder should imported pages land in, if you want a default rather than picking each time? Optional."
+dashboard:
+  prompt: |
+    Run the Import Wiki skill. Tell me the path to the exported wiki
+    directory, then follow the flow on this page to propose pages and
+    flag anything that looks stale.
+  description: "Walk a wiki export, propose pages, flag what's stale"
+components:
+  - type: section
+    eyebrow: Overview
+    heading: What this skill does
+    components:
+      - type: callout
+        variant: info
+        title: Don't copy a wiki, curate it
+        body: |
+          Walks a Notion, Confluence, or GitBook export sitting on disk, page by page. Each page runs through the same capture choreography as a pasted thread: dedup check against the existing brain, checklist, then create or patch. Content that looks stale - old dates, dead product names, anything that contradicts an already-trusted page - gets flagged in a summary section instead of written as-is. Nothing lands trusted. A human reviews every candidate.
+      - type: definition_list
+        items:
+          - term: Trigger
+            definition: Manual - run once per export, whenever a team hands over a wiki dump worth folding into the brain.
+          - term: Data Sources
+            definition: An exported wiki directory on disk - Notion, Confluence, or GitBook export format, walked file by file.
+          - term: Output
+            definition: One untrusted page per proposed export page, created new or patched onto a near-duplicate, tagged with at least one concept, plus a summary of what was found, proposed, merged, skipped, and flagged as stale.
+
+  - type: section
+    eyebrow: Setup
+    heading: Optional Defaults
+    components:
+      - type: callout
+        variant: warn
+        title: One required input, one thing worth deciding once
+        body: |
+          This skill runs on curata plus read access to the export directory. No other MCP tool is required.
+      - type: definition_list
+        items:
+          - term: Export directory
+            definition: Where is the exported wiki directory on disk? Notion, Confluence, and GitBook exports all work.
+          - term: Import folder
+            definition: Which folder should imported pages land in, if you want a default rather than picking each time? Optional.
+
+  - type: section
+    eyebrow: Prerequisites
+    heading: Before you run this skill
+    components:
+      - type: callout
+        variant: warn
+        title: Required inputs
+        body: |
+          - A wiki export directory already on disk
+          - Nothing else - no external MCP tool beyond curata itself is required
+
+  - type: section
+    eyebrow: Flow
+    heading: Validated Flow
+    components:
+      - type: markdown
+        body: |
+          Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
+
+          ```agl
+          spec ImportWiki {
+            in: export_dir: str
+            out: candidates_summarized: bool
+            description: "Walk an exported wiki directory and propose its pages against the existing brain, flagging stale content instead of copying it blind."
+            requires: capture_thread, create_page, patch_page
+
+            flow {
+              state WALK_EXPORT -> call(read_files, "every page in the exported wiki directory") -> next
+              state CHECK_STALENESS -> evaluate(each_export_page vs old_dates_dead_product_names_contradictions_with_trusted_pages) -> next
+              state RUN_CAPTURE -> call(capture_thread, "the next export page's content, source file path, page_type if not the default") -> next
+              state REVIEW_CANDIDATE -> gate(human_approval) -> next
+              state WRITE_CANDIDATE -> call(create_page, "capture_token plus dedup_ack: new, or patch_page the matched slug instead if the human picked an existing candidate") -> next
+              state MORE_PAGES -> evaluate(remaining_export_pages vs none) -> branch
+
+              branch MORE_PAGES {
+                if pages_remain -> RUN_CAPTURE
+                if none_remain -> SUMMARIZE
+              }
+
+              state SUMMARIZE -> evaluate(found_vs_proposed_vs_merged_vs_skipped_vs_flagged_stale) -> TERMINATE("Wiki export walked, candidates proposed for review, stale content flagged")
+            }
+          }
+          ```
+
+  - type: section
+    eyebrow: Key Rules
+    heading: Rules for this skill
+    components:
+      - type: callout
+        variant: info
+        title: Flag stale, don't silently drop it
+        body: |
+          A page with a two-year-old date, a product name that no longer exists, or a claim that contradicts an already-trusted page still gets counted - it goes in the summary's stale-content section instead of getting written or quietly skipped. Let the human decide whether it's worth rewriting.
+
+          Never skip capture_thread. Every candidate lands untrusted, tagged with at least one concept. End the run with an exact count: pages found, proposed as new, merged into existing pages, skipped, and flagged as stale.

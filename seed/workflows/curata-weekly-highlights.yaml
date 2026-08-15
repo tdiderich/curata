@@ -1,97 +1,37 @@
-title: "Skill - Weekly Highlights"
-subtitle: Scan what became trusted this week and what's still waiting on a human, and publish a five-minute digest.
+title: "Skill - Weekly Highlights (superseded)"
+subtitle: This manual flow is superseded by the generate_digest MCP tool. Call generate_digest instead of following the steps below.
 shell: standard
 skill:
   trigger: "weekly highlights, weekly digest, what happened this week, review digest"
-  setup:
-    - key: digest_folder
-      ask: "Which folder should the digest page land in, if you want a default rather than picking each time? Optional."
 dashboard:
   prompt: |
-    Run the Weekly Highlights skill. Follow the flow on this page to scan
-    what's newly trusted and what's still pending review, then publish the
-    digest page.
-  description: "Weekly digest: what got trusted, what's still pending"
+    This workflow is superseded. Call generate_digest directly (no
+    arguments), then read_page the slug it returns - see the curata-digest
+    skill for the full reference.
+  description: "Superseded - call generate_digest instead"
 components:
   - type: section
     eyebrow: Overview
-    heading: What this skill does
-    components:
-      - type: callout
-        variant: info
-        title: A five-minute read on the review backlog
-        body: |
-          Scans every page's trust state, splits what it finds into what a human approved this week and what's still sitting in the review queue, then publishes a dated digest page. Run it manually before the team standup, whenever you want a read on the backlog.
-      - type: definition_list
-        items:
-          - term: Trigger
-            definition: Manual - run whenever you want a read on the review backlog, no schedule required.
-          - term: Data Sources
-            definition: This curata instance's own trust state, read over MCP. No external tool required.
-          - term: Output
-            definition: A dated digest page listing what became trusted this week and what's still pending review, oldest-waiting first.
-
-  - type: section
-    eyebrow: Setup
-    heading: Optional Defaults
+    heading: Superseded by generate_digest
     components:
       - type: callout
         variant: warn
-        title: Nothing required, one thing worth deciding once
+        title: Don't follow this flow, call the tool
         body: |
-          This skill has no external tool dependency, it runs on curata alone. The only thing worth fixing per org is where the digest page lands.
+          This page used to describe a manual flow: scan every page's trust state, split what became trusted this week from what's still pending, draft a digest, gate it, publish it. The generate_digest MCP tool now does that in one call and writes the same kind of dated digest page, so there is nothing left to run here by hand.
       - type: definition_list
         items:
-          - term: Digest folder
-            definition: Which folder should the digest page land in, if you want a default rather than picking each time? Optional.
+          - term: Replacement
+            definition: "generate_digest - takes no arguments, computes the window since the last run, writes a dated page to the Digests folder, and returns slug, folderId, created, windowStart, windowEnd, and a summary."
+          - term: Where to look
+            definition: The curata-digest skill covers cadence, what each digest section contains, and how to read a digest back. Run generate_digest the same way you'd run any other skill.
 
   - type: section
-    eyebrow: Prerequisites
-    heading: Before you run this skill
-    components:
-      - type: callout
-        variant: warn
-        title: Required inputs
-        body: |
-          - At least one page in this curata instance
-          - Nothing else - no external MCP tool is required to run this skill
-
-          There's no MCP tool for marking a page trusted. This skill reads that state, it never changes it. If the digest surfaces something that should be approved, say so and point at `/review`, don't act on it here.
-
-  - type: section
-    eyebrow: Flow
-    heading: Validated Flow
-    components:
-      - type: markdown
-        body: |
-          Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
-
-          ```agl
-          spec WeeklyHighlights {
-            in: none: str
-            out: digest_published: bool
-            description: "Scan what became trusted this week and what's still waiting on a human, and publish a five-minute digest."
-            requires: list_pages, get_versions, write_page
-
-            flow {
-              state SCAN_TRUST_STATE -> call(list_pages, "channel: latest, every page's trusted and trustedBehind labels") -> next
-              state SPLIT_NEWLY_TRUSTED -> call(get_versions, "for pages showing trusted: true, the trusted version's created date as the closest available proxy for when it was approved - list_pages carries no separate trust timestamp") -> next
-              state SPLIT_PENDING -> evaluate(trusted_false_pages vs never_trusted_or_trusted_behind) -> next
-              state DRAFT_DIGEST -> evaluate(newly_trusted vs still_pending vs five_minute_read) -> next
-              state PROPOSE_DIGEST -> gate(human_approval) -> WRITE_DIGEST
-              state WRITE_DIGEST -> call(write_page, "the dated weekly highlights page") -> TERMINATE("Weekly highlights published")
-            }
-          }
-          ```
-
-  - type: section
-    eyebrow: Key Rules
-    heading: Rules for this skill
+    eyebrow: Migration
+    heading: If you customized this page
     components:
       - type: callout
         variant: info
-        title: Digest, don't dump
+        title: Your edits aren't lost
         body: |
-          Lead with anything that's been pending the longest. Link every entry to its page. The "newly trusted" date is a proxy (the trusted version's creation date, not the trust action itself), label it as such rather than stating it as exact.
-
-          This skill only writes the digest page. It never marks anything trusted, that stays a human action on `/review`.
+          If your org edited this page's setup or flow before generate_digest existed, that content still lives in this page's version history. generate_digest doesn't read anything from here - it computes the digest server-side. Anything you want carried forward (a custom digest folder, extra sections) needs to move into how you call and read generate_digest, not into this page.
