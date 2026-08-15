@@ -51,10 +51,20 @@ export interface DigestData {
  * pages already slugged digest-* — there is no separate timestamp column,
  * the digest pages themselves are the record of when the last run happened.
  * Null when this org has never generated a digest yet.
+ *
+ * `excludeSlug` must be the slug currently being generated: a same-week
+ * rerun REFRESHES that week's window with current data, and counting the
+ * week's own earlier run as "previous" would shrink the window to the
+ * minutes since it, silently replacing a full week's digest with a
+ * near-empty one (found live on the TS Hub, 2026-08-15).
  */
-export async function resolvePreviousDigestAt(orgId: string): Promise<Date | null> {
+export async function resolvePreviousDigestAt(orgId: string, excludeSlug?: string): Promise<Date | null> {
   const digestPages = await db.page.findMany({
-    where: { orgId, slug: { startsWith: "digest-" } },
+    where: {
+      orgId,
+      slug: { startsWith: "digest-" },
+      ...(excludeSlug ? { NOT: { slug: excludeSlug } } : {}),
+    },
     select: {
       versions: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
     },
@@ -93,7 +103,7 @@ export async function gatherDigestData(
   userId?: string,
   now: Date = new Date()
 ): Promise<DigestData> {
-  const previousDigestAt = await resolvePreviousDigestAt(orgId);
+  const previousDigestAt = await resolvePreviousDigestAt(orgId, digestSlug(now));
   const { windowStart, windowEnd } = computeWindow(previousDigestAt, now);
 
   const where = listPagesWhere(orgId, userId ?? null);

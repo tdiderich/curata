@@ -170,10 +170,24 @@ describe("digest — gatherDigestData", () => {
     expect(data.uncategorizedNewPages.map((p) => p.slug)).not.toContain("archived-new");
   });
 
+  it("keeps the full week's window on a same-week rerun instead of shrinking to since-last-run", async () => {
+    const inWindow = new Date(windowStart.getTime() + 60_000);
+    // First run of the current week already happened mid-window...
+    const firstRunAt = new Date(windowStart.getTime() + 120_000);
+    await makePage(orgId, "digest-2026-w33", firstRunAt);
+    // ...and a real page landed after it.
+    await makePage(orgId, "late-page", new Date(firstRunAt.getTime() + 60_000));
+    await makePage(orgId, "early-page", inWindow);
+
+    const data = await gatherDigestData(orgId, undefined, now);
+
+    // Window still anchors to the PRIOR week's digest, so both pages report,
+    // and the week's own digest page never reports itself.
+    expect(data.windowStart).toEqual(windowStart);
+    expect(data.uncategorizedNewPages.map((p) => p.slug).sort()).toEqual(["early-page", "late-page"]);
+  });
+
   it("excludes locked-folder pages from new pages and hot spots", async () => {
-    // Digest pages themselves can't land in the window (windowStart is
-    // derived from the newest digest version), so only the locked-folder
-    // exclusion needs a live test; the slug filter is defensive.
     const inWindow = new Date(windowStart.getTime() + 60_000);
     const locked = await testDb.folder.create({
       data: { orgId, name: "Templates", locked: true, createdBy: "test-user" },
@@ -323,6 +337,10 @@ describe("MCP dispatch — generate_digest", () => {
       "user-1"
     )) as { slug: string; created: boolean };
     expect(first.created).toBe(true);
+
+    // New knowledge lands between runs — the rerun must refresh the same
+    // week's page with it (identical content would no-op version creation).
+    await makePage(orgId, "between-runs", new Date());
 
     const second = (await dispatch(
       "generate_digest",
