@@ -12,6 +12,11 @@ import { resolvePublicPage } from "@/lib/public-page";
 // visibility=public, or a valid share token must resolve via resolvePageAccess.
 // Every failure returns an identical 404 so the endpoint leaks no information
 // about which private pages exist.
+//
+// Deliberately NOT run through expandComponentRefs, unlike /md and /prompt:
+// "raw" means the stored doc, `type: ref` blocks included — this is the
+// endpoint `kazam install` and "clone as a template" rely on to get back the
+// exact YAML that was written, not a rendered view of it.
 
 interface Ctx {
   params: Promise<{ orgSlug: string; pageSlug: string }>;

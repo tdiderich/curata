@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { resolveCurrentUser } from "@/lib/auth";
+import type { RefViewer } from "@/lib/component-refs";
 
 // Shared gate for the anonymous, non-HTML representations of a page (/raw,
 // /md). It exists so those routes cannot drift apart from each other or from
@@ -49,4 +51,20 @@ export async function resolvePublicPage(
     slug: page.slug,
     visibility: page.visibility,
   };
+}
+
+/**
+ * Ref-expansion viewer for the non-HTML public surfaces (/md, /prompt): same
+ * anonymous-vs-member semantics as the /p HTML view — a signed-in user who is
+ * a member of this org can expand refs to org/shared-visibility component
+ * pages; anyone else (no session, or signed in to a different org) is treated
+ * as anonymous, same as the HTML route treats them for ref access purposes.
+ */
+export async function resolvePublicRefViewer(orgId: string): Promise<RefViewer> {
+  const user = await resolveCurrentUser();
+  if (!user) return { userId: null, orgMemberRole: null };
+  const membership = await db.orgMember.findUnique({
+    where: { orgId_userId: { orgId, userId: user.id } },
+  });
+  return { userId: user.id, orgMemberRole: membership?.role ?? null };
 }

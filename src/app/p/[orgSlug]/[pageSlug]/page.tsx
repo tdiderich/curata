@@ -9,7 +9,7 @@ import { ThemeScript } from "@/components/theme-script";
 import PublicAnnotationClient from "@/components/public-annotation-client";
 import PagePromptDialog from "@/components/page-prompt-dialog";
 import { buildPagePrompt, opensPromptOnLoad, promptNote } from "@/lib/share-prompt";
-import { expandComponentRefs, renderedRefWrap } from "@/lib/component-refs";
+import { expandComponentRefs, expandSlideRefs, renderedRefWrap } from "@/lib/component-refs";
 import type { Metadata } from "next";
 
 interface Props {
@@ -138,15 +138,26 @@ export default async function PublicPageView({ params, searchParams }: Props & {
   // blocks before PageRenderer ever sees them. Public viewers only ever get
   // "latest" (readPage above has no channel arg), so refs resolve on that
   // same channel — no trusted-content leak via a component embed.
+  const refCtx = {
+    orgId: org.id,
+    channel: "latest" as const,
+    viewer: { userId: user?.id ?? null, orgMemberRole, shareToken },
+    ...renderedRefWrap((refSlug: string) => `/p/${orgSlug}/${refSlug}`),
+  };
   const expandedComponents = await expandComponentRefs(
     pageData.json.components as Array<Record<string, unknown>> | undefined,
-    {
-      orgId: org.id,
-      channel: "latest",
-      viewer: { userId: user?.id ?? null, orgMemberRole, shareToken },
-      ...renderedRefWrap((refSlug) => `/p/${orgSlug}/${refSlug}`),
-    }
+    refCtx
   );
+  // Deck slides carry a second components tree — same expansion, same ctx.
+  const rawSlides = pageData.json.slides as Array<{
+    label: string;
+    hide_label?: boolean;
+    cover?: boolean;
+    components?: Array<{ type: string; [key: string]: unknown }>;
+  }> | undefined;
+  const expandedSlides = Array.isArray(rawSlides)
+    ? await expandSlideRefs(rawSlides as Array<Record<string, unknown>>, refCtx)
+    : undefined;
 
   return (
     <>
@@ -193,12 +204,12 @@ export default async function PublicPageView({ params, searchParams }: Props & {
                   type: string;
                   [key: string]: unknown;
                 }>,
-                slides: (pageData.json.slides as Array<{
+                slides: expandedSlides as Array<{
                   label: string;
                   hide_label?: boolean;
                   cover?: boolean;
                   components?: Array<{ type: string; [key: string]: unknown }>;
-                }>) || undefined,
+                }> | undefined,
                 freshness: pageData.json.freshness as { updated?: string; review_every?: string; owner?: string; expires?: string } | "never" | undefined,
               }}
             />

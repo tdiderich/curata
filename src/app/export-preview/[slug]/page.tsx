@@ -4,7 +4,7 @@ import { readPage } from "@/lib/pages";
 import { getOrgTheme } from "@/lib/theme";
 import { ThemeScript } from "@/components/theme-script";
 import { PageRenderer } from "@/generated/kazam-renderer";
-import { expandComponentRefs, renderedRefWrap } from "@/lib/component-refs";
+import { expandComponentRefs, expandSlideRefs, renderedRefWrap } from "@/lib/component-refs";
 
 export default async function ExportPreview({
   params,
@@ -61,15 +61,26 @@ export default async function ExportPreview({
   // already had access to `slug` (see previewUrl/consumeExportNonce) — treat
   // the viewer as any org member in good standing for ref expansion, on the
   // same "latest" channel readPage used above.
+  const refCtx = {
+    orgId,
+    channel: "latest" as const,
+    viewer: { userId: null, orgMemberRole: "member" },
+    ...renderedRefWrap((refSlug: string) => `/pages/${refSlug}`),
+  };
   const expandedComponents = await expandComponentRefs(
     pageData.json.components as Array<Record<string, unknown>> | undefined,
-    {
-      orgId,
-      channel: "latest",
-      viewer: { userId: null, orgMemberRole: "member" },
-      ...renderedRefWrap((refSlug) => `/pages/${refSlug}`),
-    }
+    refCtx
   );
+  // Deck slides carry a second components tree — same expansion, same ctx.
+  const rawSlides = pageData.json.slides as Array<{
+    label: string;
+    hide_label?: boolean;
+    cover?: boolean;
+    components?: Array<{ type: string; [key: string]: unknown }>;
+  }> | undefined;
+  const expandedSlides = Array.isArray(rawSlides)
+    ? await expandSlideRefs(rawSlides as Array<Record<string, unknown>>, refCtx)
+    : undefined;
 
   const page = {
     title: (pageData.json.title as string) || slug,
@@ -80,13 +91,12 @@ export default async function ExportPreview({
       type: string;
       [key: string]: unknown;
     }>,
-    slides:
-      (pageData.json.slides as Array<{
-        label: string;
-        hide_label?: boolean;
-        cover?: boolean;
-        components?: Array<{ type: string; [key: string]: unknown }>;
-      }>) || undefined,
+    slides: expandedSlides as Array<{
+      label: string;
+      hide_label?: boolean;
+      cover?: boolean;
+      components?: Array<{ type: string; [key: string]: unknown }>;
+    }> | undefined,
   };
 
   return (

@@ -4,10 +4,16 @@ import type { Channel } from "./pages";
 
 // Shared components: a `type: ref` block embeds another page's `components`
 // array by reference. Expansion happens here, at read time, and only here —
-// every render/read/export path (pages/[slug], the public /p/ route,
-// export-preview, and MCP read_page) funnels through expandComponentRefs
-// before the tree reaches the renderer, so stored docs never contain
-// expanded content and the renderer never has to know `ref` exists.
+// every render/read/export path (pages/[slug], the public /p/ route (HTML,
+// /md, and /prompt), export-preview, and MCP read_page) funnels through
+// expandComponentRefs before the tree reaches the renderer, so stored docs
+// never contain expanded content and the renderer never has to know `ref`
+// exists. Deck slides (`page.slides[].components`) are a second components
+// tree on the same page — every rendering surface must expand refs there too,
+// via expandSlideRefs below, using the same RefExpansionContext (and
+// therefore the same depth/cycle guards) as the page's main components tree.
+// The /raw route is the one deliberate exception: it serves the stored doc
+// as-is, ref blocks included, by design.
 
 export const MAX_REF_DEPTH = 3;
 
@@ -190,6 +196,29 @@ export async function expandComponentRefs(
     out.push(next);
   }
   return out;
+}
+
+/**
+ * Same expansion, applied per-slide for deck pages. Each slide gets its own
+ * top-level call (depth 0, empty chain) — identical to how the page's main
+ * `components` tree is expanded — so a ref cycle wholly contained within a
+ * slide (including one that loops back through a page the main tree also
+ * references) is caught by the same MAX_REF_DEPTH/chain guard in
+ * expandComponentRefs. Slides without a `components` array pass through
+ * unchanged.
+ */
+export async function expandSlideRefs(
+  slides: Comp[] | undefined | null,
+  ctx: RefExpansionContext
+): Promise<Comp[]> {
+  if (!Array.isArray(slides)) return [];
+  return Promise.all(
+    slides.map(async (slide) =>
+      slide && typeof slide === "object" && Array.isArray((slide as Comp).components)
+        ? { ...slide, components: await expandComponentRefs((slide as Comp).components as Comp[], ctx) }
+        : slide
+    )
+  );
 }
 
 /** Standard "subtle chip" attribution + error placeholder for rendered surfaces (app page view, public /p/ page, export preview): a small linked markdown note above the expanded content, and a low-key callout when expansion fails. Nothing else — no editor UI, no picker. */

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect, notFound } from "next/navigation";
 import { resolveOrg, AUTH_MODE } from "@/lib/auth";
 import { getAnnotations, getPageSections, readPage, bumpViewCount } from "@/lib/pages";
+import type { Channel } from "@/lib/pages";
 import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
 import { resolveRules } from "@/lib/content-rules";
@@ -13,7 +14,8 @@ import PageDetailClient from "@/components/page-detail-client";
 import { PageTags } from "@/components/page-tags";
 import { getPageConcepts, normalizeTerm } from "@/lib/concepts";
 import { DEFAULT_TAGS } from "@/lib/default-tags";
-import { expandComponentRefs, renderedRefWrap } from "@/lib/component-refs";
+import { expandComponentRefs, expandSlideRefs, renderedRefWrap } from "@/lib/component-refs";
+import type { RefExpansionContext } from "@/lib/component-refs";
 
 export async function generateMetadata({
   params,
@@ -44,7 +46,7 @@ export default async function PageDetailView({
   // point of the approval gate. ?latest=1 previews the newest, unapproved
   // version without changing what anyone else sees.
   const previewingLatest = latestParam === "1";
-  const channel = previewingLatest ? "latest" : "trusted";
+  const channel: Channel = previewingLatest ? "latest" : "trusted";
 
   const pageData = await readPage(ctx.orgId, slug, channel);
   if (!pageData) notFound();
@@ -173,15 +175,27 @@ export default async function PageDetailView({
   // Channel-aware (same channel the page itself is being read on), re-checks
   // the viewer's access to the referenced page, and never leaks content the
   // viewer can't see.
+  const refCtx: RefExpansionContext = {
+    orgId: ctx.orgId,
+    channel,
+    viewer: { userId: ctx.userId, orgMemberRole: ctx.role },
+    ...renderedRefWrap((refSlug: string) => `/pages/${refSlug}`),
+  };
   const expandedComponents = await expandComponentRefs(
     pageData.json.components as Array<Record<string, unknown>> | undefined,
-    {
-      orgId: ctx.orgId,
-      channel,
-      viewer: { userId: ctx.userId, orgMemberRole: ctx.role },
-      ...renderedRefWrap((refSlug) => `/pages/${refSlug}`),
-    }
+    refCtx
   );
+  // Deck slides carry a second components tree — same expansion, same ctx (so
+  // the same depth/cycle guards apply as for the main tree above).
+  const rawSlides = pageData.json.slides as Array<{
+    label: string;
+    hide_label?: boolean;
+    cover?: boolean;
+    components?: Array<{ type: string; [key: string]: unknown }>;
+  }> | undefined;
+  const expandedSlides = Array.isArray(rawSlides)
+    ? await expandSlideRefs(rawSlides as Array<Record<string, unknown>>, refCtx)
+    : undefined;
 
   const page = {
     title: pageTitle,
@@ -192,12 +206,12 @@ export default async function PageDetailView({
       type: string;
       [key: string]: unknown;
     }>,
-    slides: (pageData.json.slides as Array<{
+    slides: expandedSlides as Array<{
       label: string;
       hide_label?: boolean;
       cover?: boolean;
       components?: Array<{ type: string; [key: string]: unknown }>;
-    }>) || undefined,
+    }> | undefined,
     freshness: pageData.json.freshness as { updated?: string; review_every?: string; owner?: string; expires?: string } | "never" | undefined,
   };
 

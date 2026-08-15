@@ -23,8 +23,11 @@ vi.mock("@/lib/kazam", async () => {
   };
 });
 
-import { expandComponentRefs, renderedRefWrap, agentRefWrap, MAX_REF_DEPTH } from "@/lib/component-refs";
+import { expandComponentRefs, expandSlideRefs, renderedRefWrap, agentRefWrap, MAX_REF_DEPTH } from "@/lib/component-refs";
 import { dispatch } from "@/lib/mcp-dispatch";
+import { GET as mdGET } from "@/app/p/[orgSlug]/[pageSlug]/md/route";
+import { GET as promptGET } from "@/app/p/[orgSlug]/[pageSlug]/prompt/route";
+import { GET as rawGET } from "@/app/p/[orgSlug]/[pageSlug]/raw/route";
 import yaml from "js-yaml";
 
 const REF_WRAP = renderedRefWrap((slug) => `/pages/${slug}`);
@@ -245,6 +248,175 @@ describe("expandComponentRefs", () => {
       ...REF_WRAP,
     });
     expect(out).toEqual(components);
+  });
+});
+
+describe("expandSlideRefs", () => {
+  let orgId: string;
+
+  beforeEach(async () => {
+    const org = await createTestOrg({ name: "Slide Ref Org", slug: "slide-ref-org" });
+    orgId = org.id;
+  });
+
+  it("expands a ref block inside a slide's components, with attribution", async () => {
+    await createComponentPage(orgId, "shared-slide", { title: "Shared Slide", body: "slide body content" });
+
+    const slides = [{ label: "Slide 1", components: [refBlock("shared-slide")] }];
+    const out = await expandSlideRefs(slides, {
+      orgId,
+      channel: "latest",
+      viewer: { userId: null, orgMemberRole: "member" },
+      ...REF_WRAP,
+    });
+
+    const joined = JSON.stringify(out);
+    expect(joined).toContain("slide body content");
+    expect(joined).toContain("shared: [Shared Slide]");
+  });
+
+  it("catches a ref cycle inside a slide the same way the main components tree does", async () => {
+    await createTestPage(orgId, {
+      slug: "slide-cycle-a",
+      yamlContent: `title: Slide Cycle A\nshell: document\npageType: component\ncomponents:\n  - type: ref\n    id: to-b\n    component: slide-cycle-b\n`,
+    });
+    await createTestPage(orgId, {
+      slug: "slide-cycle-b",
+      yamlContent: `title: Slide Cycle B\nshell: document\npageType: component\ncomponents:\n  - type: ref\n    id: to-a\n    component: slide-cycle-a\n`,
+    });
+
+    const slides = [{ label: "Slide 1", components: [refBlock("slide-cycle-a")] }];
+    const out = await expandSlideRefs(slides, {
+      orgId,
+      channel: "latest",
+      viewer: { userId: null, orgMemberRole: "member" },
+      ...REF_WRAP,
+    });
+
+    const joined = JSON.stringify(out);
+    expect(joined).toContain("cycle detected");
+    expect(joined).toContain("slide-cycle-a");
+  });
+
+  it("passes a slide with no components through unchanged", async () => {
+    const slides = [{ label: "Cover", cover: true }];
+    const out = await expandSlideRefs(slides, {
+      orgId,
+      channel: "latest",
+      viewer: { userId: null, orgMemberRole: "member" },
+      ...REF_WRAP,
+    });
+    expect(out).toEqual(slides);
+  });
+
+  it("returns an empty array for undefined/null slides", async () => {
+    expect(
+      await expandSlideRefs(undefined, {
+        orgId,
+        channel: "latest",
+        viewer: { userId: null, orgMemberRole: "member" },
+        ...REF_WRAP,
+      })
+    ).toEqual([]);
+    expect(
+      await expandSlideRefs(null, {
+        orgId,
+        channel: "latest",
+        viewer: { userId: null, orgMemberRole: "member" },
+        ...REF_WRAP,
+      })
+    ).toEqual([]);
+  });
+});
+
+describe("public /p/ sub-routes — ref expansion parity", () => {
+  let orgId: string;
+  const orgSlug = "ref-public-org";
+
+  beforeEach(async () => {
+    const org = await createTestOrg({ name: "Ref Public Org", slug: orgSlug });
+    orgId = org.id;
+  });
+
+  function ctxFor(pageSlug: string) {
+    return { params: Promise.resolve({ orgSlug, pageSlug }) };
+  }
+
+  it("GET .../md expands a ref block into the target's content, with attribution", async () => {
+    await createComponentPage(orgId, "shared-md", { title: "Shared MD", body: "md body content", visibility: "public" });
+    await createTestPage(orgId, {
+      slug: "consumer-md",
+      visibility: "public",
+      yamlContent: `title: Consumer MD\nshell: document\ncomponents:\n  - type: ref\n    id: embed\n    component: shared-md\n`,
+    });
+
+    const res = await mdGET(
+      new Request(`https://example.com/p/${orgSlug}/consumer-md/md`),
+      ctxFor("consumer-md")
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("md body content");
+    expect(body).toContain("Shared MD");
+  });
+
+  it("GET .../md never leaks a private, inaccessible ref's content", async () => {
+    await createComponentPage(orgId, "shared-md-private", {
+      body: "secret md content",
+      visibility: "private",
+      createdBy: "owner-user",
+    });
+    await createTestPage(orgId, {
+      slug: "consumer-md-private-ref",
+      visibility: "public",
+      yamlContent: `title: Consumer\nshell: document\ncomponents:\n  - type: ref\n    id: embed\n    component: shared-md-private\n`,
+    });
+
+    const res = await mdGET(
+      new Request(`https://example.com/p/${orgSlug}/consumer-md-private-ref/md`),
+      ctxFor("consumer-md-private-ref")
+    );
+    const body = await res.text();
+
+    expect(body).not.toContain("secret md content");
+  });
+
+  it("GET .../prompt appends the ref-expanded page content, with attribution", async () => {
+    await createComponentPage(orgId, "shared-prompt", { title: "Shared Prompt", body: "prompt body content", visibility: "public" });
+    await createTestPage(orgId, {
+      slug: "consumer-prompt",
+      visibility: "public",
+      yamlContent: `title: Consumer Prompt\nshell: document\ncomponents:\n  - type: ref\n    id: embed\n    component: shared-prompt\n`,
+    });
+
+    const res = await promptGET(
+      new Request(`https://example.com/p/${orgSlug}/consumer-prompt/prompt`),
+      ctxFor("consumer-prompt")
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("prompt body content");
+    expect(body).toContain("Shared Prompt");
+  });
+
+  it("GET .../raw returns the stored ref block unexpanded — the stored doc, not a rendered view", async () => {
+    await createComponentPage(orgId, "shared-raw", { title: "Shared Raw", body: "raw body content" });
+    await createTestPage(orgId, {
+      slug: "consumer-raw",
+      visibility: "public",
+      yamlContent: `title: Consumer Raw\nshell: document\ncomponents:\n  - type: ref\n    id: embed\n    component: shared-raw\n`,
+    });
+
+    const res = await rawGET(
+      new Request(`https://example.com/p/${orgSlug}/consumer-raw/raw`),
+      ctxFor("consumer-raw")
+    );
+    const body = await res.text();
+
+    expect(body).toContain("component: shared-raw");
+    expect(body).not.toContain("raw body content");
   });
 });
 
