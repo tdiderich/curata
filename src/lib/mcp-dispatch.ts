@@ -33,6 +33,7 @@ import { resolveRequiredComponentsRules, validateRequiredComponents, validateReq
 import { enforceCaptureGate } from "@/lib/capture-gate";
 import { createCaptureToken, CAPTURE_TOKEN_TTL_MS } from "@/lib/capture-token";
 import { findCaptureDedupCandidates } from "@/lib/capture-dedup";
+import { gatherDigestData, digestSlug, digestTitle, buildDigestPageYaml } from "@/lib/digest";
 import type { Prisma } from "@/generated/prisma/client";
 import {
   upsertConcepts,
@@ -85,7 +86,7 @@ export const READ_TOOLS = [
   "list_groups",
   "capture_thread",
 ];
-export const WRITE_TOOLS = ["write_page", "create_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted"];
+export const WRITE_TOOLS = ["write_page", "create_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted", "generate_digest"];
 export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -138,7 +139,23 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   remove_group_member: { known: new Set(["group_id", "user_id"]), aliases: { groupId: "group_id", userId: "user_id" } },
   mark_trusted: { known: new Set(["slug", "version_id"]), aliases: { versionId: "version_id" } },
   clear_trusted: { known: new Set(["slug"]) },
+  generate_digest: { known: new Set() },
 };
+
+const DIGEST_FOLDER_NAME = "Digests";
+
+/// Find-or-create the Digests folder, mirroring seed.ts's findOrCreateFolder
+/// pattern for the app's other generated/system folders — but left unlocked
+/// (unlike Templates/Skills) since generate_digest re-writes the same page
+/// week over week and a locked folder would block that update.
+async function ensureDigestsFolder(orgId: string, actorId: string): Promise<string> {
+  const existing = await db.folder.findFirst({ where: { orgId, name: DIGEST_FOLDER_NAME } });
+  if (existing) return existing.id;
+  const created = await db.folder.create({
+    data: { orgId, name: DIGEST_FOLDER_NAME, visibility: "org", createdBy: actorId },
+  });
+  return created.id;
+}
 
 function validateParams(tool: string, args: Record<string, string>): Record<string, string> {
   const spec = TOOL_PARAMS[tool];
@@ -1518,6 +1535,69 @@ export async function dispatch(
       const result = await clearTrusted(orgId, args.slug, actorUserId);
       if (!result.ok) throw new Error(result.error);
       return { ok: true, slug: args.slug };
+    }
+
+    // generate_digest: computes new pages (by concept tag), trust flips (read
+    // off the audit log's page.trust entries — no new column), pages awaiting
+    // review, and hot spots since the last digest run (7 days back the first
+    // time), then writes/updates a dated page in the Digests folder. The slug
+    // is deterministic per ISO week so re-running mid-week updates the same
+    // page instead of creating a duplicate.
+    case "generate_digest": {
+      const now = new Date();
+      const data = await gatherDigestData(orgId, userId, now);
+      const gdSlug = digestSlug(now);
+      const gdTitle = digestTitle(now);
+      const gdContent = buildDigestPageYaml(data, orgSlug, gdTitle);
+
+      const gdUnsupported = checkUnsupportedComponents(gdContent);
+      if (gdUnsupported.length > 0) throw new Error(gdUnsupported.map((e) => e.message).join("; "));
+      const gdValidation = await validateContent(orgSlug, gdSlug, gdContent);
+      if (gdValidation.length > 0) {
+        throw new Error(`invalid digest content: ${gdValidation.map((e) => e.message).join("; ")}`);
+      }
+
+      const gdExisting = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: gdSlug } } });
+      const gdFolderId = await ensureDigestsFolder(orgId, actorId);
+
+      const gdResult = await writePage(orgId, orgSlug, gdSlug, gdContent, "agent", undefined, undefined, "org");
+      if (!gdResult.ok) throw new Error(gdResult.error);
+
+      if (!gdExisting || gdExisting.folderId !== gdFolderId) {
+        await db.page.update({ where: { orgId_slug: { orgId, slug: gdSlug } }, data: { folderId: gdFolderId } });
+      }
+
+      const gdPage = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: gdSlug } }, select: { id: true } });
+      if (gdPage) {
+        await upsertConcepts(gdPage.id, [{ term: "digest" }], actorId);
+      }
+
+      const gdSummary = {
+        newPages: data.newPagesByConcept.reduce((sum, g) => sum + g.pages.length, 0) + data.uncategorizedNewPages.length,
+        trustFlips: data.trustFlips.length,
+        awaitingReview: data.awaitingReview.length,
+        hotSpots: data.hotSpots.length,
+      };
+
+      logAudit({
+        orgId,
+        action: "digest.generate",
+        resourceType: "page",
+        resourceId: gdSlug,
+        actorType: "apikey",
+        actorId,
+        metadata: { windowStart: data.windowStart.toISOString(), windowEnd: data.windowEnd.toISOString(), ...gdSummary },
+      });
+
+      return {
+        ok: true,
+        slug: gdSlug,
+        folderId: gdFolderId,
+        created: !gdExisting,
+        windowStart: data.windowStart.toISOString(),
+        windowEnd: data.windowEnd.toISOString(),
+        summary: gdSummary,
+      };
     }
 
     default:

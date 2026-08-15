@@ -758,6 +758,10 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     { slug: z.string() },
     viaDispatch("clear_trusted"));
 
+  server.tool("generate_digest", "Generate (or refresh) this org's dated digest page: new pages since the last digest run grouped by concept tag, trust flips read off the audit log, pages awaiting review (trusted but behind latest), and hot spots (most-edited pages this window). Writes to a deterministic per-week slug in the Digests folder — running it again mid-week updates that same page instead of creating a duplicate. Weekly cadence is a guideline, not enforced.",
+    {},
+    viaDispatch("generate_digest"));
+
   return server;
 }
 

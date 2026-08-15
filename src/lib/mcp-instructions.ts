@@ -33,6 +33,7 @@ export async function buildServerInstructions(
     `TAGGING: tag every page you write with concepts - untagged pages are invisible in the brain map. Prefer the canonical tags where they fit (${DEFAULT_TAGS.join(", ")}) plus any specific concepts; combine tags freely - engineering + go-to-market marks something engineers should know that customers will ask about. Reuse existing tags from the brain map over inventing near-synonyms.`,
     `GROUPS: list_groups is read-only for anyone; creating, renaming, deleting groups and adding/removing members (create_group, update_group, delete_group, add_group_member, remove_group_member) only succeed when the calling key belongs to an org owner or admin.`,
     `TRUST FLIPS: mark_trusted and clear_trusted only succeed when the human behind the calling key is eligible under the page's approval rule (owner/admin, or the rule's listed approvers), and every flip is audited — confirm with your human before calling either.`,
+    `DIGEST: generate_digest computes new pages, trust flips, pages awaiting review, and hot spots since the last digest run (or the last 7 days, the first time) and writes a dated page to the Digests folder. Run it about weekly, or whenever a human asks what changed. It takes no arguments and is safe to re-run — a second call in the same week updates that week's page instead of creating a duplicate.`,
   ];
 
   try {

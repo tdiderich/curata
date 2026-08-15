@@ -13,6 +13,7 @@ Skills for managing your curata instance from Claude Code, Cursor, or any MCP-co
 | `curata-write` | `/curata-write` | Create and update pages |
 | `curata-capture` | `/curata-capture` | Capture a pasted thread into a deduped, checklist-complete page |
 | `curata-review` | `/curata-review` | Summarize what's pending review and what's trusted but behind |
+| `curata-digest` | `/curata-digest` | Generate the org's brain digest: new pages, trust flips, awaiting review, hot spots |
 
 ## Getting started
 
