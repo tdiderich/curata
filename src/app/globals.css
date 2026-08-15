@@ -7689,3 +7689,81 @@ body:has(.nav-reveal) .page-toolbar {
   stroke: none;
   pointer-events: none;
 }
+
+/* ── Public page pill nav ── */
+
+.pubnav-wrap {
+  position: sticky;
+  top: 14px;
+  z-index: 40;
+  padding: 0 16px;
+}
+
+.pubnav {
+  max-width: 1020px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 16px;
+  background: rgba(var(--bg-rgb), 0.82);
+  border: 1px solid rgba(var(--text-rgb), 0.11);
+  border-radius: 14px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.pubnav-name {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--snow);
+  text-decoration: none;
+}
+
+.pubnav-name:hover {
+  color: var(--teal);
+}
+
+.pubnav-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pubnav-link {
+  font-size: 13.5px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.pubnav-link:hover {
+  color: var(--snow);
+}
+
+.pubnav-cta {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--snow);
+  background: rgba(var(--accent-rgb), 0.9);
+  padding: 7px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.pubnav-cta:hover {
+  background: rgba(var(--accent-rgb), 1);
+}
+
+@media (max-width: 640px) {
+  .pubnav {
+    gap: 10px;
+  }
+
+  .pubnav-link {
+    display: none;
+  }
+}
