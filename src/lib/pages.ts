@@ -10,6 +10,7 @@ import { logAudit } from "./audit";
 import { getEntitlements } from "./entitlements";
 import { estimateTokens } from "./tokens";
 import { pruneVersions } from "./version-retention";
+import { extractSalientTerms } from "./salient-terms";
 
 /// npm dist-tag style read channel: "latest" is the current behavior (newest
 /// version); "trusted" resolves to the version a human pinned via
@@ -506,6 +507,77 @@ export async function searchPages(
     }
   }
 
+  if (results.length === 0) {
+    return salientTermFallback(entries, query, glanceCtx);
+  }
+
+  return results;
+}
+
+/**
+ * Fallback for search_pages when the literal whole-query substring match
+ * (above) finds nothing — the common failure mode for multi-word queries
+ * like "getting started onboarding", where no page contains that exact
+ * phrase even though a page titled "Getting Started with Curata" is
+ * obviously the answer. Splits the query into distinctive terms (the same
+ * extraction capture-dedup uses for paraphrase matching) and scores pages by
+ * how many of those terms they contain, requiring at least 2 distinct hits
+ * (or the single term, if the query only yields one) so a lone generic word
+ * doesn't turn into noise. Literal-first is unchanged: this only runs when
+ * that pass returns zero results, so single-phrase queries that already
+ * match verbatim keep their exact current behavior.
+ */
+function salientTermFallback(
+  entries: SearchIndexEntry[],
+  query: string,
+  glanceCtx: GlanceContext
+): SearchResult[] {
+  const terms = extractSalientTerms(query);
+  if (terms.length === 0) return [];
+  const minHits = terms.length === 1 ? 1 : 2;
+
+  const scored: { entry: SearchIndexEntry; matchedTerms: string[] }[] = [];
+  for (const entry of entries) {
+    const titleLower = entry.title.toLowerCase();
+    const contentLower = entry.content.toLowerCase();
+    const matchedTerms = terms.filter((t) => titleLower.includes(t) || contentLower.includes(t));
+    if (matchedTerms.length >= minHits) scored.push({ entry, matchedTerms });
+  }
+  scored.sort((a, b) => b.matchedTerms.length - a.matchedTerms.length);
+
+  const results: SearchResult[] = [];
+  for (const { entry, matchedTerms } of scored) {
+    const content = entry.content;
+    const json = entry.json;
+    const label = entry.label;
+
+    const lines = content.split("\n");
+    const matches = lines
+      .filter((l) => {
+        const lower = l.toLowerCase();
+        return matchedTerms.some((t) => lower.includes(t));
+      })
+      .slice(0, 5)
+      .map((l) => l.trim());
+
+    const isDashboard = entry.dashboardEnabled && json && hasDashboardBlock(json);
+    const dashBlock = isDashboard ? (json!.dashboard as { prompt: string; title?: string; description?: string }) : null;
+
+    const rawPrompt = dashBlock?.prompt;
+    const wrappedPrompt = rawPrompt
+      ? `${contextHeader(glanceCtx)}\n\nWorkflow page: read_page("${entry.slug}") for full steps.\n\n${rawPrompt.trim()}`
+      : undefined;
+
+    results.push({
+      slug: entry.slug,
+      title: dashBlock?.title ?? entry.title,
+      matches: matches.length === 0 ? [dashBlock?.description ?? entry.title] : matches,
+      type: isDashboard ? "prompt" : "page",
+      prompt: wrappedPrompt,
+      trusted: label.trusted,
+      trustedBehind: label.trustedBehind,
+    });
+  }
   return results;
 }
 

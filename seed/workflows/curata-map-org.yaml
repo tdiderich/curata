@@ -77,6 +77,15 @@ components:
 
             flow {
               state READ_CODEOWNERS -> call(read_files, "CODEOWNERS files and team directory structure across the named repos") -> next
+              state CHECK_CODEOWNERS_PRESENT -> evaluate(each_repo vs codeowners_or_team_directory_found) -> branch
+
+              branch CHECK_CODEOWNERS_PRESENT {
+                if missing -> FLAG_GAP
+                if found -> FILTER_PLACEHOLDER
+              }
+
+              state FLAG_GAP -> evaluate(repo vs no_group_proposed_note_gap_in_summary) -> next
+              state FILTER_PLACEHOLDER -> evaluate(findings vs exclude_seed_demos_and_template_placeholder_content) -> next
               state CHECK_EXISTING -> call(read_page, "any existing groups or approval rules already documented, so the proposal doesn't repeat what's already set up") -> next
               state DRAFT_GROUPS -> evaluate(codeowners_and_directories vs suggested_groups_memberships_and_folder_rules) -> next
               state PROPOSE -> gate(human_approval) -> next
@@ -94,3 +103,7 @@ components:
         title: This is governance config, propose-only
         body: |
           Never call create_group, update_group, or set_rules from this skill, under any circumstance, even if the proposal looks obviously correct. Draft the one proposal page, gate it, publish it, stop. A human owner reads the proposal and executes it themselves - creating the groups, adding members, and setting folder rules is their call, not this skill's.
+
+          If a repo has no CODEOWNERS file and no team directory structure, flag the gap in the proposal and propose nothing for that repo. Never guess ownership from file paths or commit history.
+
+          Never treat seed content, demo content, or a template's placeholder team roster as real team data. Fictional example org charts, anything under seed/ or demos/, and unfilled template placeholders get excluded from the findings entirely, not proposed as if they described this org.

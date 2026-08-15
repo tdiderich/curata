@@ -153,3 +153,39 @@ export async function seedOrgContent(orgId: string): Promise<void> {
     console.error("[seed] templates folder/pages failed:", err);
   }
 }
+
+// seedOrgContent runs at org creation only (seedOrg above). An org created
+// before a seed page existed — every batch-2 skill page, every FDE skill
+// page — never gets it, because nothing re-runs the sweep for existing orgs.
+// seedPagesFromDir is already skip-if-exists per slug (see above), so
+// re-running the exact same sweep against an existing org is safe: it only
+// ever fills gaps, it never touches a page (customized or not) whose slug
+// already exists.
+//
+// ensureSeedPages is the lazy backfill entry point for existing orgs, called
+// from a cheap high-traffic read path (mcp-dispatch's read_page — the exact
+// place a thin-pointer SKILL.md 404s) the same way capture_thread calls
+// ensureDefaultRequiredComponentsRules to backfill orgs older than that
+// feature. Memoized in-process per org: the first caller in this process
+// kicks off the sweep, every concurrent/subsequent caller in the same
+// process awaits (or, once resolved, no-ops on) that same promise instead of
+// re-reading the seed directories and re-querying the DB per call.
+// globalThis-backed so the memo survives Next.js dev-mode module reloads,
+// mirroring capture-token.ts's consumedTokens store. A failed sweep is
+// evicted from the memo so the next call retries rather than being
+// permanently marked done.
+const g = globalThis as unknown as { __seedPagesEnsured?: Map<string, Promise<void>> };
+if (!g.__seedPagesEnsured) g.__seedPagesEnsured = new Map();
+const seedPagesEnsured = g.__seedPagesEnsured;
+
+export async function ensureSeedPages(orgId: string): Promise<void> {
+  let pending = seedPagesEnsured.get(orgId);
+  if (!pending) {
+    pending = seedOrgContent(orgId).catch((err) => {
+      console.error(`[seed] ensureSeedPages failed for org ${orgId}:`, err);
+      seedPagesEnsured.delete(orgId);
+    });
+    seedPagesEnsured.set(orgId, pending);
+  }
+  return pending;
+}

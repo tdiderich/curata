@@ -182,6 +182,46 @@ components:
       const results = await searchPages(orgId, "zzznomatch999");
       expect(results).toHaveLength(0);
     });
+
+    it("falls back to salient-term matching when the literal multi-word query misses an exact-titled page", async () => {
+      await writePage(
+        orgId,
+        orgSlug,
+        "getting-started",
+        "title: Getting Started with Curata\nshell: document\ncomponents:\n  - type: markdown\n    body: From empty brain to running loop.\n",
+        "user1"
+      );
+
+      // No page contains this exact phrase verbatim, so the literal
+      // whole-query substring pass finds nothing — the fallback should still
+      // surface the obviously-relevant page via shared distinctive terms.
+      const results = await searchPages(orgId, "getting started onboarding");
+      expect(results.some((r) => r.slug === "getting-started")).toBe(true);
+    });
+
+    it("keeps literal-first behavior for a query that matches verbatim", async () => {
+      await writePage(
+        orgId,
+        orgSlug,
+        "verbatim-page",
+        "title: Exact Phrase Page\nshell: document\ncomponents:\n  - type: markdown\n    body: this exact phrase appears here\n",
+        "user1"
+      );
+      const results = await searchPages(orgId, "this exact phrase appears here");
+      expect(results.some((r) => r.slug === "verbatim-page")).toBe(true);
+    });
+
+    it("does not fall back to noise for a nonsense query with no shared terms", async () => {
+      await writePage(
+        orgId,
+        orgSlug,
+        "unrelated-fallback-page",
+        "title: Completely Different Topic\nshell: document\ncomponents:\n  - type: markdown\n    body: nothing to do with the query\n",
+        "user1"
+      );
+      const results = await searchPages(orgId, "zzznomatch999 qqqnothingmatches888");
+      expect(results).toHaveLength(0);
+    });
   });
 
   describe("trust channel", () => {

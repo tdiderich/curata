@@ -17,7 +17,7 @@ import {
   bumpViewCount,
   restorePageVersion,
 } from "@/lib/pages";
-import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
+import { validateContent, checkUnsupportedComponents, invalidContentMessage } from "@/lib/kazam";
 import { checkFolderBoundary, mcpDefaultVisibility } from "@/lib/access";
 import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
 import { resolveRequiredComponentsRules } from "@/lib/required-components";
@@ -35,6 +35,7 @@ import type { ConceptInput, LinkInput } from "@/lib/concepts";
 import { ensureComponentIds, applyPatchOperations } from "@/lib/component-ids";
 import type { PatchOperation } from "@/lib/component-ids";
 import { dispatch } from "@/lib/mcp-dispatch";
+import { ensureSeedPages } from "@/lib/seed";
 import yaml from "js-yaml";
 import fs from "fs";
 import path from "path";
@@ -160,6 +161,10 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
 
   server.tool("read_page", "Read a knowledge page's full content by slug. Use after search_pages or get_related surfaces a promising page — the full page carries caveats and provenance the search snippet omits", { slug: z.string(), channel: CHANNEL_SCHEMA }, async ({ slug, channel }) => {
     validateSlug(slug);
+    // Orgs created before a seed page existed (batch-2 skills, FDE skills)
+    // never got it — backfill missing seed pages here so a thin-pointer
+    // SKILL.md doesn't 404. See ensureSeedPages in src/lib/seed.ts.
+    await ensureSeedPages(orgId);
     const result = await readPageYaml(orgId, slug, channel ?? "trusted");
     if (!result) return { content: [{ type: "text", text: `Error: page not found: ${slug}` }], isError: true };
 
@@ -214,7 +219,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       const unsupported = checkUnsupportedComponents(content);
       if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
       const validationErrors = await validateContent(orgSlug, slug, content);
-      if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: invalid YAML: ${validationErrors.map((e) => e.message).join("; ")}` }], isError: true };
+      if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: ${invalidContentMessage(validationErrors.map((e) => e.message).join("; "))}` }], isError: true };
       const wpVis = visibility ?? mcpDefaultVisibility();
       const wpExisting = await db.page.findUnique({
         where: { orgId_slug: { orgId, slug } },
@@ -274,7 +279,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
         }
       }
       logAudit({ orgId, action: "page.write", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug } });
-      const wpResponse: Record<string, unknown> = { message: `Updated page "${slug}"` };
+      const wpResponse: Record<string, unknown> = { message: wpExisting ? `Updated page "${slug}"` : `Created page "${slug}"` };
       if (wpRuleCheck.warnings.length > 0) {
         wpResponse.contentWarnings = wpRuleCheck.warnings.map((w) => ({ scope: w.scope, message: w.message, matches: w.matches }));
       }
@@ -399,7 +404,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       const unsupported = checkUnsupportedComponents(content);
       if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
       const validationErrors = await validateContent(orgSlug, slug, content);
-      if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: invalid YAML: ${validationErrors.map((e) => e.message).join("; ")}` }], isError: true };
+      if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: ${invalidContentMessage(validationErrors.map((e) => e.message).join("; "))}` }], isError: true };
       const cpVis = visibility ?? mcpDefaultVisibility();
       if (folder_id) {
         const folder = await db.folder.findFirst({ where: { id: folder_id, orgId } });

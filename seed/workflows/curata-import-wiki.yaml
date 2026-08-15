@@ -73,13 +73,15 @@ components:
             in: export_dir: str
             out: candidates_summarized: bool
             description: "Walk an exported wiki directory and propose its pages against the existing brain, flagging stale content instead of copying it blind."
-            requires: capture_thread, create_page, patch_page
+            requires: capture_thread, create_page, patch_page, list_rules
 
             flow {
               state WALK_EXPORT -> call(read_files, "every page in the exported wiki directory") -> next
               state CHECK_STALENESS -> evaluate(each_export_page vs old_dates_dead_product_names_contradictions_with_trusted_pages) -> next
+              state CHECK_CONTENT_RULES -> call(list_rules, "the org's blocking content rules, once, before drafting the first page") -> next
               state RUN_CAPTURE -> call(capture_thread, "the next export page's content, source file path, page_type if not the default") -> next
               state REVIEW_CANDIDATE -> gate(human_approval) -> next
+              state RECHECK_TOKEN -> call(capture_thread, "the same export page's content again, immediately before writing - the capture_token from RUN_CAPTURE may have expired while the gate waited on the human") -> next
               state WRITE_CANDIDATE -> call(create_page, "capture_token plus dedup_ack: new, or patch_page the matched slug instead if the human picked an existing candidate") -> next
               state MORE_PAGES -> evaluate(remaining_export_pages vs none) -> branch
 
@@ -103,4 +105,4 @@ components:
         body: |
           A page with a two-year-old date, a product name that no longer exists, or a claim that contradicts an already-trusted page still gets counted - it goes in the summary's stale-content section instead of getting written or quietly skipped. Let the human decide whether it's worth rewriting.
 
-          Never skip capture_thread. Every candidate lands untrusted, tagged with at least one concept. End the run with an exact count: pages found, proposed as new, merged into existing pages, skipped, and flagged as stale.
+          Never skip capture_thread, and never reuse a capture_token across a gate wait. Run capture_thread again immediately before each create_page or patch_page call - the token is short-lived, and time passes while a human reviews dedupCandidates. Check list_rules once before the first draft so content already fits the org's blocking rules. Every candidate lands untrusted, tagged with at least one concept. End the run with an exact count: pages found, proposed as new, merged into existing pages, skipped, and flagged as stale.

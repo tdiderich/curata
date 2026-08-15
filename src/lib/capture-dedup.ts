@@ -2,6 +2,7 @@ import { loadSearchIndex } from "@/lib/pages";
 import type { SearchIndexEntry } from "@/lib/pages";
 import { hasDashboardBlock } from "@/lib/glance-prompts";
 import { getVocabulary, getRelated } from "@/lib/concepts";
+import { extractSalientTerms } from "@/lib/salient-terms";
 
 export interface CaptureDedupCandidate {
   slug: string;
@@ -13,37 +14,57 @@ export interface CaptureDedupCandidate {
 const MAX_PHRASES = 5;
 const MAX_CONCEPT_TERMS = 5;
 const MAX_CANDIDATES = 8;
-const MAX_SALIENT_TERMS = 8;
 // A page must share at least this many distinct salient terms with the
 // thread before a term-level hit counts as a dedup candidate — one shared
-// word is noise, two or more starts to look like the same topic.
+// word is noise, two or more starts to look like the same topic. This is a
+// floor: corpusMinTermHits below raises it further on larger corpora, where
+// two shared generic words (customer, instance, credential) stop meaning
+// anything.
 const MIN_TERM_HITS = 2;
 
-const STOPWORDS = new Set([
-  "this", "that", "with", "have", "will", "your", "from", "they", "them",
-  "there", "their", "what", "when", "where", "which", "would", "could",
-  "should", "about", "just", "like", "only", "then", "than", "does", "need",
-  "into", "some", "more", "also", "here", "want", "make", "sure", "still",
-  "been", "were", "because", "over", "very", "really", "thanks", "hey",
-]);
+// A term that shows up in a large fraction of the org's pages carries no
+// dedup signal in a sales-heavy corpus every page says "customer" and
+// "instance". Document frequency (fraction of indexed pages containing the
+// term) lets common-but-generic vocabulary get down-weighted instead of
+// contributing a full point toward MIN_TERM_HITS the same as a rare, truly
+// distinctive term.
+//
+// - DF at or above this fraction: the term is dropped entirely (pure noise).
+// - Otherwise the term's weight scales down linearly from 1.0 (rare) to a
+//   floor as DF climbs toward the drop threshold, so "somewhat common" terms
+//   still count, just for less than a full hit.
+const TERM_DROP_DF = 0.4;
+const TERM_MIN_WEIGHT = 0.25;
+
+/** How many indexed pages contain `term` (case-insensitive substring). */
+function documentFrequency(term: string, index: SearchIndexEntry[]): number {
+  let n = 0;
+  for (const entry of index) {
+    if (entry.content.toLowerCase().includes(term) || entry.title.toLowerCase().includes(term)) n++;
+  }
+  return index.length > 0 ? n / index.length : 0;
+}
 
 /**
- * Distinctive single words from the thread, for term-level search.
- * A literal-substring match only catches verbatim copies — paraphrased
- * near-duplicates (the common case) surface through shared distinctive
- * terms instead.
+ * Rarity weight for a term against this org's corpus: 1.0 for a term unique
+ * (or near-unique) to a handful of pages, scaling down to TERM_MIN_WEIGHT as
+ * its document frequency approaches TERM_DROP_DF, and 0 (dropped) beyond it.
  */
-function extractSalientTerms(content: string, max = MAX_SALIENT_TERMS): string[] {
-  const counts = new Map<string, number>();
-  for (const raw of content.toLowerCase().split(/[^a-z0-9_-]+/)) {
-    const w = raw.trim();
-    if (w.length < 4 || STOPWORDS.has(w)) continue;
-    counts.set(w, (counts.get(w) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
-    .slice(0, max)
-    .map(([w]) => w);
+function termWeight(df: number): number {
+  if (df >= TERM_DROP_DF) return 0;
+  const scaled = 1 - df / TERM_DROP_DF;
+  return TERM_MIN_WEIGHT + (1 - TERM_MIN_WEIGHT) * scaled;
+}
+
+/**
+ * Effective MIN_TERM_HITS floor, raised as the corpus grows: a two-word
+ * overlap is plausible signal on a 20-page brain and pure noise on a
+ * 200-page one, where any two generic words co-occur on dozens of pages.
+ */
+function corpusMinTermHits(pageCount: number): number {
+  if (pageCount >= 200) return 4;
+  if (pageCount >= 80) return 3;
+  return MIN_TERM_HITS;
 }
 
 /**
@@ -145,24 +166,41 @@ export async function findCaptureDedupCandidates(
   }
 
   // Term-level pass: paraphrased duplicates share distinctive words even
-  // when no full line survives verbatim. Score pages by how many distinct
-  // salient terms they match and keep the ones above the noise floor.
+  // when no full line survives verbatim. Each term is weighted by how rare
+  // it is across this org's corpus (documentFrequency/termWeight above) —
+  // "customer", "instance", "credential" show up on nearly every page of a
+  // sales-heavy brain and shouldn't move the needle the same as a term that
+  // appears on two pages. Pages are scored by the sum of weighted hits and
+  // must clear both an absolute floor (at least 2 distinct terms — one
+  // shared word is always noise) and a bar that rises with corpus size
+  // (corpusMinTermHits), so a bigger brain requires more/rarer overlap
+  // before a term-level hit counts as a candidate at all. Fewer, better
+  // candidates beats a wall of generic-vocabulary noise; an empty result is
+  // a perfectly fine answer.
   const terms = extractSalientTerms(content);
-  const termHits = new Map<string, { title: string; snippet: string; matched: string[] }>();
+  const termWeights = new Map<string, number>();
   for (const term of terms) {
+    termWeights.set(term, termWeight(documentFrequency(term.toLowerCase(), index)));
+  }
+  const termHits = new Map<string, { title: string; snippet: string; matched: string[]; score: number }>();
+  for (const term of terms) {
+    const weight = termWeights.get(term) ?? 0;
+    if (weight <= 0) continue; // term is common enough across the corpus to carry no signal
     const q = term.toLowerCase();
     for (const entry of index) {
       if (bySlug.has(entry.slug)) continue;
       const hit = matchEntry(entry, q);
       if (!hit) continue;
-      const existing = termHits.get(entry.slug) ?? { title: hit.title, snippet: hit.snippet, matched: [] };
+      const existing = termHits.get(entry.slug) ?? { title: hit.title, snippet: hit.snippet, matched: [], score: 0 };
       existing.matched.push(term);
+      existing.score += weight;
       termHits.set(entry.slug, existing);
     }
   }
+  const minHits = corpusMinTermHits(index.length);
   const scored = [...termHits.entries()]
-    .filter(([, h]) => h.matched.length >= MIN_TERM_HITS)
-    .sort((a, b) => b[1].matched.length - a[1].matched.length);
+    .filter(([, h]) => h.matched.length >= MIN_TERM_HITS && h.score >= minHits)
+    .sort((a, b) => b[1].score - a[1].score);
   for (const [slug, h] of scored) {
     if (bySlug.has(slug)) continue;
     bySlug.set(slug, {

@@ -24,13 +24,14 @@ import type { Channel } from "@/lib/pages";
 import { getOrgTheme } from "@/lib/theme";
 import { buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
 import { getChromium, previewUrl, screenshotPage, renderHtmlToPng } from "@/lib/export-render";
-import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
+import { validateContent, checkUnsupportedComponents, invalidContentMessage } from "@/lib/kazam";
 import { checkFolderBoundary, mcpDefaultVisibility } from "@/lib/access";
 import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
 import { validateApprovalRule, canApprove, getApprovers, describeApprovalRule } from "@/lib/approval";
 import type { Role } from "@/lib/permissions";
 import { resolveRequiredComponentsRules, validateRequiredComponents, validateRequiredComponentsRule, ensureDefaultRequiredComponentsRules } from "@/lib/required-components";
 import { enforceCaptureGate } from "@/lib/capture-gate";
+import { ensureSeedPages } from "@/lib/seed";
 import { createCaptureToken, CAPTURE_TOKEN_TTL_MS } from "@/lib/capture-token";
 import { findCaptureDedupCandidates } from "@/lib/capture-dedup";
 import { gatherDigestData, digestSlug, digestTitle, buildDigestPageYaml } from "@/lib/digest";
@@ -241,6 +242,11 @@ export async function dispatch(
     case "read_page": {
       if (!args.slug) throw new Error("slug is required");
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
+      // Orgs created before a seed page existed (batch-2 skills, FDE skills)
+      // never got it — backfill missing seed pages here so a thin-pointer
+      // SKILL.md doesn't 404 on read_page. See ensureSeedPages in
+      // src/lib/seed.ts for why this is safe to run on every call.
+      await ensureSeedPages(orgId);
       const channel = resolveChannelArg(args);
       const result = await readPageYaml(orgId, args.slug, channel);
       if (!result) throw new Error(`page not found: ${args.slug}`);
@@ -610,7 +616,7 @@ export async function dispatch(
       const createValidation = await validateContent(orgSlug, args.slug, args.content);
       if (createValidation.length > 0) {
         const messages = createValidation.map((e) => e.message).join("; ");
-        throw new Error(`invalid YAML: ${messages}`);
+        throw new Error(invalidContentMessage(messages));
       }
       const cpVis = args.visibility ?? mcpDefaultVisibility();
       if (!["private", "org", "public"].includes(cpVis)) throw new Error("visibility must be private, org, or public");
@@ -750,7 +756,7 @@ export async function dispatch(
       const validationErrors = await validateContent(orgSlug, args.slug, args.content);
       if (validationErrors.length > 0) {
         const messages = validationErrors.map((e) => e.message).join("; ");
-        throw new Error(`invalid YAML: ${messages}`);
+        throw new Error(invalidContentMessage(messages));
       }
       const wpVis = args.visibility ?? mcpDefaultVisibility();
       if (!["private", "org", "public"].includes(wpVis)) throw new Error("visibility must be private, org, or public");
@@ -1213,6 +1219,17 @@ export async function dispatch(
 
       const dedupCandidates = await findCaptureDedupCandidates(orgId, args.content, userId);
 
+      // Blocking content rules the eventual create_page/write_page will
+      // enforce, surfaced now so an agent learns the write constraints
+      // (no em dashes, no e.g./i.e., etc.) before it drafts content, not
+      // from a rejected write. Bounded to id/text/scope and to block-mode
+      // rules only — a summary, not the full resolved rule set (list_rules
+      // still exists for that).
+      const ctContentRules = await resolveRules(orgId, ctFolderId, undefined);
+      const blockingContentRules = [...ctContentRules.inherited, ...ctContentRules.page]
+        .filter((r) => r.mode === "block")
+        .map((r) => ({ id: r.id, text: r.text, scope: r.scope }));
+
       const ctRcRules = await resolveRequiredComponentsRules(orgId, ctFolderId, undefined);
       const ctAllRcRules = [...ctRcRules.inherited, ...ctRcRules.page];
       const ctApplicable = ctAllRcRules.filter((r) => r.pageType === ctPageType);
@@ -1231,6 +1248,7 @@ export async function dispatch(
       return {
         dedupCandidates,
         checklist,
+        blockingContentRules,
         captureToken,
         expiresInSeconds: Math.floor(CAPTURE_TOKEN_TTL_MS / 1000),
         ...(ctSource !== undefined ? { source: ctSource } : {}),
@@ -1377,7 +1395,24 @@ export async function dispatch(
           where: { orgId_slug: { orgId, slug: args.slug } },
           select: { folderId: true, rules: true },
         });
-        if (!lrPage) throw new Error(`page not found: ${args.slug}`);
+        // The tool description promises global rules "if no slug" — an
+        // unknown slug isn't the same as no slug, but a caller that got the
+        // slug wrong (typo, stale reference, page deleted) shouldn't be
+        // stopped cold by a page-not-found error when it can still get a
+        // useful answer. Fall back to global rules, and say so, rather than
+        // throwing and misleading a caller who read the description as "this
+        // always returns rules."
+        if (!lrPage) {
+          const lrFallbackOrg = await db.organization.findUnique({
+            where: { id: orgId },
+            select: { rules: true },
+          });
+          return {
+            scope: "global",
+            rules: lrFallbackOrg?.rules ?? [],
+            note: `page not found: "${args.slug}" — falling back to global rules`,
+          };
+        }
         const lrRules = await resolveRules(orgId, lrPage.folderId, lrPage.rules);
         const lrRcRules = await resolveRequiredComponentsRules(orgId, lrPage.folderId, lrPage.rules);
         return {

@@ -72,13 +72,15 @@ components:
             in: repos: str
             out: candidates_summarized: bool
             description: "Read the org's repos and propose shareable knowledge as reviewable curata pages, one capture per candidate."
-            requires: capture_thread, create_page, patch_page
+            requires: capture_thread, create_page, patch_page, list_rules
 
             flow {
               state READ_REPOS -> call(read_files, "READMEs, docs/ dirs, runbooks, CLAUDE.md/AGENTS.md, ADRs, incident notes across the named repos") -> next
               state CLASSIFY -> evaluate(each_finding vs company_shareable_or_team_local) -> next
+              state CHECK_CONTENT_RULES -> call(list_rules, "the org's blocking content rules, once, before drafting the first candidate") -> next
               state RUN_CAPTURE -> call(capture_thread, "the next shareable candidate's content, source repo and file path, page_type if not the default") -> next
               state REVIEW_CANDIDATE -> gate(human_approval) -> next
+              state RECHECK_TOKEN -> call(capture_thread, "the same candidate's content again, immediately before writing - the capture_token from RUN_CAPTURE may have expired while the gate waited on the human") -> next
               state WRITE_CANDIDATE -> call(create_page, "capture_token plus dedup_ack: new, or patch_page the matched slug instead if the human picked an existing candidate") -> next
               state MORE_CANDIDATES -> evaluate(remaining_shareable_candidates vs none) -> branch
 
@@ -102,4 +104,4 @@ components:
         body: |
           A build quirk that only makes sense inside one repo is not a curata page. Only company-shareable knowledge gets proposed: how the team works, architecture decisions, on-call lore, FAQ-shaped answers anyone in the org would ask. Everything else counts as skipped, not silently dropped.
 
-          Never skip capture_thread. Every candidate lands untrusted, tagged with at least one concept. End the run with an exact count: candidates found, proposed as new pages, merged into existing pages, skipped as team-local.
+          Never skip capture_thread, and never reuse a capture_token across a gate wait. Run capture_thread again immediately before each create_page or patch_page call - the token is short-lived, and time passes while a human reviews dedupCandidates. Check list_rules once before the first draft so content already fits the org's blocking rules. Every candidate lands untrusted, tagged with at least one concept. End the run with an exact count: candidates found, proposed as new pages, merged into existing pages, skipped as team-local.
