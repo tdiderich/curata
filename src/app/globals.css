@@ -7714,9 +7714,8 @@ body:has(.nav-reveal) .page-toolbar {
 }
 
 .pubnav-name {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
   color: var(--snow);
   text-decoration: none;
 }
