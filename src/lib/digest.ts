@@ -37,6 +37,10 @@ export interface DigestData {
   windowEnd: Date;
   newPagesByConcept: DigestConceptGroup[];
   uncategorizedNewPages: DigestPageRef[];
+  // Distinct page counts — a page carrying two tags appears in two concept
+  // groups, so summing group sizes overcounts; these are the real numbers.
+  newPageCount: number;
+  taggedNewPageCount: number;
   trustFlips: DigestTrustFlip[];
   awaitingReview: DigestAwaitingReview[];
   hotSpots: DigestHotSpot[];
@@ -95,16 +99,30 @@ export async function gatherDigestData(
   const where = listPagesWhere(orgId, userId ?? null);
   const visiblePages = await db.page.findMany({
     where,
-    select: { id: true, slug: true, title: true, createdAt: true },
+    select: { id: true, slug: true, title: true, createdAt: true, folderId: true },
   });
   const titleBySlug = new Map(visiblePages.map((p) => [p.slug, p.title]));
   const visibleSlugs = new Set(visiblePages.map((p) => p.slug));
   const pageById = new Map(visiblePages.map((p) => [p.id, p]));
 
+  // Locked (curata-managed) folders hold seeded scaffolding — Templates,
+  // Skills — not knowledge anyone wrote this week. Reporting those as "new
+  // pages" (unresolved {{placeholder}} titles and all) or "hot spots" is
+  // noise, so they're excluded from both scans. Digest pages themselves are
+  // excluded too: a report that lists itself as news is never right.
+  const lockedFolders = await db.folder.findMany({
+    where: { orgId, locked: true },
+    select: { id: true },
+  });
+  const lockedFolderIds = new Set(lockedFolders.map((f) => f.id));
+  const scanPages = visiblePages.filter(
+    (p) => !(p.folderId && lockedFolderIds.has(p.folderId)) && !p.slug.startsWith("digest-")
+  );
+
   // New pages, grouped by concept tag. Lower bound is exclusive so the
   // previous digest run's own page (created exactly at windowStart) never
   // shows up as "new" in the report that follows it.
-  const newPages = visiblePages.filter(
+  const newPages = scanPages.filter(
     (p) => p.createdAt > windowStart && p.createdAt < windowEnd
   );
   const newPageIds = newPages.map((p) => p.id);
@@ -163,10 +181,10 @@ export async function gatherDigestData(
     .map((r) => ({ slug: r.slug, title: r.title, versionsBehind: r.versionsBehind }));
 
   // Hot spots: pages edited more than once inside the window.
-  const versionsInWindow = visiblePages.length > 0
+  const versionsInWindow = scanPages.length > 0
     ? await db.pageVersion.findMany({
         where: {
-          pageId: { in: visiblePages.map((p) => p.id) },
+          pageId: { in: scanPages.map((p) => p.id) },
           createdAt: { gt: windowStart, lt: windowEnd },
         },
         select: { pageId: true },
@@ -191,6 +209,8 @@ export async function gatherDigestData(
     windowEnd,
     newPagesByConcept,
     uncategorizedNewPages,
+    newPageCount: newPages.length,
+    taggedNewPageCount: newPages.filter((p) => (conceptsByPageId.get(p.id) ?? []).length > 0).length,
     trustFlips,
     awaitingReview,
     hotSpots,
@@ -236,15 +256,22 @@ function pageLink(orgSlug: string, ref: DigestPageRef): string {
  * to week.
  */
 export function buildDigestPageYaml(data: DigestData, orgSlug: string, title: string): string {
-  const totalNewPages =
-    data.newPagesByConcept.reduce((sum, g) => sum + g.pages.length, 0) +
-    data.uncategorizedNewPages.length;
+  const totalNewPages = data.newPageCount;
 
   const overviewLines = [
     `Covering ${formatDate(data.windowStart)} to ${formatDate(data.windowEnd)}.`,
     "",
     `${totalNewPages} new page${totalNewPages === 1 ? "" : "s"}, ${data.trustFlips.length} trust flip${data.trustFlips.length === 1 ? "" : "s"}, ${data.awaitingReview.length} page${data.awaitingReview.length === 1 ? "" : "s"} awaiting review, ${data.hotSpots.length} hot spot${data.hotSpots.length === 1 ? "" : "s"}.`,
   ];
+  // Tagging health: grouping quality depends entirely on upstream tag
+  // discipline, so the digest says outright how much of this week's intake
+  // was tagged instead of letting a flat Untagged bucket fail silently.
+  if (totalNewPages > 0) {
+    overviewLines.push(
+      "",
+      `${data.taggedNewPageCount} of ${totalNewPages} new page${totalNewPages === 1 ? "" : "s"} tagged${data.taggedNewPageCount === 0 ? " - tag pages so future digests can group them" : ""}.`
+    );
+  }
 
   const newPagesLines: string[] = [];
   if (totalNewPages === 0) {

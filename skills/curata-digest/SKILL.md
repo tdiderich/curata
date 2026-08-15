@@ -32,6 +32,12 @@ Five sections, always present even when a section is empty:
 
 Every entry links back to its page slug.
 
+The overview also reports tagging health (how many of the window's new pages carry concept tags). When it says 0 tagged, grouping had nothing to work with - relay that to the human as an action item, since digest quality tracks tagging discipline directly.
+
+## Reading digests later
+
+Digest pages are system reports, so no human marks them trusted. Read them by slug (`digest-<year>-w<week>`) or with `channel: "latest"` - a trusted-channel search will not surface them, and that is expected, since trusted stays reserved for human-approved knowledge.
+
 ## Summarizing to a human
 
 Lead with counts from the `summary` the tool returns, then read the page for the entries themselves. Keep it short: which tags got new pages, who flipped what to trusted, what is still waiting, and which pages are getting hammered with edits. If awaiting review is non-empty and growing week over week, say so - that is a backlog forming, not just a line item.

@@ -170,6 +170,45 @@ describe("digest — gatherDigestData", () => {
     expect(data.uncategorizedNewPages.map((p) => p.slug)).not.toContain("archived-new");
   });
 
+  it("excludes locked-folder pages from new pages and hot spots", async () => {
+    // Digest pages themselves can't land in the window (windowStart is
+    // derived from the newest digest version), so only the locked-folder
+    // exclusion needs a live test; the slug filter is defensive.
+    const inWindow = new Date(windowStart.getTime() + 60_000);
+    const locked = await testDb.folder.create({
+      data: { orgId, name: "Templates", locked: true, createdBy: "test-user" },
+    });
+    const template = await makePage(orgId, "seeded-template", inWindow, { folderId: locked.id });
+    await addVersion(template.id, new Date(inWindow.getTime() + 1000), "hash-template-v2");
+    await addVersion(template.id, new Date(inWindow.getTime() + 2000), "hash-template-v3");
+    await makePage(orgId, "real-page", inWindow);
+
+    const data = await gatherDigestData(orgId, undefined, now);
+
+    expect(data.uncategorizedNewPages.map((p) => p.slug)).toEqual(["real-page"]);
+    expect(data.hotSpots.map((h) => h.slug)).not.toContain("seeded-template");
+  });
+
+  it("counts distinct new pages and tagged new pages for the overview health line", async () => {
+    const inWindow = new Date(windowStart.getTime() + 60_000);
+    const multiTag = await makePage(orgId, "multi-tag", inWindow);
+    await tagPage(multiTag.id, "pricing");
+    await tagPage(multiTag.id, "sales");
+    await makePage(orgId, "untagged-a", inWindow);
+    await makePage(orgId, "untagged-b", inWindow);
+
+    const data = await gatherDigestData(orgId, undefined, now);
+
+    // multi-tag appears in two concept groups but counts once.
+    expect(data.newPageCount).toBe(3);
+    expect(data.taggedNewPageCount).toBe(1);
+
+    const { buildDigestPageYaml } = await import("@/lib/digest");
+    const yamlOut = buildDigestPageYaml(data, "gather-org", "Digest - Week 33, 2026");
+    expect(yamlOut).toContain("3 new pages");
+    expect(yamlOut).toContain("1 of 3 new pages tagged");
+  });
+
   it("derives trust flips from AuditLog page.trust entries in the window", async () => {
     const page = await makePage(orgId, "flipped-page", new Date(windowStart.getTime() - 60_000));
     const inWindow = new Date(windowStart.getTime() + 60_000);
