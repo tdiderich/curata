@@ -703,6 +703,36 @@ export async function writePageJson(
   return _writePageInternal(orgId, orgSlug, slug, yamlContent, stamped as Prisma.InputJsonValue, title, createdBy, expectedHash, sortOrder);
 }
 
+/**
+ * Restore a page to the content of one of its own prior PageVersion rows.
+ * Routed through the same _writePageInternal choke point as writePage/
+ * writePageJson so a restore gets identical semantics to a normal write:
+ * tokenCount gets restamped, the brain-cap entitlements check runs (a
+ * restore that shrinks content always passes even over cap — same
+ * shrinking-writes-always-pass rule as any other write — while a restore
+ * that grows past the cap is rejected with the same error shape), and
+ * inline version pruning runs afterward. Only restore_page_version
+ * (src/app/api/mcp/stream/route.ts) calls this today.
+ */
+export async function restorePageVersion(
+  orgId: string,
+  orgSlug: string,
+  slug: string,
+  versionId: string,
+  createdBy: string
+): Promise<{ ok: true; slug: string; contentHash: string } | { ok: false; error: string }> {
+  const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
+  if (!page) return { ok: false, error: `page not found: ${slug}` };
+
+  const targetVersion = await db.pageVersion.findFirst({ where: { id: versionId, pageId: page.id } });
+  if (!targetVersion) return { ok: false, error: `version not found: ${versionId}` };
+
+  const jsonContent = (targetVersion.jsonContent ?? undefined) as Prisma.InputJsonValue | undefined;
+  const title = extractTitle(targetVersion.yamlContent, page.title);
+
+  return _writePageInternal(orgId, orgSlug, slug, targetVersion.yamlContent, jsonContent, title, createdBy);
+}
+
 /// Pin a specific PageVersion as the "trusted" read for this page (npm
 /// dist-tag style). Never touches the write path — trustedVersionId only
 /// moves here and in clearTrusted.

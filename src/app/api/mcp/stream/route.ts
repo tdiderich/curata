@@ -15,6 +15,7 @@ import {
   updateAnnotationStatus,
   searchPages,
   bumpViewCount,
+  restorePageVersion,
 } from "@/lib/pages";
 import { validateContent, checkUnsupportedComponents } from "@/lib/kazam";
 import { checkFolderBoundary, mcpDefaultVisibility } from "@/lib/access";
@@ -35,7 +36,6 @@ import { ensureComponentIds, applyPatchOperations } from "@/lib/component-ids";
 import type { PatchOperation } from "@/lib/component-ids";
 import { dispatch } from "@/lib/mcp-dispatch";
 import yaml from "js-yaml";
-import { createHash } from "crypto";
 import fs from "fs";
 import path from "path";
 
@@ -520,17 +520,13 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     { slug: z.string(), version_id: z.string() },
     async ({ slug, version_id }) => {
       validateSlug(slug);
-      const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
-      if (!page) return { content: [{ type: "text", text: `Error: page not found: ${slug}` }], isError: true };
-      const targetVersion = await db.pageVersion.findFirst({ where: { id: version_id, pageId: page.id } });
-      if (!targetVersion) return { content: [{ type: "text", text: `Error: version not found: ${version_id}` }], isError: true };
-      const contentHash = createHash("sha256").update(targetVersion.yamlContent).digest("hex");
-      await db.$transaction([
-        db.pageVersion.create({
-          data: { pageId: page.id, yamlContent: targetVersion.yamlContent, jsonContent: targetVersion.jsonContent ?? undefined, contentHash, createdBy: actorId },
-        }),
-        db.page.update({ where: { id: page.id }, data: { updatedAt: new Date() } }),
-      ]);
+      // Routed through the same write choke point as write_page/patch_page
+      // (see restorePageVersion in @/lib/pages) so a restore restamps
+      // tokenCount, is subject to the brain-cap check (shrinking always
+      // passes, growing past cap is rejected), and prunes old versions —
+      // identical semantics to any other write.
+      const result = await restorePageVersion(orgId, orgSlug, slug, version_id, actorId);
+      if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
       logAudit({ orgId, action: "page.restore", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug, versionId: version_id } });
       return { content: [{ type: "text", text: `Restored "${slug}" to version ${version_id}` }] };
     });
