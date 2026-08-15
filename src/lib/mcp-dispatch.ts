@@ -34,6 +34,7 @@ import { enforceCaptureGate } from "@/lib/capture-gate";
 import { createCaptureToken, CAPTURE_TOKEN_TTL_MS } from "@/lib/capture-token";
 import { findCaptureDedupCandidates } from "@/lib/capture-dedup";
 import { gatherDigestData, digestSlug, digestTitle, buildDigestPageYaml } from "@/lib/digest";
+import { sweepVersions } from "@/lib/version-retention";
 import type { Prisma } from "@/generated/prisma/client";
 import {
   upsertConcepts,
@@ -1600,6 +1601,15 @@ export async function dispatch(
         awaitingReview: data.awaitingReview.length,
         hotSpots: data.hotSpots.length,
       };
+
+      // Weekly version-retention sweep, piggybacked on the digest run since
+      // that already fires once a week per org. Never allowed to fail the
+      // digest itself — a sweep error just gets logged.
+      try {
+        await sweepVersions(orgId);
+      } catch (err) {
+        console.error(`[version-retention] sweepVersions failed for org ${orgId}:`, err);
+      }
 
       logAudit({
         orgId,

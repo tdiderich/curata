@@ -9,6 +9,7 @@ import { listPagesWhere, defaultPageVisibility } from "./access";
 import { logAudit } from "./audit";
 import { getEntitlements } from "./entitlements";
 import { estimateTokens } from "./tokens";
+import { pruneVersions } from "./version-retention";
 
 /// npm dist-tag style read channel: "latest" is the current behavior (newest
 /// version); "trusted" resolves to the version a human pinned via
@@ -607,6 +608,8 @@ async function _writePageInternal(
     }
   }
 
+  let pageId: string;
+
   if (existing) {
     const pageUpdateData: Record<string, unknown> = { title, updatedAt: new Date(), dashboardEnabled, tokenCount: newTokens };
     if (sortOrder !== undefined) pageUpdateData.sortOrder = sortOrder;
@@ -620,6 +623,7 @@ async function _writePageInternal(
         data: pageUpdateData,
       }),
     ]);
+    pageId = existing.id;
   } else {
     const createData: Record<string, unknown> = {
       orgId,
@@ -635,7 +639,19 @@ async function _writePageInternal(
     };
     if (sortOrder !== undefined && sortOrder !== null) createData.sortOrder = sortOrder;
 
-    await db.page.create({ data: createData as Parameters<typeof db.page.create>[0]["data"] });
+    const created = await db.page.create({ data: createData as Parameters<typeof db.page.create>[0]["data"] });
+    pageId = created.id;
+  }
+
+  // Version retention prune, inline on every write so version rows never
+  // grow unbounded between weekly sweeps. Runs AFTER the version above is
+  // committed so "newest" unambiguously means the version just written. Must
+  // never take the write down with it — a prune failure logs and the write
+  // (already committed above) still succeeds.
+  try {
+    await pruneVersions(pageId);
+  } catch (err) {
+    console.error(`[version-retention] pruneVersions failed for page ${pageId}:`, err);
   }
 
   return { ok: true, slug, contentHash };
@@ -751,7 +767,16 @@ export interface ReviewQueueRow {
   latestUpdatedAt: Date;
   /** True when this page has never had a trusted version marked. */
   neverTrusted: boolean;
-  /** How many versions have landed since the trusted pointer (or since creation, if never trusted). */
+  /**
+   * How many versions have landed since the trusted pointer (or since
+   * creation, if never trusted). Counts surviving PageVersion rows only —
+   * version-retention.ts prunes intermediate versions older than
+   * RETENTION_DAYS (trusted and newest are always kept, so this number is
+   * never wrong about *whether* a page is behind). On a stale page whose
+   * unreviewed history is mostly older than the retention window, this count
+   * can shrink after a sweep even though nothing was reviewed in between —
+   * accepted tradeoff of the retention policy, not a bug.
+   */
   versionsBehind: number;
   /** createdAt of the oldest version not yet covered by trust — drives staleness sort. */
   sinceUnapprovedAt: Date;
