@@ -48,6 +48,7 @@ import {
 import type { ConceptInput, LinkInput } from "@/lib/concepts";
 import { ensureComponentIds, applyPatchOperations } from "@/lib/component-ids";
 import type { PatchOperation } from "@/lib/component-ids";
+import { expandComponentRefs, agentRefWrap } from "@/lib/component-refs";
 import {
   createGroup,
   renameGroup,
@@ -120,7 +121,12 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   update_annotation: { known: new Set(["slug", "annotation_id", "status"]), aliases: { annotationId: "annotation_id" } },
   patch_page: { known: new Set(["slug", "expected_hash", "operations", "concepts", "links"]) },
   replace_in_page: { known: new Set(["slug", "target", "replacement"]) },
-  create_from_template: { known: new Set(["template_slug", "slug", "variables", "folder_id"]), aliases: { templateSlug: "template_slug", folderId: "folder_id" } },
+  // Pre-existing mismatch fixed in passing: the dispatch case reads
+  // args.target_slug throughout, but the whitelist only ever allowed "slug" —
+  // any caller passing target_slug (the only name that actually works) was
+  // rejected as an unknown parameter. Keep "slug" too since removing an
+  // already-known key could break an existing caller relying on the alias.
+  create_from_template: { known: new Set(["template_slug", "slug", "target_slug", "variables", "folder_id"]), aliases: { templateSlug: "template_slug", folderId: "folder_id" } },
   list_workflows: { known: new Set() },
   list_templates: { known: new Set() },
   get_vocabulary: { known: new Set(["kind", "query"]) },
@@ -241,6 +247,16 @@ export async function dispatch(
       const parsed = yaml.load(result.yaml) as Record<string, unknown>;
       if (Array.isArray(parsed.components)) {
         parsed.components = ensureComponentIds(parsed.components as Record<string, unknown>[]);
+        // Expand `type: ref` shared-component blocks for display only — the
+        // stored doc (and result.contentHash below) still reflects the
+        // unexpanded ref, so patch_page continues to target the ref block
+        // itself, not this expanded view.
+        parsed.components = await expandComponentRefs(parsed.components as Record<string, unknown>[], {
+          orgId,
+          channel,
+          viewer: { userId: userId ?? null, orgMemberRole: "member" },
+          ...agentRefWrap(),
+        });
         result.yaml = yaml.dump(parsed, { lineWidth: -1, noRefs: true });
       }
 
@@ -451,7 +467,13 @@ export async function dispatch(
           error: "component reference not found — run the setup script",
         };
       }
-      return { content: fs.readFileSync(refPath, "utf-8") };
+      // `ref` isn't a real renderer component (it never reaches the
+      // renderer — it's expanded server-side before render), so it isn't in
+      // the generated schema doc above. Appended here instead of hand-edited
+      // into that generated file.
+      const sharedComponentsNote =
+        "\n\n## ref (shared components)\n\nNot a rendered component — expanded server-side before the page renders. Embeds another page's `components` array by slug:\n\n```yaml\n- type: ref\n  component: <slug-of-a-pageType-component-page>\n```\n\nThe target page must declare `pageType: component`. Edits to the target fan out to every page that embeds it once the target's new version is trusted; a page that only holds a ref has nothing else to patch.";
+      return { content: fs.readFileSync(refPath, "utf-8") + sharedComponentsNote };
     }
 
     case "list_folders": {

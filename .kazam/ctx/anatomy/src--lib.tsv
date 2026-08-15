@@ -8,9 +8,10 @@ src/lib/approval.ts	2787	0	approval library module
 src/lib/audit.ts	183	0	audit library module
 src/lib/auth.ts	2716	0	auth library module
 src/lib/capture-dedup.ts	1896	0	capture-dedup library module
-src/lib/capture-gate.ts	644	0	capture-gate library module
+src/lib/capture-gate.ts	790	0	capture-gate library module
 src/lib/capture-token.ts	1808	0	capture-token library module
 src/lib/component-ids.ts	1987	0	component-ids library module
+src/lib/component-refs.ts	2280	0	component-refs library module
 src/lib/concept-kinds.ts	261	0	concept-kinds library module
 src/lib/concepts.ts	3271	0	concepts library module
 src/lib/content-negotiation.ts	557	0	content-negotiation library module
@@ -18,6 +19,7 @@ src/lib/content-rules.ts	1720	0	content-rules library module
 src/lib/copy-for-agent.ts	679	0	copy-for-agent library module
 src/lib/db.ts	145	0	db library module
 src/lib/default-tags.ts	168	0	default-tags library module
+src/lib/digest.ts	2806	0	digest library module
 src/lib/export-nonce.ts	1458	0	export-nonce library module
 src/lib/export-render.ts	853	0	export-render library module
 src/lib/export.ts	1105	0	export library module
@@ -25,13 +27,13 @@ src/lib/glance-prompts.ts	3629	0	glance-prompts library module
 src/lib/graph.ts	1810	0	graph library module
 src/lib/groups.ts	1522	0	groups library module
 src/lib/kazam.ts	1076	0	kazam library module
-src/lib/mcp-dispatch.ts	16353	0	mcp-dispatch library module
-src/lib/mcp-instructions.ts	1699	0	mcp-instructions library module
+src/lib/mcp-dispatch.ts	18477	0	mcp-dispatch library module
+src/lib/mcp-instructions.ts	2107	0	mcp-instructions library module
 src/lib/next-auth.ts	229	0	next-auth library module
 src/lib/org-tags.ts	387	0	org-tags library module
 src/lib/page-actions.ts	203	0	page-actions library module
 src/lib/page-markdown.ts	6268	0	page-markdown library module
-src/lib/pages.ts	8002	0	pages library module
+src/lib/pages.ts	8067	0	pages library module
 src/lib/permissions.ts	265	0	permissions library module
 src/lib/personal-domains.ts	196	0	personal-domains library module
 src/lib/pins.ts	530	0	pins library module

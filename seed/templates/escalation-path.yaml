@@ -1,0 +1,19 @@
+title: Escalation Path
+shell: document
+pageType: component
+components:
+  - type: section
+    id: escalation
+    eyebrow: Escalation
+    heading: Escalation path
+    components:
+      - type: steps
+        items:
+          - title: Replace with who to contact first
+            detail: When to go here and how to reach them
+          - title: Second level of escalation
+            detail: When to go here and how to reach them
+  - type: callout
+    variant: info
+    title: This is a shared component page.
+    body: "Embed this path on any runbook or support page with a `type: ref` block pointing at this page's slug, so the escalation order stays the same everywhere it's referenced. Update the path here and mark this page trusted to fan the change out."

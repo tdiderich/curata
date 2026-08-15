@@ -1,0 +1,25 @@
+title: Pricing Snapshot
+shell: document
+pageType: component
+components:
+  - type: section
+    id: pricing
+    eyebrow: Pricing
+    heading: Pricing snapshot
+    components:
+      - type: stat_grid
+        columns: 3
+        stats:
+          - label: Starter
+            value: "Replace with price"
+            detail: Who it's for
+          - label: Growth
+            value: "Replace with price"
+            detail: Who it's for
+          - label: Enterprise
+            value: "Talk to sales"
+            detail: Who it's for
+  - type: callout
+    variant: info
+    title: This is a shared component page.
+    body: "Embed this snapshot anywhere with a `type: ref` block pointing at this page's slug, so every sales page and deal page quotes the same numbers. Update prices here and mark this page trusted to fan the change out everywhere it's embedded."

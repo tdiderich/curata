@@ -42,5 +42,27 @@ components:
 | `code` | Code blocks with language highlighting |
 | `definition_list` | Term/definition pairs |
 | `card_grid` | Grid of linked cards |
+| `ref` | Embeds another page's components by slug, see Shared components below |
 
 For full component specs, check if your instance has a component reference page, or refer to the curata docs.
+
+## Shared components
+
+If the same block, such as a roadmap or a pricing table or a support contact list,
+needs to appear on more than one page and stay in sync, write it once as its own
+page with `pageType: component`, then embed it elsewhere:
+
+```yaml
+- type: ref
+  component: current-roadmap
+```
+
+At read time the ref expands to the source page's components. Approving a new
+version of the source page (via `mark_trusted`) updates every page that embeds
+it, with no edit needed on the consuming pages. To change the content, call
+`patch_page` or `write_page` on the source page's own slug. A page that only
+embeds a ref has nothing else to change, since its stored content is just the
+ref block.
+
+Use a normal page when content only ever lives in one place. Use a `pageType:
+component` page when several pages need the same block to update together.

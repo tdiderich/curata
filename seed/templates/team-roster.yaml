@@ -1,0 +1,25 @@
+title: Team Roster
+shell: document
+pageType: component
+components:
+  - type: section
+    id: roster
+    eyebrow: Team
+    heading: Team roster
+    components:
+      - type: table
+        columns:
+          - key: name
+            label: Name
+          - key: role
+            label: Role
+          - key: contact
+            label: Contact
+        rows:
+          - name: Replace with a name
+            role: Their role
+            contact: their@email
+  - type: callout
+    variant: info
+    title: This is a shared component page.
+    body: "Embed this roster on any page with a `type: ref` block pointing at this page's slug, instead of copying names and roles onto every page that lists the team. Update the roster here and every page that embeds it stays current once this page is marked trusted."

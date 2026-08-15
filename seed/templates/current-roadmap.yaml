@@ -1,0 +1,28 @@
+title: Current Roadmap
+shell: document
+pageType: component
+components:
+  - type: section
+    id: roadmap
+    eyebrow: Roadmap
+    heading: Current roadmap
+    components:
+      - type: table
+        columns:
+          - key: theme
+            label: Theme
+          - key: quarter
+            label: Target quarter
+          - key: status
+            label: Status
+        rows:
+          - theme: Replace this row with your first roadmap theme
+            quarter: Q1
+            status: In progress
+          - theme: Second theme
+            quarter: Q2
+            status: Planned
+  - type: callout
+    variant: info
+    title: This is a shared component page.
+    body: "Any page can embed this content with a `type: ref` block pointing at this page's slug. Update the roadmap here, mark this page trusted, and every page that embeds it shows the new version automatically. Nothing to change on the pages that embed it."

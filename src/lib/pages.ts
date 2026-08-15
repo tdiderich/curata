@@ -317,7 +317,7 @@ export async function readPage(
   orgId: string,
   slug: string,
   channel: Channel = "latest"
-): Promise<{ json: Record<string, unknown>; contentHash: string; visibility: string } & ChannelLabel | null> {
+): Promise<{ json: Record<string, unknown>; contentHash: string; visibility: string; pageId: string; createdBy: string } & ChannelLabel | null> {
   const page = await db.page.findUnique({
     where: { orgId_slug: { orgId, slug } },
     include: {
@@ -346,7 +346,10 @@ export async function readPage(
   const json = v.jsonContent
     ? (v.jsonContent as Record<string, unknown>)
     : (yaml.load(v.yamlContent) as Record<string, unknown>);
-  return { json, contentHash: v.contentHash, visibility: page.visibility, ...label };
+  // pageId/createdBy ride along so callers (component-refs.ts's ref
+  // expansion) can run resolvePageAccess against the *referenced* page
+  // without a second round-trip query.
+  return { json, contentHash: v.contentHash, visibility: page.visibility, pageId: page.id, createdBy: page.createdBy, ...label };
 }
 
 export interface SearchResult {

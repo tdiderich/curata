@@ -1,0 +1,21 @@
+title: Security Posture
+shell: document
+pageType: component
+components:
+  - type: section
+    id: security
+    eyebrow: Security
+    heading: Security posture
+    components:
+      - type: definition_list
+        items:
+          - term: Data encryption
+            definition: Replace with your current state
+          - term: Access control
+            definition: Replace with your current state
+          - term: Last audit
+            definition: Replace with a date
+  - type: callout
+    variant: info
+    title: This is a shared component page.
+    body: "Embed this summary on any customer-facing or security-review page with a `type: ref` block pointing at this page's slug, so answers stay consistent across every deal and every review. Update the facts here and mark this page trusted to fan the change out."

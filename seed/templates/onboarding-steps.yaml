@@ -1,0 +1,19 @@
+title: Onboarding Steps
+shell: document
+pageType: component
+components:
+  - type: section
+    id: onboarding
+    eyebrow: Onboarding
+    heading: Onboarding steps
+    components:
+      - type: steps
+        items:
+          - title: Replace with the first step
+            detail: Who does it and what "done" looks like
+          - title: Second step
+            detail: Who does it and what "done" looks like
+  - type: callout
+    variant: info
+    title: This is a shared component page.
+    body: "Embed these steps on any onboarding page or deployment tracker with a `type: ref` block pointing at this page's slug, instead of copying the checklist onto every customer's page. Update the steps here and every page that embeds them shows the change once this page is marked trusted."

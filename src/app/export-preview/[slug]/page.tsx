@@ -4,6 +4,7 @@ import { readPage } from "@/lib/pages";
 import { getOrgTheme } from "@/lib/theme";
 import { ThemeScript } from "@/components/theme-script";
 import { PageRenderer } from "@/generated/kazam-renderer";
+import { expandComponentRefs, renderedRefWrap } from "@/lib/component-refs";
 
 export default async function ExportPreview({
   params,
@@ -56,12 +57,26 @@ export default async function ExportPreview({
     }
   }
 
+  // Export is only reachable via a nonce minted for an org member who
+  // already had access to `slug` (see previewUrl/consumeExportNonce) — treat
+  // the viewer as any org member in good standing for ref expansion, on the
+  // same "latest" channel readPage used above.
+  const expandedComponents = await expandComponentRefs(
+    pageData.json.components as Array<Record<string, unknown>> | undefined,
+    {
+      orgId,
+      channel: "latest",
+      viewer: { userId: null, orgMemberRole: "member" },
+      ...renderedRefWrap((refSlug) => `/pages/${refSlug}`),
+    }
+  );
+
   const page = {
     title: (pageData.json.title as string) || slug,
     subtitle: (pageData.json.subtitle as string) || undefined,
     shell: hubSlug ? "hub" : (pageData.json.shell as string) || "standard",
     hub: effectiveHub,
-    components: (pageData.json.components ?? []) as Array<{
+    components: expandedComponents as Array<{
       type: string;
       [key: string]: unknown;
     }>,

@@ -11,3 +11,7 @@ bugs:
   symptom: dev.sh's npx prisma db push step fails with 'datasource.url property required' because prisma.config.ts reads process.env[DATABASE_URL] directly and dev.sh never exports/sources .env into the shell before that step
   file_path: dev.sh
   created: 2026-08-13T14:30:16.220599-05:00
+- id: kz-2821d7
+  symptom: create_from_template rejected target_slug as an unknown parameter — TOOL_PARAMS whitelist only listed slug, but the dispatch case body reads args.target_slug throughout
+  file_path: src/lib/mcp-dispatch.ts
+  created: 2026-08-14T21:51:47.018056-05:00

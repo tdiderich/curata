@@ -9,6 +9,7 @@ import { ThemeScript } from "@/components/theme-script";
 import PublicAnnotationClient from "@/components/public-annotation-client";
 import PagePromptDialog from "@/components/page-prompt-dialog";
 import { buildPagePrompt, opensPromptOnLoad, promptNote } from "@/lib/share-prompt";
+import { expandComponentRefs, renderedRefWrap } from "@/lib/component-refs";
 import type { Metadata } from "next";
 
 interface Props {
@@ -81,6 +82,17 @@ export default async function PublicPageView({ params, searchParams }: Props & {
   const user = await resolveCurrentUser();
   const isSignedIn = !!user;
 
+  // For ref expansion only: is this viewer actually a member of this org (as
+  // opposed to just signed in to some org)? Anonymous/non-member viewers can
+  // still expand refs to component pages that are themselves public.
+  let orgMemberRole: string | null = null;
+  if (user) {
+    const membership = await db.orgMember.findUnique({
+      where: { orgId_userId: { orgId: org.id, userId: user.id } },
+    });
+    orgMemberRole = membership?.role ?? null;
+  }
+
   const rawAnnotations = await getAnnotations(org.id, pageSlug);
   const annotations = rawAnnotations.map((a) => ({
     id: a.id,
@@ -121,6 +133,20 @@ export default async function PublicPageView({ params, searchParams }: Props & {
     note: promptNote(pageData.json),
   });
   const shell = (pageData.json.shell as string) || "standard";
+
+  // Same choke point as the authenticated page view: expand `type: ref`
+  // blocks before PageRenderer ever sees them. Public viewers only ever get
+  // "latest" (readPage above has no channel arg), so refs resolve on that
+  // same channel — no trusted-content leak via a component embed.
+  const expandedComponents = await expandComponentRefs(
+    pageData.json.components as Array<Record<string, unknown>> | undefined,
+    {
+      orgId: org.id,
+      channel: "latest",
+      viewer: { userId: user?.id ?? null, orgMemberRole, shareToken },
+      ...renderedRefWrap((refSlug) => `/p/${orgSlug}/${refSlug}`),
+    }
+  );
 
   return (
     <>
@@ -163,7 +189,7 @@ export default async function PublicPageView({ params, searchParams }: Props & {
                 title: pageTitle,
                 subtitle: (pageData.json.subtitle as string) || undefined,
                 shell,
-                components: (pageData.json.components ?? []) as Array<{
+                components: expandedComponents as Array<{
                   type: string;
                   [key: string]: unknown;
                 }>,

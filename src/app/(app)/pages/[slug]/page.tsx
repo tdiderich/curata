@@ -13,6 +13,7 @@ import PageDetailClient from "@/components/page-detail-client";
 import { PageTags } from "@/components/page-tags";
 import { getPageConcepts, normalizeTerm } from "@/lib/concepts";
 import { DEFAULT_TAGS } from "@/lib/default-tags";
+import { expandComponentRefs, renderedRefWrap } from "@/lib/component-refs";
 
 export async function generateMetadata({
   params,
@@ -167,12 +168,27 @@ export default async function PageDetailView({
     };
   }
 
+  // Expand `type: ref` shared-component blocks before this tree ever reaches
+  // PageRenderer — the single server-side choke point for this surface.
+  // Channel-aware (same channel the page itself is being read on), re-checks
+  // the viewer's access to the referenced page, and never leaks content the
+  // viewer can't see.
+  const expandedComponents = await expandComponentRefs(
+    pageData.json.components as Array<Record<string, unknown>> | undefined,
+    {
+      orgId: ctx.orgId,
+      channel,
+      viewer: { userId: ctx.userId, orgMemberRole: ctx.role },
+      ...renderedRefWrap((refSlug) => `/pages/${refSlug}`),
+    }
+  );
+
   const page = {
     title: pageTitle,
     subtitle: (pageData.json.subtitle as string) || undefined,
     shell: hubContext ? "hub" : (pageData.json.shell as string) || "standard",
     hub: effectiveHub,
-    components: (pageData.json.components ?? []) as Array<{
+    components: expandedComponents as Array<{
       type: string;
       [key: string]: unknown;
     }>,

@@ -1,4 +1,4 @@
-# scanned: 2026-08-14T16:32:11.569173-05:00
+# scanned: 2026-08-14T21:49:53.997278-05:00
 # root_files
 path	tokens	reads	description
 CLAUDE.md	781	0	Claude Code project instructions
@@ -11,7 +11,7 @@ docker-compose.test.yml	85	0	YAML configuration/data
 docker-compose.yml	174	0	YAML configuration/data
 entrypoint.sh	92	0	Shell script
 eslint.config.mjs	114	0	
-next-env.d.ts	62	0	TypeScript source
+next-env.d.ts	61	0	TypeScript source
 next.config.ts	644	0	TypeScript source
 package.json	525	0	Node.js package manifest
 pnpm-lock.yaml	55287	0	YAML configuration/data
@@ -28,7 +28,7 @@ docs	6	20320
 packages	19	27763	
 prisma	5	2644	migrations
 scripts	8	2526	
-seed	21	28108	
-skills	9	3771	
-src	196	745153	
-tests	27	44447	tests
+seed	31	30112	
+skills	10	4720	
+src	198	753934	
+tests	30	52709	tests

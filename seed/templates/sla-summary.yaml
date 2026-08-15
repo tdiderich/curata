@@ -1,0 +1,22 @@
+title: SLA Summary
+shell: document
+pageType: component
+components:
+  - type: section
+    id: sla
+    eyebrow: SLA
+    heading: SLA summary
+    components:
+      - type: stat_grid
+        columns: 3
+        stats:
+          - label: Uptime target
+            value: "Replace with target"
+          - label: First response
+            value: "Replace with target"
+          - label: Resolution target
+            value: "Replace with target"
+  - type: callout
+    variant: info
+    title: This is a shared component page.
+    body: "Embed these targets on any page with a `type: ref` block pointing at this page's slug, so a customer page, a support runbook, and a contract summary all quote the same numbers. Update the targets here and every page that embeds them stays current once this page is marked trusted."
