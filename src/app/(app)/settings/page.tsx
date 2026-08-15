@@ -15,6 +15,8 @@ import { ContentRulesEditor } from "@/components/content-rules-editor";
 import { TagsManager } from "@/components/tags-manager";
 import { SettingsTabs } from "@/components/settings-tabs";
 import { SettingsSection } from "@/components/settings/settings-section";
+import { TeamChip } from "@/components/settings/team-chip";
+import { getEntitlements } from "@/lib/entitlements";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
@@ -37,6 +39,12 @@ export default async function SettingsPage() {
   const canManage = can(ctx.role, "member:manage");
   const canManageKeys = can(ctx.role, "key:manage");
   const canManageRules = can(ctx.role, "rules:manage");
+
+  // Team chip is a pay-to-play signal only (every feature stays usable on
+  // every plan) — it renders only when entitlements come back finite, so
+  // self-hosted orgs (always unlimited) never see it.
+  const { maxMembers } = await getEntitlements(ctx.orgId);
+  const limitedPlan = Number.isFinite(maxMembers);
 
   const org = await db.organization.findUnique({
     where: { id: ctx.orgId },
@@ -89,10 +97,12 @@ export default async function SettingsPage() {
     },
     {
       label: "Groups",
+      labelExtra: limitedPlan ? <TeamChip /> : null,
       content: <GroupManager canManage={canManage} />,
     },
     {
       label: "Members",
+      labelExtra: limitedPlan ? <TeamChip /> : null,
       content: <MemberList canManage={canManage} currentUserId={ctx.userId} />,
     },
     ...(canManageRules ? [{
@@ -110,6 +120,7 @@ export default async function SettingsPage() {
             scopeParam="scope=global"
             initialRules={globalRules}
             canManage={canManageRules}
+            limitedPlan={limitedPlan}
           />
         </SettingsSection>
       ),

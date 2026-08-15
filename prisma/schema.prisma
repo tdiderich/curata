@@ -118,6 +118,10 @@ model Page {
   status           String    @default("active")
   dashboardEnabled Boolean   @default(false) @map("dashboard_enabled")
   supersededBy String? @map("superseded_by")
+  // Estimated tokens (chars/4, same substrate as the knowledge graph) for the
+  // latest version's yaml content. Null on pre-existing pages until the next
+  // write or lazy backfill (see getBrainUsage in lib/pages.ts) fills it in.
+  tokenCount   Int?    @map("token_count")
   rules        Json?
   lastViewedAt DateTime? @map("last_viewed_at")
   // npm dist-tag style trust pointer: a human marks one PageVersion as the

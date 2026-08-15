@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { db } from "./db";
 import { hashApiKey } from "./api-key";
 import { isPersonalEmailDomain } from "./personal-domains";
+import { getEntitlements } from "./entitlements";
 import type { Role } from "./permissions";
 
 export interface OrgContext {
@@ -43,12 +44,43 @@ function normalizeClerkRole(clerkRole: string): Role {
   return "member";
 }
 
+/**
+ * Thrown by findOrCreateMember when an org is at its plan's member cap and
+ * a brand-new member would need to be created. Never thrown for a userId
+ * that already has an OrgMember row — existing members always resolve.
+ * resolveOrg() catches this and normalizes it back to `null` (same as any
+ * other "no access" case) so the ~30 existing callers of resolveOrg() need
+ * no changes; hosted-fork surfaces that want the specific reason (to link
+ * to a billing page) can call findOrCreateMember's callers directly and
+ * check `err instanceof MemberLimitError`.
+ */
+export class MemberLimitError extends Error {
+  constructor(public readonly maxMembers: number) {
+    super(`This workspace's plan supports ${maxMembers} member(s). Upgrade to add more.`);
+    this.name = "MemberLimitError";
+  }
+}
+
+/**
+ * The member-add choke point: every auto-join-on-login path (Clerk org
+ * membership sync, Clerk OAuth token sync, Tailscale auto-join) routes
+ * through here rather than creating OrgMember rows directly. Existing
+ * members are never re-checked against entitlements — only the create
+ * branch is gated, and removal isn't handled by this function at all.
+ */
 async function findOrCreateMember(orgId: string, userId: string, defaultRole: Role) {
-  return db.orgMember.upsert({
+  const existing = await db.orgMember.findUnique({
     where: { orgId_userId: { orgId, userId } },
-    update: {},
-    create: { orgId, userId, role: defaultRole },
   });
+  if (existing) return existing;
+
+  const { maxMembers } = await getEntitlements(orgId);
+  const memberCount = await db.orgMember.count({ where: { orgId } });
+  if (memberCount >= maxMembers) {
+    throw new MemberLimitError(maxMembers);
+  }
+
+  return db.orgMember.create({ data: { orgId, userId, role: defaultRole } });
 }
 
 async function resolveOrgNone(): Promise<OrgContext | null> {
@@ -202,10 +234,19 @@ async function resolveOrgClerk(): Promise<OrgContext | null> {
 }
 
 export async function resolveOrg(): Promise<OrgContext | null> {
-  if (AUTH_MODE === "clerk") return resolveOrgClerk();
-  if (AUTH_MODE === "oauth") return resolveOrgOAuth();
-  if (AUTH_MODE === "tailscale") return resolveOrgTailscale();
-  return resolveOrgNone();
+  try {
+    if (AUTH_MODE === "clerk") return await resolveOrgClerk();
+    if (AUTH_MODE === "oauth") return await resolveOrgOAuth();
+    if (AUTH_MODE === "tailscale") return await resolveOrgTailscale();
+    return await resolveOrgNone();
+  } catch (err) {
+    // A blocked new-member add reads the same as "no context" to every
+    // existing caller (redirect to sign-in/onboarding, 401, etc). Hosted
+    // forks that want to show an upgrade prompt instead should catch
+    // MemberLimitError at their own entry point (e.g. the onboarding page).
+    if (err instanceof MemberLimitError) return null;
+    throw err;
+  }
 }
 
 export async function resolveCurrentUser(): Promise<CurrentUser | null> {
@@ -314,7 +355,13 @@ export async function resolveOrgFromClerkOAuth(
   }
   if (!org) return null;
 
-  const member = await findOrCreateMember(org.id, userId, "member");
+  let member;
+  try {
+    member = await findOrCreateMember(org.id, userId, "member");
+  } catch (err) {
+    if (err instanceof MemberLimitError) return null;
+    throw err;
+  }
   const role = normalizeClerkRole(member.role);
 
   return {

@@ -6,7 +6,7 @@ export function FormRow({
   hint,
   children,
 }: {
-  label: string;
+  label: ReactNode;
   hint?: ReactNode;
   children: ReactNode;
 }) {

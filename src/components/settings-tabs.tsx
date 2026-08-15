@@ -5,6 +5,9 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
 interface Tab {
   label: string;
+  /** Optional extra node rendered after the label text (e.g. a TeamChip) —
+   * kept separate from `label` so slugify()/the URL param stay plain text. */
+  labelExtra?: React.ReactNode;
   content: React.ReactNode;
 }
 
@@ -47,6 +50,7 @@ export function SettingsTabs({ tabs }: { tabs: Tab[] }) {
             onClick={() => selectTab(i)}
           >
             {tab.label}
+            {tab.labelExtra}
           </button>
         ))}
       </nav>

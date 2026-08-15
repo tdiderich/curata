@@ -7487,6 +7487,23 @@ body:has(.nav-reveal) .page-toolbar {
 
 .stg-pcount { font-family: "SF Mono", Monaco, "Cascadia Mono", monospace; font-size: 11px; color: var(--light-muted); white-space: nowrap; }
 
+/* TeamChip: subtle pay-to-play signal, not a gate — no lock icon, no
+   disabled state, just a quiet label next to team-oriented surfaces. */
+.stg-team-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: "SF Mono", Monaco, "Cascadia Mono", monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: rgba(var(--text-rgb), 0.08);
+  color: var(--light-muted);
+  white-space: nowrap;
+}
+
 /* Chips + typeahead (approvers today; org tags/tags-tab reuse the .stg-chip
    look without adopting the typeahead machinery — see component report). */
 .stg-chip-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }

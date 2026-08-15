@@ -7,6 +7,8 @@ import { hasDashboardBlock, contextHeader } from "./glance-prompts";
 import type { GlanceContext } from "./glance-prompts";
 import { listPagesWhere, defaultPageVisibility } from "./access";
 import { logAudit } from "./audit";
+import { getEntitlements } from "./entitlements";
+import { estimateTokens } from "./tokens";
 
 /// npm dist-tag style read channel: "latest" is the current behavior (newest
 /// version); "trusted" resolves to the version a human pinned via
@@ -507,6 +509,40 @@ export async function searchPages(
 }
 
 
+/**
+ * Total estimated tokens ("brain size") across an org's non-archived pages.
+ * Archived pages don't count — archiving is one of the ways an over-cap org
+ * gets back under it, so it has to actually shrink the total.
+ *
+ * Pre-existing pages may have a null tokenCount (written before this column
+ * existed); those are backfilled lazily here from their latest version's
+ * content rather than in a one-off migration script, so the number is always
+ * correct the moment anyone asks for it.
+ */
+export async function getBrainUsage(orgId: string): Promise<number> {
+  const pages = await db.page.findMany({
+    where: { orgId, status: { not: "archived" } },
+    select: { id: true, tokenCount: true },
+  });
+
+  let total = 0;
+  for (const page of pages) {
+    if (page.tokenCount !== null) {
+      total += page.tokenCount;
+      continue;
+    }
+    const latest = await db.pageVersion.findFirst({
+      where: { pageId: page.id },
+      orderBy: { createdAt: "desc" },
+      select: { yamlContent: true },
+    });
+    const tokens = latest ? estimateTokens(latest.yamlContent) : 0;
+    await db.page.update({ where: { id: page.id }, data: { tokenCount: tokens } });
+    total += tokens;
+  }
+  return total;
+}
+
 async function _writePageInternal(
   orgId: string,
   orgSlug: string,
@@ -546,8 +582,33 @@ async function _writePageInternal(
     if (existing.versions.length > 0 && existing.versions[0].contentHash === contentHash && sortOrder === undefined) {
       return { ok: true, slug, contentHash };
     }
+  }
 
-    const pageUpdateData: Record<string, unknown> = { title, updatedAt: new Date(), dashboardEnabled };
+  // Brain-size cap: single choke point for create_page/write_page/patch_page
+  // (all three funnel through _writePageInternal). Only a write that grows
+  // this page's own footprint can be rejected — a shrinking or same-size
+  // edit always goes through, even on an org that's already over its cap,
+  // or there'd be no way back under it once over.
+  const newTokens = estimateTokens(yamlContent);
+  const oldTokens =
+    existing && existing.status !== "archived"
+      ? existing.tokenCount ?? (existing.versions[0] ? estimateTokens(existing.versions[0].yamlContent) : 0)
+      : 0;
+
+  const { maxBrainTokens } = await getEntitlements(orgId);
+  if (Number.isFinite(maxBrainTokens) && newTokens > oldTokens) {
+    const currentTotal = await getBrainUsage(orgId);
+    const newTotal = currentTotal - oldTokens + newTokens;
+    if (newTotal > maxBrainTokens) {
+      return {
+        ok: false,
+        error: `This workspace is using about ${currentTotal} of ${maxBrainTokens} tokens. Upgrade to add more content.`,
+      };
+    }
+  }
+
+  if (existing) {
+    const pageUpdateData: Record<string, unknown> = { title, updatedAt: new Date(), dashboardEnabled, tokenCount: newTokens };
     if (sortOrder !== undefined) pageUpdateData.sortOrder = sortOrder;
 
     await db.$transaction([
@@ -567,6 +628,7 @@ async function _writePageInternal(
       createdBy,
       visibility: visibility ?? defaultPageVisibility(),
       dashboardEnabled,
+      tokenCount: newTokens,
       versions: {
         create: { yamlContent, jsonContent, contentHash, createdBy },
       },

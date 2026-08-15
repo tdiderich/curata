@@ -8,6 +8,7 @@ import { StatusBadge, type StatusBadgeTone } from "@/components/settings/status-
 import { FormRow } from "@/components/settings/form-row";
 import { SegmentedControl } from "@/components/settings/segmented-control";
 import { ChipInput, type ChipInputChip, type ChipInputOption } from "@/components/settings/chip-input";
+import { TeamChip } from "@/components/settings/team-chip";
 import {
   useApprovalDirectory,
   approverLabel,
@@ -43,6 +44,9 @@ interface ContentRulesEditorProps {
   scopeParam: string;
   initialRules: ContentRule[];
   canManage: boolean;
+  /** Shows a small "Team" chip next to the approvers picker. Pay-to-play
+   * signal only — approval groups still work the same either way. */
+  limitedPlan?: boolean;
 }
 
 type Enforcement = "block" | "review" | "guidance";
@@ -76,7 +80,7 @@ function splitApproverId(prefixed: string): ApprovalApproverInput {
   return { type: "user", id: prefixed.slice(5) };
 }
 
-export function ContentRulesEditor({ scopeParam, initialRules, canManage }: ContentRulesEditorProps) {
+export function ContentRulesEditor({ scopeParam, initialRules, canManage, limitedPlan }: ContentRulesEditorProps) {
   const router = useRouter();
   const [rules, setRules] = useState<ContentRule[]>(initialRules);
   const [approvalRule, setApprovalRule] = useState<ApprovalRuleData | null>(null);
@@ -481,7 +485,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage }: Cont
   function approvalFields() {
     return (
       <FormRow
-        label="Approvers"
+        label={<>Approvers{limitedPlan && <TeamChip />}</>}
         hint="Org owners and admins can always approve. Everyone else needs to be listed here or be in a listed group."
       >
         <ChipInput
