@@ -1,38 +1,56 @@
 title: Connecting Your Agent
-subtitle: Connect any MCP-compatible agent to curata using the built-in SSE endpoint.
+subtitle: Point any MCP client at curata. OAuth for interactive agents, API keys for headless ones.
 shell: standard
 components:
   - type: markdown
     body: |
-      Curata includes a built-in MCP server available at `/api/mcp/stream`. There is nothing to install - just point your agent at the URL. Any MCP-compatible client (Claude Code, Cursor, Windsurf, or any tool supporting the [Model Context Protocol](https://modelcontextprotocol.io)) can connect with a single JSON config block.
+      Curata includes a built-in MCP server at `/api/mcp/stream`. There is nothing to install and, for most clients, no key to manage: paste the URL, sign in when your client asks, done. The server advertises its auth via standard MCP discovery, so OAuth-capable clients set themselves up.
 
   - type: section
-    heading: Prerequisites
+    heading: "Connect with OAuth (recommended)"
+    components:
+      - type: tabs
+        tabs:
+          - label: Claude (claude.ai)
+            components:
+              - type: steps
+                numbered: true
+                items:
+                  - title: Add the connector
+                    detail: "Go to **Settings → Connectors → Add custom connector** and paste `https://curata.ai/api/mcp/stream`."
+                  - title: Sign in
+                    detail: "Claude opens a browser window to authorize. Sign in with your curata account and approve."
+                  - title: Done
+                    detail: "The curata tools show up in every conversation. Ask Claude to list pages to confirm."
+          - label: Claude Code
+            components:
+              - type: markdown
+                body: "One command, then authenticate from inside the session:"
+              - type: code
+                language: bash
+                code: |
+                  claude mcp add --transport http curata https://curata.ai/api/mcp/stream
+              - type: markdown
+                body: "Start a session and run `/mcp` to complete the browser sign-in. No key in your config, nothing to rotate."
+          - label: Other clients
+            components:
+              - type: markdown
+                body: |
+                  Any client that supports MCP OAuth needs only the URL:
+
+                  ```
+                  https://curata.ai/api/mcp/stream
+                  ```
+
+                  The client discovers the authorization server through the standard well-known metadata and walks you through sign-in. If your client asks for manual OAuth configuration, it will find everything it needs at `/.well-known/oauth-protected-resource`.
+
+  - type: section
+    heading: "API keys (headless and CI)"
     components:
       - type: markdown
         body: |
-          - A curata account with an API key (create one at **Settings → API Keys**)
-          - An MCP-compatible agent (Claude Code, Cursor, Windsurf, Cline, or any tool supporting the [Model Context Protocol](https://modelcontextprotocol.io))
+          Use an API key when there is no browser to sign in with: cron jobs, CI pipelines, server-side agents, or a client without OAuth support. Create one at **Settings → API Keys**. Keys start with `ck_` and act with your permissions.
 
-  - type: section
-    heading: Setup
-    components:
-      - type: steps
-        numbered: true
-        items:
-          - title: Generate an API key
-            detail: |
-              Go to **Settings → API Keys** in your dashboard. Click **Create key**, give it a name, and copy the key. It starts with `ck_`.
-          - title: Add the config to your editor
-            detail: |
-              Paste the JSON config into your editor's MCP config file (see the per-editor tabs below). Replace `ck_your_api_key_here` with your actual key.
-          - title: Done
-            detail: |
-              Restart your editor or reload the MCP config. Ask your agent to list pages - if it returns results (or an empty list for a fresh workspace), you're connected.
-
-  - type: section
-    heading: Editor configuration
-    components:
       - type: tabs
         tabs:
           - label: Claude Code
@@ -71,109 +89,27 @@ components:
                       }
                     }
                   }
-          - label: Windsurf
+          - label: Any MCP client
             components:
               - type: markdown
-                body: "Add to your Windsurf MCP configuration:"
-              - type: code
-                language: json
-                code: |
-                  {
-                    "mcpServers": {
-                      "curata": {
-                        "type": "url",
-                        "url": "https://curata.ai/api/mcp/stream",
-                        "headers": {
-                          "Authorization": "Bearer ck_your_api_key_here"
-                        }
-                      }
-                    }
-                  }
-          - label: Self-hosted
-            components:
-              - type: markdown
-                body: "If you're running curata on your own infrastructure, point the URL at your instance. If `AUTH_MODE=none`, omit the `headers` block entirely:"
-              - type: code
-                language: json
-                code: |
-                  {
-                    "mcpServers": {
-                      "curata": {
-                        "type": "url",
-                        "url": "http://localhost:3000/api/mcp/stream"
-                      }
-                    }
-                  }
+                body: "The pattern is the same everywhere: streamable HTTP transport, the `/api/mcp/stream` URL, and an `Authorization: Bearer ck_...` header."
+
+      - type: callout
+        variant: warn
+        title: Treat keys like passwords
+        body: |
+          Keys inherit your access. Keep them out of version control, rotate them from **Settings → API Keys** if one leaks, and prefer OAuth anywhere a browser exists.
+
+  - type: section
+    heading: Self-hosted instances
+    components:
+      - type: markdown
+        body: |
+          Auth on a self-hosted instance follows its `AUTH_MODE`: `none` and `tailscale` deployments need no key at all (connect with just the URL on the trusted network), and API keys work in every mode. The [OSS README](https://github.com/tdiderich/curata) covers configuration.
 
   - type: section
     heading: Verify the connection
     components:
       - type: markdown
         body: |
-          After configuring, test the connection by asking your agent to list pages:
-
-      - type: code
-        language: text
-        code: |
-          > List all pages in curata
-
-      - type: markdown
-        body: |
-          If the connection is working, you'll see your page list (or an empty list if this is a fresh workspace). If you get an authentication error, double-check your API key.
-
-  - type: section
-    heading: Available MCP tools
-    components:
-      - type: table
-        filterable: false
-        columns:
-          - key: tool
-            label: Tool
-          - key: description
-            label: Description
-        rows:
-          - tool: search_pages
-            description: Search your team's knowledge base by keywords or topics.
-          - tool: read_page
-            description: Read a specific page by slug - returns YAML content, sections, and annotations.
-          - tool: list_pages
-            description: List all pages with titles, slugs, and metadata.
-          - tool: write_page
-            description: Create or update a page. Provide a title and YAML content - the slug is auto-generated from the title.
-          - tool: create_page
-            description: Create a new page (fails if slug already exists).
-          - tool: annotate_page
-            description: Add an annotation to a page - observations, suggestions, or edit proposals.
-
-      - type: markdown
-        body: |
-          See the [MCP Tools Reference](/pages/mcp-tools-reference) for the full parameter spec of each tool.
-
-  - type: section
-    heading: Using curata from custom code
-    components:
-      - type: markdown
-        body: |
-          If your agent doesn't support MCP, or you want to integrate curata into a script or pipeline, you can call the HTTP API directly. All MCP tools map to API endpoints:
-
-      - type: code
-        language: bash
-        code: |
-          # List all pages
-          curl -H "Authorization: Bearer YOUR_API_KEY" \
-            https://curata.ai/api/agent/list_pages
-
-          # Read a specific page
-          curl -H "Authorization: Bearer YOUR_API_KEY" \
-            "https://curata.ai/api/agent/read_page?slug=q2-roadmap"
-
-          # Create a page
-          curl -X POST \
-            -H "Authorization: Bearer YOUR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{"slug": "my-page", "content": "title: My Page\nshell: standard\ncomponents:\n  - type: markdown\n    body: Hello world"}' \
-            https://curata.ai/api/agent/create_page
-
-      - type: markdown
-        body: |
-          See the [MCP Tools Reference](/pages/mcp-tools-reference) for the full parameter spec of each tool.
+          Ask your agent to list pages. A result (or an empty list on a fresh workspace) means you are connected. From there, try `search` before answering org-specific questions and `capture_thread` when an answer is worth keeping. The server's own instructions teach connected agents the rest.

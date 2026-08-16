@@ -1,31 +1,55 @@
 title: Architecture
-subtitle: How curata works under the hood - the knowledge loop, data model, and system design.
+subtitle: The knowledge loop - how agents write, humans validate, and everything learned flows back to the whole team.
 shell: standard
 components:
   - type: markdown
     body: |
-      Curata is a read-write knowledge store built around one idea: agent outputs should become agent inputs. This page explains how the system is designed and why.
+      Curata is a company brain. Agents feed it from real work, policy shapes what gets in, humans validate what matters, and every agent and every human starts their next session from what the team already learned. This page explains the pieces that make that loop compound instead of resetting.
 
   - type: section
     heading: The knowledge loop
     components:
-      - type: markdown
-        body: |
-          Every interaction with curata follows a three-phase loop:
-
       - type: steps
         numbered: true
         items:
           - title: "Agents write"
-            detail: "AI agents publish structured pages through the MCP server or HTTP API. Pages are stored as kazam YAML - a format designed for machines to produce and humans to read."
-          - title: "Humans curate"
-            detail: "Your team views rendered pages in the dashboard. They annotate directly on the content - corrections, context, approvals. Annotations are stored alongside the page."
-          - title: "Agents read"
-            detail: "Next session, agents search and read from the knowledge base. They start with real context (including human feedback) instead of guessing. The output quality improves."
+            detail: "Agents publish structured pages through the built-in MCP server. Every write passes through org rules at the write path: required sections, blocked content, approval requirements. A blocked write returns a teaching error that cites the rule, so the agent fixes the call instead of guessing."
+          - title: "Humans validate"
+            detail: "Your team reads rendered pages, annotates directly on the content, and approves where it counts. Pages under an approval rule queue for review; everything else just publishes. Validation effort goes where you point it, never everywhere by default."
+          - title: "Agents read back"
+            detail: "Next session, any agent searches the brain and starts from validated answers instead of guessing. Approved pages outrank general knowledge. Human corrections ride along as annotations."
+          - title: "The loop reports on itself"
+            detail: "The weekly digest tells humans what the brain learned: the one big thing, a few noteworthy pages, and activity stats. Humans steer, agents keep writing."
 
       - type: markdown
         body: |
-          This isn't a one-time workflow - it's a compounding loop. Each cycle adds signal. Pages get better over time as agents and humans iterate on the same content.
+          The flywheel piece is capture. When an agent answers a question well in a working session, `capture_thread` checks the answer against pages that already exist, then turns the validated answer into a page. The next agent starts from it. Each cycle adds signal instead of starting over.
+
+  - type: section
+    heading: The trust layer
+    components:
+      - type: markdown
+        body: |
+          Every page has two channels: **latest** (every edit, immediately) and **trusted** (a version a human approved). Trust is optional provenance, never a lifecycle requirement. Most pages are fine living on latest forever.
+
+          Where correctness matters (customer-facing answers, pricing, security posture), you attach an approval rule to the folder or page. Those pages queue for review, named approvers sign off, and agents reading the trusted channel get the approved version even while newer edits pile up behind it. One approval on a shared component fans out to every page that embeds it.
+
+  - type: section
+    heading: Shared components
+    components:
+      - type: markdown
+        body: |
+          Facts that appear in many places (pricing, team roster, SLA terms) live once as a component page and get embedded by reference:
+
+      - type: code
+        language: yaml
+        code: |
+          - type: ref
+            component: pricing-snapshot
+
+      - type: markdown
+        body: |
+          Edit the component, every page that embeds it updates. Approve it once, the approved version renders everywhere. Access is re-checked at read time, so an embed never leaks a page the viewer can't see.
 
   - type: section
     heading: System components
@@ -33,113 +57,51 @@ components:
       - type: card_grid
         min_width: 280
         cards:
-          - title: MCP server
-            badge:
-              label: npm
-              color: teal
-            description: "Stdio server that bridges MCP-compatible agents to the curata API. Installed globally via npm. Exposes 6 tools: search, read, list, write, create, annotate."
           - title: Web application
             badge:
               label: Next.js
               color: teal
-            description: "Dashboard for viewing, editing, and annotating pages. Includes org management, API key generation, and public sharing. Built with Next.js + Prisma."
-          - title: kazam renderer
-            badge:
-              label: Rust → WASM
-              color: teal
-            description: "Renders kazam YAML into themed HTML. Runs as a Rust CLI for static sites and as a generated React component in the web app. 40+ component types."
-          - title: API layer
-            description: "REST endpoints that the MCP server calls. Handles auth (API key or session), page CRUD, search, and annotations. All behind /api/agent/*."
+            description: "Dashboard for reading, editing, annotating, and reviewing pages. Folders, org rules, the review queue, and public sharing all live here."
+          - title: Built-in MCP server
+            description: "Lives at /api/mcp/stream, nothing to install. 41 tools covering search, reads, writes, capture, trust, templates, and the digest. OAuth for interactive agents, API keys for headless ones."
           - title: PostgreSQL
-            description: "Stores pages (YAML content + metadata), annotations, orgs, users, and API keys. Prisma ORM with typed queries."
+            badge:
+              label: Prisma
+              color: teal
+            description: "Stores pages with full version history, trust pointers, annotations, concept tags, folders, rules, and the audit log."
+          - title: kazam renderer
+            description: "Typed YAML in, themed HTML out. Runs as a generated React component in the app and as a Rust CLI for static export. 40+ component types."
 
   - type: section
     heading: Data model
     components:
-      - type: markdown
-        body: |
-          The core data model is intentionally simple:
-
       - type: code
         language: text
         code: |
           Org
-           ├── Users (members of the org)
-           ├── ApiKeys (for agent access)
+           ├── Folders (org rules cascade here; locked folders hold curata-managed scaffolding)
            └── Pages
                 ├── slug (unique within org)
-                ├── json (kazam YAML stored as JSON)
-                ├── contentHash (for optimistic concurrency)
+                ├── versions[] (full history, every write)
+                ├── trustedVersionId (which version a human approved, if any)
                 ├── visibility (org | shared | public)
-                └── Annotations
-                     ├── text
-                     ├── section (optional target)
-                     ├── kind (note | edit)
-                     └── author
+                ├── concepts (tags that power grouping, search, and the semantic map)
+                └── annotations (human notes, corrections, approvals-in-context)
 
       - type: markdown
         body: |
-          Pages are stored as JSON (parsed from kazam YAML). The renderer reads the JSON and produces HTML at render time - no pre-compilation step.
+          Versions are the unit of trust: latest is simply the newest version, trusted is a pointer a human moves on purpose. Nothing is ever edited in place, so review always has a real diff to look at.
 
   - type: section
-    heading: kazam format
+    heading: Why typed pages
     components:
       - type: markdown
         body: |
-          Pages use the [kazam](https://github.com/tdiderich/kazam) YAML format. kazam is an open-source Rust CLI that also generates static sites from the same format. Curata uses kazam's React renderer to display pages dynamically.
+          Pages are [kazam](https://github.com/tdiderich/kazam) YAML: a component vocabulary designed for agents to produce and humans to read.
 
-          The format is designed for LLM authoring:
-          - **Consistent `type:` tags** - no nested conditionals or template logic
-          - **40+ component types** - from `markdown` and `code` to `stat_grid`, `timeline`, `tabs`, and `accordion`
-          - **3 shells** - standard (dashboard), document (print-ready), deck (slides)
+          - **Structured by default.** Markdown is freeform, so two agents produce two layouts for the same prompt. Typed components give agents a vocabulary: `stat_grid` for metrics, `callout` for the key takeaway, `steps` for instructions.
+          - **Validatable.** Because components are typed, org rules can require sections, block content patterns, and reject malformed pages at write time instead of after publication.
+          - **Machine-readable.** Search, related-page detection, and the semantic map work on structure, never regex.
+          - **Human-editable.** YAML reads fine in a code review and renders the same in the dashboard, on public pages, and in static exports.
 
           See [Page Structure](/pages/page-structure) for the full component reference.
-
-  - type: section
-    heading: API endpoints
-    components:
-      - type: markdown
-        body: |
-          The agent API lives at `/api/agent/*`. All endpoints accept either an API key (`Authorization: Bearer <key>`) or a session cookie.
-
-      - type: table
-        filterable: false
-        columns:
-          - key: method
-            label: Method
-            align: center
-          - key: endpoint
-            label: Endpoint
-          - key: description
-            label: Description
-        rows:
-          - method: GET
-            endpoint: /api/agent/search
-            description: Search pages by keyword. Returns matching titles and snippets.
-          - method: GET
-            endpoint: /api/agent/read_page
-            description: Read a page by slug. Returns full content + annotations.
-          - method: GET
-            endpoint: /api/agent/list_pages
-            description: List all pages in the org.
-          - method: POST
-            endpoint: /api/agent/write_page
-            description: Create or update a page (upsert).
-          - method: POST
-            endpoint: /api/agent/create_page
-            description: Create a page. Fails if slug exists.
-          - method: POST
-            endpoint: /api/agent/annotate_page
-            description: Add an annotation to a page.
-
-  - type: section
-    heading: Why kazam YAML?
-    components:
-      - type: markdown
-        body: |
-          We chose kazam YAML over Markdown, HTML, or JSON for a few reasons:
-
-          - **Structured by default.** Markdown is freeform - an LLM can produce wildly different layouts for the same prompt. Kazam's component types give agents a vocabulary: "use `stat_grid` for metrics, `callout` for key takeaways, `steps` for instructions."
-          - **Renderable.** The same YAML renders identically as a static site (via `kazam build`) and in the curata dashboard. No separate template layer.
-          - **Machine-readable.** Because components are typed, search, extraction, and cross-referencing work on structure, not regex.
-          - **Human-editable.** YAML is familiar and readable. Your team can hand-edit pages when they want to.

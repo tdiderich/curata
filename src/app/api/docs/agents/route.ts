@@ -5,7 +5,6 @@ const DOC_SLUGS = [
   "connecting-your-agent",
   "mcp-tools-reference",
   "page-structure",
-  "self-hosting",
   "architecture",
 ];
 

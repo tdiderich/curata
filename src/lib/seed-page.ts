@@ -135,7 +135,7 @@ const GETTING_STARTED_PAGE = {
           cards: [
             {
               title: "Getting Started",
-              description: "Product docs: connecting agents, the MCP tools reference, page structure, self-hosting, and architecture.",
+              description: "Product docs: connecting agents, the MCP tools reference, page structure, and architecture. Self-hosting lives in the OSS README on GitHub.",
             },
             {
               title: "Skills",
