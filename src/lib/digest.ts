@@ -31,6 +31,23 @@ export interface DigestHotSpot extends DigestPageRef {
   versionCount: number;
 }
 
+// The human-picked "one big thing" for a digest run. slug/title are only
+// set when the pick links to a page — a big thing can stand alone as prose.
+export interface DigestBigThing {
+  headline: string;
+  body: string;
+  slug?: string;
+  title?: string;
+  alsoConsidered?: string[];
+}
+
+export interface DigestNoteworthyItem {
+  summary: string;
+  description: string;
+  slug: string;
+  title: string;
+}
+
 export interface DigestData {
   orgId: string;
   windowStart: Date;
@@ -259,72 +276,66 @@ function pageLink(orgSlug: string, ref: DigestPageRef): string {
   return `[${ref.title}](/p/${orgSlug}/${ref.slug})`;
 }
 
-/**
- * Renders the digest as page YAML: one section per area, each a plain
- * markdown body linking every entry back to its page slug. Sections always
- * render, even empty ones, so the shape of the page stays consistent week
- * to week.
- */
-export function buildDigestPageYaml(data: DigestData, orgSlug: string, title: string): string {
-  const totalNewPages = data.newPageCount;
+export interface DigestSynthesis {
+  bigThing?: DigestBigThing;
+  noteworthy?: DigestNoteworthyItem[];
+}
 
-  const overviewLines = [
+/**
+ * Renders the digest as page YAML: an optional human-picked "One big thing",
+ * an optional "Noteworthy" list (2-3 items), and an always-present "Activity"
+ * section that carries only a stats line and a hot-spots line — the full
+ * new-pages/trust-flips/awaiting-review lists no longer render on the page,
+ * gatherDigestData still computes them for preview and for the stats count.
+ */
+export function buildDigestPageYaml(
+  data: DigestData,
+  orgSlug: string,
+  title: string,
+  synthesis?: DigestSynthesis
+): string {
+  const totalNewPages = data.newPageCount;
+  const components: Record<string, unknown>[] = [];
+
+  if (synthesis?.bigThing) {
+    const bt = synthesis.bigThing;
+    const lines = [`**${bt.headline}**`, "", bt.body];
+    if (bt.slug) lines.push("", `[Read more](/p/${orgSlug}/${bt.slug})`);
+    if (bt.alsoConsidered && bt.alsoConsidered.length > 0) {
+      lines.push("", `*Also considered: ${bt.alsoConsidered.join(", ")}*`);
+    }
+    components.push({ type: "section", heading: "One big thing", components: [{ type: "markdown", body: lines.join("\n") }] });
+  }
+
+  if (synthesis?.noteworthy && synthesis.noteworthy.length > 0) {
+    const lines = synthesis.noteworthy.map(
+      (n) => `- **${n.summary}** - ${n.description} ${pageLink(orgSlug, { slug: n.slug, title: n.title })}`
+    );
+    components.push({ type: "section", heading: "Noteworthy", components: [{ type: "markdown", body: lines.join("\n") }] });
+  }
+
+  // Activity: covering-dates line, then a single stats line, then an
+  // optional tagging nudge and an optional hot-spots line. The old per-area
+  // list sections (new pages, trust flips, awaiting review, hot spots) are
+  // gone — those counts are all this section reports now.
+  const activityLines = [
     `Covering ${formatDate(data.windowStart)} to ${formatDate(data.windowEnd)}.`,
     "",
-    `${totalNewPages} new page${totalNewPages === 1 ? "" : "s"}, ${data.trustFlips.length} trust flip${data.trustFlips.length === 1 ? "" : "s"}, ${data.awaitingReview.length} page${data.awaitingReview.length === 1 ? "" : "s"} awaiting review, ${data.hotSpots.length} hot spot${data.hotSpots.length === 1 ? "" : "s"}.`,
+    `${totalNewPages} new page${totalNewPages === 1 ? "" : "s"} (${data.taggedNewPageCount} tagged) - ${data.trustFlips.length} trust flip${data.trustFlips.length === 1 ? "" : "s"} - ${data.awaitingReview.length} awaiting review - ${data.hotSpots.length} hot spot${data.hotSpots.length === 1 ? "" : "s"}${totalNewPages > 0 && data.taggedNewPageCount === 0 ? " - tag pages so future digests can group them" : ""}.`,
   ];
-  // Tagging health: grouping quality depends entirely on upstream tag
-  // discipline, so the digest says outright how much of this week's intake
-  // was tagged instead of letting a flat Untagged bucket fail silently.
-  if (totalNewPages > 0) {
-    overviewLines.push(
-      "",
-      `${data.taggedNewPageCount} of ${totalNewPages} new page${totalNewPages === 1 ? "" : "s"} tagged${data.taggedNewPageCount === 0 ? " - tag pages so future digests can group them" : ""}.`
-    );
+  if (data.hotSpots.length > 0) {
+    const hotSpotStr = data.hotSpots
+      .map((h, i) => `${pageLink(orgSlug, h)} (${h.versionCount}${i === 0 ? " edits" : ""})`)
+      .join(", ");
+    activityLines.push("", `Hot spots: ${hotSpotStr}`);
   }
-
-  const newPagesLines: string[] = [];
-  if (totalNewPages === 0) {
-    newPagesLines.push("No new pages this window.");
-  } else {
-    for (const group of data.newPagesByConcept) {
-      newPagesLines.push(`**${group.concept}**`, "");
-      for (const p of group.pages) newPagesLines.push(`- ${pageLink(orgSlug, p)}`);
-      newPagesLines.push("");
-    }
-    if (data.uncategorizedNewPages.length > 0) {
-      newPagesLines.push("**Untagged**", "");
-      for (const p of data.uncategorizedNewPages) newPagesLines.push(`- ${pageLink(orgSlug, p)}`);
-    }
-  }
-
-  const trustFlipLines = data.trustFlips.length === 0
-    ? ["No trust flips this window."]
-    : data.trustFlips.map(
-        (f) => `- ${pageLink(orgSlug, f)} marked trusted by ${f.actorId} on ${formatDate(f.flippedAt)}`
-      );
-
-  const awaitingReviewLines = data.awaitingReview.length === 0
-    ? ["Nothing awaiting review."]
-    : data.awaitingReview.map(
-        (r) => `- ${pageLink(orgSlug, r)} - ${r.versionsBehind} version${r.versionsBehind === 1 ? "" : "s"} behind trusted`
-      );
-
-  const hotSpotLines = data.hotSpots.length === 0
-    ? ["No hot spots this window."]
-    : data.hotSpots.map((h) => `- ${pageLink(orgSlug, h)} - ${h.versionCount} edits`);
+  components.push({ type: "section", heading: "Activity", components: [{ type: "markdown", body: activityLines.join("\n") }] });
 
   const json = {
     title,
     shell: "document",
     pageType: "digest",
-    components: [
-      { type: "section", heading: "Overview", components: [{ type: "markdown", body: overviewLines.join("\n") }] },
-      { type: "section", heading: "New pages", components: [{ type: "markdown", body: newPagesLines.join("\n").trim() }] },
-      { type: "section", heading: "Trust flips", components: [{ type: "markdown", body: trustFlipLines.join("\n") }] },
-      { type: "section", heading: "Awaiting review", components: [{ type: "markdown", body: awaitingReviewLines.join("\n") }] },
-      { type: "section", heading: "Hot spots", components: [{ type: "markdown", body: hotSpotLines.join("\n") }] },
-    ],
+    components,
   };
 
   return yaml.dump(json, { lineWidth: -1, noRefs: true });

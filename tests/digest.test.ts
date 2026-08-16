@@ -28,8 +28,26 @@ import {
   isoWeek,
   digestSlug,
   digestTitle,
+  buildDigestPageYaml,
 } from "@/lib/digest";
+import type { DigestData } from "@/lib/digest";
 import { dispatch } from "@/lib/mcp-dispatch";
+
+function emptyDigestData(overrides: Partial<DigestData> = {}): DigestData {
+  return {
+    orgId: "org-1",
+    windowStart: new Date("2026-08-07T00:00:00Z"),
+    windowEnd: new Date("2026-08-14T00:00:00Z"),
+    newPagesByConcept: [],
+    uncategorizedNewPages: [],
+    newPageCount: 0,
+    taggedNewPageCount: 0,
+    trustFlips: [],
+    awaitingReview: [],
+    hotSpots: [],
+    ...overrides,
+  };
+}
 
 const PAGE_YAML = "title: t\nshell: document\ncomponents: []\n";
 
@@ -93,6 +111,66 @@ describe("digest — window math", () => {
     const title = digestTitle(d);
     expect(title).toContain(String(year));
     expect(title).not.toContain("—");
+  });
+});
+
+describe("digest — buildDigestPageYaml", () => {
+  it("renders Activity only when no synthesis params are given", () => {
+    const yamlOut = buildDigestPageYaml(emptyDigestData(), "org-slug", "Digest - Week 32, 2026");
+    expect(yamlOut).toContain("Activity");
+    expect(yamlOut).not.toContain("One big thing");
+    expect(yamlOut).not.toContain("Noteworthy");
+  });
+
+  it("renders One big thing and Noteworthy only when supplied", () => {
+    const yamlOut = buildDigestPageYaml(emptyDigestData(), "org-slug", "Digest - Week 32, 2026", {
+      bigThing: { headline: "Big launch shipped", body: "The team shipped the launch this week." },
+      noteworthy: [
+        { summary: "New pricing page", description: "Sales can now quote self-serve tiers directly.", slug: "pricing-page", title: "Pricing Page" },
+      ],
+    });
+    expect(yamlOut).toContain("One big thing");
+    expect(yamlOut).toContain("**Big launch shipped**");
+    expect(yamlOut).toContain("Noteworthy");
+    expect(yamlOut).toContain("**New pricing page**");
+    expect(yamlOut).toContain("[Pricing Page](/p/org-slug/pricing-page)");
+  });
+
+  it("links the big thing's page and renders also_considered as a trailing italic line", () => {
+    const yamlOut = buildDigestPageYaml(emptyDigestData(), "org-slug", "Digest - Week 32, 2026", {
+      bigThing: {
+        headline: "Big launch shipped",
+        body: "The team shipped the launch this week.",
+        slug: "launch-page",
+        title: "Launch Page",
+        alsoConsidered: ["New hire onboarding", "Pricing overhaul"],
+      },
+    });
+    expect(yamlOut).toContain("[Read more](/p/org-slug/launch-page)");
+    expect(yamlOut).toContain("*Also considered: New hire onboarding, Pricing overhaul*");
+  });
+
+  it("keeps the tagging nudge in the Activity stats line when 0 of N new pages are tagged", () => {
+    const yamlOut = buildDigestPageYaml(
+      emptyDigestData({ newPageCount: 2, taggedNewPageCount: 0 }),
+      "org-slug",
+      "Digest - Week 32, 2026"
+    );
+    expect(yamlOut).toContain("2 new pages (0 tagged)");
+    expect(yamlOut).toContain("tag pages so future digests can group them");
+  });
+
+  it("renders a hot-spots line in Activity only when hot spots exist", () => {
+    const withHotSpots = buildDigestPageYaml(
+      emptyDigestData({ hotSpots: [{ slug: "hot-page", title: "Hot Page", versionCount: 4 }] }),
+      "org-slug",
+      "Digest - Week 32, 2026"
+    );
+    expect(withHotSpots).toContain("Hot spots:");
+    expect(withHotSpots).toContain("[Hot Page](/p/org-slug/hot-page) (4 edits)");
+
+    const withoutHotSpots = buildDigestPageYaml(emptyDigestData(), "org-slug", "Digest - Week 32, 2026");
+    expect(withoutHotSpots).not.toContain("Hot spots:");
   });
 });
 
@@ -217,10 +295,8 @@ describe("digest — gatherDigestData", () => {
     expect(data.newPageCount).toBe(3);
     expect(data.taggedNewPageCount).toBe(1);
 
-    const { buildDigestPageYaml } = await import("@/lib/digest");
     const yamlOut = buildDigestPageYaml(data, "gather-org", "Digest - Week 33, 2026");
-    expect(yamlOut).toContain("3 new pages");
-    expect(yamlOut).toContain("1 of 3 new pages tagged");
+    expect(yamlOut).toContain("3 new pages (1 tagged)");
   });
 
   it("derives trust flips from AuditLog page.trust entries in the window", async () => {
@@ -379,5 +455,159 @@ describe("MCP dispatch — generate_digest", () => {
       select: { concept: { select: { normalizedName: true } } },
     });
     expect(tags.map((t) => t.concept.normalizedName)).toContain("digest");
+  });
+
+  it("preview:true returns gathered window data and writes nothing", async () => {
+    await makePage(orgId, "preview-candidate", new Date());
+
+    const result = (await dispatch(
+      "generate_digest",
+      { preview: "true" },
+      orgId,
+      orgSlug,
+      "apikey-1",
+      "user-1"
+    )) as { preview: boolean; slug: string; newPageCount: number; uncategorizedNewPages: { slug: string }[] };
+
+    expect(result.preview).toBe(true);
+    expect(result.slug).toMatch(/^digest-/);
+    expect(result.newPageCount).toBeGreaterThanOrEqual(1);
+    expect(result.uncategorizedNewPages.map((p) => p.slug)).toContain("preview-candidate");
+
+    const pages = await testDb.page.findMany({ where: { orgId, slug: { startsWith: "digest-" } } });
+    expect(pages).toHaveLength(0);
+  });
+
+  it("writes One big thing and Noteworthy sections when both params are supplied", async () => {
+    await makePage(orgId, "launch-page", new Date());
+    await makePage(orgId, "pricing-page", new Date());
+
+    const result = (await dispatch(
+      "generate_digest",
+      {
+        big_thing: JSON.stringify({ headline: "Big launch shipped", body: "The team shipped it this week.", slug: "launch-page" }),
+        noteworthy: JSON.stringify([
+          { summary: "New pricing page", description: "Sales can quote self-serve tiers directly now.", slug: "pricing-page" },
+        ]),
+      },
+      orgId,
+      orgSlug,
+      "apikey-1",
+      "user-1"
+    )) as { slug: string };
+
+    const page = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: result.slug } } });
+    const version = await testDb.pageVersion.findFirst({ where: { pageId: page!.id }, orderBy: { createdAt: "desc" } });
+    expect(version!.yamlContent).toContain("One big thing");
+    expect(version!.yamlContent).toContain("Big launch shipped");
+    expect(version!.yamlContent).toContain(`/p/${orgSlug}/launch-page`);
+    expect(version!.yamlContent).toContain("Noteworthy");
+    expect(version!.yamlContent).toContain(`/p/${orgSlug}/pricing-page`);
+  });
+
+  it("rejects big_thing with a headline over 80 characters as a teaching error", async () => {
+    const longHeadline = "x".repeat(81);
+    await expect(
+      dispatch(
+        "generate_digest",
+        { big_thing: JSON.stringify({ headline: longHeadline, body: "Body." }) },
+        orgId,
+        orgSlug,
+        "apikey-1",
+        "user-1"
+      )
+    ).rejects.toThrow(/80 characters or fewer/);
+  });
+
+  it("rejects big_thing whose slug does not exist or is not visible", async () => {
+    await expect(
+      dispatch(
+        "generate_digest",
+        { big_thing: JSON.stringify({ headline: "Headline", body: "Body.", slug: "does-not-exist" }) },
+        orgId,
+        orgSlug,
+        "apikey-1",
+        "user-1"
+      )
+    ).rejects.toThrow(/does not exist/);
+  });
+
+  it("rejects more than 3 noteworthy items", async () => {
+    await makePage(orgId, "a-page", new Date());
+    await makePage(orgId, "b-page", new Date());
+    await makePage(orgId, "c-page", new Date());
+    await makePage(orgId, "d-page", new Date());
+    const items = ["a-page", "b-page", "c-page", "d-page"].map((slug) => ({
+      summary: "Item summary",
+      description: "One sentence description.",
+      slug,
+    }));
+
+    await expect(
+      dispatch("generate_digest", { noteworthy: JSON.stringify(items) }, orgId, orgSlug, "apikey-1", "user-1")
+    ).rejects.toThrow(/at most 3 items/);
+  });
+
+  it("rejects a noteworthy summary over 40 characters", async () => {
+    await makePage(orgId, "over-length-page", new Date());
+    const items = [
+      { summary: "This summary is deliberately far too long", description: "One sentence.", slug: "over-length-page" },
+    ];
+
+    await expect(
+      dispatch("generate_digest", { noteworthy: JSON.stringify(items) }, orgId, orgSlug, "apikey-1", "user-1")
+    ).rejects.toThrow(/40 characters or fewer/);
+  });
+
+  it("renders also_considered as a trailing italic line when supplied", async () => {
+    const result = (await dispatch(
+      "generate_digest",
+      {
+        big_thing: JSON.stringify({
+          headline: "Unattended pick",
+          body: "Best candidate this run.",
+          also_considered: ["Runner up one", "Runner up two"],
+        }),
+      },
+      orgId,
+      orgSlug,
+      "apikey-1",
+      "user-1"
+    )) as { slug: string };
+
+    const page = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: result.slug } } });
+    const version = await testDb.pageVersion.findFirst({ where: { pageId: page!.id }, orderBy: { createdAt: "desc" } });
+    expect(version!.yamlContent).toContain("Also considered: Runner up one, Runner up two");
+  });
+
+  it("same-week rerun with big_thing/noteworthy still upserts the same slug", async () => {
+    await makePage(orgId, "week-page", new Date());
+
+    const first = (await dispatch(
+      "generate_digest",
+      { big_thing: JSON.stringify({ headline: "First pick", body: "Body one." }) },
+      orgId,
+      orgSlug,
+      "apikey-1",
+      "user-1"
+    )) as { slug: string; created: boolean };
+    expect(first.created).toBe(true);
+
+    const second = (await dispatch(
+      "generate_digest",
+      { big_thing: JSON.stringify({ headline: "Refreshed pick", body: "Body two." }) },
+      orgId,
+      orgSlug,
+      "apikey-1",
+      "user-1"
+    )) as { slug: string; created: boolean };
+    expect(second.slug).toBe(first.slug);
+    expect(second.created).toBe(false);
+
+    const pages = await testDb.page.findMany({ where: { orgId, slug: { startsWith: "digest-" } } });
+    expect(pages).toHaveLength(1);
+
+    const version = await testDb.pageVersion.findFirst({ where: { pageId: pages[0].id }, orderBy: { createdAt: "desc" } });
+    expect(version!.yamlContent).toContain("Refreshed pick");
   });
 });

@@ -759,8 +759,12 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     { slug: z.string() },
     viaDispatch("clear_trusted"));
 
-  server.tool("generate_digest", "Generate (or refresh) this org's dated digest page: new pages since the last digest run grouped by concept tag, trust flips read off the audit log, pages awaiting review (trusted but behind latest), and hot spots (most-edited pages this window). Writes to a deterministic per-week slug in the Digests folder — running it again mid-week updates that same page instead of creating a duplicate. Weekly cadence is a guideline, not enforced.",
-    {},
+  server.tool("generate_digest", "Generate (or refresh) this org's dated digest page: One big thing (a human-picked headline), Noteworthy (2-3 short items), and Activity (stats plus hot spots) since the last digest run. Call with preview: true first to get the window's gathered data (candidate pages, counts) without writing anything - read a few of those pages, draft candidates, and gate on a human pick before calling again with big_thing/noteworthy to write the page. Writes to a deterministic per-week slug in the Digests folder - running it again mid-week updates that same page instead of creating a duplicate. Weekly cadence is a guideline, not enforced.",
+    {
+      preview: z.boolean().optional().describe("When true, return the gathered window data (new pages by concept, trust flips, awaiting review, hot spots, the slug this run would write) without writing a page. big_thing/noteworthy are ignored in this mode."),
+      big_thing: z.string().optional().describe('JSON object for the week\'s single biggest item, normally the human\'s pick: {headline (<=80 chars), body (1-3 sentences), slug? (link this to an existing page - must exist and be visible to this caller), also_considered? (array of other candidate headlines - only set on unattended runs where no human picked)}'),
+      noteworthy: z.string().optional().describe('JSON array of at most 3 items: [{summary (2-5 words, <=40 chars), description (one sentence, <=200 chars), slug (existing, visible page)}]'),
+    },
     viaDispatch("generate_digest"));
 
   return server;

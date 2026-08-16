@@ -25,7 +25,7 @@ import { getOrgTheme } from "@/lib/theme";
 import { buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
 import { getChromium, previewUrl, screenshotPage, renderHtmlToPng } from "@/lib/export-render";
 import { validateContent, checkUnsupportedComponents, invalidContentMessage } from "@/lib/kazam";
-import { checkFolderBoundary, mcpDefaultVisibility } from "@/lib/access";
+import { checkFolderBoundary, mcpDefaultVisibility, listPagesWhere } from "@/lib/access";
 import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
 import { validateApprovalRule, canApprove, getApprovers, describeApprovalRule } from "@/lib/approval";
 import type { Role } from "@/lib/permissions";
@@ -35,6 +35,7 @@ import { ensureSeedPages } from "@/lib/seed";
 import { createCaptureToken, CAPTURE_TOKEN_TTL_MS } from "@/lib/capture-token";
 import { findCaptureDedupCandidates } from "@/lib/capture-dedup";
 import { gatherDigestData, digestSlug, digestTitle, buildDigestPageYaml } from "@/lib/digest";
+import type { DigestBigThing, DigestNoteworthyItem } from "@/lib/digest";
 import { sweepVersions } from "@/lib/version-retention";
 import type { Prisma } from "@/generated/prisma/client";
 import {
@@ -147,7 +148,7 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   remove_group_member: { known: new Set(["group_id", "user_id"]), aliases: { groupId: "group_id", userId: "user_id" } },
   mark_trusted: { known: new Set(["slug", "version_id"]), aliases: { versionId: "version_id" } },
   clear_trusted: { known: new Set(["slug"]) },
-  generate_digest: { known: new Set() },
+  generate_digest: { known: new Set(["preview", "big_thing", "noteworthy"]) },
 };
 
 const DIGEST_FOLDER_NAME = "Digests";
@@ -163,6 +164,107 @@ async function ensureDigestsFolder(orgId: string, actorId: string): Promise<stri
     data: { orgId, name: DIGEST_FOLDER_NAME, visibility: "org", createdBy: actorId },
   });
   return created.id;
+}
+
+/// True for the handful of string spellings a caller might reasonably send
+/// for a boolean flag over the string-typed dispatch args channel.
+function truthyArg(v: string | undefined): boolean {
+  return v === "true" || v === "1";
+}
+
+/// Looks up a page by slug, scoped to what this caller can actually see —
+/// same filter list_pages/search_pages use (listPagesWhere), not a second
+/// visibility rule invented for digest links. Used to validate big_thing and
+/// noteworthy slugs and to recover their titles for the rendered link text.
+async function resolveVisibleDigestPage(
+  orgId: string,
+  userId: string | undefined,
+  slug: string
+): Promise<{ title: string } | null> {
+  return db.page.findFirst({
+    where: { ...listPagesWhere(orgId, userId ?? null), slug },
+    select: { title: true },
+  });
+}
+
+/// Parses and validates the generate_digest big_thing param. Throws a
+/// teaching error naming exactly what to fix, matching the style used
+/// elsewhere in this file (flag_page, create_page).
+async function parseDigestBigThing(
+  orgId: string,
+  userId: string | undefined,
+  raw: string
+): Promise<DigestBigThing> {
+  let parsed: { headline?: string; body?: string; slug?: string; also_considered?: string[] };
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('big_thing must be valid JSON: {headline, body, slug?, also_considered?}');
+  }
+  if (!parsed.headline) throw new Error("big_thing.headline is required");
+  if (parsed.headline.length > 80) {
+    throw new Error(`big_thing.headline must be 80 characters or fewer, got ${parsed.headline.length} - tighten it to a single short line`);
+  }
+  if (!parsed.body) throw new Error("big_thing.body is required (1-3 sentences)");
+  let title: string | undefined;
+  if (parsed.slug) {
+    if (!SLUG_RE.test(parsed.slug)) throw new Error("big_thing.slug is not a valid slug format");
+    const page = await resolveVisibleDigestPage(orgId, userId, parsed.slug);
+    if (!page) {
+      throw new Error(`big_thing.slug "${parsed.slug}" does not exist in this org or is not visible to this caller - check the slug with read_page, or omit slug to render the pick without a link`);
+    }
+    title = page.title;
+  }
+  if (parsed.also_considered && !Array.isArray(parsed.also_considered)) {
+    throw new Error("big_thing.also_considered must be an array of strings");
+  }
+  return {
+    headline: parsed.headline,
+    body: parsed.body,
+    slug: parsed.slug,
+    title,
+    alsoConsidered: parsed.also_considered,
+  };
+}
+
+/// Parses and validates the generate_digest noteworthy param: max 3 items,
+/// each with length-bounded summary/description and a slug that must resolve
+/// to a page this caller can see.
+async function parseDigestNoteworthy(
+  orgId: string,
+  userId: string | undefined,
+  raw: string
+): Promise<DigestNoteworthyItem[]> {
+  let parsedList: unknown;
+  try {
+    parsedList = JSON.parse(raw);
+  } catch {
+    throw new Error("noteworthy must be valid JSON: [{summary, description, slug}]");
+  }
+  if (!Array.isArray(parsedList)) throw new Error("noteworthy must be a JSON array");
+  if (parsedList.length > 3) {
+    throw new Error(`noteworthy accepts at most 3 items, got ${parsedList.length} - pick the most important ones`);
+  }
+  const items: DigestNoteworthyItem[] = [];
+  for (const [i, raw] of parsedList.entries()) {
+    const item = raw as { summary?: string; description?: string; slug?: string };
+    if (!item.summary) throw new Error(`noteworthy[${i}].summary is required`);
+    if (item.summary.length > 40) {
+      throw new Error(`noteworthy[${i}].summary must be 40 characters or fewer (2-5 words), got ${item.summary.length}`);
+    }
+    if (!item.description) throw new Error(`noteworthy[${i}].description is required (one sentence)`);
+    if (item.description.length > 200) {
+      throw new Error(`noteworthy[${i}].description must be 200 characters or fewer, got ${item.description.length}`);
+    }
+    if (!item.slug) throw new Error(`noteworthy[${i}].slug is required`);
+    if (!SLUG_RE.test(item.slug)) throw new Error(`noteworthy[${i}].slug is not a valid slug format`);
+    const page = await resolveVisibleDigestPage(orgId, userId, item.slug);
+    if (!page) {
+      throw new Error(`noteworthy[${i}].slug "${item.slug}" does not exist in this org or is not visible to this caller - check the slug with read_page`);
+    }
+    items.push({ summary: item.summary, description: item.description, slug: item.slug, title: page.title });
+  }
+  return items;
 }
 
 function validateParams(tool: string, args: Record<string, string>): Record<string, string> {
@@ -1595,18 +1697,43 @@ export async function dispatch(
       return { ok: true, slug: args.slug };
     }
 
-    // generate_digest: computes new pages (by concept tag), trust flips (read
-    // off the audit log's page.trust entries — no new column), pages awaiting
-    // review, and hot spots since the last digest run (7 days back the first
-    // time), then writes/updates a dated page in the Digests folder. The slug
-    // is deterministic per ISO week so re-running mid-week updates the same
+    // generate_digest: gathers new pages (by concept tag), trust flips (read
+    // off the audit log's page.trust entries — no new column), pages
+    // awaiting review, and hot spots since the last digest run (7 days back
+    // the first time). preview:true returns that gathered window data
+    // without writing anything — the curata-digest skill uses it to find
+    // candidate pages before a human picks the week's synthesis. Otherwise
+    // writes/updates a dated page in the Digests folder: "One big thing" and
+    // "Noteworthy" render only when big_thing/noteworthy are supplied,
+    // "Activity" (stats + hot spots) always renders. The slug is
+    // deterministic per ISO week so re-running mid-week updates the same
     // page instead of creating a duplicate.
     case "generate_digest": {
       const now = new Date();
       const data = await gatherDigestData(orgId, userId, now);
       const gdSlug = digestSlug(now);
       const gdTitle = digestTitle(now);
-      const gdContent = buildDigestPageYaml(data, orgSlug, gdTitle);
+
+      if (truthyArg(args.preview)) {
+        return {
+          preview: true,
+          slug: gdSlug,
+          windowStart: data.windowStart.toISOString(),
+          windowEnd: data.windowEnd.toISOString(),
+          newPageCount: data.newPageCount,
+          taggedNewPageCount: data.taggedNewPageCount,
+          newPagesByConcept: data.newPagesByConcept,
+          uncategorizedNewPages: data.uncategorizedNewPages,
+          trustFlips: data.trustFlips,
+          awaitingReview: data.awaitingReview,
+          hotSpots: data.hotSpots,
+        };
+      }
+
+      const gdBigThing = args.big_thing ? await parseDigestBigThing(orgId, userId, args.big_thing) : undefined;
+      const gdNoteworthy = args.noteworthy ? await parseDigestNoteworthy(orgId, userId, args.noteworthy) : undefined;
+
+      const gdContent = buildDigestPageYaml(data, orgSlug, gdTitle, { bigThing: gdBigThing, noteworthy: gdNoteworthy });
 
       const gdUnsupported = checkUnsupportedComponents(gdContent);
       if (gdUnsupported.length > 0) throw new Error(gdUnsupported.map((e) => e.message).join("; "));
