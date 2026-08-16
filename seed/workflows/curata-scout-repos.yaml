@@ -1,18 +1,17 @@
 title: "Skill - Scout Repos"
-subtitle: Read the repos this agent can access and propose the knowledge worth sharing across the org as reviewable curata pages.
+subtitle: Cluster related repos, find what they should share, riff with a human, then build packs and PR skills that make cross-repo work better.
 shell: standard
 skill:
-  trigger: "scout repos for curata, pull knowledge out of our repos, seed curata from what we already have written down"
+  trigger: "scout repos, figure out what our repos should share, set up cross-repo context"
   setup:
     - key: repo_scope
-      ask: "Which repos should this skill read? Name them, or say 'everything this agent has access to'."
-    - key: capture_folder
-      ask: "Which folder should proposed pages land in, if you want a default rather than picking each time? Optional."
+      ask: "Which repos should this skill scan? Name them, or say 'everything this agent has access to'."
 dashboard:
   prompt: |
-    Run the Scout Repos skill. Tell me which repos to read (or say all of
-    them), then follow the flow on this page to propose shareable pages.
-  description: "Turn what your repos already know into reviewable pages"
+    Run the Scout Repos skill. Tell me which repos to scan (or say all of
+    them). I'll propose repo clusters and shared-context opportunities,
+    then we riff before anything gets written.
+  description: "Find what your repos should share, then build it"
 components:
   - type: section
     eyebrow: Overview
@@ -20,88 +19,50 @@ components:
     components:
       - type: callout
         variant: info
-        title: Your repos already have the answers written down
+        title: The unit of value is a relationship between repos
         body: |
-          Reads READMEs, docs/ directories, runbooks, CLAUDE.md and AGENTS.md files, architecture decision records, and incident notes across the repos this agent can access. Splits what it finds into company-shareable knowledge and team-local detail, then runs the same capture choreography a human uses when pasting in a thread: dedup check, checklist, then create or patch. Nothing gets written as trusted. A human reviews every candidate.
+          Scans for relationship signals (shared dependencies, CI cross-references, sync scripts, copied configs), proposes repo clusters with evidence, names the shared context or skills that would raise work quality in each cluster, then stops for a riff with the human who has the org knowledge. Only ratified opportunities get built: pack pages that compile into every repo's agent config, PR skills for drift-prone pairs, seam pages where a contract between repos deserves prose.
       - type: definition_list
         items:
           - term: Trigger
-            definition: Manual - run once against a fresh brain, then re-run whenever repos gain new docs worth surfacing.
+            definition: Manual - run against a set of repos, then re-run as the org's repo landscape changes. Reruns update the same pages instead of duplicating.
           - term: Data Sources
-            definition: Whatever repos this agent has read access to - README files, docs/ dirs, runbooks, CLAUDE.md/AGENTS.md, ADRs, incident and postmortem notes.
+            definition: Relationship signals only - dependency files, CI workflows, sync scripts, submodules, cross-repo links, tool configs. Never content extraction.
           - term: Output
-            definition: One untrusted page per shareable candidate, created new or patched onto a near-duplicate, tagged with at least one concept, plus a summary of what was found, proposed, merged, and skipped.
-
-  - type: section
-    eyebrow: Setup
-    heading: Optional Defaults
-    components:
-      - type: callout
-        variant: warn
-        title: Nothing required, two things worth deciding once
-        body: |
-          This skill runs on curata plus whatever repos the agent can already read. No other MCP tool is required. The only things worth fixing per org are which repos count and where proposed pages land.
-      - type: definition_list
-        items:
-          - term: Repo scope
-            definition: Which repos should this skill read? Name them, or say "everything this agent has access to."
-          - term: Capture folder
-            definition: Which folder should proposed pages land in, if you want a default rather than picking each time? Optional.
-
-  - type: section
-    eyebrow: Prerequisites
-    heading: Before you run this skill
-    components:
-      - type: callout
-        variant: warn
-        title: Required inputs
-        body: |
-          - Read access to at least one repo
-          - Nothing else - no external MCP tool beyond curata itself is required
+            definition: Pack pages (installed into CLAUDE.md/.cursorrules via kazam install), PR skill instances for drift-prone repo pairs, seam pages where warranted. Everything lands untrusted.
 
   - type: section
     eyebrow: Flow
-    heading: Validated Flow
+    heading: The four steps
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Cluster
+            detail: "Light scan for relationship signals: lockfile overlap, CI workflows referencing other repos, sync scripts, vendored copies, cross-repo URLs, deploy targets, configs that rhyme. Output is repo sets with evidence lines. No evidence, no cluster."
+          - title: Opportunity
+            detail: "Per cluster: which convention exists in one sibling and is missing in the others, which repo pairs drift (a change in A should always update B), what setup pain repeats, what implicit seam contract nothing documents. Each opportunity names its proposed output type."
+          - title: Riff
+            detail: "Mandatory gate. Present clusters and opportunities numbered, then stop. The human corrects clusters, kills false positives, adds the seams only they know about, and picks what matters. Nothing is written before this conversation."
+          - title: Build and maintain
+            detail: "Pack pages via the ai-tool-pack template (kazam install compiles them into each repo, kazam check catches drift), PR skills for drift pairs (docs-drift is the archetype), seam pages where connective tissue deserves prose. Reruns patch the same slugs."
+
+  - type: section
+    eyebrow: Guardrails
+    heading: What this skill never does
     components:
       - type: markdown
         body: |
-          Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
-
-          ```agl
-          spec ScoutRepos {
-            in: repos: str
-            out: candidates_summarized: bool
-            description: "Read the org's repos and propose shareable knowledge as reviewable curata pages, one capture per candidate."
-            requires: capture_thread, create_page, patch_page, list_rules
-
-            flow {
-              state READ_REPOS -> call(read_files, "READMEs, docs/ dirs, runbooks, CLAUDE.md/AGENTS.md, ADRs, incident notes across the named repos") -> next
-              state CLASSIFY -> evaluate(each_finding vs company_shareable_or_team_local) -> next
-              state CHECK_CONTENT_RULES -> call(list_rules, "the org's blocking content rules, once, before drafting the first candidate") -> next
-              state RUN_CAPTURE -> call(capture_thread, "the next shareable candidate's content, source repo and file path, page_type if not the default") -> next
-              state REVIEW_CANDIDATE -> gate(human_approval) -> next
-              state RECHECK_TOKEN -> call(capture_thread, "the same candidate's content again, immediately before writing - the capture_token from RUN_CAPTURE may have expired while the gate waited on the human") -> next
-              state WRITE_CANDIDATE -> call(create_page, "capture_token plus dedup_ack: new, or patch_page the matched slug instead if the human picked an existing candidate") -> next
-              state MORE_CANDIDATES -> evaluate(remaining_shareable_candidates vs none) -> branch
-
-              branch MORE_CANDIDATES {
-                if candidates_remain -> RUN_CAPTURE
-                if none_remain -> SUMMARIZE
-              }
-
-              state SUMMARIZE -> evaluate(found_vs_proposed_vs_merged_vs_skipped) -> TERMINATE("Repos scouted, candidates proposed for review")
-            }
-          }
-          ```
+          - **No fact extraction.** Scout v1 scraped facts from READMEs into page-shaped scraps; that flow is dead. Repo content stays in repos.
+          - **No FAQ synthesis.** The FAQ shape belongs to import-wiki (digesting a targeted legacy wiki) and live captured Q&A. Never seeded from repo scans.
+          - **No writes before the riff.** The human's org knowledge is what separates a real cluster from a coincidence.
+          - **No trusted marks.** Pages land untrusted; humans approve from /review where an approval rule applies.
+          - **No duplicates on rerun.** search_pages first, patch the cluster's existing pages, stable slugs.
 
   - type: section
-    eyebrow: Key Rules
-    heading: Rules for this skill
+    eyebrow: Mechanics
+    heading: Write mechanics
     components:
-      - type: callout
-        variant: info
-        title: Team-local stays local
+      - type: markdown
         body: |
-          A build quirk that only makes sense inside one repo is not a curata page. Only company-shareable knowledge gets proposed: how the team works, architecture decisions, on-call lore, FAQ-shaped answers anyone in the org would ask. Everything else counts as skipped, not silently dropped.
-
-          Never skip capture_thread, and never reuse a capture_token across a gate wait. Run capture_thread again immediately before each create_page or patch_page call - the token is short-lived, and time passes while a human reviews dedupCandidates. Check list_rules once before the first draft so content already fits the org's blocking rules. Every candidate lands untrusted, tagged with at least one concept. End the run with an exact count: candidates found, proposed as new pages, merged into existing pages, skipped as team-local.
+          Before the first write, call `list_rules` so drafts fit the org's blocking rules. Pack pages come from `create_from_template` with the `ai-tool-pack` template. Tag every page with concepts so it shows in the brain map. End with a summary: clusters found, what the riff changed, pages written or updated, and the `kazam install <org>/<pack-slug>` command for each pack.

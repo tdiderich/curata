@@ -1,6 +1,6 @@
 ---
 name: curata-scout-repos
-description: "Scan the repos this agent can access and propose shareable knowledge as reviewable curata pages: how-we-work notes, architecture decisions, on-call lore, FAQ-shaped answers. Use when asked to 'scout repos for curata', 'pull knowledge out of our repos', or 'seed curata from what we already have written down'."
+description: "Cluster related repos, find the shared context or skills that would raise work quality across them, riff with the human who has the org knowledge, then build pack pages and PR skills. Use when asked to 'scout repos', 'figure out what our repos should share', or 'set up cross-repo context'."
 ---
 
 # curata-scout-repos
@@ -13,24 +13,59 @@ read_page slug: "curata-scout-repos"
 
 If the workflow page is missing on your instance, follow this file. It is complete on its own.
 
+## What this skill is not
+
+No fact extraction. Scout v1 scraped facts out of READMEs and produced page-shaped scraps nobody trusted; that flow is dead. Do not lift content out of repos into knowledge pages, and never synthesize FAQ pages from repo scans - the FAQ shape belongs to `curata-import-wiki` (digesting a targeted legacy wiki) and live captured Q&A only.
+
+The unit of value here is a relationship between repos, not a fact inside one.
+
 ## Before you start, ask
 
 - **Which repos?** Name them, or confirm "everything this agent has access to."
-- **Which folder** should proposed pages land in, if the team wants a default rather than picking one each time? Optional, skip if not given.
 
 ## Flow
 
-1. **Read what's already written.** READMEs, docs/ directories, runbooks, CLAUDE.md and AGENTS.md files, ADRs, incident and postmortem notes, anywhere a repo already explains itself, across the repos scoped above.
-2. **Classify each candidate.** Company-shareable (how the team works, architecture decisions, on-call lore, FAQ-shaped answers anyone in the org would ask) versus team-local (build quirks that only make sense inside one repo). Only shareable candidates move to step 3.
-3. **Check content rules before the first write.** Call `list_rules` (or `get_config`) once, before drafting anything, so the content you write already fits the org's blocking rules instead of getting rejected on the first attempt.
-4. **Run `capture_thread` on the next shareable candidate.** Always, every candidate, no exceptions. It returns `dedupCandidates` against the existing brain, a checklist for the declared page type, and a `captureToken`.
-5. **Show the human the `dedupCandidates`.** Stop and wait. Do not call `create_page` or `write_page` until a human has looked at the candidates and told you which way to go.
-6. **Write only after the human decides.** A clear match: `patch_page` the matched slug. No match: `create_page` with `capture_token` and `dedup_ack: "new"`.
-7. **Re-run `capture_thread` immediately before each write, not once for the whole batch.** The `capture_token` expires. If any time passes between minting it and writing (showing the human the candidates, waiting on a decision, moving to the next file), call `capture_thread` again right before the write instead of reusing a token that may have gone stale.
-8. **Tag every page** with at least one concept so it surfaces in the brain map.
-9. **Everything lands untrusted.** This skill never marks a page trusted. A human reviews and trusts from `/review`.
-10. **Summarize at the end.** How many candidates found, how many proposed as new pages, how many merged into existing pages, how many skipped as team-local.
+### 1. Cluster
+
+Light scan for relationship signals only - do not read content for its own sake:
+
+- shared or mirrored dependencies and lockfile overlap
+- CI workflows that reference another repo (sync jobs, triggers, artifact pulls)
+- sync scripts, submodules, vendored copies, generated-from markers
+- cross-repo URLs in docs and configs
+- same deploy target, same infra module, copied tool configs (eslint, tsconfig, Dockerfiles that rhyme)
+
+Output: proposed repo SETS, each with the evidence lines that justify it. A repo can sit in more than one cluster. A cluster without evidence is a guess - drop it.
+
+### 2. Opportunity
+
+Per cluster, name what shared context or skill would make work in each member higher quality:
+
+- a convention one sibling enforces that the others lack (commit style, PR shape, error taxonomy)
+- drift-prone pairs: a change in repo A that should always produce an update in repo B (code plus docs, schema plus client, template plus consumer)
+- repeated setup or onboarding pain the cluster shares
+- an implicit contract at the seam between two repos that nothing documents
+
+Each opportunity states: what, the evidence, and the proposed output type - pack page, PR skill, or seam page.
+
+### 3. Riff (mandatory gate)
+
+Present the clusters and opportunities to the human, numbered, and stop. They have the org knowledge you do not: which clusters are real, which seams are load-bearing, which conventions are deliberate versus accidental. Ask what is missing, what is wrong, and which opportunities actually matter. Do not write anything to curata before this conversation happens. Reshape the list from their answers.
+
+### 4. Build and maintain
+
+Only ratified opportunities get built. Outputs, in order of preference:
+
+- **Pack pages** - rules and conventions as an AI Tool Pack page (use the `ai-tool-pack` template via `create_from_template`). Packs compile into each repo's CLAUDE.md, AGENTS.md, and .cursorrules with `kazam install`, and `kazam check` catches drift later. One pack per cluster unless the human says otherwise.
+- **PR skill instances** - for drift-prone pairs, a skill page that watches the driving repo and drafts the dependent update as a PR (the curata-docs-drift skill is the archetype: atlas or deployment-guide change lands, plain-docs PR gets drafted).
+- **Seam pages** - where a cluster's connective tissue deserves prose (an implicit contract, a data handoff), one page for the seam. Not a dump of either repo's docs.
+
+Mechanics for every write: check `list_rules` first, `search_pages` for an existing page before creating (reruns UPDATE the same pages - stable slug per cluster, patch not duplicate), tag every page with concepts, and never mark anything trusted - humans do that from `/review` where an approval rule applies.
+
+### 5. Summarize
+
+Clusters found, opportunities proposed, what the human cut or added at the riff, pages written or updated, and the install command for each pack (`kazam install <org>/<pack-slug>`).
 
 ## MCP setup
 
-Requires a curata MCP server exposing `capture_thread`, `create_page` (or `write_page`), `patch_page`, and `list_rules`, plus read access to the org's repos. See `/curata-setup` for connection setup.
+Requires a curata MCP server exposing `search_pages`, `create_from_template`, `create_page`, `patch_page`, and `list_rules`, plus read access to the org's repos. See `/curata-setup` for connection setup.
