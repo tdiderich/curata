@@ -159,23 +159,66 @@ describe("locked-folder seed refresh", () => {
     expect(after?.status).toBe("archived");
   });
 
-  it("leaves user-created strays in a locked folder alone", async () => {
+  it("archives any non-seed page in a locked folder regardless of createdBy", async () => {
+    // curata.ai's own getting-started pages were created via the dashboard
+    // (createdBy web), so the sweep must not filter on creator.
     const folder = await testDb.folder.findFirst({ where: { orgId, name: "Getting Started" } });
     await testDb.page.create({
       data: {
         orgId,
-        slug: "my-own-notes",
-        title: "My Own Notes",
+        slug: "legacy-doc",
+        title: "Legacy Doc",
         folderId: folder!.id,
-        createdBy: "human",
-        versions: { create: { yamlContent: "title: My Own Notes\ncomponents: []\n", contentHash: "user-hash", createdBy: "human" } },
+        createdBy: "web",
+        versions: { create: { yamlContent: "title: Legacy Doc\ncomponents: []\n", contentHash: "legacy-hash", createdBy: "web" } },
       },
     });
 
     await seedOrgContent(orgId);
 
-    const after = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "my-own-notes" } } });
-    expect(after?.status).toBe("active");
+    const after = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "legacy-doc" } } });
+    expect(after?.status).toBe("archived");
+  });
+
+  it("advances a set trusted pointer on refresh and repairs a stale one without minting versions", async () => {
+    const page = await testDb.page.findUnique({
+      where: { orgId_slug: { orgId, slug: "architecture" } },
+      include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
+    });
+    // Simulate the live curata.ai state: an old trusted version, then a
+    // seed refresh landed a newer latest, pointer still on the old one.
+    const oldVersion = await testDb.pageVersion.create({
+      data: { pageId: page!.id, yamlContent: "title: Old Trusted\ncomponents: []\n", contentHash: "old-trusted-hash", createdBy: "web" },
+    });
+    await testDb.page.update({ where: { id: page!.id }, data: { trustedVersionId: oldVersion.id } });
+
+    await seedOrgContent(orgId);
+
+    const after = await testDb.page.findUnique({
+      where: { orgId_slug: { orgId, slug: "architecture" } },
+      include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
+    });
+    expect(after?.versions[0].yamlContent).toContain("The knowledge loop");
+    expect(after?.trustedVersionId).toBe(after?.versions[0].id);
+
+    // Second run: content matches, pointer current — no new version.
+    const countBefore = await testDb.pageVersion.count({ where: { pageId: page!.id } });
+    await seedOrgContent(orgId);
+    const countAfter = await testDb.pageVersion.count({ where: { pageId: page!.id } });
+    expect(countAfter).toBe(countBefore);
+  });
+
+  it("keeps never-trusted seed pages never-trusted through a refresh", async () => {
+    const page = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "connecting-your-agent" } } });
+    expect(page?.trustedVersionId).toBeNull();
+    await testDb.pageVersion.create({
+      data: { pageId: page!.id, yamlContent: "title: Drift\ncomponents: []\n", contentHash: "drift-hash", createdBy: "system" },
+    });
+
+    await seedOrgContent(orgId);
+
+    const after = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "connecting-your-agent" } } });
+    expect(after?.trustedVersionId).toBeNull();
   });
 
   it("preserves the getting-started page from the retired sweep and reactivates archived seed pages", async () => {
