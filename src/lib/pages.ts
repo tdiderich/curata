@@ -11,6 +11,7 @@ import { getEntitlements } from "./entitlements";
 import { estimateTokens } from "./tokens";
 import { pruneVersions } from "./version-retention";
 import { extractSalientTerms } from "./salient-terms";
+import { makeApprovalRuleResolver } from "./approval";
 
 /// npm dist-tag style read channel: "latest" is the current behavior (newest
 /// version); "trusted" resolves to the version a human pinned via
@@ -47,6 +48,17 @@ function resolveChannel(
   // latest either way, but only label it trusted if it happens to be the
   // pinned version.
   return { versionId: latestVersionId, label: { trusted: trustedIsLatest, trustedBehind } };
+}
+
+/// Whether the read-path trust banner (trust-banner.tsx, including its
+/// "Not yet trusted" state) should render at all for a page in the given
+/// folder. Locked (curata-managed) folders hold seeded system content, not a
+/// knowledge claim a human made, so the banner is suppressed entirely there
+/// — mirroring getReviewQueue's unconditional exclusion of locked-folder
+/// pages. Exported as a pure function so the page-view server component and
+/// tests share one source of truth instead of duplicating the check.
+export function shouldShowTrustBanner(folderLocked: boolean | null | undefined): boolean {
+  return !folderLocked;
 }
 
 export interface PageMeta {
@@ -898,34 +910,56 @@ interface ReviewCandidate {
   neverTrusted: boolean;
 }
 
-/// Cheap first pass: which pages qualify for the review queue (never trusted,
-/// or trusted pointer behind the latest version)? Mirrors the batching
-/// pattern in listPages — take:1 on versions avoids pulling full history for
-/// pages that don't qualify.
+/// Cheap first pass: which pages qualify for the review queue? A page whose
+/// trusted pointer has fallen behind latest always qualifies — a human
+/// vouched for it once and it has since drifted, always review-worthy. A
+/// never-trusted page only qualifies when an approval rule governs its scope
+/// (page > nearest folder ancestor > global) — no rule anywhere in the
+/// cascade means the org never asked for that content to be gated, so it
+/// stays out of the queue forever rather than padding it with everything
+/// nobody has looked at. Locked (curata-managed) folders are excluded
+/// unconditionally in both cases: seeded system content, not a knowledge
+/// claim, so it never queues regardless of trust state or rules.
+/// Mirrors the batching pattern in listPages — take:1 on versions avoids
+/// pulling full history for pages that don't qualify. Rule resolution reuses
+/// approval.ts's makeApprovalRuleResolver, loaded once for the whole org
+/// (one folder query, one org query) rather than per page.
 async function getReviewCandidates(
   orgId: string,
   userId?: string
 ): Promise<ReviewCandidate[]> {
   const where = listPagesWhere(orgId, userId ?? null);
-  const pages = await db.page.findMany({
-    where,
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      folderId: true,
-      createdBy: true,
-      trustedVersionId: true,
-      versions: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true } },
-    },
-  });
+  const [pages, folders, org] = await Promise.all([
+    db.page.findMany({
+      where,
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        folderId: true,
+        createdBy: true,
+        trustedVersionId: true,
+        rules: true,
+        versions: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true } },
+      },
+    }),
+    db.folder.findMany({ where: { orgId }, select: { id: true, parentId: true, name: true, rules: true, locked: true } }),
+    db.organization.findUnique({ where: { id: orgId }, select: { rules: true } }),
+  ]);
+
+  const lockedFolderIds = new Set(folders.filter((f) => f.locked).map((f) => f.id));
+  const resolveApprovalRule = makeApprovalRuleResolver(folders, org?.rules);
 
   const candidates: ReviewCandidate[] = [];
   for (const p of pages) {
+    if (p.folderId && lockedFolderIds.has(p.folderId)) continue;
+
     const latest = p.versions[0];
     if (!latest) continue;
     const neverTrusted = !p.trustedVersionId;
     if (!neverTrusted && p.trustedVersionId === latest.id) continue;
+
+    if (neverTrusted && !resolveApprovalRule(p.folderId, p.rules)) continue;
 
     candidates.push({
       pageId: p.id,

@@ -39,6 +39,7 @@ import {
   getPageSections,
   getReviewQueue,
   getReviewQueueCount,
+  shouldShowTrustBanner,
 } from "@/lib/pages";
 
 const DEFAULT_YAML = `title: Test Page
@@ -437,14 +438,46 @@ components:
       return page!.versions.map((v) => v.id);
     }
 
-    it("includes pages that have never been trusted", async () => {
-      await writePage(orgId, orgSlug, "never-trusted-page", DEFAULT_YAML, "user1");
+    it("keeps a never-trusted page out of the queue when no approval rule governs its scope", async () => {
+      await writePage(orgId, orgSlug, "never-trusted-unruled", DEFAULT_YAML, "user1");
 
       const queue = await getReviewQueue(orgId);
-      const entry = queue.find((r) => r.slug === "never-trusted-page");
+      expect(queue.find((r) => r.slug === "never-trusted-unruled")).toBeUndefined();
+    });
+
+    it("queues a never-trusted page inside a folder with an approval rule", async () => {
+      const folder = await testDb.folder.create({
+        data: {
+          orgId,
+          name: "Gated Folder",
+          createdBy: "test-user",
+          rules: [{ id: "approval", kind: "approval", approvers: [{ type: "user", id: "alice" }] }],
+        },
+      });
+      await writePage(orgId, orgSlug, "never-trusted-in-gated-folder", DEFAULT_YAML, "user1");
+      await testDb.page.update({
+        where: { orgId_slug: { orgId, slug: "never-trusted-in-gated-folder" } },
+        data: { folderId: folder.id },
+      });
+
+      const queue = await getReviewQueue(orgId);
+      const entry = queue.find((r) => r.slug === "never-trusted-in-gated-folder");
       expect(entry).toBeDefined();
       expect(entry!.neverTrusted).toBe(true);
       expect(entry!.versionsBehind).toBe(1);
+    });
+
+    it("a global approval rule queues all never-trusted pages", async () => {
+      await testDb.organization.update({
+        where: { id: orgId },
+        data: { rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] }] },
+      });
+      await writePage(orgId, orgSlug, "never-trusted-under-global-rule", DEFAULT_YAML, "user1");
+
+      const queue = await getReviewQueue(orgId);
+      const entry = queue.find((r) => r.slug === "never-trusted-under-global-rule");
+      expect(entry).toBeDefined();
+      expect(entry!.neverTrusted).toBe(true);
     });
 
     it("includes pages whose trusted pointer has fallen behind latest", async () => {
@@ -461,6 +494,56 @@ components:
       expect(entry!.versionsBehind).toBe(2);
     });
 
+    it("queues a trustedBehind page regardless of approval rules (no rule anywhere in scope)", async () => {
+      // No org/folder/page approval rule exists at all here — trustedBehind
+      // pages queue unconditionally, unlike never-trusted pages which need a
+      // rule in scope. This is the same scenario as the un-ruled org above,
+      // just proving the trustedBehind path doesn't share the never-trusted
+      // gate.
+      await writePage(orgId, orgSlug, "behind-no-rule", "title: V1\nshell: document\ncomponents: []\n", "user1");
+      const [v1Id] = await versionIdsDesc("behind-no-rule");
+      await markTrusted(orgId, "behind-no-rule", v1Id, "reviewer1");
+      await writePage(orgId, orgSlug, "behind-no-rule", "title: V2\nshell: document\ncomponents: []\n", "user1");
+
+      const queue = await getReviewQueue(orgId);
+      const entry = queue.find((r) => r.slug === "behind-no-rule");
+      expect(entry).toBeDefined();
+      expect(entry!.neverTrusted).toBe(false);
+    });
+
+    it("excludes a locked-folder page from the queue unconditionally, even under a global approval rule", async () => {
+      await testDb.organization.update({
+        where: { id: orgId },
+        data: { rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] }] },
+      });
+      const lockedFolder = await testDb.folder.create({
+        data: { orgId, name: "Templates", createdBy: "system", locked: true },
+      });
+
+      // Never-trusted page in the locked folder: would otherwise qualify
+      // under the global rule, but locked-folder exclusion wins.
+      await writePage(orgId, orgSlug, "locked-never-trusted", DEFAULT_YAML, "user1");
+      await testDb.page.update({
+        where: { orgId_slug: { orgId, slug: "locked-never-trusted" } },
+        data: { folderId: lockedFolder.id },
+      });
+
+      // trustedBehind page in the locked folder: would otherwise always
+      // queue, but locked-folder exclusion still wins.
+      await writePage(orgId, orgSlug, "locked-behind", "title: V1\nshell: document\ncomponents: []\n", "user1");
+      await testDb.page.update({
+        where: { orgId_slug: { orgId, slug: "locked-behind" } },
+        data: { folderId: lockedFolder.id },
+      });
+      const [lockedV1Id] = await versionIdsDesc("locked-behind");
+      await markTrusted(orgId, "locked-behind", lockedV1Id, "reviewer1");
+      await writePage(orgId, orgSlug, "locked-behind", "title: V2\nshell: document\ncomponents: []\n", "user1");
+
+      const queue = await getReviewQueue(orgId);
+      expect(queue.find((r) => r.slug === "locked-never-trusted")).toBeUndefined();
+      expect(queue.find((r) => r.slug === "locked-behind")).toBeUndefined();
+    });
+
     it("excludes pages whose trusted pointer already matches latest", async () => {
       await writePage(orgId, orgSlug, "synced-page", DEFAULT_YAML, "user1");
       const [v1Id] = await versionIdsDesc("synced-page");
@@ -471,6 +554,12 @@ components:
     });
 
     it("sorts oldest unapproved change first", async () => {
+      // A global approval rule so these never-trusted pages qualify for the
+      // queue — this test is about sort order, not the rule-scope gate.
+      await testDb.organization.update({
+        where: { id: orgId },
+        data: { rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] }] },
+      });
       await writePage(orgId, orgSlug, "older-unreviewed", DEFAULT_YAML, "user1");
       await new Promise((r) => setTimeout(r, 5));
       await writePage(orgId, orgSlug, "newer-unreviewed", DEFAULT_YAML, "user1");
@@ -484,6 +573,13 @@ components:
     });
 
     it("flags createdByMe and annotatedByMe for the requesting user", async () => {
+      // A global approval rule so these never-trusted pages qualify for the
+      // queue — this test is about the createdByMe/annotatedByMe flags, not
+      // the rule-scope gate.
+      await testDb.organization.update({
+        where: { id: orgId },
+        data: { rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] }] },
+      });
       await writePage(orgId, orgSlug, "mine-page", DEFAULT_YAML, "me");
       await writePage(orgId, orgSlug, "annotated-page", DEFAULT_YAML, "someone-else");
       await saveAnnotation(orgId, orgSlug, "annotated-page", "note", "me");
@@ -498,6 +594,12 @@ components:
     });
 
     it("getReviewQueueCount matches the queue length", async () => {
+      // A global approval rule so these never-trusted pages actually land in
+      // the queue — otherwise both sides of the comparison are trivially 0.
+      await testDb.organization.update({
+        where: { id: orgId },
+        data: { rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] }] },
+      });
       await writePage(orgId, orgSlug, "count-page-a", DEFAULT_YAML, "user1");
       await writePage(orgId, orgSlug, "count-page-b", DEFAULT_YAML, "user1");
 
@@ -506,6 +608,19 @@ components:
         getReviewQueueCount(orgId),
       ]);
       expect(count).toBe(queue.length);
+      expect(count).toBeGreaterThan(0);
+    });
+  });
+
+  describe("shouldShowTrustBanner", () => {
+    it("shows the banner when the folder is unlocked or the page has no folder", () => {
+      expect(shouldShowTrustBanner(false)).toBe(true);
+      expect(shouldShowTrustBanner(null)).toBe(true);
+      expect(shouldShowTrustBanner(undefined)).toBe(true);
+    });
+
+    it("suppresses the banner for pages in a locked (curata-managed) folder", () => {
+      expect(shouldShowTrustBanner(true)).toBe(false);
     });
   });
 });

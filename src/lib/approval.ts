@@ -179,6 +179,55 @@ export async function canApprove(orgId: string, userId: string, orgRole: Role, s
   return isUserEligible(orgId, userId, resolved.rule);
 }
 
+export interface FolderRuleRow {
+  id: string;
+  parentId: string | null;
+  name: string;
+  rules: unknown;
+}
+
+/**
+ * Synchronous scope-resolver factory over already-loaded org data: given the
+ * whole org's folders and org-level rules JSON (one query each, done once by
+ * the caller), returns a function that resolves any page's effective
+ * approval rule purely in memory — no DB round trip per page. Shared by
+ * canApproveBatch (per-user eligibility) and getReviewQueue (which only
+ * needs to know whether a rule governs the scope at all, not who it names).
+ * Same priority as resolveEffectiveApprovalRule: page > nearest folder
+ * ancestor > global.
+ */
+export function makeApprovalRuleResolver(
+  folders: FolderRuleRow[],
+  orgRulesJson: unknown
+): (folderId: string | null, pageRulesJson: unknown) => EffectiveApprovalRule | null {
+  const folderMap = new Map(folders.map((f) => [f.id, f]));
+  const orgRules = parseApprovalRules(orgRulesJson);
+
+  return function resolve(folderId: string | null, pageRulesJson: unknown): EffectiveApprovalRule | null {
+    const pageRules = parseApprovalRules(pageRulesJson);
+    if (pageRules.length > 0) return { rule: pageRules[0], scope: "page" };
+
+    if (folderId) {
+      const ancestry: FolderRuleRow[] = [];
+      let current = folderMap.get(folderId);
+      const visited = new Set<string>();
+      while (current && !visited.has(current.id)) {
+        visited.add(current.id);
+        ancestry.unshift(current);
+        current = current.parentId ? folderMap.get(current.parentId) : undefined;
+      }
+      for (let i = ancestry.length - 1; i >= 0; i--) {
+        const folder = ancestry[i];
+        const rules = parseApprovalRules(folder.rules);
+        if (rules.length > 0) return { rule: rules[0], scope: `folder:${folder.name}` };
+      }
+    }
+
+    if (orgRules.length > 0) return { rule: orgRules[0], scope: "global" };
+    return null;
+  };
+}
+
 export interface BatchApprovalRow {
   slug: string;
   eligible: boolean;
@@ -212,32 +261,7 @@ export async function canApproveBatch(
     db.organization.findUnique({ where: { id: orgId }, select: { rules: true } }),
   ]);
 
-  const folderMap = new Map(folders.map((f) => [f.id, f]));
-  const orgRules = parseApprovalRules(org?.rules);
-
-  function effectiveFor(folderId: string | null, pageRulesJson: unknown): EffectiveApprovalRule | null {
-    const pageRules = parseApprovalRules(pageRulesJson);
-    if (pageRules.length > 0) return { rule: pageRules[0], scope: "page" };
-
-    if (folderId) {
-      const ancestry: typeof folders = [];
-      let current = folderMap.get(folderId);
-      const visited = new Set<string>();
-      while (current && !visited.has(current.id)) {
-        visited.add(current.id);
-        ancestry.unshift(current);
-        current = current.parentId ? folderMap.get(current.parentId) : undefined;
-      }
-      for (let i = ancestry.length - 1; i >= 0; i--) {
-        const folder = ancestry[i];
-        const rules = parseApprovalRules(folder.rules);
-        if (rules.length > 0) return { rule: rules[0], scope: `folder:${folder.name}` };
-      }
-    }
-
-    if (orgRules.length > 0) return { rule: orgRules[0], scope: "global" };
-    return null;
-  }
+  const effectiveFor = makeApprovalRuleResolver(folders, org?.rules);
 
   const effectiveByPage = new Map<string, EffectiveApprovalRule | null>();
   for (const p of pages) effectiveByPage.set(p.slug, effectiveFor(p.folderId, p.rules));

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect, notFound } from "next/navigation";
 import { resolveOrg, AUTH_MODE } from "@/lib/auth";
-import { getAnnotations, getPageSections, readPage, bumpViewCount } from "@/lib/pages";
+import { getAnnotations, getPageSections, readPage, bumpViewCount, shouldShowTrustBanner } from "@/lib/pages";
 import type { Channel } from "@/lib/pages";
 import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
@@ -90,12 +90,14 @@ export default async function PageDetailView({
   const pageTags: Array<{ term: string; kind: string }> = [];
   let tagOptions: Array<{ term: string; kind: string }> = [];
   let folderTag: string | undefined;
+  let showTrustBanner = true;
   if (pageRow?.folderId) {
     const folder = await db.folder.findUnique({
       where: { id: pageRow.folderId },
-      select: { name: true },
+      select: { name: true, locked: true },
     });
     folderTag = normalizeTerm(folder?.name ?? "") || undefined;
+    showTrustBanner = shouldShowTrustBanner(folder?.locked);
   }
   if (pageRow) {
     const [concepts, orgConcepts] = await Promise.all([
@@ -238,7 +240,7 @@ export default async function PageDetailView({
         archived={pageRow?.status === "archived"
           ? { since: pageRow.updatedAt.toISOString().slice(0, 10), supersededBy: pageRow.supersededBy }
           : undefined}
-        trustBanner={{
+        trustBanner={!showTrustBanner ? undefined : {
           trusted: pageData.trusted,
           trustedBehind: pageData.trustedBehind,
           previewingLatest,
