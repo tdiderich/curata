@@ -42,7 +42,27 @@ async function findOrCreateFolder(
   return created.id;
 }
 
-async function seedPagesFromDir(orgId: string, folderId: string, dirPath: string): Promise<void> {
+/**
+ * Seeds one locked (curata-managed) folder from a seed directory, and keeps
+ * it tracking the shipped seed content afterwards:
+ *
+ * - Missing page: created.
+ * - Existing page still in this folder whose latest version differs from the
+ *   seed file: a new system version is written (and the page reactivated if
+ *   it was archived). Safe by definition — locked folders are view + copy
+ *   only, so there is no human customization to clobber.
+ * - Existing page that was moved OUT of this folder: never touched. A page
+ *   living elsewhere is user territory, same guarantee as before.
+ * - System-created page still in this folder whose seed file no longer
+ *   ships (and isn't in preserveSlugs): archived. Retired seed content
+ *   should retire from deployments too, not linger forever.
+ */
+async function seedPagesFromDir(
+  orgId: string,
+  folderId: string,
+  dirPath: string,
+  preserveSlugs: string[] = []
+): Promise<void> {
   if (!fs.existsSync(dirPath)) {
     console.log(`[seed] directory not found, skipping: ${dirPath}`);
     return;
@@ -54,18 +74,58 @@ async function seedPagesFromDir(orgId: string, folderId: string, dirPath: string
     console.error(`[seed] failed to read directory ${dirPath}:`, err);
     return;
   }
+  const seededSlugs = new Set<string>(preserveSlugs);
   for (const file of files) {
     const slug = path.basename(file, path.extname(file));
+    seededSlugs.add(slug);
     try {
-      const existing = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
-      if (existing) {
-        console.log(`[seed] skipping existing page: ${slug}`);
-        continue;
-      }
       const yamlContent = fs.readFileSync(path.join(dirPath, file), "utf-8");
       const parsed = yaml.load(yamlContent) as Record<string, unknown>;
       const title = typeof parsed?.title === "string" ? parsed.title : slug;
       const contentHash = createHash("sha256").update(yamlContent).digest("hex");
+
+      const existing = await db.page.findUnique({
+        where: { orgId_slug: { orgId, slug } },
+        select: {
+          id: true,
+          folderId: true,
+          status: true,
+          versions: { orderBy: { createdAt: "desc" }, take: 1, select: { contentHash: true } },
+        },
+      });
+      if (existing) {
+        if (existing.folderId !== folderId) {
+          console.log(`[seed] skipping relocated page: ${slug}`);
+          continue;
+        }
+        const latestMatchesSeed = existing.versions[0]?.contentHash === contentHash;
+        if (latestMatchesSeed && existing.status === "active") {
+          continue;
+        }
+        // Archived-but-current pages just reactivate; only a real content
+        // change earns a new version.
+        await db.page.update({
+          where: { id: existing.id },
+          data: {
+            title,
+            status: "active",
+            ...(latestMatchesSeed
+              ? {}
+              : {
+                  versions: {
+                    create: {
+                      yamlContent,
+                      jsonContent: parsed as unknown as Prisma.InputJsonValue,
+                      contentHash,
+                      createdBy: "system",
+                    },
+                  },
+                }),
+          },
+        });
+        console.log(`[seed] refreshed page: ${slug}`);
+        continue;
+      }
       await db.page.create({
         data: {
           orgId,
@@ -87,6 +147,29 @@ async function seedPagesFromDir(orgId: string, folderId: string, dirPath: string
     } catch (err) {
       console.error(`[seed] failed to seed page ${slug}:`, err);
     }
+  }
+
+  // Retire system pages this folder used to seed but no longer ships.
+  // Scoped hard: system-created, still in this locked folder, active, and
+  // absent from both the seed dir and preserveSlugs. User-created strays
+  // (pre-lock orgs) are never touched.
+  try {
+    const strays = await db.page.findMany({
+      where: {
+        orgId,
+        folderId,
+        createdBy: "system",
+        status: "active",
+        slug: { notIn: [...seededSlugs] },
+      },
+      select: { id: true, slug: true },
+    });
+    for (const stray of strays) {
+      await db.page.update({ where: { id: stray.id }, data: { status: "archived" } });
+      console.log(`[seed] archived retired seed page: ${stray.slug}`);
+    }
+  } catch (err) {
+    console.error(`[seed] retired-page sweep failed for folder ${folderId}:`, err);
   }
 }
 
@@ -134,7 +217,11 @@ export async function seedOrgContent(orgId: string): Promise<void> {
   try {
     const gettingStartedFolderId = await findOrCreateFolder(orgId, "Getting Started", true);
     await seedGettingStartedPage(orgId, "system", gettingStartedFolderId);
-    await seedPagesFromDir(orgId, gettingStartedFolderId, path.join(process.cwd(), "seed", "getting-started"));
+    // "getting-started" itself is seeded by seedGettingStartedPage above, not
+    // from the directory — preserve it from the retired-page sweep.
+    await seedPagesFromDir(orgId, gettingStartedFolderId, path.join(process.cwd(), "seed", "getting-started"), [
+      "getting-started",
+    ]);
   } catch (err) {
     console.error("[seed] getting-started folder/pages failed:", err);
   }
@@ -157,10 +244,10 @@ export async function seedOrgContent(orgId: string): Promise<void> {
 // seedOrgContent runs at org creation only (seedOrg above). An org created
 // before a seed page existed — every batch-2 skill page, every FDE skill
 // page — never gets it, because nothing re-runs the sweep for existing orgs.
-// seedPagesFromDir is already skip-if-exists per slug (see above), so
-// re-running the exact same sweep against an existing org is safe: it only
-// ever fills gaps, it never touches a page (customized or not) whose slug
-// already exists.
+// Re-running the sweep against an existing org is safe: locked-folder pages
+// are refreshed to track shipped seed content (view + copy only, nothing
+// human-authored to clobber), pages relocated out of the seed folders are
+// never touched, and user-created pages are never touched.
 //
 // ensureSeedPages is the lazy backfill entry point for existing orgs, called
 // from a cheap high-traffic read path (mcp-dispatch's read_page — the exact

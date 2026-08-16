@@ -92,6 +92,112 @@ describe("ensureSeedPages backfill", () => {
   });
 });
 
+describe("locked-folder seed refresh", () => {
+  let orgId: string;
+
+  beforeEach(async () => {
+    const org = await createTestOrg({ name: "Refresh Org", slug: `refresh-org-${Math.random().toString(36).slice(2)}` });
+    orgId = org.id;
+    await seedOrgContent(orgId);
+  });
+
+  it("refreshes a locked-folder page whose latest version drifted from the shipped seed", async () => {
+    const page = await testDb.page.findUnique({
+      where: { orgId_slug: { orgId, slug: "architecture" } },
+      include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
+    });
+    expect(page).not.toBeNull();
+    await testDb.pageVersion.create({
+      data: { pageId: page!.id, yamlContent: "title: Stale\ncomponents: []\n", contentHash: "stale-hash", createdBy: "system" },
+    });
+
+    await seedOrgContent(orgId);
+
+    const after = await testDb.page.findUnique({
+      where: { orgId_slug: { orgId, slug: "architecture" } },
+      include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
+    });
+    expect(after?.versions[0].yamlContent).toContain("The knowledge loop");
+  });
+
+  it("never touches a page that was moved out of the seed folder", async () => {
+    const other = await testDb.folder.create({
+      data: { orgId, name: "User Folder", visibility: "org", createdBy: "human" },
+    });
+    const page = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "architecture" } } });
+    await testDb.page.update({ where: { id: page!.id }, data: { folderId: other.id } });
+    await testDb.pageVersion.create({
+      data: { pageId: page!.id, yamlContent: "title: Mine now\ncomponents: []\n", contentHash: "mine-hash", createdBy: "human" },
+    });
+
+    await seedOrgContent(orgId);
+
+    const after = await testDb.page.findUnique({
+      where: { orgId_slug: { orgId, slug: "architecture" } },
+      include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
+    });
+    expect(after?.versions[0].contentHash).toBe("mine-hash");
+    expect(after?.status).toBe("active");
+  });
+
+  it("archives a system page whose seed file no longer ships", async () => {
+    const folder = await testDb.folder.findFirst({ where: { orgId, name: "Getting Started" } });
+    await testDb.page.create({
+      data: {
+        orgId,
+        slug: "self-hosting",
+        title: "Self-Hosting",
+        folderId: folder!.id,
+        createdBy: "system",
+        versions: { create: { yamlContent: "title: Self-Hosting\ncomponents: []\n", contentHash: "retired-hash", createdBy: "system" } },
+      },
+    });
+
+    await seedOrgContent(orgId);
+
+    const after = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "self-hosting" } } });
+    expect(after?.status).toBe("archived");
+  });
+
+  it("leaves user-created strays in a locked folder alone", async () => {
+    const folder = await testDb.folder.findFirst({ where: { orgId, name: "Getting Started" } });
+    await testDb.page.create({
+      data: {
+        orgId,
+        slug: "my-own-notes",
+        title: "My Own Notes",
+        folderId: folder!.id,
+        createdBy: "human",
+        versions: { create: { yamlContent: "title: My Own Notes\ncomponents: []\n", contentHash: "user-hash", createdBy: "human" } },
+      },
+    });
+
+    await seedOrgContent(orgId);
+
+    const after = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "my-own-notes" } } });
+    expect(after?.status).toBe("active");
+  });
+
+  it("preserves the getting-started page from the retired sweep and reactivates archived seed pages", async () => {
+    const gs = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "getting-started" } } });
+    expect(gs).not.toBeNull();
+
+    const arch = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "architecture" } } });
+    await testDb.page.update({ where: { id: arch!.id }, data: { status: "archived" } });
+    const versionsBefore = await testDb.pageVersion.count({ where: { pageId: arch!.id } });
+
+    await seedOrgContent(orgId);
+
+    const gsAfter = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "getting-started" } } });
+    expect(gsAfter?.status).toBe("active");
+    const archAfter = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "architecture" } } });
+    expect(archAfter?.status).toBe("active");
+    // Content already matched the seed, so reactivation must not mint a new version.
+    const versionsAfter = await testDb.pageVersion.count({ where: { pageId: arch!.id } });
+    expect(versionsAfter).toBe(versionsBefore);
+  });
+});
+
 describe("read_page backfills missing seed pages before the lookup", () => {
   it("a thin-pointer skill slug that was never seeded for this org is served instead of 404ing", async () => {
     const org = await createTestOrg({ name: "Thin Pointer Org", slug: `thin-pointer-org-${Math.random().toString(36).slice(2)}` });
