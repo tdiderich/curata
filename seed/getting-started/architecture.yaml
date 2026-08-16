@@ -63,7 +63,7 @@ components:
               color: teal
             description: "Dashboard for reading, editing, annotating, and reviewing pages. Folders, org rules, the review queue, and public sharing all live here."
           - title: Built-in MCP server
-            description: "Lives at /api/mcp/stream, nothing to install. 41 tools covering search, reads, writes, capture, trust, templates, and the digest. OAuth for interactive agents, API keys for headless ones."
+            description: "Lives at /api/mcp/stream, nothing to install. 43 tools covering search, reads, writes, capture, trust, templates, and the digest. OAuth for interactive agents, API keys for headless ones."
           - title: PostgreSQL
             badge:
               label: Prisma
