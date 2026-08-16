@@ -58,11 +58,13 @@ Curata has a built-in MCP server — no separate package needed. Just point your
 
 Add the config to `~/.claude.json`, `.cursor/mcp.json`, or wherever your agent reads MCP settings.
 
-Your agent now has 6 tools: `search_pages`, `read_page`, `list_pages`, `write_page`, `create_page`, `annotate_page`.
+Your agent now has 43 tools covering search, reads, writes, capture, trust, templates, and the digest. Start with `search_pages`, `read_page`, and `write_page`; the server's own instructions teach the rest.
 
 ---
 
 ## Claude Code plugin
+
+**Deprecated in favor of two paths: OAuth (`claude mcp add --transport http curata <url>`, then sign in) or the copy-paste MCP snippet on the Connect page in your dashboard (Settings > Connect), which has your instance URL and key pre-filled.** The plugin still works and keeps getting bug fixes, but it gets no new features going forward.
 
 Curata ships as a Claude Code plugin with skills for planning, workflows, and page management.
 
@@ -108,7 +110,7 @@ The quality-gate layer is the key differentiator: humans annotate agent output, 
 
 ## Features
 
-- **MCP server** — 6 tools for reading, writing, searching, and annotating knowledge pages
+- **MCP server** — 43 tools for reading, writing, capturing, trusting, and annotating knowledge pages
 - **Rendered pages** — kazam-powered renderer with structured components (cards, tables, stats, steps, tabs, and more)
 - **Annotations** — humans comment, correct, and approve directly on page content
 - **Search** — full-text search across all pages and YAML content
@@ -116,7 +118,7 @@ The quality-gate layer is the key differentiator: humans annotate agent output, 
 - **Theme system** — 7 accent colors, light/dark mode, texture overlays
 - **AI tool packs**: pages marked with a `pack:` block install into repos via `kazam install`, compiling into CLAUDE.md / .cursorrules
 - **Agent-readable public pages**: markdown, YAML, and a paste-ready prompt for any public page, plus the standard discovery documents
-- **Templates** — 20 pre-built page structures for common use cases
+- **Templates** — component showcases and typed page structures, each teaching a pattern worth stealing
 
 ---
 

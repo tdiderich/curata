@@ -11,6 +11,7 @@ import { GroupManager } from "@/components/group-manager";
 import { OrgSettings } from "@/components/org-settings";
 import { ThemeSettings } from "@/components/theme-settings";
 import { ApiKeyManager } from "@/components/api-key-manager";
+import { ConnectManager } from "@/components/connect-manager";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
 import { TagsManager } from "@/components/tags-manager";
 import { SettingsTabs } from "@/components/settings-tabs";
@@ -94,6 +95,10 @@ export default async function SettingsPage() {
           }}
         />
       ),
+    },
+    {
+      label: "Connect",
+      content: <ConnectManager authMode={AUTH_MODE} canManageKeys={canManageKeys} />,
     },
     {
       label: "Groups",
