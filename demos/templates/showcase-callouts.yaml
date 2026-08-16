@@ -1,0 +1,38 @@
+title: "Callouts, Badges, Dividers"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: When to use this
+    body: "Reach for a callout when one sentence needs to stand out from the surrounding text, like a risk or a caveat. Reach for a badge when you need a short status label attached to a title, and a labeled divider to break a long page into named sections."
+  - type: divider
+    label: Posture Summary
+  - type: callout
+    variant: success
+    title: SOC 2 Type II
+    body: "Report renewed in June, no exceptions noted. Available under NDA in the trust room."
+  - type: callout
+    variant: warn
+    title: Pen test scope is narrower than customers assume
+    body: "The last external test covered the app and API layer only, not the infrastructure. A full-scope test is scheduled for Q4."
+  - type: callout
+    variant: danger
+    title: Legacy auth is deprecated
+    body: "Password-only login without SSO will stop working on October 1. Any account still on it needs to migrate before then."
+  - type: divider
+    label: Status Tags
+  - type: badge
+    label: Compliant
+    color: green
+  - type: badge
+    label: In progress
+    color: yellow
+  - type: badge
+    label: Blocked
+    color: red
+  - type: badge
+    label: Info only
+    color: default
+  - type: badge
+    label: Verified
+    color: teal

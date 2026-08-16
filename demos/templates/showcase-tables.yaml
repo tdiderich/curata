@@ -1,0 +1,66 @@
+title: "Tables and Card Grids"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: When to use this
+    body: "Use a filterable table when people will scan a list by column, like a vendor inventory sorted by renewal date. Use a card grid when each row deserves its own visual treatment, like flagging that same list by risk level."
+  - type: section
+    heading: Vendor Inventory
+    components:
+      - type: table
+        filterable: true
+        columns:
+          - key: tool
+            label: Tool
+          - key: category
+            label: Category
+          - key: owner
+            label: Owner
+          - key: annual_cost
+            label: Annual Cost
+            align: right
+          - key: renewal
+            label: Renewal
+        rows:
+          - tool: GitHub Enterprise
+            category: Engineering
+            owner: Priya Sundaram
+            annual_cost: "$24,000"
+            renewal: "2026-11-01"
+          - tool: Datadog
+            category: Engineering
+            owner: Layla Osei
+            annual_cost: "$38,400"
+            renewal: "2026-08-15"
+          - tool: Salesforce CRM
+            category: Sales
+            owner: Morgan Ellis
+            annual_cost: "$54,000"
+            renewal: "2026-06-30"
+          - tool: Figma
+            category: Design
+            owner: Sam Ito
+            annual_cost: "$6,000"
+            renewal: "2026-09-01"
+  - type: section
+    heading: By Risk Level
+    components:
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: Salesforce CRM
+            description: "Single sign-on required, renewal in 6 weeks. Owner has already started the renegotiation."
+            badge:
+              label: Review before renewal
+              color: yellow
+          - title: Datadog
+            description: "No SSO configured yet. Flagged in the last security review."
+            badge:
+              label: Needs SSO
+              color: red
+          - title: GitHub Enterprise
+            description: "Standard renewal, no changes expected."
+            badge:
+              label: On track
+              color: green

@@ -2,178 +2,117 @@ export interface Template {
   slug: string;
   title: string;
   description: string;
-  persona: string;
+  group: string;
   previewUrl: string;
 }
 
 export const TEMPLATES: Template[] = [
-  // Agents
+  // Present
+  {
+    slug: "showcase-deck",
+    title: "Deck: Slide Presentation",
+    description: "A slide-by-slide narrative with a cover slide, built for a live walkthrough like a QBR.",
+    group: "Present",
+    previewUrl: "/p/curata-internal/template-showcase-deck",
+  },
+  {
+    slug: "showcase-hub",
+    title: "Hub: Multi-Page Collection",
+    description: "Shared navigation and one status across a small set of related pages, like a launch hub.",
+    group: "Present",
+    previewUrl: "/p/curata-internal/template-showcase-hub",
+  },
+  // Reuse
+  {
+    slug: "showcase-shared-component",
+    title: "Shared Component",
+    description: "A fact written once and embedded everywhere, so one approval updates every page that references it.",
+    group: "Reuse",
+    previewUrl: "/p/curata-internal/template-showcase-shared-component",
+  },
+  {
+    slug: "showcase-ref-embeds",
+    title: "Page With Embedded Components",
+    description: "Embeds a shared component page twice, mixed with its own content, using a ref block.",
+    group: "Reuse",
+    previewUrl: "/p/curata-internal/template-showcase-ref-embeds",
+  },
+  // Procedures
+  {
+    slug: "showcase-steps-checklist",
+    title: "Steps and Checklists",
+    description: "Numbered steps for a runbook, plus an unordered list for pre-flight items where order doesn't matter.",
+    group: "Procedures",
+    previewUrl: "/p/curata-internal/template-showcase-steps-checklist",
+  },
   {
     slug: "skill",
-    title: "Skill",
+    title: "Skill: Agent Procedure",
     description: "An agent procedure: trigger, steps, and an optionally AGL-validated flow",
-    persona: "Agents",
+    group: "Procedures",
     previewUrl: "/p/curata-internal/template-skill",
   },
-  // Sales
+  // Structured data
   {
-    slug: "sales-forecast",
-    title: "Sales Forecast",
-    description: "Pipeline health, rep performance, and deal velocity",
-    persona: "Sales",
-    previewUrl: "/p/curata-internal/template-sales-forecast",
+    slug: "showcase-stat-timeline",
+    title: "Stats and Timelines",
+    description: "A stat grid for the headline numbers, and a timeline underneath for status at a glance.",
+    group: "Structured data",
+    previewUrl: "/p/curata-internal/template-showcase-stat-timeline",
   },
   {
-    slug: "competitive-intel-brief",
-    title: "Competitive Intel Brief",
-    description: "Competitor positioning, pricing, and talk tracks",
-    persona: "Sales",
-    previewUrl: "/p/curata-internal/template-competitive-intel-brief",
+    slug: "showcase-tables",
+    title: "Tables and Card Grids",
+    description: "A filterable table for scanning by column, and a card grid with badges for browsing visually.",
+    group: "Structured data",
+    previewUrl: "/p/curata-internal/template-showcase-tables",
+  },
+  // Emphasis and layout
+  {
+    slug: "showcase-tabs-accordion",
+    title: "Tabs and Accordions",
+    description: "Tabs for content that genuinely forks, and an accordion for optional detail someone can skip.",
+    group: "Emphasis and layout",
+    previewUrl: "/p/curata-internal/template-showcase-tabs-accordion",
   },
   {
-    slug: "deal-review-playbook",
-    title: "Deal Review Playbook",
-    description: "Qualification checklist, stakeholder map, and objection handling",
-    persona: "Sales",
-    previewUrl: "/p/curata-internal/template-deal-review-playbook",
+    slug: "showcase-callouts",
+    title: "Callouts, Badges, Dividers",
+    description: "Every callout variant, every badge color, and labeled dividers, in a security-posture brief.",
+    group: "Emphasis and layout",
+    previewUrl: "/p/curata-internal/template-showcase-callouts",
   },
-  // Engineering
+  // Documents
   {
-    slug: "agent-skills-workflows",
-    title: "Agent Skills & Workflows",
-    description: "What your agents do, how they're triggered, what they produce",
-    persona: "Engineering",
-    previewUrl: "/p/curata-internal/template-agent-skills-workflows",
+    slug: "showcase-document",
+    title: "Document: Print-Ready",
+    description: "The document shell with print_flow set, built for a memo someone will export or print.",
+    group: "Documents",
+    previewUrl: "/p/curata-internal/template-showcase-document",
   },
+  // Agents
   {
     slug: "ai-tool-pack",
     title: "AI Tool Pack",
     description: "Rules and guardrails that install into CLAUDE.md, AGENTS.md, and .cursorrules with kazam install",
-    persona: "Engineering",
+    group: "Agents",
     previewUrl: "/p/curata-internal/template-ai-tool-pack",
   },
   {
-    slug: "architecture-decision-record",
-    title: "Architecture Decision Record",
-    description: "Document key decisions, alternatives considered, and trade-offs",
-    persona: "Engineering",
-    previewUrl: "/p/curata-internal/template-architecture-decision-record",
-  },
-  {
-    slug: "incident-postmortem",
-    title: "Incident Postmortem",
-    description: "Timeline, root cause analysis, and action items from an outage",
-    persona: "Engineering",
-    previewUrl: "/p/curata-internal/template-incident-postmortem",
-  },
-  {
-    slug: "sprint-retrospective",
-    title: "Sprint Retrospective",
-    description: "What went well, what didn't, and what to change next sprint",
-    persona: "Engineering",
-    previewUrl: "/p/curata-internal/template-sprint-retrospective",
-  },
-  // CS & Ops
-  {
-    slug: "customer-deployment-tracker",
-    title: "Customer Deployment Tracker",
-    description: "Onboarding status and implementation health",
-    persona: "CS & Ops",
-    previewUrl: "/p/curata-internal/template-customer-deployment-tracker",
-  },
-  {
-    slug: "vendor-tool-inventory",
-    title: "Vendor & Tool Inventory",
-    description: "Stack overview, owners, costs, and renewal dates",
-    persona: "CS & Ops",
-    previewUrl: "/p/curata-internal/template-vendor-tool-inventory",
-  },
-  {
-    slug: "runbook-sop",
-    title: "Runbook / SOP",
-    description: "Step-by-step procedure for a repeatable operational task",
-    persona: "CS & Ops",
-    previewUrl: "/p/curata-internal/template-runbook-sop",
-  },
-  {
-    slug: "weekly-standup-digest",
-    title: "Weekly Standup Digest",
-    description: "Team updates, blockers, and priorities in one place",
-    persona: "CS & Ops",
-    previewUrl: "/p/curata-internal/template-weekly-standup-digest",
-  },
-  // Product
-  {
-    slug: "product-spec-prd",
-    title: "Product Spec / PRD",
-    description: "Problem, goals, requirements, and success metrics",
-    persona: "Product",
-    previewUrl: "/p/curata-internal/template-product-spec-prd",
-  },
-  {
-    slug: "user-research-summary",
-    title: "User Research Summary",
-    description: "Interview findings, themes, and recommended next steps",
-    persona: "Product",
-    previewUrl: "/p/curata-internal/template-user-research-summary",
-  },
-  {
-    slug: "feature-launch-checklist",
-    title: "Feature Launch Checklist",
-    description: "Pre-launch tasks, comms plan, and rollout steps",
-    persona: "Product",
-    previewUrl: "/p/curata-internal/template-feature-launch-checklist",
-  },
-  {
-    slug: "roadmap-overview",
-    title: "Roadmap Overview",
-    description: "Themes, priorities, and upcoming milestones by quarter",
-    persona: "Product",
-    previewUrl: "/p/curata-internal/template-roadmap-overview",
-  },
-  // Founder / CEO
-  {
-    slug: "investor-update",
-    title: "Investor Update",
-    description: "Progress, metrics, asks, and what's next",
-    persona: "Founder / CEO",
-    previewUrl: "/p/curata-internal/template-investor-update",
-  },
-  {
-    slug: "org-chart-team-directory",
-    title: "Org Chart & Team Directory",
-    description: "Who owns what, how teams are structured, and key contacts",
-    persona: "Founder / CEO",
-    previewUrl: "/p/curata-internal/template-org-chart-team-directory",
-  },
-  {
-    slug: "board-meeting-prep",
-    title: "Board Meeting Prep",
-    description: "Agenda, metrics, key decisions, and materials for the board",
-    persona: "Founder / CEO",
-    previewUrl: "/p/curata-internal/template-board-meeting-prep",
-  },
-  {
-    slug: "company-okrs",
-    title: "Company OKRs",
-    description: "Objectives, key results, owners, and current progress",
-    persona: "Founder / CEO",
-    previewUrl: "/p/curata-internal/template-company-okrs",
-  },
-  {
-    slug: "hiring-plan",
-    title: "Hiring Plan",
-    description: "Open roles, priorities, timelines, and headcount targets",
-    persona: "Founder / CEO",
-    previewUrl: "/p/curata-internal/template-hiring-plan",
+    slug: "agent-skills-workflows",
+    title: "Agent Skills & Workflows",
+    description: "What your agents do, how they're triggered, what they produce",
+    group: "Agents",
+    previewUrl: "/p/curata-internal/template-agent-skills-workflows",
   },
 ];
 
-export const PERSONAS: string[] = [
-  "Sales",
-  "Engineering",
-  "CS & Ops",
-  "Product",
-  "Founder / CEO",
+export const GROUPS: string[] = [
+  "Present",
+  "Reuse",
+  "Procedures",
+  "Structured data",
+  "Emphasis and layout",
+  "Documents",
+  "Agents",
 ];
-

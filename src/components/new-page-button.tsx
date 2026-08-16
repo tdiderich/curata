@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { TEMPLATES, PERSONAS } from "@/lib/templates";
+import { TEMPLATES, GROUPS } from "@/lib/templates";
 import { basePath } from "@/lib/api-fetch";
 
 type Step = "template" | "details";
@@ -116,12 +116,12 @@ export function NewPageButton({
             <div className="new-page-template-divider">or use a template</div>
 
             <div className="new-page-template-list">
-              {PERSONAS.map((persona) => {
-                const group = TEMPLATES.filter((t) => t.persona === persona);
+              {GROUPS.map((groupName) => {
+                const groupTemplates = TEMPLATES.filter((t) => t.group === groupName);
                 return (
-                  <div key={persona} className="new-page-template-group">
-                    <div className="new-page-template-group-label">{persona}</div>
-                    {group.map((t) => (
+                  <div key={groupName} className="new-page-template-group">
+                    <div className="new-page-template-group-label">{groupName}</div>
+                    {groupTemplates.map((t) => (
                       <button
                         key={t.slug}
                         className="new-page-template-card"

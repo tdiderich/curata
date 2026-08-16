@@ -1,0 +1,53 @@
+title: "Tabs and Accordions"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: When to use this
+    body: "Use tabs when content is a genuine fork, like setup steps that differ per editor, so only one path shows at a time. Use an accordion when content is optional detail someone can skip, not a decision they have to make."
+  - type: section
+    heading: Editor Setup
+    components:
+      - type: tabs
+        tabs:
+          - label: VS Code
+            components:
+              - type: steps
+                items:
+                  - title: Install the extension
+                    detail: Search "curata" in the extensions marketplace and install
+                  - title: Sign in
+                    detail: "Run \"Curata: Sign In\" from the command palette"
+          - label: JetBrains
+            components:
+              - type: steps
+                items:
+                  - title: Install the plugin
+                    detail: Settings > Plugins > Marketplace, search "curata"
+                  - title: Sign in
+                    detail: Tools > Curata > Sign In
+          - label: Neovim
+            components:
+              - type: steps
+                items:
+                  - title: Add the plugin
+                    detail: Add the curata.nvim entry to your plugin manager config
+                  - title: Sign in
+                    detail: "Run \":CurataLogin\" and paste the token from the CLI"
+  - type: section
+    heading: FAQ
+    components:
+      - type: accordion
+        items:
+          - title: Does this work offline?
+            components:
+              - type: markdown
+                body: "Editing works offline. Search, publish, and annotations need a connection back to your curata instance."
+          - title: Can I use more than one editor?
+            components:
+              - type: markdown
+                body: "Yes, sign in separately in each one. The API key is per-editor, not per-person."
+          - title: What if my editor isn't listed?
+            components:
+              - type: markdown
+                body: "Use the standalone MCP server package and point any MCP-compatible client at it."

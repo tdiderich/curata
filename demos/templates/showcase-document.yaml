@@ -1,0 +1,40 @@
+title: "Document: Print-Ready"
+shell: document
+print_flow: continuous
+components:
+  - type: callout
+    variant: info
+    title: When to use this
+    body: "Use the document shell when someone will print this or export it as a PDF, like a one-page memo to leadership. print_flow controls how content paginates for print - continuous flows normally across pages, and slides breaks after every top-level section instead."
+  - type: header
+    title: "Support Ticketing Migration"
+    eyebrow: Internal Memo
+    subtitle: "From the Support team, August 2026"
+  - type: markdown
+    body: "We're moving off the legacy ticketing tool and onto the new platform on September 1. This memo covers why, what changes for the team, and what we need from other departments before the cutover."
+  - type: section
+    heading: Why now
+    components:
+      - type: markdown
+        body: "The legacy tool's vendor is sunsetting the product in December, and the new platform already handles our SLA rules and escalation paths natively instead of through a patchwork of Zapier automations."
+  - type: section
+    heading: What changes
+    components:
+      - type: definition_list
+        items:
+          - term: Ticket intake
+            definition: Same support@ email address, routes to the new platform automatically
+          - term: SLA timers
+            definition: Start on first customer reply instead of on ticket creation, so timers will read differently on day one
+          - term: Reporting
+            definition: Weekly volume report moves from the old dashboard to the new platform's built-in reports
+  - type: section
+    heading: What we need from you
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Update saved replies
+            detail: Anyone with custom macros should re-save them in the new platform by August 25
+          - title: Re-point integrations
+            detail: Teams with Slack or Zapier automations tied to ticket events should update the webhook URL before September 1

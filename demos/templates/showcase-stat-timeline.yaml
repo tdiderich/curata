@@ -1,0 +1,48 @@
+title: "Stats and Timelines"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: When to use this
+    body: "Use a stat grid to lead with the headline numbers before the narrative, and a timeline underneath to show status at a glance, like a quarterly metrics recap. Skip both if there's really just one number worth saying in a sentence."
+  - type: section
+    heading: Q2 Metrics
+    components:
+      - type: stat_grid
+        columns: 4
+        stats:
+          - label: Revenue
+            value: "$1.8M"
+            detail: Up from $1.5M in Q1
+            color: green
+            trend: up
+          - label: Net churn
+            value: "1.2%"
+            detail: Down from 2.1% in Q1
+            color: green
+            trend: down
+          - label: NPS
+            value: "52"
+            detail: Up 6 points quarter over quarter
+            color: teal
+            trend: up
+          - label: Headcount
+            value: "84"
+            detail: 6 hires, 1 departure
+            color: default
+            trend: up
+  - type: section
+    heading: Program Timeline
+    components:
+      - type: timeline
+        items:
+          - name: Kickoff
+            status: completed
+          - name: Data migration
+            status: completed
+          - name: Beta rollout
+            status: active
+          - name: General availability
+            status: upcoming
+          - name: Legacy sunset
+            status: upcoming

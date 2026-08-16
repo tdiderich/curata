@@ -1,0 +1,31 @@
+title: "Page With Embedded Components"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: When to use this
+    body: "Use a ref block to embed a shared component page inside another page, like quoting the same pricing table on two different sales pages. There's never a second copy to keep in sync: edit the component and every embed follows, approve it once and the approved version renders everywhere."
+  - type: section
+    heading: Deal Overview
+    components:
+      - type: markdown
+        body: "Acme Corp is evaluating the Growth plan for their 18-person support team, with a decision expected before the end of Q3."
+  - type: section
+    heading: Pricing
+    components:
+      - type: ref
+        component: showcase-shared-component
+  - type: section
+    heading: Deal Notes
+    components:
+      - type: steps
+        items:
+          - title: Security review
+            detail: Passed, no follow-up items from their infosec team
+          - title: Procurement
+            detail: Contract routed to their legal team on August 10
+  - type: section
+    heading: "Appendix: Current Pricing"
+    components:
+      - type: ref
+        component: showcase-shared-component

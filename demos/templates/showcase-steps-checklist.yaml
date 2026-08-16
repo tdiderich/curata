@@ -1,0 +1,35 @@
+title: "Steps and Checklists"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: When to use this
+    body: "Use numbered steps when order matters, like an onboarding runbook someone follows top to bottom. There's no dedicated checklist component in kazam, so an unordered list of steps works for pre-flight items where order doesn't matter."
+  - type: section
+    heading: Day One Runbook
+    components:
+      - type: steps
+        numbered: true
+        items:
+          - title: Set up laptop and accounts
+            detail: IT provisions the laptop, SSO, and email before day one
+          - title: Get repo access
+            detail: Manager requests GitHub org access and the new hire clones the monorepo
+          - title: Ship a one-line change
+            detail: Pair with a buddy to open, review, and merge a real PR to production
+          - title: Meet your onboarding buddy
+            detail: 30-minute walkthrough of the codebase and team norms
+          - title: Shadow on-call
+            detail: Sit in on one on-call shift before joining the rotation
+  - type: section
+    heading: Pre-Launch Checklist
+    components:
+      - type: steps
+        numbered: false
+        items:
+          - title: Laptop encrypted and enrolled in MDM
+            detail: Confirmed by IT before shipping
+          - title: Slack and email accounts active
+            detail: Added to team and company-wide channels
+          - title: VPN and staging access confirmed
+            detail: Tested with a sample login before day one

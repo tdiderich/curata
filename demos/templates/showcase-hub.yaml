@@ -1,0 +1,44 @@
+title: "Hub: Multi-Page Collection"
+shell: hub
+hub:
+  name: "Launch: Atlas"
+  eyebrow: Launch Hub
+  status: In progress
+  status_color: teal
+  pages:
+    - label: Overview
+      href: showcase-hub
+    - label: Launch Checklist
+      href: showcase-hub-checklist
+    - label: Messaging
+      href: showcase-hub-messaging
+    - label: Metrics
+      href: showcase-hub-metrics
+components:
+  - type: callout
+    variant: info
+    title: When to use this
+    body: "Use a hub when a handful of pages belong together and need shared navigation and one status at the top, like a product launch with a checklist, a messaging doc, and a metrics page. A single page with sections is enough until you have more than two or three pages in the set."
+  - type: section
+    heading: Launch Overview
+    components:
+      - type: markdown
+        body: "Atlas ships to general availability on September 15. This hub is the entry point for the launch team - the pages nav above links to the checklist, the messaging doc, and the metrics page we'll stand up once we have traffic."
+      - type: card_grid
+        min_width: 240
+        cards:
+          - title: Launch Checklist
+            description: "Every task between now and GA, owner and due date per row."
+            badge:
+              label: Not created yet
+              color: yellow
+          - title: Messaging
+            description: "Approved external copy for the blog post, changelog, and sales one-pager."
+            badge:
+              label: Not created yet
+              color: yellow
+          - title: Metrics
+            description: "Adoption and reliability numbers, tracked from GA day one."
+            badge:
+              label: Not created yet
+              color: yellow

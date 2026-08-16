@@ -1,0 +1,55 @@
+title: "Deck: Slide Presentation"
+shell: deck
+slides:
+  - label: Cover
+    cover: true
+    hide_label: true
+    title: "Q3 Business Review"
+    subtitle: "Acme Corp - Customer Success"
+    components: []
+  - label: "When to use this"
+    title: "When to use this"
+    components:
+      - type: callout
+        variant: info
+        title: When to use this
+        body: "Use a deck when someone will present this live, one slide at a time, like a QBR or a board update. Reach for the hub or document shell instead when people will read it solo, at their own pace."
+  - label: Wins
+    title: "Wins this quarter"
+    components:
+      - type: stat_grid
+        columns: 3
+        stats:
+          - label: Renewal
+            value: "$186K"
+            detail: Signed 14 months ahead of the original term
+            color: green
+            trend: up
+          - label: Weekly active seats
+            value: "92%"
+            detail: Of licensed seats, up from 74% last quarter
+            color: teal
+            trend: up
+          - label: Support tickets
+            value: "-38%"
+            detail: Quarter over quarter, after the onboarding fix shipped
+            color: green
+            trend: down
+  - label: Roadmap
+    title: "What's next"
+    components:
+      - type: timeline
+        items:
+          - name: Phase 1 rollout
+            status: completed
+          - name: Phase 2 rollout
+            status: active
+          - name: Renewal review
+            status: upcoming
+          - name: Expansion conversation
+            status: upcoming
+  - label: Ask
+    title: "The ask"
+    components:
+      - type: markdown
+        body: "Two asks before quarter close: sign off on the phase 2 rollout plan by September 1, and introduce us to the finance stakeholder who owns budget for the renewal conversation."

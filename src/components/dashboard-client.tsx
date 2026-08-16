@@ -7,7 +7,7 @@ import { PageMenu } from "@/components/folder-actions";
 import { readPinsSeeded, PINS_CHANGED_EVENT } from "@/lib/pins";
 import { DashboardFeed } from "@/components/dashboard-feed";
 import { toast } from "@/components/toast";
-import { TEMPLATES, PERSONAS } from "@/lib/templates";
+import { TEMPLATES, GROUPS } from "@/lib/templates";
 
 export interface SerializedPageMeta {
   slug: string;
@@ -182,13 +182,13 @@ function EmptyWelcome({ orgName }: { orgName?: string }) {
       <div className="empty-divider">or pick a template</div>
 
       <div className="empty-groups">
-        {PERSONAS.map((persona) => {
-          const group = TEMPLATES.filter((t) => t.persona === persona);
+        {GROUPS.map((groupName) => {
+          const groupTemplates = TEMPLATES.filter((t) => t.group === groupName);
           return (
-            <div key={persona}>
-              <div className="empty-group-label">{persona}</div>
+            <div key={groupName}>
+              <div className="empty-group-label">{groupName}</div>
               <div className="empty-group-cards">
-                {group.map((t) => (
+                {groupTemplates.map((t) => (
                   <button
                     key={t.slug}
                     className={`empty-template-card${creating === t.slug ? " empty-template-card--creating" : ""}`}

@@ -1,0 +1,25 @@
+title: "Shared Component"
+shell: document
+pageType: component
+components:
+  - type: callout
+    variant: info
+    title: When to use this
+    body: "Use a component page when a fact needs to appear on more than one page, like pricing, an SLA, or a team roster. Write it once here, embed it anywhere with a ref block, and one approval on this page fans the update out everywhere it's embedded."
+  - type: section
+    id: pricing
+    eyebrow: Pricing
+    heading: Pricing snapshot
+    components:
+      - type: stat_grid
+        columns: 3
+        stats:
+          - label: Starter
+            value: "$49/mo"
+            detail: Up to 5 seats
+          - label: Growth
+            value: "$199/mo"
+            detail: Up to 25 seats, priority support
+          - label: Enterprise
+            value: "Talk to sales"
+            detail: Custom seats, SSO, dedicated support
