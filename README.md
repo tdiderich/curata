@@ -172,7 +172,7 @@ Default is `none`. For `oauth`, set `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, and `
 
 ## Documentation
 
-Full docs at **[curata.ai/docs](https://curata.ai/docs)** — covers getting started, MCP tools reference, page structure, self-hosting, and architecture.
+Full docs at **[curata.ai/docs](https://curata.ai/docs)** — covers getting started, connecting your agent, the MCP tools reference, page structure, and architecture. Self-hosting docs live right here in this README.
 
 ---
 
@@ -182,7 +182,7 @@ Full docs at **[curata.ai/docs](https://curata.ai/docs)** — covers getting sta
 docker compose up
 ```
 
-Postgres data is persisted in a named volume. See the [self-hosting guide](https://curata.ai/docs/self-hosting) for production deployment tips.
+Postgres data is persisted in a named volume. For production: managed Postgres (Neon, Supabase, RDS), your platform's TLS, and scheduled `pg_dump` backups cover the essentials. `AUTH_MODE` picks the auth story, see [Auth modes](#auth-modes).
 
 ---
 
