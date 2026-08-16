@@ -7322,12 +7322,24 @@ button.pg-tag-kind-dot:hover {
 /* B+C variant: zoned sticky bar - identity left, actions right */
 .pt-identity {
   display: flex;
+  /* Let the tag row drop below the title instead of forcing both onto one
+     line - the title still gets first claim on the row via its own
+     shrink/ellipsis below, tags simply flow to a second line when there
+     isn't room, they never get pushed off past either edge. */
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  row-gap: 4px;
   min-width: 0;
 }
 .pt-title {
   white-space: nowrap;
+  /* Shrinks instead of forcing the toolbar (or the actions cluster) to
+     overflow - min-width:0 overrides the flex-item default of "don't shrink
+     past content size", overflow/text-overflow do the actual truncation. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--snow);
@@ -7371,6 +7383,29 @@ body:has(.nav-reveal) .page-toolbar {
 .pt-tags .kg-picker-menu {
   right: auto;
   left: 0;
+}
+
+/* Below this width the fixed-size action cluster (VisibilityPicker, Edit,
+   Actions, and on deck pages Present) and the identity zone no longer
+   comfortably share one row - give identity the full row so the title has
+   maximum room before it needs to ellipsize, and let actions wrap to their
+   own row underneath. Same pattern .page-toolbar-right already uses at the
+   general mobile breakpoint below; this triggers earlier so a shrinking
+   identity zone doesn't get crushed illegibly first. */
+@media (max-width: 900px) {
+  .page-toolbar {
+    flex-wrap: wrap;
+  }
+  .page-toolbar-spacer {
+    display: none;
+  }
+  .pt-identity {
+    width: 100%;
+  }
+  .page-toolbar-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
 .site-search-results {
