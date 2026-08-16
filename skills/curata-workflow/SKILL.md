@@ -29,7 +29,6 @@ curata ships with these workflow pages (seeded on first run):
 | Customer Onboarding | `workflow-customer-onboarding` | Create initial page set for a new customer |
 | Call Prep & Debrief | `workflow-call-prep-debrief` | Pre-call research + post-call page updates |
 | Assessment Builder | `workflow-assessment-builder` | Build current-state security assessments |
-| Weekly Highlights | `workflow-weekly-highlights` | Cross-customer highlights for standups |
 | Feature Request / Bug | `workflow-feature-request-bug` | File and track feature requests with customer attribution |
 | Deal Debrief | `workflow-deal-debrief` | Post-deal learnings capture |
 | Semantic Refresh | `workflow-semantic-refresh` | Rebuild hub from external data sources |

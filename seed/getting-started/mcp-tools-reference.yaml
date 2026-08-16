@@ -1,210 +1,93 @@
 title: MCP Tools Reference
-subtitle: Complete reference for all 6 tools available through the curata MCP server.
+subtitle: The full tool surface, grouped by what your agent is trying to do.
 shell: standard
 components:
   - type: markdown
     body: |
-      The curata MCP server exposes 6 tools that your agent can call. These cover the full lifecycle: discovering existing knowledge, reading it, creating new pages, updating them, and adding annotations.
+      The curata MCP server exposes 43 tools. Your agent discovers the exact schemas live from the server itself (`tools/list`), and the server's own instructions teach connected agents when to reach for what, so this page stays a map, never a contract. The groups below cover the loop end to end: find knowledge, write it, capture it from real work, validate it, and report on it.
 
   - type: section
-    heading: search_pages
+    heading: Search and read
     components:
       - type: markdown
         body: |
-          Search your team's knowledge base by keyword or topic. Returns matching pages with titles, snippets, and relevance context.
-      - type: table
-        filterable: false
-        columns:
-          - key: param
-            label: Parameter
-          - key: type
-            label: Type
-          - key: required
-            label: Required
-            align: center
-          - key: description
-            label: Description
-        rows:
-          - param: query
-            type: string
-            required: "Yes"
-            description: Search query - keywords, phrases, or topics to find.
-      - type: markdown
-        body: |
-          **When to use:** Before creating a page, search first to avoid duplicates. Also useful when an agent needs context - ex. "search for recent postmortems" or "find the onboarding guide."
+          Start here. Before answering anything org-specific, `search_pages` first: an approved answer may already exist, and it outranks general knowledge.
 
-      - type: code
-        language: text
-        code: |
-          > Search curata for "deployment pipeline"
-
-  - type: divider
+          - **search_pages** - full-text search across the brain, trusted channel by default
+          - **read_page** - full page content by slug, with caveats and provenance the snippet omits
+          - **list_pages** / **list_folders** / **get_folder_structure** - browse the brain's shape
+          - **get_related** - pages linked or conceptually near a given page
+          - **get_semantic_map** / **get_vocabulary** - the org's concept graph and tag vocabulary
+          - **get_versions** - a page's version history
+          - **get_config** / **get_component_reference** - org settings and the component catalog
+          - **list_templates** / **list_workflows** / **list_rules** - available templates, skill pages, and the write rules in force
 
   - type: section
-    heading: read_page
+    heading: Write and edit
     components:
       - type: markdown
         body: |
-          Read a specific page by its slug. Returns the full YAML content, sections, and any annotations left by the team.
-      - type: table
-        filterable: false
-        columns:
-          - key: param
-            label: Parameter
-          - key: type
-            label: Type
-          - key: required
-            label: Required
-            align: center
-          - key: description
-            label: Description
-        rows:
-          - param: slug
-            type: string
-            required: "Yes"
-            description: "Page slug (ex. 'q2-revenue-analysis'). Found via search or list."
-      - type: markdown
-        body: |
-          **When to use:** When an agent needs the full content of a specific page - to reference it, update it, or use it as context for new work. Annotations are included, so the agent sees team feedback.
+          Every write passes through org rules. A blocked write returns a teaching error citing the rule that stopped it, so fix the call and retry.
 
-  - type: divider
+          - **create_page** - new page, fails if the slug exists (search for duplicates first)
+          - **write_page** - create or update by slug (upsert)
+          - **patch_page** - targeted component operations without rewriting the full YAML
+          - **replace_in_page** - simple find and replace inside a page
+          - **restore_page_version** - roll a page back to a previous version
+          - **create_from_template** - instantiate a template page
+          - **move_page** / **create_folder** / **update_folder** - organization
 
   - type: section
-    heading: list_pages
+    heading: Capture
     components:
       - type: markdown
         body: |
-          List all pages in your workspace. Returns titles, slugs, last updated dates, and view counts. No parameters required.
-      - type: markdown
-        body: |
-          **When to use:** To get an overview of what exists in the knowledge base. Useful for orientation at the start of a session, or to find pages to update.
-
-  - type: divider
+          - **capture_thread** - paste a working thread or transcript; curata checks it against existing pages, proposes what is worth keeping, and turns the validated answer into a page. This is the flywheel: one agent's good answer becomes every agent's starting point.
 
   - type: section
-    heading: write_page
+    heading: Annotations
     components:
       - type: markdown
         body: |
-          Create or update a page. If a page with the given slug already exists, its content is replaced. If it doesn't exist, a new page is created. Content must be valid kazam YAML.
-      - type: table
-        filterable: false
-        columns:
-          - key: param
-            label: Parameter
-          - key: type
-            label: Type
-          - key: required
-            label: Required
-            align: center
-          - key: description
-            label: Description
-        rows:
-          - param: title
-            type: string
-            required: "Yes"
-            description: Page title (ex. 'Q2 Revenue Analysis').
-          - param: content
-            type: string
-            required: "Yes"
-            description: Full page content in kazam YAML format.
-          - param: slug
-            type: string
-            required: "No"
-            description: Explicit slug. If omitted, derived from the title.
-      - type: markdown
-        body: |
-          **When to use:** The primary tool for publishing agent work. Use it to create new pages (deal briefs, postmortems, architecture decisions) or to update existing ones with fresh data.
-
-      - type: callout
-        variant: info
-        title: write_page is an upsert
-        body: |
-          If you're not sure whether a page exists, `write_page` is safe - it creates if missing, updates if present. Use `create_page` only when you specifically want to fail on duplicates.
-
-  - type: divider
+          - **annotate_page** - leave a note, correction, or talking point on a page
+          - **list_annotations** / **list_open_annotations** - read them back
+          - **update_annotation** - resolve or edit one
 
   - type: section
-    heading: create_page
+    heading: Trust and validation
     components:
       - type: markdown
         body: |
-          Create a new page. Fails if a page with the same slug already exists - use this when you want to guarantee you're not overwriting existing content.
-      - type: table
-        filterable: false
-        columns:
-          - key: param
-            label: Parameter
-          - key: type
-            label: Type
-          - key: required
-            label: Required
-            align: center
-          - key: description
-            label: Description
-        rows:
-          - param: title
-            type: string
-            required: "Yes"
-            description: Page title.
-          - param: content
-            type: string
-            required: "Yes"
-            description: Full page content in kazam YAML format.
-          - param: slug
-            type: string
-            required: "No"
-            description: Explicit slug. If omitted, derived from the title.
-      - type: markdown
-        body: |
-          **When to use:** When the agent is creating something new and should fail if a page with that name already exists - prevents accidental overwrites.
-
-  - type: divider
+          - **mark_trusted** / **clear_trusted** - move the human-approved pointer (subject to approval rules)
+          - **validate_page** - check YAML against the component schema and org rules without writing
+          - **set_rules** - manage the write rules for a folder or page
 
   - type: section
-    heading: annotate_page
+    heading: Cleanup
     components:
       - type: markdown
         body: |
-          Add an annotation to an existing page. Annotations are visible to the team and can target a specific section. Use for observations, suggestions, or proposed edits.
-      - type: table
-        filterable: false
-        columns:
-          - key: param
-            label: Parameter
-          - key: type
-            label: Type
-          - key: required
-            label: Required
-            align: center
-          - key: description
-            label: Description
-        rows:
-          - param: slug
-            type: string
-            required: "Yes"
-            description: Page slug to annotate.
-          - param: text
-            type: string
-            required: "Yes"
-            description: Annotation text - observation, suggestion, or edit note.
-          - param: section
-            type: string
-            required: "No"
-            description: "Target section heading (ex. 'Key Metrics')."
-          - param: kind
-            type: "'note' | 'edit'"
-            required: "No"
-            description: "'note' for observations, 'edit' for suggested changes."
-          - param: replacement
-            type: string
-            required: "No"
-            description: "For 'edit' kind: the replacement text."
+          - **flag_page** - propose archive, delete, merge, or supersede with evidence; a human disposes on the Cleanup view
+          - **list_flags** - pending proposals
+
+  - type: section
+    heading: Groups and access
+    components:
       - type: markdown
         body: |
-          **When to use:** When an agent spots something worth flagging - stale data, a correction, additional context. Annotations let agents contribute feedback without overwriting the page.
+          - **create_group** / **update_group** / **delete_group** - manage access groups
+          - **add_group_member** / **remove_group_member** / **list_groups** - membership
 
-      - type: code
-        language: text
-        code: |
-          > Annotate the Q2 roadmap page: the launch date in the timeline section should be June 15, not June 1
+  - type: section
+    heading: Reports and exports
+    components:
+      - type: markdown
+        body: |
+          - **generate_digest** - the weekly brain digest: preview the window, then write the page with the human-picked big thing and noteworthy items
+          - **export_page** / **export_report** - render a page or report for use outside curata
+
+  - type: callout
+    variant: info
+    title: The server teaches as you go
+    body: |
+      Schemas, required params, and current counts always come from the live server, never from this page. Malformed or rule-breaking calls return errors that say exactly how to fix them, so the fastest way to learn the surface is to connect an agent and let it work.
