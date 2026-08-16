@@ -16,6 +16,20 @@ export function sitePath(orgSlug: string): string {
   return path.join(SITES_ROOT, orgSlug);
 }
 
+/**
+ * kazam validate deserializes page content into its Page struct — content
+ * that isn't YAML at all, or YAML that doesn't parse into the page shape
+ * (a bare string, a list, prose pasted straight in), surfaces as a raw serde
+ * error like "invalid type: string, expected struct Page". That's meaningless
+ * to an agent that doesn't know kazam is a Rust binary under the hood.
+ * Prefixes a sentence pointing at the actual authoring references, keeping
+ * the raw detail after it so nothing is lost for a human debugging the CLI
+ * itself.
+ */
+export function invalidContentMessage(detail: string): string {
+  return `content must be curata page YAML (title/shell/components) - call get_component_reference or read the page-structure page for the format: ${detail}`;
+}
+
 export interface ValidationError {
   file: string;
   path: string;
