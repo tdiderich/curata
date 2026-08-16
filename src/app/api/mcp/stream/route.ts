@@ -592,10 +592,17 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     });
 
   server.tool("annotate_page", "Add an annotation to a page",
-    { slug: z.string(), text: z.string(), section: z.string().optional(), kind: z.enum(["note", "edit"]).optional(), replacement: z.string().optional() },
-    async ({ slug, text, section, kind, replacement }) => {
+    {
+      slug: z.string(),
+      text: z.string(),
+      section: z.string().optional(),
+      kind: z.enum(["note", "edit"]).optional(),
+      replacement: z.string().optional(),
+      source: z.enum(["agent", "prescreen"]).optional().describe('Provenance tag: "prescreen" marks a review pre-screen finding, defaults to "agent"'),
+    },
+    async ({ slug, text, section, kind, replacement, source }) => {
       validateSlug(slug);
-      const annotation = await saveAnnotation(orgId, orgSlug, slug, text, "agent", section, undefined, kind, replacement, "agent");
+      const annotation = await saveAnnotation(orgId, orgSlug, slug, text, "agent", section, undefined, kind, replacement, source ?? "agent");
       logAudit({ orgId, action: "annotation.create", resourceType: "annotation", resourceId: (annotation as { id?: string }).id ?? slug, actorType: "apikey", actorId, metadata: { slug, section, kind } });
       return { content: [{ type: "text", text: `Annotation added to "${slug}"` }] };
     });
@@ -670,6 +677,10 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   server.tool("list_flags", "List cleanup flags — pending plus human dispositions (kept/snoozed) so sweeps avoid duplicate work",
     { status: z.enum(["pending", "kept", "snoozed", "resolved", "all"]).optional() },
     viaDispatch("list_flags"));
+
+  server.tool("get_review_queue", "REVIEW PRE-SCREEN: pages waiting on human trust review (never-trusted pages inside an approval rule's scope, plus any page whose trusted version has fallen behind latest). Each item carries the trusted and latest version ids, the applicable approval rule description if one resolves, and the folder name. Pre-screen flow: for each item, read_page the slug on channel \"trusted\" and channel \"latest\" to diff, check list_rules for the folder, search_pages plus get_related to check for likely duplicates, validate_page for structural problems, then annotate_page one finding per issue (kind \"note\", source \"prescreen\"). Never call mark_trusted from a pre-screen: findings are advisory only, a human decides.",
+    {},
+    viaDispatch("get_review_queue"));
 
   server.tool("get_versions", "List version history for a page",
     { slug: z.string(), limit: z.string().optional().describe("Max versions to return (default 10, max 50)") },

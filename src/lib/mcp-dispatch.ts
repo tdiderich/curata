@@ -19,6 +19,7 @@ import {
   bumpViewCount,
   markTrusted,
   clearTrusted,
+  getReviewQueue,
 } from "@/lib/pages";
 import type { Channel } from "@/lib/pages";
 import { getOrgTheme } from "@/lib/theme";
@@ -27,7 +28,7 @@ import { getChromium, previewUrl, screenshotPage, renderHtmlToPng } from "@/lib/
 import { validateContent, checkUnsupportedComponents, invalidContentMessage } from "@/lib/kazam";
 import { checkFolderBoundary, mcpDefaultVisibility, listPagesWhere } from "@/lib/access";
 import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
-import { validateApprovalRule, canApprove, getApprovers, describeApprovalRule } from "@/lib/approval";
+import { validateApprovalRule, canApprove, getApprovers, describeApprovalRule, makeApprovalRuleResolver } from "@/lib/approval";
 import type { Role } from "@/lib/permissions";
 import { resolveRequiredComponentsRules, validateRequiredComponents, validateRequiredComponentsRule, ensureDefaultRequiredComponentsRules } from "@/lib/required-components";
 import { enforceCaptureGate } from "@/lib/capture-gate";
@@ -74,6 +75,7 @@ export const READ_TOOLS = [
   "list_annotations",
   "list_open_annotations",
   "list_flags",
+  "get_review_queue",
   "get_component_reference",
   "list_folders",
   "get_folder_structure",
@@ -110,6 +112,7 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   list_open_annotations: { known: new Set(["slug"]) },
   flag_page: { known: new Set(["slug", "action", "reason", "evidence", "superseded_by", "confidence"]), aliases: { supersededBy: "superseded_by" } },
   list_flags: { known: new Set(["status"]) },
+  get_review_queue: { known: new Set() },
   get_component_reference: { known: new Set() },
   list_folders: { known: new Set() },
   get_folder_structure: { known: new Set() },
@@ -120,7 +123,7 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   create_page: { known: new Set(["slug", "content", "folder_id", "visibility", "rules", "concepts", "links", "capture_token", "dedup_ack"]), aliases: { folderId: "folder_id" } },
   move_page: { known: new Set(["slug", "folder_id"]), aliases: { folderId: "folder_id" } },
   write_page: { known: new Set(["slug", "content", "expected_hash", "visibility", "folder_id", "concepts", "links", "rules", "capture_token", "dedup_ack"]), aliases: { folderId: "folder_id" } },
-  annotate_page: { known: new Set(["slug", "text", "section", "kind", "replacement"]) },
+  annotate_page: { known: new Set(["slug", "text", "section", "kind", "replacement", "source"]) },
   update_annotation: { known: new Set(["slug", "annotation_id", "status"]), aliases: { annotationId: "annotation_id" } },
   patch_page: { known: new Set(["slug", "expected_hash", "operations", "concepts", "links"]) },
   replace_in_page: { known: new Set(["slug", "target", "replacement"]) },
@@ -569,6 +572,52 @@ export async function dispatch(
       }));
     }
 
+    case "get_review_queue": {
+      // Rules-scoped queue: getReviewQueue already excludes locked folders
+      // unconditionally, and only lets a never-trusted page in when an
+      // approval rule governs its scope (trustedBehind pages always
+      // qualify). Reused as-is, never reimplemented here.
+      const queue = await getReviewQueue(orgId, userId);
+      if (queue.length === 0) return [];
+
+      const slugs = queue.map((r) => r.slug);
+      const [grPages, grFolders, grOrg] = await Promise.all([
+        db.page.findMany({
+          where: { orgId, slug: { in: slugs } },
+          select: {
+            slug: true,
+            folderId: true,
+            rules: true,
+            trustedVersionId: true,
+            versions: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true } },
+          },
+        }),
+        db.folder.findMany({ where: { orgId }, select: { id: true, parentId: true, name: true, rules: true } }),
+        db.organization.findUnique({ where: { id: orgId }, select: { rules: true } }),
+      ]);
+      const grPageBySlug = new Map(grPages.map((p) => [p.slug, p]));
+      const grResolveApprovalRule = makeApprovalRuleResolver(grFolders, grOrg?.rules);
+
+      const rows = await Promise.all(
+        queue.map(async (r) => {
+          const p = grPageBySlug.get(r.slug);
+          const resolved = p ? grResolveApprovalRule(p.folderId, p.rules) : null;
+          const approvalRule = resolved ? await describeApprovalRule(orgId, resolved.rule) : null;
+          return {
+            slug: r.slug,
+            title: r.title,
+            folderName: r.folderName,
+            neverTrusted: r.neverTrusted,
+            versionsBehind: r.versionsBehind,
+            trustedVersionId: p?.trustedVersionId ?? null,
+            latestVersionId: p?.versions[0]?.id ?? null,
+            approvalRule,
+          };
+        })
+      );
+      return rows;
+    }
+
     case "get_component_reference": {
       const refPath = path.join(process.cwd(), "docs", "agents-reference.md");
       if (!fs.existsSync(refPath)) {
@@ -975,6 +1024,14 @@ export async function dispatch(
       if (!args.slug) throw new Error("slug is required");
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       if (!args.text) throw new Error("text is required");
+      // Provenance: plain agent annotations default to "agent"; a review
+      // pre-screen finding sets source: "prescreen" so it's distinguishable
+      // in list_open_annotations/list_annotations without any schema change
+      // (source is a plain string column, not an enum).
+      if (args.source && args.source !== "agent" && args.source !== "prescreen") {
+        throw new Error('source must be "agent" or "prescreen"');
+      }
+      const apSource = args.source === "prescreen" ? "prescreen" : "agent";
       const annotation = await saveAnnotation(
         orgId,
         orgSlug,
@@ -985,7 +1042,7 @@ export async function dispatch(
         args.target,
         (args.kind as "note" | "edit") || undefined,
         args.replacement,
-        "agent"
+        apSource
       );
       logAudit({
         orgId,

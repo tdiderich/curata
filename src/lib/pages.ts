@@ -1080,7 +1080,7 @@ export async function saveAnnotation(
   target?: string,
   kind?: "note" | "edit" | "talking_point",
   replacement?: string,
-  source: "web" | "agent" | "cli" = "web",
+  source: "web" | "agent" | "cli" | "prescreen" = "web",
   slide?: string,
   visibility?: "visible" | "presenter",
 ): Promise<AnnotationRow> {
