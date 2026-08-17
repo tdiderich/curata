@@ -515,9 +515,9 @@ describe("shared components — starter templates", () => {
     orgSlug = org.slug;
   });
 
-  it("instantiates the current-roadmap starter template as a pageType: component page via create_from_template", async () => {
+  it("instantiates the event-timeline starter template as a pageType: component page via create_from_template", async () => {
     const templatesDir = path.join(process.cwd(), "seed", "templates");
-    const templateContent = fs.readFileSync(path.join(templatesDir, "current-roadmap.yaml"), "utf-8");
+    const templateContent = fs.readFileSync(path.join(templatesDir, "event-timeline.yaml"), "utf-8");
 
     const folder = await testDb.folder.create({
       data: { orgId, name: "Templates", createdBy: "system", locked: true },
@@ -526,8 +526,8 @@ describe("shared components — starter templates", () => {
       data: {
         orgId,
         folderId: folder.id,
-        slug: "current-roadmap",
-        title: "Current Roadmap",
+        slug: "event-timeline",
+        title: "Event Timeline",
         createdBy: "system",
         versions: { create: { yamlContent: templateContent, contentHash: "seed-hash", createdBy: "system" } },
       },
@@ -535,7 +535,7 @@ describe("shared components — starter templates", () => {
 
     const result = (await dispatch(
       "create_from_template",
-      { template_slug: "current-roadmap", target_slug: "our-roadmap" },
+      { template_slug: "event-timeline", target_slug: "our-timeline" },
       orgId,
       orgSlug,
       "apikey-1",
@@ -544,7 +544,7 @@ describe("shared components — starter templates", () => {
     expect(result.ok).toBe(true);
 
     const created = await testDb.page.findUnique({
-      where: { orgId_slug: { orgId, slug: "our-roadmap" } },
+      where: { orgId_slug: { orgId, slug: "our-timeline" } },
       include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
     });
     const parsed = yaml.load(created!.versions[0].yamlContent) as { pageType?: string; components: unknown[] };
