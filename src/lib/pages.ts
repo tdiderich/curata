@@ -694,7 +694,7 @@ async function _writePageInternal(
     if (newTotal > maxBrainTokens) {
       return {
         ok: false,
-        error: `This workspace is using about ${currentTotal} of ${maxBrainTokens} tokens. Upgrade to add more content.`,
+        error: `This brain is using about ${currentTotal} of ${maxBrainTokens} tokens. Upgrade or add teammates on the billing page to grow the cap, or contact support to request an increase.`,
       };
     }
   }

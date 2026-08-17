@@ -4184,6 +4184,13 @@ body .c-section.align-right > * { max-width: none !important; }
   border-radius: 8px;
 }
 
+.settings-billing-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .members-invite-copy {
   font-size: 13px;
   color: var(--light-muted);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveOrg } from "@/lib/auth";
+import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
 
@@ -15,11 +15,42 @@ export async function GET() {
       orderBy: { role: "asc" },
     });
 
+    // Clerk userIds are opaque (user_...), so display identity is the
+    // provider email, backfilled here once per member and persisted.
+    // Self-hosted modes never enter this branch: their userId is already
+    // human-readable and their rows have no provider to ask.
+    if (AUTH_MODE === "clerk") {
+      const missing = members.filter((m) => !m.email && m.userId.startsWith("user_"));
+      if (missing.length > 0) {
+        try {
+          const { clerkClient } = await import("@clerk/nextjs/server");
+          const client = await clerkClient();
+          const { data: users } = await client.users.getUserList({
+            userId: missing.map((m) => m.userId),
+            limit: missing.length,
+          });
+          for (const user of users) {
+            const email =
+              user.primaryEmailAddress?.emailAddress ??
+              user.emailAddresses[0]?.emailAddress ??
+              null;
+            if (!email) continue;
+            const member = missing.find((m) => m.userId === user.id);
+            if (!member) continue;
+            member.email = email;
+            await db.orgMember.update({ where: { id: member.id }, data: { email } });
+          }
+        } catch (err) {
+          console.warn("members email backfill failed:", err);
+        }
+      }
+    }
+
     return NextResponse.json(
       members.map((m) => ({
         id: m.id,
         userId: m.userId,
-        email: null,
+        email: m.email,
         role: m.role,
       }))
     );

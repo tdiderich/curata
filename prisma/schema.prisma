@@ -38,6 +38,9 @@ model OrgMember {
   id     String @id @default(cuid())
   orgId  String @map("org_id")
   userId String @map("user_id")
+  // Display identity for auth modes whose userId is an opaque id (Clerk
+  // user_...); backfilled lazily by the members API from the provider.
+  email  String? @map("email")
   role   String @default("member")
 
   org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)

@@ -120,6 +120,29 @@ export default async function SettingsPage() {
         />
       ),
     },
+    // Cloud-only: /billing and /org live in the overlay, and self-hosted
+    // deployments have no subscription to manage.
+    ...(AUTH_MODE === "clerk" ? [{
+      label: "Billing",
+      labelExtra: limitedPlan ? <TeamChip /> : null,
+      content: (
+        <SettingsSection
+          title="Billing"
+          description={limitedPlan
+            ? "This organization is on the Personal plan: solo, 128k-token brain."
+            : "This organization is on the Team plan."}
+        >
+          <div className="settings-billing-links">
+            <Link href="/billing" className="stg-btn stg-btn--primary">
+              {limitedPlan ? "See plans & upgrade" : "Manage plan"}
+            </Link>
+            <Link href="/org" className="stg-btn stg-btn--ghost">
+              Invoices &amp; payment methods
+            </Link>
+          </div>
+        </SettingsSection>
+      ),
+    }] : []),
     ...(canManageRules ? [{
       label: "Tags",
       content: <TagsManager canManage={canManageRules} />,
