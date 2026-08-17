@@ -499,7 +499,23 @@ export function Sidebar({
             // eslint-disable-next-line @next/next/no-img-element -- arbitrary external/user URL, next/image needs domain allowlisting
             <img src={logoUrl} alt={orgName} className="nav-org-logo" />
           ) : (
-            orgName
+            <>
+              <svg
+                className="nav-org-mark"
+                viewBox="0 0 32 32"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M 24.43 8.93 A 11 11 0 1 0 24.43 23.07"
+                  stroke="rgb(var(--accent-rgb))"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                />
+                <circle cx="27.2" cy="16" r="3.4" fill="rgba(var(--accent-rgb), 0.5)" />
+              </svg>
+              <span className="nav-org-text">{orgName}</span>
+            </>
           )}
         </Link>
         <button

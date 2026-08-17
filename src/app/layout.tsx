@@ -39,7 +39,7 @@ async function ClerkWrapper({ children }: { children: React.ReactNode }) {
         // and silently ignored, which left footer text unreadable on dark.
         variables: {
           colorBackground: "#121113",
-          colorPrimary: "#899878",
+          colorPrimary: "#AB7FBB",
           colorPrimaryForeground: "#121113",
           colorForeground: "#F7F7F2",
           colorNeutral: "#B0B3AD",

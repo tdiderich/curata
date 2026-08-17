@@ -5575,10 +5575,25 @@ body .c-section.align-right > * { max-width: none !important; }
 }
 
 .nav-org-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
   font-weight: 600;
   color: var(--snow);
   min-width: 0;
+}
+
+.nav-org-mark {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.nav-org-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Hide / reveal the sidebar (⌘\) */
