@@ -10,7 +10,14 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const defaultArgs = {
+  value: "",
+  options: [{ value: "a", label: "A" }],
+  onChange: () => {},
+};
+
 export const TwoOptions: Story = {
+  args: defaultArgs,
   render: function TwoOptions() {
     const [value, setValue] = useState<"month" | "annual">("month");
     return (
@@ -27,6 +34,7 @@ export const TwoOptions: Story = {
 };
 
 export const WithDisabledOption: Story = {
+  args: defaultArgs,
   render: function WithDisabledOption() {
     const [value, setValue] = useState<"warn" | "block">("warn");
     return (
@@ -44,6 +52,7 @@ export const WithDisabledOption: Story = {
 };
 
 export const WithIcons: Story = {
+  args: defaultArgs,
   render: function WithIcons() {
     const [value, setValue] = useState<"topic" | "vendor" | "finding">("topic");
     return (
