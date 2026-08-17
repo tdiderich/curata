@@ -71,7 +71,7 @@ function isSectionWithSlug(c: unknown): c is Comp {
 function namespaceIds(components: Comp[], prefix: string): Comp[] {
   return components.map((c) => {
     if (!c || typeof c !== "object") return c;
-    const next: Comp = { ...c };
+    const next: Comp = { ...(c as Comp) };
     if (typeof next.id === "string" && next.id) next.id = `${prefix}--${next.id}`;
     if (Array.isArray(next.components)) {
       next.components = namespaceIds(next.components as Comp[], prefix);
@@ -218,7 +218,7 @@ export async function expandComponentRefs(
       continue;
     }
 
-    const next: Comp = { ...c };
+    const next: Comp = { ...(c as Comp) };
     if (Array.isArray(next.components)) {
       next.components = await expandComponentRefs(next.components as Comp[], ctx, depth, chain);
     }
