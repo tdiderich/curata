@@ -107,6 +107,22 @@ describe("brain usage — token accounting on writes", () => {
     const usage = await getBrainUsage(orgId);
     expect(usage).toBe(estimateTokens(SMALL_YAML));
   });
+
+  it("getBrainUsage excludes curata-managed pages in locked folders", async () => {
+    await writePage(orgId, orgSlug, "own-page", SMALL_YAML, "user1");
+    const folder = await testDb.folder.create({
+      data: { orgId, name: "Docs", locked: true, createdBy: "system" },
+    });
+    const seededContent = SMALL_YAML + "extra: " + "z".repeat(4000) + "\n";
+    await writePage(orgId, orgSlug, "seeded-doc", seededContent, "system");
+    await testDb.page.update({
+      where: { orgId_slug: { orgId, slug: "seeded-doc" } },
+      data: { folderId: folder.id },
+    });
+
+    const usage = await getBrainUsage(orgId);
+    expect(usage).toBe(estimateTokens(SMALL_YAML));
+  });
 });
 
 describe("brain cap enforcement — writePage rejects growing writes over the cap", () => {

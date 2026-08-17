@@ -605,8 +605,15 @@ function salientTermFallback(
  * correct the moment anyone asks for it.
  */
 export async function getBrainUsage(orgId: string): Promise<number> {
+  // Curata-managed content (pages in locked folders: docs, seeded skills,
+  // templates) ships with the product and is excluded, only content the
+  // org itself created counts against its brain cap.
   const pages = await db.page.findMany({
-    where: { orgId, status: { not: "archived" } },
+    where: {
+      orgId,
+      status: { not: "archived" },
+      NOT: { folder: { locked: true } },
+    },
     select: { id: true, tokenCount: true },
   });
 
