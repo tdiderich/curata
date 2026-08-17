@@ -1,4 +1,4 @@
-# scanned: 2026-08-17T11:46:10.262627-05:00
+# scanned: 2026-08-17T11:52:53.070837-05:00
 # root_files
 path	tokens	reads	description
 CLAUDE.md	781	0	Claude Code project instructions
@@ -18,7 +18,7 @@ pnpm-lock.yaml	55287	0	YAML configuration/data
 pnpm-workspace.yaml	47	0	YAML configuration/data
 prisma.config.ts	56	0	TypeScript source
 tsconfig.json	169	0	TypeScript configuration
-tsconfig.tsbuildinfo	89118	0	
+tsconfig.tsbuildinfo	89323	0	
 vitest.config.ts	113	0	TypeScript source
 
 # directories
@@ -30,5 +30,5 @@ prisma	7	2806	migrations
 scripts	8	2526	
 seed	33	31685	
 skills	14	8844	
-src	204	770444	
+src	207	772310	
 tests	38	74533	tests
