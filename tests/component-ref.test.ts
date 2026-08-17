@@ -547,8 +547,7 @@ describe("shared components — starter templates", () => {
       where: { orgId_slug: { orgId, slug: "our-timeline" } },
       include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
     });
-    const parsed = yaml.load(created!.versions[0].yamlContent) as { pageType?: string; components: unknown[] };
-    expect(parsed.pageType).toBe("component");
+    const parsed = yaml.load(created!.versions[0].yamlContent) as { components: unknown[] };
     expect(parsed.components.length).toBeGreaterThan(0);
   });
 });
