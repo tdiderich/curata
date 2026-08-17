@@ -30,11 +30,9 @@ export const metadata: Metadata = {
 
 async function ClerkWrapper({ children }: { children: React.ReactNode }) {
   const { ClerkProvider } = await import("@clerk/nextjs");
-  const { dark } = await import("@clerk/themes");
   return (
     <ClerkProvider
       appearance={{
-        baseTheme: dark,
         // Clerk v7 variable names — colorText/colorInputBackground are v5/v6
         // and silently ignored, which left footer text unreadable on dark.
         variables: {
