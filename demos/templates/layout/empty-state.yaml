@@ -1,0 +1,45 @@
+title: Welcome to Your Brain
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "The **empty_state** component: a zero-data placeholder with a call to action. Use it as the landing page a new org sees before their first capture, or inside any feature that starts blank."
+  - type: empty_state
+    title: Your brain is empty
+    icon: brain
+    body: "This is where your team's validated knowledge will live. Capture a page from a Slack thread, a call transcript, or a document, and it appears here for everyone to find and trust."
+    action:
+      label: Capture your first page
+      href: /getting-started/first-capture
+  - type: divider
+    label: What happens next
+  - type: callout
+    variant: success
+    title: After your first capture
+    body: "Your brain starts building connections automatically. Pages link to related topics, agents surface answers from what you have captured, and new teammates find institutional knowledge without asking around."
+  - type: callout
+    variant: warn
+    title: One page is not a brain
+    body: "The value compounds. Aim for 10 pages in your first week: the questions your team answers most often, the decisions that keep getting re-explained, and the processes only one person knows by heart."
+  - type: card_grid
+    min_width: 200
+    cards:
+      - title: Capture from Slack
+        description: "Turn a thread into a validated page with one command."
+        href: /getting-started/capture-slack
+        badge:
+          label: Popular
+          color: green
+      - title: Import a document
+        description: "Upload a Google Doc, Notion export, or markdown file."
+        href: /getting-started/import
+      - title: Write from scratch
+        description: "Create a page directly in the editor using components."
+        href: /getting-started/new-page
+      - title: Connect an agent
+        description: "Let your AI tools read and write to the brain via MCP."
+        href: /getting-started/mcp-setup
+        badge:
+          label: Advanced
+          color: teal

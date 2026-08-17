@@ -6,7 +6,7 @@ src/generated/prisma/models/Concept.ts	12439	0	Concept model
 src/generated/prisma/models/Folder.ts	18634	0	Folder model
 src/generated/prisma/models/Group.ts	13542	0	Group model
 src/generated/prisma/models/GroupMember.ts	12661	0	GroupMember model
-src/generated/prisma/models/OrgMember.ts	11989	0	OrgMember model
+src/generated/prisma/models/OrgMember.ts	12344	0	OrgMember model
 src/generated/prisma/models/Organization.ts	25383	0	Organization model
 src/generated/prisma/models/Page.ts	39627	0	Page model
 src/generated/prisma/models/PageConcept.ts	14922	0	PageConcept model

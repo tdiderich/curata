@@ -1,0 +1,30 @@
+title: The Brain Difference
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A before_after comparison: the same question answered from tribal memory versus answered from the brain. The after_context field names the exact page the answer came from, so the reader can verify it."
+  - type: section
+    heading: Same questions, different answers
+    components:
+      - type: before_after
+        before_label: "Tribal Memory"
+        after_label: "From the Brain"
+        items:
+          - title: "P1 incident SLA?"
+            before: "Maybe 30 minutes? Check with DevOps."
+            after: "15 min acknowledge, 1 hr mitigate, 4 hr resolve."
+            after_context: "SLA Policy, reviewed 2026-06-01"
+          - title: "Who's still on legacy auth?"
+            before: "Acme for sure. Maybe Globex? Check the spreadsheet."
+            after: "Acme (blocked by contract), Globex (Sept 15), Soylent (unresponsive)."
+            after_context: "Migration Tracker, refreshed weekly"
+          - title: "Discount approval process?"
+            before: "Under 10% the AE can approve, I think. Slack Dana."
+            after: "Under 10%: AE. 11-20%: VP Sales. Over 20%: CFO + margin analysis."
+            after_context: "Discount Matrix, approved 2026-05-15"
+          - title: "SAML with Okta?"
+            before: "Pretty sure it works. Loop in engineering if not."
+            after: "Fully supported. Nested groups don't sync, flatten as workaround."
+            after_context: "SSO Guide - Okta, updated 2026-06-20"

@@ -53,10 +53,18 @@ interface RefBlock extends Comp {
   type: "ref";
 }
 
-// Narrows to RefBlock (not Comp) so the negative branch keeps `c` usable —
-// a `c is Comp` predicate would collapse the else-branch type to `never`.
 function isRefBlock(c: unknown): c is RefBlock {
   return !!c && typeof c === "object" && (c as Comp).type === "ref";
+}
+
+function isSectionWithSlug(c: unknown): c is Comp {
+  return (
+    !!c &&
+    typeof c === "object" &&
+    (c as Comp).type === "section" &&
+    typeof (c as Comp).slug === "string" &&
+    !!((c as Comp).slug as string).trim()
+  );
 }
 
 /** Prefixes every explicit `id` in a components tree with `prefix--` so an expanded subtree can never collide with ids already on the consuming page (or with another expansion of the same shared component elsewhere on the page). Mirrors the nested-array shapes component-ids.ts already knows about. */
@@ -138,11 +146,54 @@ async function resolveRef(
   return ctx.wrap(slug, title, namespaced);
 }
 
+async function resolveSection(
+  section: Comp,
+  ctx: RefExpansionContext,
+  depth: number,
+  chain: string[]
+): Promise<Comp> {
+  const slug = ((section.slug as string) || "").trim();
+  const sectionId = typeof section.id === "string" && section.id ? section.id : `section-${depth}`;
+
+  if (chain.includes(slug)) {
+    return { ...section, components: [ctx.placeholder(slug, `cycle detected: ${[...chain, slug].join(" -> ")}`)] };
+  }
+  const nextDepth = depth + 1;
+  if (nextDepth > MAX_REF_DEPTH) {
+    return { ...section, components: [ctx.placeholder(slug, `expansion stopped at ${MAX_REF_DEPTH} levels deep`)] };
+  }
+
+  const resolved = await readPage(ctx.orgId, slug, ctx.channel);
+  if (!resolved) {
+    return { ...section, components: [ctx.placeholder(slug, "page not found")] };
+  }
+
+  const access = await resolvePageAccess(
+    { id: resolved.pageId, orgId: ctx.orgId, slug, visibility: resolved.visibility, createdBy: resolved.createdBy },
+    ctx.viewer.userId,
+    ctx.viewer.orgMemberRole,
+    ctx.viewer.shareToken
+  );
+  if (!access) {
+    return { ...section, components: [ctx.placeholder(slug, "you don't have access to this page")] };
+  }
+
+  const inner = Array.isArray(resolved.json.components) ? (resolved.json.components as Comp[]) : [];
+  const expandedInner = await expandComponentRefs(inner, ctx, depth + 1, [...chain, slug]);
+  const namespaced = namespaceIds(expandedInner, sectionId);
+
+  return {
+    ...section,
+    components: namespaced,
+    slug: undefined,
+  };
+}
+
 /**
- * Walks a components tree (including nested `components`/`items[].components`/
- * `tabs[].components`/`columns[]` arrays) and replaces every `type: ref`
- * block with its target component page's expanded content. Safe to call on
- * any page's components — pages with no refs pass through unchanged.
+ * Walks a components tree and replaces `type: ref` blocks and sections with a
+ * `slug` field with their target page's expanded content. Safe to call on
+ * any page's components - pages with no refs or slug-sections pass through
+ * unchanged.
  */
 export async function expandComponentRefs(
   components: Comp[] | undefined | null,
@@ -160,6 +211,10 @@ export async function expandComponentRefs(
     }
     if (isRefBlock(c)) {
       out.push(...(await resolveRef(c, ctx, depth, chain)));
+      continue;
+    }
+    if (isSectionWithSlug(c)) {
+      out.push(await resolveSection(c, ctx, depth, chain));
       continue;
     }
 

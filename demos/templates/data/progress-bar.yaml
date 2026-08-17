@@ -1,0 +1,46 @@
+title: "Platform Migration Tracker"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "One progress bar per legacy system being retired. Thresholds shift the color as completion nears target, so at-risk migrations stand out."
+  - type: section
+    heading: "Migration Status"
+    components:
+      - type: markdown
+        body: "Target completion: 2026-10-01. All systems must reach 100% before the legacy environment is decommissioned."
+      - type: progress_bar
+        label: "JIRA to Linear"
+        value: 92
+        target: 100
+        detail: "418 of 454 issues migrated. Remaining: 36 epics with custom fields."
+        thresholds:
+          "50": yellow
+          "80": green
+      - type: progress_bar
+        label: "Confluence to Curata"
+        value: 67
+        target: 100
+        detail: "312 of 465 pages imported. Blocked: 48 pages with embedded Confluence macros."
+        thresholds:
+          "50": yellow
+          "80": green
+      - type: progress_bar
+        label: "Jenkins to GitHub Actions"
+        value: 45
+        target: 100
+        detail: "23 of 51 pipelines converted. In progress: monorepo build matrix."
+        color: yellow
+        thresholds:
+          "50": yellow
+          "80": green
+      - type: progress_bar
+        label: "Slack Workflows to Custom Automation"
+        value: 20
+        target: 100
+        detail: "4 of 20 workflows rebuilt. Not started: approval chains, PTO bot."
+        color: red
+        thresholds:
+          "50": yellow
+          "80": green

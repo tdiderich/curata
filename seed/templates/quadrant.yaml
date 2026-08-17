@@ -1,0 +1,58 @@
+title: "Feature Prioritization"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A quadrant plot mapping feature requests by effort vs impact. Quadrant labels name the decision, not just high/low."
+  - type: quadrant
+    title: "Product Roadmap Prioritization"
+    x_axis: "Implementation Effort"
+    y_axis: "Customer Impact"
+    height: 500
+    quadrants:
+      - "Quick Win"
+      - "Big Bet"
+      - "Fill-In"
+      - "Question Mark"
+    points:
+      - label: "SSO enforcement"
+        x: 20
+        y: 85
+        color: green
+      - label: "Bulk CSV export"
+        x: 15
+        y: 70
+        color: green
+      - label: "Custom themes"
+        x: 30
+        y: 25
+        color: default
+      - label: "AI summaries"
+        x: 70
+        y: 80
+        color: teal
+      - label: "Audit retention"
+        x: 80
+        y: 75
+        color: teal
+      - label: "Webhooks"
+        x: 75
+        y: 30
+        color: yellow
+      - label: "PDF watermark"
+        x: 65
+        y: 15
+        color: default
+      - label: "Real-time collab"
+        x: 85
+        y: 90
+        color: red
+      - label: "Dark mode"
+        x: 25
+        y: 40
+        color: default
+      - label: "Mobile push"
+        x: 40
+        y: 20
+        color: yellow

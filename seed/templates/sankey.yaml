@@ -1,0 +1,55 @@
+title: "Recruiting Funnel"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A sankey diagram tracing candidates from sourcing channel to final disposition. Flow width is proportional to candidate count."
+  - type: sankey
+    title: "Q3 Hiring Pipeline"
+    height: 400
+    colors:
+      Referral: green
+      Inbound: teal
+      Agency: yellow
+      Internal: default
+      Offer Extended: green
+      Rejected: red
+      Withdrew: yellow
+    flows:
+      - source: "Referral"
+        target: "Offer Extended"
+        value: 12
+      - source: "Referral"
+        target: "Rejected"
+        value: 8
+      - source: "Referral"
+        target: "Withdrew"
+        value: 3
+      - source: "Inbound"
+        target: "Offer Extended"
+        value: 6
+      - source: "Inbound"
+        target: "Rejected"
+        value: 31
+      - source: "Inbound"
+        target: "Withdrew"
+        value: 9
+      - source: "Agency"
+        target: "Offer Extended"
+        value: 4
+      - source: "Agency"
+        target: "Rejected"
+        value: 14
+      - source: "Agency"
+        target: "Withdrew"
+        value: 5
+      - source: "Internal"
+        target: "Offer Extended"
+        value: 3
+      - source: "Internal"
+        target: "Rejected"
+        value: 1
+      - source: "Internal"
+        target: "Withdrew"
+        value: 1

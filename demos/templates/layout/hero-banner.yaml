@@ -1,0 +1,47 @@
+title: Welcome to Acme Engineering
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A **hero_banner** as a page opener with action buttons, followed by a **card_grid** linking to key resources. Useful for onboarding hubs, team landing pages, or internal launch announcements."
+  - type: hero_banner
+    eyebrow: Acme Engineering
+    title: Welcome to the team
+    subtitle: "Everything you need for your first week: environment setup, key contacts, and the projects you will be joining. Start with the checklist and work through it at your own pace."
+    buttons:
+      - label: First Week Checklist
+        href: /p/acme/first-week-checklist
+        variant: primary
+      - label: Meet the Team
+        href: /p/acme/team-directory
+        variant: secondary
+  - type: divider
+    label: Quick Links
+  - type: card_grid
+    min_width: 220
+    cards:
+      - title: Dev Environment Setup
+        description: "Clone the monorepo, install dependencies, and get the local stack running. Estimated time: 45 minutes."
+        href: /p/acme/dev-setup
+        badge:
+          label: Start here
+          color: green
+      - title: Architecture Overview
+        description: "How the platform is structured: services, data flow, and deployment topology."
+        href: /p/acme/architecture
+      - title: On-Call Handbook
+        description: "Rotation schedule, escalation paths, and runbooks for the incidents you are most likely to see."
+        href: /p/acme/oncall
+      - title: Code Review Guidelines
+        description: "What reviewers look for, how to request a review, and the merge checklist."
+        href: /p/acme/code-review
+      - title: Benefits and Perks
+        description: "Health plan details, equipment budget, learning stipend, and how to submit expenses."
+        href: /p/acme/benefits
+        badge:
+          label: HR
+          color: teal
+      - title: Who to Ask
+        description: "A directory of subject-matter experts by area, so you do not have to guess who knows what."
+        href: /p/acme/experts

@@ -21,18 +21,18 @@ src/components/member-list.tsx	2860	0	member-list component
 src/components/new-page-button.tsx	1617	0	new-page-button component
 src/components/org-settings.tsx	2003	0	org-settings component
 src/components/org-tags-manager.tsx	606	0	org-tags-manager component
-src/components/page-detail-client.tsx	7541	0	page-detail-client component
+src/components/page-detail-client.tsx	7862	0	page-detail-client component
 src/components/page-folder-select.tsx	753	0	page-folder-select component
 src/components/page-prompt-dialog.tsx	1051	0	page-prompt-dialog component
 src/components/page-tags.tsx	1303	0	page-tags component
-src/components/page-viewer.tsx	1183	0	page-viewer component
+src/components/page-viewer.tsx	2830	0	page-viewer component
 src/components/public-annotation-client.tsx	2869	0	public-annotation-client component
 src/components/public-toggle.tsx	399	0	Private-page-editor toggle for visibility public/org + Copy link button using navigator.clipboard.writeText; appears currently unreferenced in JSX
 src/components/report-builder.tsx	5145	0	report-builder component
 src/components/review-queue-client.tsx	2644	0	review-queue-client component
 src/components/settings-tabs.tsx	449	0	settings-tabs component
 src/components/sidebar.tsx	6192	0	sidebar component
-src/components/source-editor.tsx	2232	0	source-editor component
+src/components/source-editor.tsx	2700	0	source-editor component
 src/components/tag-picker.tsx	1639	0	tag-picker component
 src/components/tags-manager.tsx	2187	0	tags-manager component
 src/components/theme-script.tsx	189	0	theme-script component

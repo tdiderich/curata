@@ -1,0 +1,54 @@
+title: "Curata Org Activity"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "Two charts side by side using a columns layout: a timeseries line for pages written per day, and a bar chart for trust rate by week."
+  - type: columns
+    columns:
+      - - type: chart
+          kind: timeseries
+          title: "Pages Written Per Day"
+          y_label: "Pages"
+          series:
+            - label: "All pages"
+              color: teal
+              points:
+                - label: "Aug 01"
+                  value: 4
+                - label: "Aug 02"
+                  value: 7
+                - label: "Aug 03"
+                  value: 3
+                - label: "Aug 04"
+                  value: 9
+                - label: "Aug 05"
+                  value: 12
+                - label: "Aug 06"
+                  value: 6
+                - label: "Aug 07"
+                  value: 8
+                - label: "Aug 08"
+                  value: 15
+                - label: "Aug 09"
+                  value: 11
+                - label: "Aug 10"
+                  value: 5
+      - - type: chart
+          kind: bar
+          title: "Trust Rate by Week"
+          y_label: "% Trusted"
+          data:
+            - label: "Week 1"
+              value: 62
+              color: yellow
+            - label: "Week 2"
+              value: 78
+              color: green
+            - label: "Week 3"
+              value: 85
+              color: green
+            - label: "Week 4"
+              value: 71
+              color: yellow

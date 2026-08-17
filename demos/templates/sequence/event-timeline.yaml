@@ -1,0 +1,85 @@
+title: "Incident Postmortem: API Gateway Outage"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "An event_timeline tracing an incident from first alert to resolution. Each event carries a severity, source, and summary so the postmortem reads as one unbroken narrative."
+  - type: section
+    heading: "Incident #IR-2026-047 — July 15, 2026"
+    components:
+      - type: stat_grid
+        columns: 4
+        stats:
+          - label: Duration
+            value: "2h 41m"
+          - label: Severity
+            value: SEV-1
+            color: red
+          - label: Customers affected
+            value: "312"
+          - label: Root cause
+            value: Certificate expiry
+      - type: event_timeline
+        events:
+          - title: Elevated 5xx rate detected
+            date: "2026-07-15"
+            severity: minor
+            source: Datadog
+            summary: "Error rate on api-gateway crossed 5% threshold. Auto-scaling kicked in but did not resolve the spike."
+          - title: PagerDuty alert fired
+            date: "2026-07-15"
+            severity: major
+            source: PagerDuty
+            summary: "P1 page sent to on-call engineer (J. Reyes). Ack received within 90 seconds."
+          - title: On-call begins triage
+            date: "2026-07-15"
+            severity: info
+            source: Incident Channel
+            summary: "J. Reyes opened #inc-api-gateway-0715 in Slack and began correlating logs. Initial hypothesis was a bad deploy."
+          - title: Recent deploy ruled out
+            date: "2026-07-15"
+            severity: info
+            source: Incident Channel
+            summary: "Last deploy was 18 hours prior with no config changes. Rollback would not help. Team pivoted to infrastructure."
+          - title: TLS handshake failures identified
+            date: "2026-07-15"
+            severity: major
+            source: Datadog
+            summary: "Filtered logs show ssl_handshake_error on the internal mTLS cert used between the gateway and the auth service. Certificate expired at 14:00 UTC."
+          - title: Incident escalated to SEV-1
+            date: "2026-07-15"
+            severity: major
+            source: PagerDuty
+            summary: "Escalated to platform lead (M. Torres). Customer-facing status page updated to Degraded Performance."
+          - title: Emergency cert rotation started
+            date: "2026-07-15"
+            severity: info
+            source: Incident Channel
+            summary: "M. Torres initiated cert rotation via the platform CLI. New cert issued by internal CA with 1-year expiry."
+          - title: New cert deployed to staging
+            date: "2026-07-15"
+            severity: info
+            source: Incident Channel
+            summary: "Staging gateway validated the new cert. Handshake tests passing. Proceeding to production rollout."
+          - title: Production cert rotation complete
+            date: "2026-07-15"
+            severity: major
+            source: Incident Channel
+            summary: "All 4 gateway nodes rotated. 5xx rate dropped to baseline within 3 minutes. Auth service fully reachable."
+          - title: Incident resolved
+            date: "2026-07-15"
+            severity: major
+            source: PagerDuty
+            summary: "30-minute monitoring window clean. Status page updated to Operational. Retro scheduled for July 17."
+  - type: divider
+    label: Follow-up Actions
+  - type: steps
+    numbered: true
+    items:
+      - title: Add cert-expiry monitor to Datadog
+        detail: "Alert 30 days before any internal CA cert expires. Owner: Platform team."
+      - title: Audit all internal mTLS certs
+        detail: "Inventory every cert, its expiry, and which service depends on it."
+      - title: Automate cert rotation in CI
+        detail: "Certs older than 10 months should trigger a renewal PR automatically."

@@ -1,0 +1,40 @@
+title: The AI-Native Loop
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "The five-layer loop that makes a knowledge brain compound instead of reset. Each node is a layer, each connection is labeled with what actually flows between them."
+  - type: architecture
+    title: Knowledge Loop
+    direction: top_to_bottom
+    nodes:
+      - id: capture
+        label: Capture
+        detail: "Sensors and agents"
+        color: teal
+      - id: review
+        label: Review
+        detail: "Human validation"
+        color: yellow
+      - id: brain
+        label: Brain
+        detail: "Trusted pages"
+        color: green
+      - id: output
+        label: Output
+        detail: "Digests and answers"
+        color: default
+    connections:
+      - from: capture
+        to: review
+        label: raw
+      - from: review
+        to: brain
+        label: approved
+      - from: brain
+        to: output
+        label: query
+      - from: output
+        to: capture
+        label: feedback

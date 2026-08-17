@@ -1,0 +1,126 @@
+title: Trees
+shell: standard
+components:
+  - type: section
+    heading: Brain Governance
+    components:
+      - type: callout
+        variant: info
+        title: What this page shows
+        body: "The folder taxonomy for a well-organized brain. Each node's note explains what belongs there. Toggle the filter to surface folders missing an owner."
+      - type: tree
+        default_depth: 2
+        show_filter_toggle: true
+        show_counts: true
+        nodes:
+          - label: Engineering
+            owner: VP Engineering
+            note: "Architecture decisions, runbooks, and post-mortems"
+            children:
+              - label: Runbooks
+                note: "Step-by-step procedures for on-call incidents"
+                owner: SRE Lead
+                status: completed
+              - label: Architecture Decisions
+                note: "ADRs with context, decision, and consequences"
+                owner: Staff Engineer
+                status: completed
+              - label: Post-Mortems
+                note: "Blameless incident reviews within 48 hours"
+                status: active
+          - label: Sales
+            owner: VP Sales
+            note: "Competitive intel, objection handling, deal playbooks"
+            children:
+              - label: Competitive Intel
+                note: "Per-competitor pages with positioning and traps"
+                owner: Product Marketing
+                status: completed
+              - label: Objection Handling
+                note: "Top objections with sourced responses"
+                status: active
+              - label: Deal Playbooks
+                note: "Stage-specific tactics for enterprise deals"
+                status: blocked
+          - label: Support
+            owner: Head of Support
+            note: "Troubleshooting guides and known-issue trackers"
+            children:
+              - label: Troubleshooting Guides
+                note: "Symptom-first pages for the top 20 support tickets"
+                owner: Senior Support Engineer
+                status: completed
+              - label: Known Issues
+                note: "Active bugs with workarounds, linked to Linear"
+                status: active
+          - label: Operations
+            note: "Vendor contacts, procurement, and office logistics"
+            children:
+              - label: Vendor Directory
+                note: "Contact info and contract renewal dates"
+                status: completed
+              - label: Procurement
+                note: "Approval thresholds and preferred vendors"
+                status: priority
+          - label: Legal
+            owner: General Counsel
+            note: "Policies, compliance frameworks, and contract templates"
+            children:
+              - label: Policies
+                note: "Employee-facing policies (acceptable use, data handling)"
+                status: completed
+              - label: Compliance
+                note: "SOC 2, GDPR, and HIPAA control mappings"
+                status: active
+  - type: divider
+    label: Engineering View
+  - type: section
+    heading: Engineering Roadmap
+    components:
+      - type: callout
+        variant: info
+        body: "Epics and tasks with status coloring and due dates. Filter to overdue to see what needs attention."
+      - type: tree
+        default_depth: 2
+        show_filter_toggle: true
+        default_filter: overdue
+        nodes:
+          - label: "Auth overhaul"
+            status: active
+            children:
+              - label: "Migrate session store to Redis"
+                status: completed
+                owner: Priya D.
+                due: "2026-07-15"
+              - label: "SSO integration (SAML + OIDC)"
+                status: active
+                owner: Leo C.
+                due: "2026-08-30"
+              - label: "Deprecate password-only login"
+                status: blocked
+                owner: Leo C.
+                due: "2026-08-01"
+                original_due: "2026-07-20"
+          - label: "Performance sprint"
+            status: active
+            children:
+              - label: "Query optimization on page search"
+                status: completed
+                owner: Marcus T.
+                due: "2026-08-01"
+              - label: "CDN rollout for static assets"
+                status: active
+                owner: Jordan B.
+                due: "2026-08-22"
+              - label: "Lazy-load component renderer"
+                status: upcoming
+                due: "2026-09-15"
+          - label: "API v2"
+            status: upcoming
+            children:
+              - label: "Design OpenAPI spec"
+                status: upcoming
+                due: "2026-09-01"
+              - label: "Build versioned router"
+                status: upcoming
+                due: "2026-09-30"

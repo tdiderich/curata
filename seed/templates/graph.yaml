@@ -1,0 +1,54 @@
+title: "How This Brain Connects"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A concept graph where pages are nodes and shared tags are edges. A new hire sees the brain's shape in one image."
+  - type: graph
+    title: "Page Relationship Map"
+    height: 400
+    nodes:
+      - id: onboarding
+        label: "Onboarding"
+        shape: box
+        color: green
+      - id: architecture
+        label: "Architecture"
+        shape: box
+        color: teal
+      - id: runbook
+        label: "Runbook"
+        shape: box
+        color: red
+      - id: api
+        label: "API Docs"
+        shape: box
+        color: teal
+      - id: security
+        label: "Security"
+        shape: box
+        color: yellow
+      - id: faq
+        label: "FAQ"
+        shape: box
+        color: green
+    edges:
+      - from: onboarding
+        to: architecture
+        label: "infra"
+      - from: architecture
+        to: api
+        label: "api"
+      - from: runbook
+        to: architecture
+        label: "ops"
+      - from: security
+        to: architecture
+        label: "policy"
+      - from: faq
+        to: api
+        label: "integration"
+      - from: onboarding
+        to: faq
+        label: "getting started"

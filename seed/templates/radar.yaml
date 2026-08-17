@@ -1,0 +1,48 @@
+title: "Radar Comparisons"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "Two radar charts: the first overlays two customer accounts for renewal comparison, the second scores a product across maturity axes."
+  - type: section
+    heading: "Account Health Comparison"
+    components:
+      - type: markdown
+        body: "Side-by-side renewal readiness for two accounts entering Q4. Higher is better on every axis."
+      - type: radar
+        title: "Acme Corp vs Beta Inc"
+        max: 10
+        axes:
+          - "Adoption"
+          - "Support Load"
+          - "Expansion Readiness"
+          - "Champion Strength"
+          - "Product Usage"
+        curves:
+          - label: "Acme Corp"
+            color: green
+            values: [8, 3, 7, 9, 6]
+          - label: "Beta Inc"
+            color: yellow
+            values: [5, 7, 4, 3, 8]
+  - type: divider
+    label: "Second Use Case"
+  - type: section
+    heading: "CRM Product Maturity"
+    components:
+      - type: markdown
+        body: "Competitive positioning across five dimensions that matter to enterprise buyers."
+      - type: radar
+        title: "Our CRM vs Market Expectation"
+        max: 10
+        axes:
+          - "Feature Depth"
+          - "Integration Ecosystem"
+          - "Mobile Experience"
+          - "Analytics & Reporting"
+          - "Customization"
+        curves:
+          - label: "Our Product"
+            color: teal
+            values: [7, 9, 5, 8, 6]

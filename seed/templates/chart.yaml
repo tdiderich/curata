@@ -1,0 +1,27 @@
+title: "Customer Health by ARR"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A bar chart with labeled segments and semantic colors. Each bar represents a customer health tier, sized by annual recurring revenue."
+  - type: chart
+    kind: bar
+    title: "ARR by Health Tier"
+    y_label: "ARR ($K)"
+    data:
+      - label: "Healthy"
+        value: 2450
+        color: green
+      - label: "Monitor"
+        value: 870
+        color: yellow
+      - label: "At Risk"
+        value: 340
+        color: red
+      - label: "New (<90d)"
+        value: 520
+        color: teal
+      - label: "Churned"
+        value: 180
+        color: default

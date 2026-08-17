@@ -260,6 +260,7 @@ export default async function PageDetailView({
             />
           ) : undefined
         }
+        pageJson={page}
       >
         <div className="page-detail-content">
           <PageRenderer

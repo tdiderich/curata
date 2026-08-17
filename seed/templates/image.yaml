@@ -1,0 +1,47 @@
+title: Curata Brand Assets
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "The **image** component with alignment and caption options. Useful for brand asset pages, how-to screenshots, or any page where a visual needs context around it."
+  - type: section
+    heading: Primary Logo
+    components:
+      - type: image
+        src: /curata-logo.svg
+        alt: Curata logo - ring and dot mark in violet
+        caption: "Primary logomark. Use on light and dark backgrounds. Minimum clear space: half the mark height on all sides."
+        align: center
+        max_width: 280
+  - type: section
+    heading: Usage Guidelines
+    components:
+      - type: markdown
+        body: |
+          **Do**
+          - Use the violet logomark on white, near-black, or neutral backgrounds
+          - Maintain the aspect ratio when resizing
+          - Keep the minimum clear space around the mark
+
+          **Do not**
+          - Place the logo on busy or patterned backgrounds
+          - Rotate, stretch, or add effects to the mark
+          - Use the logomark at sizes smaller than 24px
+  - type: divider
+    label: Brand Colors
+  - type: stat_grid
+    columns: 4
+    stats:
+      - label: Violet
+        value: "#AB7FBB"
+        detail: Primary accent
+      - label: Soft Violet
+        value: "#D9C9E6"
+        detail: Hover and highlight
+      - label: Near Black
+        value: "#1A1A1A"
+        detail: Text and dark backgrounds
+      - label: Off White
+        value: "#FAFAFA"
+        detail: Light backgrounds

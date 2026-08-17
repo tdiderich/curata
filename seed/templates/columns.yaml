@@ -1,0 +1,36 @@
+title: Production Deploy Runbook
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A two-column layout using the **columns** component: numbered steps on the left, margin notes on the right explaining the reasoning behind the riskier steps."
+  - type: divider
+    label: Deploy Procedure
+  - type: columns
+    columns:
+      - - type: steps
+          numbered: true
+          items:
+            - title: Pre-flight checks
+              detail: "Run `make preflight` to verify the build artifact hash, confirm migrations are backward-compatible, and check that feature flags for the release are correctly toggled."
+            - title: Open a maintenance window
+              detail: "Post a 30-minute window in #ops-announce. If the deploy touches auth or billing, extend to 45 minutes and page the on-call SRE."
+            - title: Run database migrations
+              detail: "Apply migrations against production with `db-migrate up --env production`. Migrations run before the new code deploys so the old code keeps working if the deploy is rolled back."
+            - title: Deploy canary (5% traffic)
+              detail: "Push the new image to the canary target group. Monitor p99 latency and error rate on the canary dashboard for 10 minutes before proceeding."
+            - title: Evaluate canary metrics
+              detail: "Compare canary error rate to baseline. If error rate exceeds 1.5x baseline or p99 latency rises above 800ms, roll back the canary and stop."
+            - title: Promote to production
+              detail: "Shift 100% of traffic to the new image. Keep the previous image tagged as `rollback` for 24 hours."
+            - title: Post-deploy validation
+              detail: "Run the smoke suite (`make smoke-prod`), confirm webhook delivery is flowing, and verify the billing reconciliation job completes within its SLA window."
+      - - type: aside
+          body: "**Why migrations run before deploy, not during:** If the new code ships first and the migration fails, the app crashes on a schema it does not recognize. Running migrations first means the old code can still serve traffic on the updated schema while you investigate."
+        - type: aside
+          body: "**Why canary at 5%, not 10%:** At our traffic volume, 5% is roughly 400 requests per minute, enough to surface latency regressions within 3 minutes. Going higher risks a broader blast radius before metrics converge."
+        - type: aside
+          body: "**Why the rollback image lives 24 hours:** Most deploy issues surface within the first hour, but billing reconciliation runs overnight. Keeping the rollback available covers the case where a subtle serialization bug only appears during the batch job."
+        - type: aside
+          body: "**Why a maintenance window for auth changes:** Auth deploys touch session validation. A brief window lets us drain active sessions gracefully rather than forcing mid-request token re-validation, which historically caused a spike of 401s."

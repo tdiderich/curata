@@ -1,0 +1,108 @@
+title: Curata Rollout Plan
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A priority_queue tracking the phases of a Curata rollout. Items are grouped by horizon (now / next / later) with due dates, owners, and status so the team sees what's active, what's coming, and what's done."
+  - type: section
+    heading: Rollout tracker
+    components:
+      - type: priority_queue
+        title: Curata rollout for Acme Engineering
+        group_by: horizon
+        show_dates: true
+        filterable: true
+        show_counts: true
+        items:
+          - label: Connect the MCP server
+            detail: "Point Claude Code, Cursor, and Windsurf at the curata MCP endpoint so agents can read and write pages."
+            status: completed
+            horizon: now
+            owner: Platform team
+            due: "2026-08-19"
+            tags:
+              - label: Setup
+                color: teal
+          - label: Migrate top 20 wiki pages
+            detail: "Identify the 20 most-visited Notion pages and recreate them as curata pages with proper structure and tags."
+            status: active
+            horizon: now
+            owner: D. Nakamura
+            due: "2026-08-23"
+            tags:
+              - label: Content
+                color: green
+          - label: Identify trusted page candidates
+            detail: "Review migrated pages and flag which ones are ready to be marked trusted. Anything with a known owner and recent review qualifies."
+            status: active
+            horizon: now
+            owner: M. Torres
+            due: "2026-08-23"
+            tags:
+              - label: Quality
+                color: yellow
+          - label: Invite the team
+            detail: "Add the first 10 team members. Start with engineering leads and the support manager so they can validate content before the wider rollout."
+            status: upcoming
+            horizon: next
+            owner: J. Reyes
+            due: "2026-08-26"
+            tags:
+              - label: Setup
+                color: teal
+          - label: Set up approval rules
+            detail: "Configure folder-level approval rules so customer-facing pages require a second reviewer before they're marked trusted."
+            status: upcoming
+            horizon: next
+            owner: M. Torres
+            due: "2026-08-28"
+            tags:
+              - label: Quality
+                color: yellow
+          - label: Configure content rules
+            detail: "Enable the default content rules (em-dash ban, AI-slop filter, qualifier warnings) and add any org-specific terminology rules."
+            status: upcoming
+            horizon: next
+            owner: D. Nakamura
+            due: "2026-08-28"
+            tags:
+              - label: Quality
+                color: yellow
+          - label: Archive the old wiki
+            detail: "Once 80% of active pages are migrated and trusted, set the Notion workspace to read-only and add a banner pointing to curata."
+            status: upcoming
+            horizon: later
+            owner: J. Reyes
+            due: "2026-09-15"
+            tags:
+              - label: Content
+                color: green
+          - label: Train agents on brain content
+            detail: "Update agent system prompts to search curata before answering customer questions. Add the curata MCP server to all agent configurations."
+            status: upcoming
+            horizon: later
+            owner: Platform team
+            due: "2026-09-19"
+            tags:
+              - label: Agents
+                color: teal
+                emphasis: true
+          - label: Set up the weekly digest
+            detail: "Configure a Friday digest that surfaces new pages, trust changes, and annotation activity so the team stays aware of what the brain learned."
+            status: upcoming
+            horizon: later
+            owner: M. Torres
+            due: "2026-09-22"
+            tags:
+              - label: Operations
+                color: green
+          - label: Run the first maturity assessment
+            detail: "Use the maturity assessment template to score knowledge coverage across sales, support, and engineering. Baseline the score for quarterly tracking."
+            status: upcoming
+            horizon: later
+            owner: D. Nakamura
+            due: "2026-09-30"
+            tags:
+              - label: Quality
+                color: yellow

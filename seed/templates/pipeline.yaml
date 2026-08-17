@@ -1,0 +1,42 @@
+title: Capture to Trusted
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "The knowledge pipeline from raw capture to validated brain page."
+  - type: pipeline
+    title: Knowledge Pipeline
+    inputs:
+      - label: Slack thread
+        detail: "From #incidents"
+      - label: Call notes
+        detail: "Auto-captured"
+      - label: Agent output
+        detail: "Skill-generated"
+        color: teal
+      - label: Draft
+        detail: "Needs review"
+        color: yellow
+    stages:
+      - label: Review
+        detail: "Check accuracy and sources"
+        capabilities:
+          - label: Fact-check
+            detail: "Verify claims"
+          - label: Rules
+            detail: "Content filters"
+          - label: Classify
+            detail: "Tag and assign"
+          - label: Promote
+            detail: "Pin as trusted"
+    outputs:
+      - label: Post-mortem
+        detail: "Trusted"
+        color: green
+      - label: Account brief
+        detail: "Trusted"
+        color: green
+      - label: Checklist
+        detail: "Trusted"
+        color: green

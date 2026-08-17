@@ -1,0 +1,25 @@
+title: "Brain Coverage"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A venn diagram showing overlap between what Sales, Support, and Engineering have each documented. The center overlap is the shared knowledge everyone agrees on."
+  - type: venn
+    title: "Documented Knowledge by Team"
+    sets:
+      - label: "Sales"
+        color: green
+      - label: "Support"
+        color: teal
+      - label: "Engineering"
+        color: yellow
+    overlaps:
+      - sets: [0, 1]
+        label: "Pricing FAQ, feature comparison"
+      - sets: [0, 2]
+        label: "Integration capabilities, API limits"
+      - sets: [1, 2]
+        label: "Troubleshooting runbooks, known bugs"
+      - sets: [0, 1, 2]
+        label: "Shared definitions everyone agrees on"

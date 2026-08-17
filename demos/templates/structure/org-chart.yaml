@@ -1,0 +1,58 @@
+title: Customer Org Chart
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "An Apollo-enriched org chart for a customer account. Tags flag the economic buyer and internal champion so the account team knows who to loop in on renewals and expansions."
+  - type: org_chart
+    title: Windmere Industries
+    default_open_depth: 2
+    people:
+      - name: Dana Kowalski
+        title: CTO
+        id: dk-001
+        email: dana.kowalski@windmere.fake
+        linkedin: "https://linkedin.com/in/danakowalski-fake"
+        tags:
+          - label: Economic Buyer
+            color: green
+        reports:
+          - name: Marcus Tan
+            title: VP Engineering
+            id: mt-002
+            email: marcus.tan@windmere.fake
+            reports:
+              - name: Priya Deshmukh
+                title: Staff Engineer
+                id: pd-003
+                email: priya.deshmukh@windmere.fake
+              - name: Leo Chen
+                title: Senior Engineer
+                id: lc-004
+                email: leo.chen@windmere.fake
+          - name: Amara Osei
+            title: VP Security
+            id: ao-005
+            email: amara.osei@windmere.fake
+            tags:
+              - label: Champion
+                color: teal
+            reports:
+              - name: Raj Patel
+                title: Security Architect
+                id: rp-006
+                email: raj.patel@windmere.fake
+              - name: Nora Lindqvist
+                title: SOC Manager
+                id: nl-007
+                email: nora.lindqvist@windmere.fake
+          - name: Sam Reeves
+            title: Director of IT
+            id: sr-008
+            email: sam.reeves@windmere.fake
+            reports:
+              - name: Jordan Blake
+                title: IT Operations Lead
+                id: jb-009
+                email: jordan.blake@windmere.fake

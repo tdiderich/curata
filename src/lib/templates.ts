@@ -7,7 +7,172 @@ export interface Template {
 }
 
 export const TEMPLATES: Template[] = [
-  // Present
+  // Data
+  {
+    slug: "chart",
+    title: "Chart: Bar / Pie / Timeseries",
+    description: "Customer health tiers as a bar chart with ARR on the y-axis and semantic color per tier.",
+    group: "Data",
+    previewUrl: "/p/curata-internal/template-chart",
+  },
+  {
+    slug: "chart-group",
+    title: "Chart Group: Side-by-Side",
+    description: "Two charts in a single row: a timeseries of daily page volume next to a bar chart of trust rate.",
+    group: "Data",
+    previewUrl: "/p/curata-internal/template-chart-group",
+  },
+  {
+    slug: "gauge",
+    title: "Gauge: Scoring Dashboard",
+    description: "One gauge per CIS control domain, filled to the maturity score out of five.",
+    group: "Data",
+    previewUrl: "/p/curata-internal/template-gauge",
+  },
+  {
+    slug: "sankey",
+    title: "Sankey: Flow Diagram",
+    description: "A recruiting funnel from sourcing channel to final disposition, sized by candidate count.",
+    group: "Data",
+    previewUrl: "/p/curata-internal/template-sankey",
+  },
+  {
+    slug: "radar",
+    title: "Radar: Multi-Axis Comparison",
+    description: "Account health across five axes with two customers overlaid for side-by-side comparison.",
+    group: "Data",
+    previewUrl: "/p/curata-internal/template-radar",
+  },
+  {
+    slug: "quadrant",
+    title: "Quadrant: Effort vs Impact",
+    description: "Feature requests plotted on effort vs impact with named quadrant labels for each action zone.",
+    group: "Data",
+    previewUrl: "/p/curata-internal/template-quadrant",
+  },
+  {
+    slug: "venn",
+    title: "Venn: Overlap Analysis",
+    description: "Sales, support, and engineering topic coverage with the shared center labeled.",
+    group: "Data",
+    previewUrl: "/p/curata-internal/template-venn",
+  },
+  {
+    slug: "graph",
+    title: "Graph: Concept Map",
+    description: "Ten brain pages as nodes with edges labeled by the shared tag linking them.",
+    group: "Data",
+    previewUrl: "/p/curata-internal/template-graph",
+  },
+  {
+    slug: "progress-bar",
+    title: "Progress Bar: Migration Tracker",
+    description: "One bar per legacy system being retired, with color thresholds at key milestones.",
+    group: "Data",
+    previewUrl: "/p/curata-internal/template-progress-bar",
+  },
+  // Structure
+  {
+    slug: "org-chart",
+    title: "Org Chart",
+    description: "A customer org chart with titles, LinkedIn links, and tags flagging the economic buyer.",
+    group: "Structure",
+    previewUrl: "/p/curata-internal/template-org-chart",
+  },
+  {
+    slug: "role-map",
+    title: "Role Map: Who Owns What",
+    description: "Incident response and deal desk roles with authority tables showing who signs off.",
+    group: "Structure",
+    previewUrl: "/p/curata-internal/template-role-map",
+  },
+  {
+    slug: "tree",
+    title: "Tree: Hierarchy Browser",
+    description: "Folder taxonomy with ownership notes, plus an engineering roadmap with status-colored tasks.",
+    group: "Structure",
+    previewUrl: "/p/curata-internal/template-tree",
+  },
+  {
+    slug: "architecture-diagram",
+    title: "Architecture: System Diagram",
+    description: "The AI-native loop as five connected nodes with labeled data flows between each.",
+    group: "Structure",
+    previewUrl: "/p/curata-internal/template-architecture-diagram",
+  },
+  {
+    slug: "pipeline",
+    title: "Pipeline: Stage Flow",
+    description: "The capture-to-trusted pipeline with raw pages flowing through human review to validated output.",
+    group: "Structure",
+    previewUrl: "/p/curata-internal/template-pipeline",
+  },
+  // Sequence
+  {
+    slug: "event-timeline",
+    title: "Event Timeline: Postmortem",
+    description: "An incident timeline from detection to resolution with severity tags and source attribution.",
+    group: "Sequence",
+    previewUrl: "/p/curata-internal/template-event-timeline",
+  },
+  {
+    slug: "before-after",
+    title: "Before / After Comparison",
+    description: "The same question answered from tribal memory vs the brain, with source attribution.",
+    group: "Sequence",
+    previewUrl: "/p/curata-internal/template-before-after",
+  },
+  {
+    slug: "priority-queue",
+    title: "Priority Queue: Rollout Plan",
+    description: "A phased Curata rollout plan with now/next/later horizons, dates, and status tracking.",
+    group: "Sequence",
+    previewUrl: "/p/curata-internal/template-priority-queue",
+  },
+  // Layout
+  {
+    slug: "columns",
+    title: "Columns: Runbook with Asides",
+    description: "Deploy steps on the left, reasoning asides on the right explaining why each step matters.",
+    group: "Layout",
+    previewUrl: "/p/curata-internal/template-columns",
+  },
+  {
+    slug: "split-compare",
+    title: "Split Compare: Side by Side",
+    description: "Before and after Curata stats compared panel by panel with colored indicators.",
+    group: "Layout",
+    previewUrl: "/p/curata-internal/template-split-compare",
+  },
+  {
+    slug: "hero-banner",
+    title: "Hero Banner: Landing Page",
+    description: "A new-hire onboarding hub with a welcome hero, action buttons, and resource cards.",
+    group: "Layout",
+    previewUrl: "/p/curata-internal/template-hero-banner",
+  },
+  {
+    slug: "image",
+    title: "Image: Brand Assets",
+    description: "Logo placement with caption, alt text, and alignment options.",
+    group: "Layout",
+    previewUrl: "/p/curata-internal/template-image",
+  },
+  {
+    slug: "aside",
+    title: "Aside: Margin Notes",
+    description: "A pricing policy with inline asides explaining the finance reasoning behind each cap.",
+    group: "Layout",
+    previewUrl: "/p/curata-internal/template-aside",
+  },
+  {
+    slug: "empty-state",
+    title: "Empty State: First-Run Page",
+    description: "The page a new org sees before its first capture, with a call-to-action to get started.",
+    group: "Layout",
+    previewUrl: "/p/curata-internal/template-empty-state",
+  },
+  // Existing non-showcase templates
   {
     slug: "showcase-deck",
     title: "Deck: Slide Presentation",
@@ -22,7 +187,6 @@ export const TEMPLATES: Template[] = [
     group: "Present",
     previewUrl: "/p/curata-internal/template-showcase-hub",
   },
-  // Reuse
   {
     slug: "showcase-shared-component",
     title: "Shared Component",
@@ -37,7 +201,6 @@ export const TEMPLATES: Template[] = [
     group: "Reuse",
     previewUrl: "/p/curata-internal/template-showcase-ref-embeds",
   },
-  // Procedures
   {
     slug: "showcase-steps-checklist",
     title: "Steps and Checklists",
@@ -52,7 +215,6 @@ export const TEMPLATES: Template[] = [
     group: "Procedures",
     previewUrl: "/p/curata-internal/template-skill",
   },
-  // Structured data
   {
     slug: "showcase-stat-timeline",
     title: "Stats and Timelines",
@@ -67,7 +229,6 @@ export const TEMPLATES: Template[] = [
     group: "Structured data",
     previewUrl: "/p/curata-internal/template-showcase-tables",
   },
-  // Emphasis and layout
   {
     slug: "showcase-tabs-accordion",
     title: "Tabs and Accordions",
@@ -82,7 +243,6 @@ export const TEMPLATES: Template[] = [
     group: "Emphasis and layout",
     previewUrl: "/p/curata-internal/template-showcase-callouts",
   },
-  // Documents
   {
     slug: "showcase-document",
     title: "Document: Print-Ready",
@@ -90,7 +250,6 @@ export const TEMPLATES: Template[] = [
     group: "Documents",
     previewUrl: "/p/curata-internal/template-showcase-document",
   },
-  // Agents
   {
     slug: "ai-tool-pack",
     title: "AI Tool Pack",
@@ -108,6 +267,10 @@ export const TEMPLATES: Template[] = [
 ];
 
 export const GROUPS: string[] = [
+  "Data",
+  "Structure",
+  "Sequence",
+  "Layout",
   "Present",
   "Reuse",
   "Procedures",

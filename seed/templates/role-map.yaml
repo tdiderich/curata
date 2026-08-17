@@ -1,0 +1,64 @@
+title: Role Assignments
+shell: standard
+components:
+  - type: section
+    heading: Incident Response Readiness
+    components:
+      - type: callout
+        variant: warn
+        title: Why this exists
+        body: "When something breaks at 2 AM, nobody should be asking who does what. This page answers that question before the page fires."
+      - type: role_map
+        title: Who owns what when this breaks
+      - type: table
+        columns:
+          - key: role
+            label: Role
+          - key: person
+            label: Assigned
+          - key: scope
+            label: Scope
+          - key: escalation
+            label: Escalation
+        rows:
+          - role: Detector
+            person: On-call engineer (PagerDuty rotation)
+            scope: "Acknowledge alert, confirm real vs false positive, open incident channel"
+            escalation: "If no ack in 10 min, pages backup"
+          - role: Comms Lead
+            person: Engineering Manager on duty
+            scope: "Post status updates to #incidents every 15 min, notify affected customers"
+            escalation: "If customer-facing, loop in Support within 5 min"
+          - role: Fixer
+            person: Domain owner for the affected service
+            scope: "Root-cause, remediate, confirm resolution"
+            escalation: "If no progress in 30 min, pull in second engineer from same team"
+  - type: divider
+    label: Deal Desk
+  - type: section
+    heading: Deal Desk Sign-Off
+    components:
+      - type: callout
+        variant: info
+        title: When this applies
+        body: "Any discount above 15% or a non-standard payment term requires sign-off from all three roles below before the quote goes out."
+      - type: role_map
+        title: Who signs off on a discount
+      - type: table
+        columns:
+          - key: role
+            label: Role
+          - key: person
+            label: Assigned
+          - key: authority
+            label: Authority
+        rows:
+          - role: Deal Owner
+            person: Assigned AE on the opportunity
+            authority: "Discounts up to 15%, standard terms only"
+          - role: Legal Reviewer
+            person: Commercial counsel (currently Jamie Torres)
+            authority: "Non-standard terms, custom SLAs, data-processing addenda"
+          - role: Finance Approver
+            person: VP Finance
+            authority: "Discounts above 15%, payment terms beyond net-30, multi-year commits"

@@ -1,0 +1,60 @@
+title: Enterprise Pricing Policy
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "The **aside** component used as margin notes inside a **columns** layout: main content on the left, reasoning on the right. Useful for policies, runbooks, or any document where the 'why' matters as much as the 'what.'"
+  - type: divider
+    label: Pricing Tiers
+  - type: columns
+    columns:
+      - - type: section
+          heading: Standard Tiers
+          components:
+            - type: table
+              columns:
+                - key: tier
+                  label: Tier
+                - key: seats
+                  label: Seats
+                - key: price
+                  label: Price / seat / mo
+                - key: discount_cap
+                  label: Max Discount
+              rows:
+                - tier: Starter
+                  seats: "1-10"
+                  price: "$15"
+                  discount_cap: "0%"
+                - tier: Growth
+                  seats: "11-50"
+                  price: "$12"
+                  discount_cap: "10%"
+                - tier: Scale
+                  seats: "51-200"
+                  price: "$9"
+                  discount_cap: "15%"
+                - tier: Enterprise
+                  seats: "201+"
+                  price: "$7"
+                  discount_cap: "20%"
+        - type: section
+          heading: Volume Add-Ons
+          components:
+            - type: markdown
+              body: |
+                - **Additional brain capacity:** $2 per 100k tokens / month
+                - **Priority support:** $500 / month flat, Enterprise tier only
+                - **Dedicated instance:** Custom pricing, minimum 12-month term
+        - type: section
+          heading: Floor Price
+          components:
+            - type: markdown
+              body: "No deal closes below $7 per seat per month regardless of volume, term length, or strategic value. The floor is non-negotiable."
+      - - type: aside
+          body: "**Why the discount cap exists:** In 2025 Q3, three deals closed at 40%+ discounts to land logos. Two churned within six months because the price anchor was too low to justify expansion. The cap protects long-term expansion revenue."
+        - type: aside
+          body: "**Why volume tiers drop by $3, not more:** Marginal cost per seat decreases, but support cost per seat stays roughly flat through 200 seats. The tier pricing reflects actual cost structure, not just a volume incentive."
+        - type: aside
+          body: "**Why the Enterprise floor is $7:** Below $7 the gross margin on a seat turns negative once you account for SSO provisioning, dedicated Slack channel support, and the quarterly business review cycle Enterprise customers expect."

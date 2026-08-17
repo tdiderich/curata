@@ -1,0 +1,54 @@
+title: Before and After Curata
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A side-by-side comparison using the **split_compare** component: two panels with labeled stats, useful for pitching a product change or comparing vendor options."
+  - type: divider
+    label: The Knowledge Gap
+  - type: markdown
+    body: "Every team has answers scattered across Slack threads, stale wikis, and the heads of three people who have been around long enough to remember. Here is what changes when that knowledge lives in one brain."
+  - type: split_compare
+    left:
+      title: Without Curata
+      eyebrow: Before
+      stats:
+        - label: Time to answer a customer question
+          value: "35 minutes"
+          color: red
+        - label: New-hire onboarding time
+          value: "3 weeks"
+          color: red
+        - label: Duplicate docs across tools
+          value: "40%+"
+          color: yellow
+        - label: Answer accuracy (spot-checked)
+          value: "~60%"
+          color: red
+        - label: Knowledge retained after turnover
+          value: "~20%"
+          color: red
+    right:
+      title: With Curata
+      eyebrow: After
+      stats:
+        - label: Time to answer a customer question
+          value: "Under 2 minutes"
+          color: green
+        - label: New-hire onboarding time
+          value: "4 days"
+          color: green
+        - label: Duplicate docs across tools
+          value: "0% (single source)"
+          color: green
+        - label: Answer accuracy (spot-checked)
+          value: "95%+"
+          color: green
+        - label: Knowledge retained after turnover
+          value: "100%"
+          color: green
+  - type: callout
+    variant: success
+    title: The difference
+    body: "Curata captures knowledge from where it already happens, validates it through human review, and serves it back to every agent and every teammate. Nothing resets when someone leaves."

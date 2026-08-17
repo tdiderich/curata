@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { PageContent } from "./page-viewer";
+import { PageContent, type ReorderEvent } from "./page-viewer";
 import { VisibilityPicker } from "./visibility-picker";
 import { registerPageActions } from "@/lib/page-actions";
 import { VersionHistoryPanel } from "./version-history";
@@ -15,9 +15,13 @@ import { TrustBanner, type TrustBannerProps } from "./trust-banner";
 import { basePath } from "@/lib/api-fetch";
 import { copyPagesForAgent } from "@/lib/copy-for-agent";
 import { useHighlights } from "@/hooks/use-highlights";
-import { DeckControlContext } from "@/generated/kazam-renderer";
+import yaml from "js-yaml";
+import { DeckControlContext, PageRenderer, type PageData, type ComponentData } from "@/generated/kazam-renderer";
+import { EditableComponent } from "./editable-component";
+import { AddComponentButton } from "./add-component-button";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
 import { ApprovalRuleEditor, type ApprovalApproverInput } from "@/components/approval-rule-editor";
+import InlineComponentEditor from "./inline-component-editor";
 
 interface Annotation {
   id: string;
@@ -76,6 +80,7 @@ export default function PageDetailClient({
   approvalEffectiveNote = null,
   tagsRow,
   trustBanner,
+  pageJson,
 }: {
   slug: string;
   children?: React.ReactNode;
@@ -98,6 +103,7 @@ export default function PageDetailClient({
   approvalEffectiveNote?: string | null;
   tagsRow?: React.ReactNode;
   trustBanner?: Omit<TrustBannerProps, "slug">;
+  pageJson?: PageData;
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -115,6 +121,13 @@ export default function PageDetailClient({
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [viewTab, setViewTab] = useState<"preview" | "source">("preview");
+  const [editMode, setEditMode] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editingComponent, setEditingComponent] = useState<{ id: string; type: string } | null>(null);
+  const [localComponents, setLocalComponents] = useState<Record<string, unknown>[]>(() =>
+    pageJson?.components ? JSON.parse(JSON.stringify(pageJson.components)) : [],
+  );
+  const [editDirty, setEditDirty] = useState(false);
   const [srcDirty, setSrcDirty] = useState(false);
   const [srcSaving, setSrcSaving] = useState(false);
   const srcControls = useRef<SourceEditorControls | null>(null);
@@ -342,6 +355,94 @@ export default function PageDetailClient({
     router.refresh();
   }
 
+  const handleEditComponent = useCallback((componentId: string, componentType: string) => {
+    setEditingComponent({ id: componentId, type: componentType });
+  }, []);
+
+  const handleReorder = useCallback((event: ReorderEvent) => {
+    setLocalComponents((prev) => {
+      const arr = [...prev];
+      const srcIdx = arr.findIndex((c) => (c.id as string) === event.componentId || `c-${arr.indexOf(c)}` === event.componentId);
+      if (srcIdx === -1) return prev;
+      const [moved] = arr.splice(srcIdx, 1);
+      const destIdx = arr.findIndex((c) => (c.id as string) === event.targetId || `c-${arr.indexOf(c)}` === event.targetId);
+      if (destIdx === -1) return prev;
+      const insertAt = event.position === "before" ? destIdx : destIdx + 1;
+      arr.splice(insertAt, 0, moved);
+      return arr;
+    });
+    setEditDirty(true);
+  }, []);
+
+  const handleDeleteComponent = useCallback((componentId: string) => {
+    setLocalComponents((prev) => {
+      const idx = prev.findIndex((c, i) => (c.id as string) === componentId || `c-${i}` === componentId);
+      if (idx === -1) return prev;
+      const arr = [...prev];
+      arr.splice(idx, 1);
+      return arr;
+    });
+    setEditDirty(true);
+  }, []);
+
+  const handleAddComponent = useCallback((component: Record<string, unknown>) => {
+    setLocalComponents((prev) => [...prev, component]);
+    setEditDirty(true);
+  }, []);
+
+  const handleLocalComponentSave = useCallback((componentId: string, parsed: Record<string, unknown>) => {
+    setLocalComponents((prev) => {
+      const arr = [...prev];
+      const idx = arr.findIndex((c, i) => (c.id as string) === componentId || `c-${i}` === componentId);
+      if (idx === -1) return prev;
+      parsed.id = arr[idx].id ?? componentId;
+      arr[idx] = parsed;
+      return arr;
+    });
+    setEditDirty(true);
+  }, []);
+
+  const saveAllEdits = useCallback(async () => {
+    setEditSaving(true);
+    try {
+      const res = await fetch(`${basePath}/api/pages/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, op: "replace-all", components: localComponents }),
+      });
+      if (res.ok) {
+        setEditDirty(false);
+        setEditingComponent(null);
+        setEditMode(false);
+        router.refresh();
+      } else {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(data.error ?? "Save failed");
+      }
+    } catch {
+      toast.error("Save failed");
+    }
+    setEditSaving(false);
+  }, [slug, localComponents, router]);
+
+  const ComponentWrapper = useMemo(() => {
+    return function Wrapper({ comp, index, children: cv }: { comp: ComponentData; index: number; children: React.ReactNode }) {
+      return (
+        <EditableComponent
+          comp={comp}
+          index={index}
+          onEdit={handleEditComponent}
+          onDelete={handleDeleteComponent}
+          onDragStart={() => {}}
+          onDragEnd={() => {}}
+          editingId={editingComponent?.id ?? null}
+        >
+          {cv}
+        </EditableComponent>
+      );
+    };
+  }, [handleEditComponent, handleDeleteComponent, editingComponent?.id]);
+
   async function restorePage() {
     try {
       const res = await fetch(`${basePath}/api/pages`, {
@@ -402,7 +503,7 @@ export default function PageDetailClient({
           });
         },
       },
-      { id: "edit", label: "Edit page", hint: "source", run: () => setViewTab("source") },
+      { id: "edit-source", label: "Edit source YAML", run: () => setViewTab("source") },
       { id: "tags", label: "Add tags", run: () => window.dispatchEvent(new Event("curata-open-tags")) },
       { id: "trusted-versions", label: "Trusted versions", run: () => setVersionHistoryOpen(true) },
       {
@@ -508,8 +609,27 @@ export default function PageDetailClient({
               </button>
             )}
             <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} hideTrigger />
-            <button className="view-tab" onClick={() => setViewTab("source")}>
-              Edit
+            <button
+              className={`view-tab${editMode ? " view-tab--active" : ""}`}
+              disabled={editSaving}
+              onClick={() => {
+                if (editMode) {
+                  if (editDirty) {
+                    saveAllEdits();
+                  } else {
+                    setEditingComponent(null);
+                    setEditMode(false);
+                  }
+                } else {
+                  setLocalComponents(
+                    pageJson?.components ? JSON.parse(JSON.stringify(pageJson.components)) : [],
+                  );
+                  setEditDirty(false);
+                  setEditMode(true);
+                }
+              }}
+            >
+              {editSaving ? "Saving Page..." : editMode ? "Done" : "Edit"}
             </button>
             <button
               className="doc-actions-btn"
@@ -621,17 +741,54 @@ export default function PageDetailClient({
       <div className="page-content-wrap">
         <PageContent
           ref={contentRef}
+          editMode={editMode}
+          onReorder={editMode ? handleReorder : undefined}
           selectionActions={[
             { label: "Annotate", onSelect: (section, target, componentId) => openForm("note", section, target, componentId) },
-            { label: "Replace", onSelect: (section, target, componentId) => openForm("edit", section, target, componentId) },
+            ...(editMode ? [{
+              label: "Edit",
+              onSelect: (_section: string, _target: string, componentId: string) => {
+                if (!componentId) return;
+                const wrapper = document.querySelector<HTMLElement>(`[data-component-id="${componentId}"]`);
+                const compType = wrapper?.dataset.componentType || "component";
+                handleEditComponent(componentId, compType);
+              },
+            }] : []),
           ]}
         >
-          {isDeck ? (
+          {editMode && pageJson ? (
+            <>
+              <PageRenderer
+                page={{ ...pageJson!, components: localComponents as PageData["components"] }}
+                componentWrapper={ComponentWrapper}
+              />
+              <AddComponentButton onAdd={handleAddComponent} disabled={editSaving} />
+            </>
+          ) : isDeck ? (
             <DeckControlContext.Provider value={{ slide: slideIndex, onSlideChange: setSlideIndex }}>
               {children}
             </DeckControlContext.Provider>
           ) : children}
         </PageContent>
+        {editingComponent && (
+          <InlineComponentEditor
+            slug={slug}
+            componentId={editingComponent.id}
+            componentType={editingComponent.type}
+            onClose={() => setEditingComponent(null)}
+            onSaved={() => setEditingComponent(null)}
+            initialYaml={(() => {
+              const idx = localComponents.findIndex((c, i) =>
+                (c.id as string) === editingComponent.id || `c-${i}` === editingComponent.id,
+              );
+              if (idx === -1) return undefined;
+              const comp = { ...localComponents[idx] };
+              delete comp.id;
+              return yaml.dump(comp, { lineWidth: -1, noRefs: true, quotingType: '"', forceQuotes: false }).trimEnd();
+            })()}
+            onLocalSave={handleLocalComponentSave}
+          />
+        )}
 
         <div className="ann-margin" aria-label="Annotations">
           {activeAnns.map((ann) => {

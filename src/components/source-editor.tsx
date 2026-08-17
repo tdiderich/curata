@@ -9,7 +9,52 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { defaultKeymap, indentWithTab } from "@codemirror/commands";
+import { autocompletion, type CompletionContext, type Completion } from "@codemirror/autocomplete";
 import { basePath } from "@/lib/api-fetch";
+import { PALETTE, PALETTE_GROUPS } from "@/lib/component-palette";
+
+function componentCompletions(ctx: CompletionContext) {
+  const line = ctx.state.doc.lineAt(ctx.pos);
+  const textBefore = line.text.slice(0, ctx.pos - line.from);
+
+  const match = textBefore.match(/^(\s*(?:- )?)\/(\w*)$/);
+  if (!match) return null;
+
+  const prefix = match[1];
+  const typed = match[2].toLowerCase();
+  const slashPos = line.from + prefix.length;
+  const hasMarker = prefix.endsWith("- ");
+  const baseIndent = hasMarker ? prefix.slice(0, -2) : prefix;
+  const contIndent = baseIndent + "  ";
+
+  const groupOrder = Object.fromEntries(PALETTE_GROUPS.map((g, i) => [g, i]));
+
+  const options: Completion[] = PALETTE
+    .filter((e) => !typed || e.type.includes(typed) || e.label.toLowerCase().includes(typed))
+    .sort((a, b) => (groupOrder[a.group] ?? 99) - (groupOrder[b.group] ?? 99))
+    .map((entry) => ({
+      label: entry.type,
+      displayLabel: entry.label,
+      detail: entry.group,
+      info: entry.description,
+      boost: typed && entry.type.startsWith(typed) ? 1 : 0,
+      apply: (view: EditorView, _c: Completion, from: number, to: number) => {
+        const stubLines = entry.stub.split("\n");
+        let firstLine = stubLines[0];
+        if (hasMarker && firstLine.startsWith("- ")) {
+          firstLine = firstLine.slice(2);
+        }
+        const rest = stubLines.slice(1).map((l) => {
+          const origIndent = l.match(/^\s*/)?.[0].length ?? 0;
+          return baseIndent + " ".repeat(origIndent) + l.trimStart();
+        });
+        const text = [firstLine, ...rest].join("\n");
+        view.dispatch({ changes: { from, to, insert: text } });
+      },
+    }));
+
+  return { from: slashPos, options, filter: false };
+}
 
 export interface SourceEditorControls {
   save: () => void;
@@ -158,6 +203,11 @@ export default function SourceEditor({
           { tag: tags.punctuation, color: "var(--muted)" },
         ])),
         highlightSelectionMatches(),
+        autocompletion({
+          override: [componentCompletions],
+          icons: false,
+          optionClass: () => "cm-slash-option",
+        }),
         saveKeymap,
         keymap.of([...defaultKeymap, ...searchKeymap, indentWithTab]),
         EditorView.updateListener.of((update) => {

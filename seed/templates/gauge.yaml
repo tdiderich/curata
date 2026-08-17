@@ -1,0 +1,35 @@
+title: "CIS Assessment Scoring"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A gauge grid with one dial per CIS control domain. Each gauge fills to the maturity score out of five, laid out in a three-column grid."
+  - type: section
+    heading: "CIS Controls Maturity Assessment"
+    components:
+      - type: markdown
+        body: "Assessed 2026-08-01 against CIS Controls v8. Scores reflect implemented sub-controls as a fraction of the domain total."
+      - type: gauge
+        title: "Maturity by Domain"
+        max: 5
+        columns: 3
+        items:
+          - label: "Access Control"
+            value: 4.2
+            color: green
+          - label: "Asset Management"
+            value: 3.1
+            color: yellow
+          - label: "Data Protection"
+            value: 2.8
+            color: yellow
+          - label: "Incident Management"
+            value: 4.7
+            color: green
+          - label: "Vulnerability Management"
+            value: 1.9
+            color: red
+          - label: "Audit & Accountability"
+            value: 3.5
+            color: yellow
