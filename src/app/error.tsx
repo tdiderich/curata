@@ -17,7 +17,7 @@ export default function Error({
         An unexpected error occurred. It may be temporary — trying again usually fixes it.
       </p>
       <div className="error-page-actions">
-        <button className="error-page-btn" onClick={reset}>
+        <button className="btn btn--ghost" onClick={reset}>
           Try again
         </button>
         <Link className="error-page-link" href="/dashboard">

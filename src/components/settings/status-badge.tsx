@@ -15,8 +15,8 @@ export type StatusBadgeTone =
  */
 export function StatusBadge({ tone, label }: { tone: StatusBadgeTone; label: string }) {
   return (
-    <span className={`stg-badge stg-badge--${tone}`}>
-      <span className="stg-badge-dot" aria-hidden />
+    <span className={`pill pill--mono pill--${tone}`}>
+      <span className="pill-dot" aria-hidden />
       {label}
     </span>
   );

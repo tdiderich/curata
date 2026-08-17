@@ -133,10 +133,10 @@ export default async function SettingsPage() {
             : "This organization is on the Team plan."}
         >
           <div className="settings-billing-links">
-            <Link href="/billing" className="stg-btn stg-btn--primary">
+            <Link href="/billing" className="btn btn--primary">
               {limitedPlan ? "See plans & upgrade" : "Manage plan"}
             </Link>
-            <Link href="/org" className="stg-btn stg-btn--ghost">
+            <Link href="/org" className="btn btn--ghost">
               Invoices &amp; payment methods
             </Link>
           </div>

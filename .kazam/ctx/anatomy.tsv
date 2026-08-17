@@ -1,11 +1,11 @@
-# scanned: 2026-08-14T21:49:53.997278-05:00
+# scanned: 2026-08-17T11:46:10.262627-05:00
 # root_files
 path	tokens	reads	description
 CLAUDE.md	781	0	Claude Code project instructions
 CONTRIBUTING.md	389	0	Markdown document
 Dockerfile	330	0	Docker container definition
 LICENSE	267	0	License file
-README.md	2057	0	Project readme
+README.md	2215	0	Project readme
 dev.sh	524	0	Shell script
 docker-compose.test.yml	85	0	YAML configuration/data
 docker-compose.yml	174	0	YAML configuration/data
@@ -18,17 +18,17 @@ pnpm-lock.yaml	55287	0	YAML configuration/data
 pnpm-workspace.yaml	47	0	YAML configuration/data
 prisma.config.ts	56	0	TypeScript source
 tsconfig.json	169	0	TypeScript configuration
-tsconfig.tsbuildinfo	89507	0	
+tsconfig.tsbuildinfo	89118	0	
 vitest.config.ts	113	0	TypeScript source
 
 # directories
 path	files	tokens	description
-demos	21	64620	
+demos	13	10479	
 docs	6	20320	
 packages	19	27763	
-prisma	5	2644	migrations
+prisma	7	2806	migrations
 scripts	8	2526	
-seed	31	30112	
-skills	10	4720	
-src	198	753934	
-tests	30	52709	tests
+seed	33	31685	
+skills	14	8844	
+src	204	770444	
+tests	38	74533	tests

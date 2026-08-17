@@ -3,13 +3,16 @@ tests/activity.test.ts	455	0	activity.test tests
 tests/api-key.test.ts	240	0	api-key.test tests
 tests/approval.test.ts	2614	0	approval.test tests
 tests/auth.test.ts	1121	0	auth.test tests
+tests/brain-usage.test.ts	2020	0	brain-usage.test tests
+tests/capture-dedup.test.ts	1098	0	capture-dedup.test tests
 tests/capture-thread.test.ts	3630	0	capture-thread.test tests
 tests/capture-token.test.ts	1222	0	capture-token.test tests
 tests/component-ids.test.ts	2323	0	component-ids.test tests
-tests/component-ref.test.ts	3483	0	component-ref.test tests
+tests/component-ref.test.ts	5031	0	component-ref.test tests
 tests/concepts.test.ts	2833	0	concepts.test tests
 tests/content-negotiation.test.ts	788	0	content-negotiation.test tests
-tests/digest.test.ts	2945	0	digest.test tests
+tests/digest.test.ts	5872	0	digest.test tests
+tests/entitlements.test.ts	1667	0	entitlements.test tests
 tests/export-nonce.test.ts	806	0	export-nonce.test tests
 tests/export-preview-page.test.ts	588	0	export-preview-page.test tests
 tests/glance-prompts.test.ts	3522	0	glance-prompts.test tests
@@ -17,15 +20,20 @@ tests/global-setup.ts	298	0	global-setup tests
 tests/graph.test.ts	1216	0	graph.test tests
 tests/groups.test.ts	2892	0	groups.test tests
 tests/helpers.ts	537	0	helpers tests
+tests/mcp-dispatch-agent-ux.test.ts	1329	0	mcp-dispatch-agent-ux.test tests
 tests/mcp-instructions.test.ts	1023	0	mcp-instructions.test tests
 tests/mcp-oauth.test.ts	1666	0	Tests for decodeOrgIdClaim + resolveOrgFromClerkOAuth: org claim resolution, sole-membership fallback, fail-closed ambiguity, viewer scopes
+tests/mcp-review-queue.test.ts	1646	0	mcp-review-queue.test tests
 tests/mcp-tool-parity.test.ts	439	0	mcp-tool-parity.test tests
 tests/mcp-trust.test.ts	1834	0	mcp-trust.test tests
 tests/middleware-rate-limit.test.ts	170	0	middleware-rate-limit.test tests
 tests/page-markdown.test.ts	2222	0	page-markdown.test tests
-tests/pages.test.ts	4572	0	pages.test tests
+tests/pages.test.ts	6430	0	pages.test tests
 tests/required-components.test.ts	3721	0	required-components.test tests
-tests/setup.ts	194	0	setup tests
+tests/restore-cap.test.ts	2094	0	restore-cap.test tests
+tests/seed.test.ts	2821	0	seed.test tests
+tests/setup.ts	361	0	setup tests
 tests/share-prompt.test.ts	1418	0	share-prompt.test tests
 tests/tags-org.test.ts	2930	0	tags-org.test tests
+tests/version-retention.test.ts	2649	0	tests for pruneVersions/sweepVersions: trusted+latest immune at any age, 31-day intermediates deleted, fresh intermediates kept, prune failure doesn't fail the write, sweep across pages, restore lookup on a surviving vs pruned id, digest hot-spot count (7-day window) unaffected by 30-day pruning
 tests/versions-trust.test.ts	1007	0	versions-trust.test tests

@@ -54,7 +54,7 @@ export function AgentConnectFlow({ slug, temporary, authMode }: AgentConnectFlow
           {temporary && " This key expires in 1 hour."}
         </p>
         <button
-          className="agent-btn-primary"
+          className="btn btn--primary"
           onClick={handleGenerate}
           disabled={loading}
         >

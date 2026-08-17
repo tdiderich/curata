@@ -167,7 +167,7 @@ function EmptyWelcome({ orgName }: { orgName?: string }) {
       </div>
 
       <button
-        className={`empty-scratch${creating === "__blank" ? " empty-template-card--creating" : ""}`}
+        className={`empty-scratch${creating === "__blank" ? " template-picker-card--creating" : ""}`}
         onClick={createBlank}
         disabled={creating !== null}
       >
@@ -191,12 +191,12 @@ function EmptyWelcome({ orgName }: { orgName?: string }) {
                 {groupTemplates.map((t) => (
                   <button
                     key={t.slug}
-                    className={`empty-template-card${creating === t.slug ? " empty-template-card--creating" : ""}`}
+                    className={`template-picker-card${creating === t.slug ? " template-picker-card--creating" : ""}`}
                     onClick={() => createFromTemplate(t.slug, t.title)}
                     disabled={creating !== null}
                   >
-                    <span className="empty-template-card-title">{t.title}</span>
-                    <span className="empty-template-card-desc">{t.description}</span>
+                    <span className="template-picker-card-title">{t.title}</span>
+                    <span className="template-picker-card-desc">{t.description}</span>
                   </button>
                 ))}
               </div>
@@ -401,18 +401,18 @@ export function DashboardClient({ pages, folders, pageCount, orgName, cleanupCou
                       {page.title}
                     </Link>
                     {pinnedSet.has(page.slug) && (
-                      <span className="dash-badge dash-badge--pin" title="Pinned">&#9733;</span>
+                      <span className="pill dash-badge dash-badge--pin" title="Pinned">&#9733;</span>
                     )}
                     {updatedSinceVisit && (
-                      <span className="dash-badge dash-badge--updated" title={`Updated by ${page.lastEditedBy} since your last visit`}>
+                      <span className="pill dash-badge dash-badge--updated" title={`Updated by ${page.lastEditedBy} since your last visit`}>
                         new
                       </span>
                     )}
                     {page.freshness === "overdue" && (
-                      <span className="dash-badge dash-badge--stale" title="Past its review cadence">stale</span>
+                      <span className="pill dash-badge dash-badge--stale" title="Past its review cadence">stale</span>
                     )}
                     {page.freshness === "due" && (
-                      <span className="dash-badge dash-badge--due" title="Approaching its review cadence">review due</span>
+                      <span className="pill dash-badge dash-badge--due" title="Approaching its review cadence">review due</span>
                     )}
                   </td>
                   <td className="dash-td dash-td-muted">{f ? f.name : <span className="dash-none">&mdash;</span>}</td>

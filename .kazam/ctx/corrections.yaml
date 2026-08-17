@@ -1,1 +1,5 @@
-corrections: []
+corrections:
+- id: kz-ecf1b2
+  mistake: staged dogfood-fix commit from the agent report's file list and a status scan, missed src/lib/kazam.ts; pushed tree imported a nonexistent export, hub deploy failed
+  correction: after committing, run git status and confirm ZERO non-.kazam modifications remain before pushing; pre-push validates the worktree not the commit, so a clean status is the only proof the commit is self-contained
+  created: 2026-08-15T20:22:02.064016-05:00

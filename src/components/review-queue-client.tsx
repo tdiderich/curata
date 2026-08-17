@@ -198,14 +198,14 @@ export function ReviewQueueClient({ rows, canTrust }: ReviewQueueClientProps) {
           ))}
         </select>
         <button
-          className={`cleanup-btn${createdByMe ? " cleanup-btn--active" : ""}`}
+          className={`btn btn--ghost${createdByMe ? " cleanup-btn--active" : ""}`}
           onClick={() => setCreatedByMe((v) => !v)}
           aria-pressed={createdByMe}
         >
           Created by me
         </button>
         <button
-          className={`cleanup-btn${annotatedByMe ? " cleanup-btn--active" : ""}`}
+          className={`btn btn--ghost${annotatedByMe ? " cleanup-btn--active" : ""}`}
           onClick={() => setAnnotatedByMe((v) => !v)}
           aria-pressed={annotatedByMe}
         >
@@ -235,7 +235,7 @@ export function ReviewQueueClient({ rows, canTrust }: ReviewQueueClientProps) {
                   <div className="cleanup-row-top">
                     <span className="cleanup-title">{r.title}</span>
                     {r.folderName && <span className="cleanup-folder">{r.folderName}</span>}
-                    <span className={`vh-list-badge${r.neverTrusted ? "" : " vh-list-badge--trusted"}`}>
+                    <span className={`pill vh-list-badge${r.neverTrusted ? "" : " vh-list-badge--trusted"}`}>
                       {r.neverTrusted ? "never trusted" : `${r.versionsBehind} version${r.versionsBehind !== 1 ? "s" : ""} behind`}
                     </span>
                   </div>
@@ -245,13 +245,13 @@ export function ReviewQueueClient({ rows, canTrust }: ReviewQueueClientProps) {
                   </div>
                 </button>
                 <div className="cleanup-actions">
-                  <button className="cleanup-btn" onClick={() => setDiffSlug(diffSlug === r.slug ? null : r.slug)}>
+                  <button className="btn btn--ghost" onClick={() => setDiffSlug(diffSlug === r.slug ? null : r.slug)}>
                     {diffSlug === r.slug ? "Hide diff" : "View diff"}
                   </button>
                   {canTrust && (
                     r.eligible ? (
                       <button
-                        className="cleanup-btn cleanup-btn--archive"
+                        className="btn cleanup-btn--archive"
                         disabled={busySlug === r.slug}
                         onClick={() => trustLatest(r.slug)}
                       >

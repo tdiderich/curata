@@ -553,13 +553,13 @@ export function Sidebar({
         {cleanupTotal > 0 && (
           <Link href="/cleanup" className={`nav-link-item${pathname === "/cleanup" ? " nav-link-item--active" : ""}`}>
             Cleanup
-            <span className="nav-count-badge">{cleanupTotal}</span>
+            <span className="pill nav-count-badge">{cleanupTotal}</span>
           </Link>
         )}
         {reviewCount > 0 && (
           <Link href="/review" className={`nav-link-item${pathname === "/review" ? " nav-link-item--active" : ""}`}>
             Review
-            <span className="nav-count-badge">{reviewCount}</span>
+            <span className="pill nav-count-badge">{reviewCount}</span>
           </Link>
         )}
       </nav>

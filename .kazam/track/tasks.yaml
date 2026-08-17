@@ -983,3 +983,17 @@ tasks:
   updated: 2026-08-14 12:52:08.700138-05:00
   closed: 2026-08-14 12:52:08.700138-05:00
   close_reason: 'Reordered settings tabs (Admin/Theme/Groups/Members/Tags/Content Rules/API Keys), reordered+renamed page action bar (Copy for agent/Edit/Add tags/Trusted versions/Change visibility/Content Rules/Export PNG/Export PDF, stragglers Add annotation/resolved/expand grouped at end), removed form editor entry points (page-editor.tsx wrapper, isEditing branch in pages/[slug]/page.tsx, ?edit=1 pushes, Form editor palette action) and orphaned pe-footer/pe-save-btn/pe-error/pe-discard-btn CSS. Kept generated PageEditor component and /api/pages/content route untouched. Gate green: lint 0 errors, build succeeds, 268/268 tests pass.'
+- id: kz-e11ce4
+  title: 'Review queue UI: surface open annotations + prescreen provenance on queue items - review-queue-client only shows boolean annotatedByMe today, pre-screen findings (annotate_page source=prescreen) are invisible in /review. Show open annotation count + prescreen badge per item. Follow-up from kz-cdef7f'
+  status: open
+  priority: 2
+  task_type: task
+  created: 2026-08-16T15:37:55.407866-05:00
+  updated: 2026-08-16T15:37:55.407866-05:00
+- id: kz-cff8df
+  title: 'API key permissions inconsistency: Settings API Keys tab gated to owner/admin (key:manage) but POST /api/keys lets any non-viewer create their own key - Connect tab shows members ''ask an admin'' though the API would allow self-serve. Align gate or route. Found by kz-a23217 build'
+  status: open
+  priority: 3
+  task_type: task
+  created: 2026-08-16T15:42:34.132256-05:00
+  updated: 2026-08-16T15:42:34.132256-05:00

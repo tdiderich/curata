@@ -6,7 +6,7 @@ export function SegmentedControl<T extends string>({
   disabledOptions,
 }: {
   value: T;
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; icon?: React.ReactNode }[];
   onChange: (value: T) => void;
   /** Options that render but can't be selected (e.g. kind is locked while editing an existing rule). */
   disabledOptions?: T[];
@@ -21,6 +21,7 @@ export function SegmentedControl<T extends string>({
           onClick={() => onChange(opt.value)}
           disabled={disabledOptions?.includes(opt.value)}
         >
+          {opt.icon}
           {opt.label}
         </button>
       ))}

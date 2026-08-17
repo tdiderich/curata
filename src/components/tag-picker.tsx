@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CONCEPT_KINDS, DEFAULT_KIND, kindSlug, type ConceptKind } from "@/lib/concept-kinds";
+import { SegmentedControl } from "@/components/settings/segmented-control";
 
 export interface TagOption {
   term: string;
@@ -149,19 +150,15 @@ export function TagPicker({
             {(created.length > 0 || draftIsNew) && (
               <span className="kg-picker-kindrow">
                 <span className="kg-picker-kindrow-label">kind for new tags</span>
-                <span className="kg-picker-kinds">
-                  {CONCEPT_KINDS.map((k) => (
-                    <button
-                      key={k}
-                      type="button"
-                      className={newKind === k ? "kg-kind-seg kg-kind-seg-on" : "kg-kind-seg"}
-                      onClick={() => setNewKind(k)}
-                    >
-                      <span className={`pg-tag-kind-dot pg-dot-${k}`} aria-hidden />
-                      {k}
-                    </button>
-                  ))}
-                </span>
+                <SegmentedControl<ConceptKind>
+                  value={newKind}
+                  onChange={setNewKind}
+                  options={CONCEPT_KINDS.map((k) => ({
+                    value: k,
+                    label: k,
+                    icon: <span className={`pg-tag-kind-dot pg-dot-${k}`} aria-hidden />,
+                  }))}
+                />
               </span>
             )}
             <span className="kg-picker-foot">

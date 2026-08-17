@@ -138,8 +138,8 @@ export function VersionHistoryPanel({
                 <span className="vh-list-meta">
                   <span className="vh-list-author">{v.createdBy}</span>
                   <span className="vh-list-hash">{v.contentHash.slice(0, 8)}</span>
-                  {i === 0 && <span className="vh-list-badge">current</span>}
-                  {v.id === trustedVersionId && <span className="vh-list-badge vh-list-badge--trusted">trusted</span>}
+                  {i === 0 && <span className="pill vh-list-badge">current</span>}
+                  {v.id === trustedVersionId && <span className="pill vh-list-badge vh-list-badge--trusted">trusted</span>}
                 </span>
               </button>
             ))}
@@ -154,7 +154,7 @@ export function VersionHistoryPanel({
                 <span className="vh-preview-actions">
                   {!isCurrent && (
                     <button
-                      className="vh-restore-btn"
+                      className="btn btn--ghost"
                       disabled={restoring}
                       onClick={() => restore(selected.id)}
                     >
@@ -164,7 +164,7 @@ export function VersionHistoryPanel({
                   {canApprove ? (
                     isTrusted ? (
                       <button
-                        className="vh-trust-btn"
+                        className="btn btn--ghost"
                         disabled={trustBusy}
                         onClick={() => clearTrusted()}
                       >
@@ -172,7 +172,7 @@ export function VersionHistoryPanel({
                       </button>
                     ) : (
                       <button
-                        className="vh-trust-btn"
+                        className="btn btn--ghost"
                         disabled={trustBusy}
                         onClick={() => markTrusted(selected.id)}
                       >

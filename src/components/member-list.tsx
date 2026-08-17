@@ -215,7 +215,7 @@ export function MemberList({ canManage, currentUserId, invite }: MemberListProps
               ? "Personal is a solo plan. Move to Team to add teammates."
               : "Invite teammates to join this organization."}
           </span>
-          <Link href={invite.href} className="stg-btn stg-btn--primary">
+          <Link href={invite.href} className="btn btn--primary">
             {invite.kind === "upgrade" ? "Add teammates" : "Invite teammates"}
           </Link>
         </div>
@@ -237,7 +237,7 @@ export function MemberList({ canManage, currentUserId, invite }: MemberListProps
               ))}
             </select>
             <button
-              className="bulk-bar-btn"
+              className="btn btn--ghost"
               onClick={bulkAddToGroup}
               disabled={bulkBusy || !bulkGroupId}
             >
@@ -289,7 +289,7 @@ export function MemberList({ canManage, currentUserId, invite }: MemberListProps
                   <span className="members-email">
                     {m.email ?? m.userId.slice(0, 16) + "…"}
                   </span>
-                  {isSelf && <span className="members-self-badge">you</span>}
+                  {isSelf && <span className="pill members-self-badge">you</span>}
                 </td>
                 <td className="dash-td">
                   {canManage ? (
@@ -307,7 +307,7 @@ export function MemberList({ canManage, currentUserId, invite }: MemberListProps
                       ))}
                     </select>
                   ) : (
-                    <span className={`members-role-badge members-role-badge--${m.role}`}>
+                    <span className={`pill members-role-badge members-role-badge--${m.role}`}>
                       {m.role}
                     </span>
                   )}
@@ -327,7 +327,7 @@ export function MemberList({ canManage, currentUserId, invite }: MemberListProps
                     {!isSelf && (
                       <span className="stg-row-actions">
                         <button
-                          className="members-remove-btn"
+                          className="btn btn--danger"
                           onClick={() => removeMember(m.id)}
                           disabled={isBusy}
                         >

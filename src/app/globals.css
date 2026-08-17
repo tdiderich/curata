@@ -18,6 +18,52 @@
   --kind-topic-rgb: 237, 161, 0;
 }
 
+/* ── Shared primitive: buttons ──
+   Canonical .btn family, consolidated from the various one-off *-btn
+   classes that used to duplicate this same shape across settings, cleanup,
+   content rules, version history, and marketing surfaces. */
+
+.btn {
+  font: inherit;
+  font-size: 13px;
+  border-radius: 7px;
+  padding: 6px 14px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn--primary { background: rgba(var(--accent-rgb), 0.22); border-color: rgba(var(--accent-rgb), 0.5); color: var(--snow); }
+.btn--primary:hover:not(:disabled) { background: rgba(var(--accent-rgb), 0.3); }
+.btn--primary:disabled { opacity: 0.4; cursor: default; }
+.btn--ghost { background: none; border-color: rgba(var(--text-rgb), 0.14); color: var(--light-muted); }
+.btn--ghost:hover:not(:disabled) { color: var(--snow); }
+.btn--danger { color: var(--red, #e05252); border-color: rgba(224, 82, 82, 0.3); }
+.btn--danger:hover:not(:disabled) { background: rgba(224, 82, 82, 0.1); border-color: rgba(201, 123, 138, 0.5); }
+
+/* ── Shared primitive: pills/badges ──
+   Canonical .pill family, consolidated from the various one-off badge/chip
+   classes across settings, dashboard, cleanup, members, and version
+   history that all shared this same inline label shape. Each family keeps
+   its own tone-modifier class(es) for color (and, where a family carried a
+   genuinely distinct extra like a border or an icon-only tweak, that stays
+   too); only the duplicated shape (display, sizing, radius) moved here. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pill-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+/* StatusBadge and the settings chip family use a monospace face; kept as an
+   addable modifier rather than in the base shape so other pill consumers
+   keep their default (sans) font. */
+.pill--mono { font-family: "SF Mono", Monaco, "Cascadia Mono", monospace; letter-spacing: 0.04em; }
+
 /* ── Viewport-relative layout: override kazam's fixed pixel caps ── */
 
 /* Parent-relative cap, not pure viewport: the app shell's sidebar sits next
@@ -506,11 +552,9 @@ body .c-section.align-right > * { max-width: none !important; }
   color: var(--teal);
 }
 
+/* Shape shared via .pill; default tone is muted, overridden by --approved. */
 .ann-card-badge {
-  font-size: 10px;
   font-weight: 500;
-  padding: 1px 5px;
-  border-radius: 3px;
   background: rgba(var(--text-rgb), 0.08);
   color: var(--muted);
 }
@@ -1008,29 +1052,6 @@ body .c-section.align-right > * { max-width: none !important; }
   border-color: rgba(var(--accent-rgb), 0.4);
 }
 
-.agent-btn-primary {
-  background: var(--teal);
-  color: var(--bg);
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 8px 18px;
-  cursor: pointer;
-  font-family: inherit;
-  align-self: flex-start;
-  transition: opacity 0.15s;
-}
-
-.agent-btn-primary:hover {
-  opacity: 0.9;
-}
-
-.agent-btn-primary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 .agent-btn-mt {
   margin-top: 4px;
 }
@@ -1204,7 +1225,9 @@ body .c-section.align-right > * { max-width: none !important; }
   flex-direction: column;
   gap: 2px;
 }
-.empty-template-card {
+/* Shared by the dashboard's empty-state template picker and the New Page
+   modal's template picker: byte-identical card shape in both places. */
+.template-picker-card {
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -1218,21 +1241,21 @@ body .c-section.align-right > * { max-width: none !important; }
   font-family: inherit;
   transition: background 0.1s, border-color 0.1s;
 }
-.empty-template-card:hover {
+.template-picker-card:hover {
   background: rgba(var(--text-rgb), 0.04);
   border-color: rgba(var(--text-rgb), 0.08);
 }
-.empty-template-card-title {
+.template-picker-card-title {
   font-size: 13px;
   font-weight: 500;
   color: var(--snow);
 }
-.empty-template-card-desc {
+.template-picker-card-desc {
   font-size: 11px;
   color: var(--muted);
   line-height: 1.4;
 }
-.empty-template-card--creating {
+.template-picker-card--creating {
   opacity: 0.5;
   pointer-events: none;
 }
@@ -1320,30 +1343,6 @@ body .c-section.align-right > * { max-width: none !important; }
 .dash-none {
   color: rgba(var(--text-rgb), 0.2);
   font-size: 13px;
-}
-
-.dash-badge {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 4px;
-  letter-spacing: 0.02em;
-}
-
-.dash-badge-fresh {
-  background: rgba(var(--accent-rgb), 0.14);
-  color: var(--teal);
-}
-
-.dash-badge-due-soon {
-  background: rgba(228, 230, 195, 0.12);
-  color: var(--yellow);
-}
-
-.dash-badge-overdue {
-  background: rgba(201, 123, 138, 0.14);
-  color: var(--red);
 }
 
 .dash-ann-count {
@@ -1670,13 +1669,9 @@ body .c-section.align-right > * { max-width: none !important; }
 
 /* ── Visibility badge ── */
 
+/* Shape shared via .pill; this keeps just the interactive-button bits
+   (it's a clickable visibility toggle, not a passive label). */
 .dash-visibility-badge {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 4px;
-  letter-spacing: 0.02em;
   cursor: pointer;
   border: none;
   font-family: inherit;
@@ -2090,11 +2085,8 @@ body .c-section.align-right > * { max-width: none !important; }
   color: var(--muted);
 }
 
+/* Shape shared via .pill; default tone is teal, overridden by --trusted. */
 .vh-list-badge {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 1px 7px;
-  border-radius: 4px;
   background: rgba(var(--accent-rgb), 0.12);
   color: var(--teal);
 }
@@ -2127,59 +2119,11 @@ body .c-section.align-right > * { max-width: none !important; }
   color: var(--muted);
 }
 
-.vh-restore-btn {
-  background: none;
-  border: 1px solid rgba(var(--text-rgb), 0.20);
-  border-radius: 5px;
-  color: var(--light-muted);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 12px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: color 0.15s, border-color 0.15s;
-  flex-shrink: 0;
-}
-
-.vh-restore-btn:hover {
-  color: var(--teal);
-  border-color: rgba(var(--accent-rgb), 0.4);
-}
-
-.vh-restore-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 .vh-preview-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-}
-
-.vh-trust-btn {
-  background: none;
-  border: 1px solid rgba(var(--text-rgb), 0.20);
-  border-radius: 5px;
-  color: var(--light-muted);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 12px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: color 0.15s, border-color 0.15s;
-  flex-shrink: 0;
-}
-
-.vh-trust-btn:hover {
-  color: var(--green);
-  border-color: rgba(var(--green-rgb, 34, 197, 94), 0.4);
-}
-
-.vh-trust-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 .vh-approvers-note {
@@ -2224,23 +2168,15 @@ body .c-section.align-right > * { max-width: none !important; }
   color: var(--light-muted);
 }
 
+/* Shape shared via .pill; kept properties are the ones that don't belong
+   in the shared primitive. */
 .members-self-badge {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 3px;
+  margin-left: 6px;
   background: rgba(var(--accent-rgb), 0.12);
   color: var(--teal);
-  margin-left: 6px;
 }
 
 .members-role-badge {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 4px;
   text-transform: capitalize;
 }
 
@@ -2279,29 +2215,6 @@ body .c-section.align-right > * { max-width: none !important; }
 
 .members-role-select:disabled {
   opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.members-remove-btn {
-  background: none;
-  border: 1px solid rgba(var(--text-rgb), 0.12);
-  border-radius: 5px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 10px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-.members-remove-btn:hover {
-  color: var(--red);
-  border-color: rgba(201, 123, 138, 0.4);
-}
-
-.members-remove-btn:disabled {
-  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -2535,25 +2448,6 @@ body .c-section.align-right > * { max-width: none !important; }
   opacity: 0.8;
 }
 
-.error-page-btn {
-  background: none;
-  border: 1px solid rgba(var(--text-rgb), 0.20);
-  border-radius: 6px;
-  color: var(--light-muted);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 7px 18px;
-  cursor: pointer;
-  font-family: inherit;
-  margin-top: 8px;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-.error-page-btn:hover {
-  color: var(--snow);
-  border-color: rgba(var(--text-rgb), 0.35);
-}
-
 /* ── Dashboard view toggle ── */
 
 .dash-view-toggle {
@@ -2654,13 +2548,8 @@ body .c-section.align-right > * { max-width: none !important; }
   flex-wrap: wrap;
 }
 
+/* Shape shared via .pill; default tone is muted, agent tone below. */
 .feed-source-badge {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 4px;
-  letter-spacing: 0.02em;
   background: rgba(var(--text-rgb), 0.08);
   color: var(--muted);
 }
@@ -2850,27 +2739,6 @@ body .c-section.align-right > * { max-width: none !important; }
   border-color: rgba(var(--accent-rgb), 0.4);
 }
 
-.bulk-bar-btn {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 12px;
-  border-radius: 5px;
-  border: 1px solid rgba(var(--text-rgb), 0.12);
-  background: none;
-  color: var(--light-muted);
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.bulk-bar-btn--danger {
-  color: var(--red, #e05252);
-  border-color: rgba(224, 82, 82, 0.3);
-}
-
-.bulk-bar-btn--danger:hover {
-  background: rgba(224, 82, 82, 0.1);
-}
-
 .bulk-bar-clear {
   font-size: 11px;
   color: var(--muted);
@@ -2954,34 +2822,6 @@ body .c-section.align-right > * { max-width: none !important; }
   color: var(--light-muted);
 }
 
-.theme-toggle-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.theme-toggle {
-  padding: 5px 14px;
-  border-radius: 6px;
-  border: 1px solid rgba(var(--text-rgb), 0.12);
-  background: none;
-  color: var(--light-muted);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.theme-toggle:hover {
-  background: rgba(var(--text-rgb), 0.06);
-  border-color: rgba(var(--text-rgb), 0.2);
-}
-
-.theme-toggle--active {
-  background: rgba(var(--accent-rgb), 0.12);
-  border-color: rgba(var(--accent-rgb), 0.4);
-  color: var(--teal);
-}
 
 .theme-actions {
   display: flex;
@@ -2990,52 +2830,12 @@ body .c-section.align-right > * { max-width: none !important; }
   padding-top: 4px;
 }
 
-.theme-save-btn {
-  padding: 6px 20px;
-  border-radius: 6px;
-  border: 1px solid rgba(var(--accent-rgb), 0.4);
-  background: rgba(var(--accent-rgb), 0.12);
-  color: var(--teal);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.theme-save-btn:hover:not(:disabled) {
-  background: rgba(var(--accent-rgb), 0.2);
-  border-color: rgba(var(--accent-rgb), 0.6);
-}
-
-.theme-save-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
 .theme-saved-msg {
   font-size: 12px;
   color: var(--green);
 }
 
 /* ──────────────── New page ──────────────── */
-
-.new-page-btn {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--light-muted);
-  border: 1px solid rgba(var(--text-rgb), 0.15);
-  border-radius: 6px;
-  padding: 4px 12px;
-  background: none;
-  cursor: pointer;
-  font-family: inherit;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-.new-page-btn:hover {
-  color: var(--teal);
-  border-color: rgba(var(--accent-rgb), 0.4);
-}
 
 .new-page-modal-overlay {
   position: fixed;
@@ -3265,47 +3065,15 @@ body .c-section.align-right > * { max-width: none !important; }
   margin-bottom: 2px;
 }
 
-.new-page-template-card {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  width: 100%;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 7px 10px;
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-  transition: background 0.1s, border-color 0.1s;
-}
+/* Card shape now shared via .template-picker-card (see empty-template
+   picker above). */
 
-.new-page-template-card:hover {
-  background: rgba(var(--text-rgb), 0.04);
-  border-color: rgba(var(--text-rgb), 0.08);
-}
-
-.new-page-template-card-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--snow);
-}
-
-.new-page-template-card-desc {
-  font-size: 11px;
-  color: var(--muted);
-  line-height: 1.4;
-}
-
+/* Shape shared via .pill; kept properties are the border + spacing that
+   make this one read as a standalone badge above the template picker. */
 .new-page-template-badge {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
   color: var(--teal);
   background: rgba(var(--accent-rgb), 0.12);
   border: 1px solid rgba(var(--accent-rgb), 0.25);
-  border-radius: 4px;
-  padding: 2px 8px;
   margin-bottom: 14px;
 }
 
@@ -4632,23 +4400,6 @@ body .c-section.align-right > * { max-width: none !important; }
   text-align: left;
 }
 
-.landing-template-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 20px;
-  border: 1px solid rgba(var(--text-rgb), 0.1);
-  border-radius: 10px;
-  background: rgba(var(--text-rgb), 0.02);
-  text-decoration: none;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.landing-template-card:hover {
-  border-color: rgba(var(--accent-rgb), 0.35);
-  background: rgba(var(--accent-rgb), 0.04);
-}
-
 .landing-template-tag {
   font-size: 11px;
   font-weight: 600;
@@ -4787,13 +4538,6 @@ body .c-section.align-right > * { max-width: none !important; }
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   text-align: left;
-}
-
-.landing-install-card {
-  padding: 20px;
-  border: 1px solid rgba(var(--text-rgb), 0.1);
-  border-radius: 10px;
-  background: rgba(var(--text-rgb), 0.02);
 }
 
 .landing-install-label {
@@ -5465,14 +5209,10 @@ body .c-section.align-right > * { max-width: none !important; }
   text-overflow: ellipsis;
 }
 
+/* Shape shared via .pill; this keeps the inline placement tweaks next to
+   the page title link that don't belong in the shared primitive. */
 .dash-badge {
-  display: inline-block;
   margin-left: 8px;
-  padding: 1px 7px;
-  border-radius: 100px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
   vertical-align: 1px;
 }
 
@@ -6007,12 +5747,9 @@ body .c-section.align-right > * { max-width: none !important; }
 
 /* ── Cleanup queue ───────────────────────────────────────────────────────── */
 
+/* Shape shared via .pill; kept properties are the nav-specific tweaks. */
 .nav-count-badge {
   margin-left: auto;
-  font-size: 10.5px;
-  font-weight: 600;
-  padding: 1px 7px;
-  border-radius: 100px;
   background: rgba(var(--accent-rgb), 0.18);
   color: var(--teal);
 }
@@ -6062,11 +5799,8 @@ body .c-section.align-right > * { max-width: none !important; }
 .cleanup-title { font-size: 14px; font-weight: 600; color: var(--snow); }
 .cleanup-folder { font-size: 11.5px; color: var(--muted); }
 
+/* Shape shared via .pill; default tone is muted, tone modifiers below. */
 .cleanup-chip {
-  font-size: 10.5px;
-  font-weight: 600;
-  padding: 1px 8px;
-  border-radius: 100px;
   background: rgba(var(--text-rgb), 0.08);
   color: var(--light-muted);
 }
@@ -6086,22 +5820,10 @@ body .c-section.align-right > * { max-width: none !important; }
 
 .cleanup-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
-.cleanup-btn {
-  padding: 5px 12px;
-  border-radius: 7px;
-  border: 1px solid rgba(var(--text-rgb), 0.12);
-  background: none;
-  color: var(--light-muted);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.cleanup-btn:hover:not(:disabled) { color: var(--snow); border-color: rgba(var(--text-rgb), 0.3); }
-.cleanup-btn:disabled { opacity: 0.5; cursor: default; }
+/* .cleanup-btn base shape merged into the shared .btn primitive; this
+   modifier only carries the archive-specific teal tint on top of .btn. */
 .cleanup-btn--archive { border-color: rgba(var(--accent-rgb), 0.4); color: var(--teal); }
 .cleanup-btn--archive:hover:not(:disabled) { background: rgba(var(--accent-rgb), 0.12); color: var(--teal); }
-.cleanup-btn--danger:hover:not(:disabled) { border-color: rgba(201, 123, 138, 0.5); color: var(--red); }
 
 .cleanup-cluster {
   border: 1px dashed rgba(var(--accent-rgb), 0.3);
@@ -6479,20 +6201,6 @@ body .c-section.align-right > * { max-width: none !important; }
 .cr-mode-hint { font-size: 11px; color: var(--text-muted); }
 
 .cr-edit-actions { display: flex; gap: 6px; }
-.cr-save-btn {
-  font-size: 12px; padding: 4px 14px; border-radius: 4px;
-  border: 1px solid rgba(var(--accent-rgb), 0.4);
-  background: rgba(var(--accent-rgb), 0.12);
-  color: var(--teal); font-weight: 600; cursor: pointer; transition: all 0.15s;
-}
-.cr-save-btn:hover:not(:disabled) { background: rgba(var(--accent-rgb), 0.2); }
-.cr-save-btn:disabled { opacity: 0.4; cursor: default; }
-.cr-cancel-btn {
-  font-size: 12px; padding: 4px 10px; border-radius: 4px;
-  border: 1px solid var(--border); background: transparent;
-  color: var(--text-muted); cursor: pointer; transition: all 0.15s;
-}
-.cr-cancel-btn:hover { background: var(--bg-subtle); color: var(--text); }
 
 /* Bottom: inline add + defaults */
 .cr-bottom {
@@ -6508,14 +6216,6 @@ body .c-section.align-right > * { max-width: none !important; }
 .cr-inline-input:focus { border-color: var(--teal); }
 .cr-inline-input::placeholder { color: var(--text-muted); }
 .cr-inline-input:disabled { opacity: 0.5; }
-
-.cr-defaults-btn {
-  font-size: 12px; padding: 8px 14px; border-radius: 6px; white-space: nowrap;
-  border: 1px solid var(--border); background: transparent;
-  color: var(--text-muted); cursor: pointer; transition: all 0.15s;
-}
-.cr-defaults-btn:hover:not(:disabled) { background: var(--bg-subtle); color: var(--text); }
-.cr-defaults-btn:disabled { opacity: 0.4; cursor: default; }
 
 .approval-editor-lists { display: flex; flex-direction: column; gap: 10px; }
 .approval-editor-section { display: flex; flex-direction: column; gap: 2px; }
@@ -6897,29 +6597,6 @@ body .c-section.align-right > * { max-width: none !important; }
   text-transform: uppercase;
   color: var(--muted);
   margin-bottom: 6px;
-}
-.kg-picker-kinds {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-.kg-kind-seg {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-  color: var(--light-muted);
-  font: inherit;
-  font-size: 0.72rem;
-  padding: 3px 11px;
-  cursor: pointer;
-}
-.kg-kind-seg-on {
-  border-color: rgba(var(--accent-rgb), 0.6);
-  background: rgba(var(--accent-rgb), 0.12);
-  color: rgba(var(--text-rgb), 0.95);
 }
 .kg-picker-foot {
   display: flex;
@@ -7529,68 +7206,49 @@ body:has(.nav-reveal) .page-toolbar {
 .stg-qbtn--danger { color: #E0A9B5; }
 .stg-qbtn--danger:hover:not(:disabled) { border-color: rgba(201, 123, 138, 0.5); }
 
-/* StatusBadge: dot + label chip. Enforcement tones (block/review/guidance/
-   approval) plus the four concept kinds, each keyed to its own color so the
-   Tags tab badge matches the knowledge-graph legend exactly. */
-.stg-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: "SF Mono", Monaco, "Cascadia Mono", monospace;
-  font-size: 10.5px;
-  letter-spacing: 0.04em;
-  padding: 3px 9px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-.stg-badge-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.stg-badge--block { background: rgba(201, 123, 138, 0.14); color: #E0A9B5; }
-.stg-badge--block .stg-badge-dot { background: var(--red); }
-.stg-badge--review { background: rgba(228, 230, 195, 0.14); color: var(--yellow); }
-.stg-badge--review .stg-badge-dot { background: var(--yellow); }
-.stg-badge--guidance { background: rgba(var(--text-rgb), 0.09); color: var(--light-muted); }
-.stg-badge--guidance .stg-badge-dot { background: var(--light-muted); }
-.stg-badge--approval { background: rgba(var(--accent-rgb), 0.16); color: var(--snow); }
-.stg-badge--approval .stg-badge-dot { background: var(--teal); }
-.stg-badge--topic { background: rgba(var(--kind-topic-rgb), 0.14); color: var(--snow); }
-.stg-badge--topic .stg-badge-dot { background: rgba(var(--kind-topic-rgb), 0.95); }
-.stg-badge--vendor { background: rgba(var(--kind-vendor-rgb), 0.14); color: var(--snow); }
-.stg-badge--vendor .stg-badge-dot { background: rgba(var(--kind-vendor-rgb), 0.95); }
-.stg-badge--finding { background: rgba(var(--kind-finding-rgb), 0.14); color: var(--snow); }
-.stg-badge--finding .stg-badge-dot { background: rgba(var(--kind-finding-rgb), 0.95); }
-.stg-badge--framework { background: rgba(var(--kind-framework-rgb), 0.14); color: var(--snow); }
-.stg-badge--framework .stg-badge-dot { background: rgba(var(--kind-framework-rgb), 0.95); }
+/* StatusBadge: dot + label chip (shape now shared via .pill/.pill--mono).
+   Enforcement tones (block/review/guidance/approval) plus the four concept
+   kinds, each keyed to its own color so the Tags tab badge matches the
+   knowledge-graph legend exactly. */
+.pill--block { background: rgba(201, 123, 138, 0.14); color: #E0A9B5; }
+.pill--block .pill-dot { background: var(--red); }
+.pill--review { background: rgba(228, 230, 195, 0.14); color: var(--yellow); }
+.pill--review .pill-dot { background: var(--yellow); }
+.pill--guidance { background: rgba(var(--text-rgb), 0.09); color: var(--light-muted); }
+.pill--guidance .pill-dot { background: var(--light-muted); }
+.pill--approval { background: rgba(var(--accent-rgb), 0.16); color: var(--snow); }
+.pill--approval .pill-dot { background: var(--teal); }
+.pill--topic { background: rgba(var(--kind-topic-rgb), 0.14); color: var(--snow); }
+.pill--topic .pill-dot { background: rgba(var(--kind-topic-rgb), 0.95); }
+.pill--vendor { background: rgba(var(--kind-vendor-rgb), 0.14); color: var(--snow); }
+.pill--vendor .pill-dot { background: rgba(var(--kind-vendor-rgb), 0.95); }
+.pill--finding { background: rgba(var(--kind-finding-rgb), 0.14); color: var(--snow); }
+.pill--finding .pill-dot { background: rgba(var(--kind-finding-rgb), 0.95); }
+.pill--framework { background: rgba(var(--kind-framework-rgb), 0.14); color: var(--snow); }
+.pill--framework .pill-dot { background: rgba(var(--kind-framework-rgb), 0.95); }
 
 .stg-pcount { font-family: "SF Mono", Monaco, "Cascadia Mono", monospace; font-size: 11px; color: var(--light-muted); white-space: nowrap; }
 
 /* TeamChip: subtle pay-to-play signal, not a gate — no lock icon, no
-   disabled state, just a quiet label next to team-oriented surfaces. */
-.stg-team-chip {
-  display: inline-flex;
-  align-items: center;
-  font-family: "SF Mono", Monaco, "Cascadia Mono", monospace;
+   disabled state, just a quiet label next to team-oriented surfaces.
+   Shape shared via .pill/.pill--mono; this modifier is just the
+   size/case/color tweaks that make it read as a quiet aside. */
+.pill--team {
   font-size: 9.5px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 2px 7px;
   margin-left: 6px;
-  border-radius: 999px;
   background: rgba(var(--text-rgb), 0.08);
   color: var(--light-muted);
-  white-space: nowrap;
 }
 
-/* Chips + typeahead (approvers today; org tags/tags-tab reuse the .stg-chip
+/* Chips + typeahead (approvers today; org tags/tags-tab reuse the .pill--chip
    look without adopting the typeahead machinery — see component report). */
 .stg-chip-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.stg-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.pill--chip {
   border: 1px solid rgba(var(--accent-rgb), 0.4);
   background: rgba(var(--accent-rgb), 0.1);
   color: var(--snow);
-  border-radius: 999px;
   padding: 2px 10px;
   font-size: 12px;
 }
@@ -7684,6 +7342,9 @@ body:has(.nav-reveal) .page-toolbar {
 /* SegmentedControl: 2–4 fixed choices. */
 .stg-seg { display: inline-flex; border: 1px solid rgba(var(--text-rgb), 0.12); border-radius: 8px; overflow: hidden; }
 .stg-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font: inherit;
   font-size: 12.5px;
   padding: 6px 16px;
@@ -7717,19 +7378,6 @@ body:has(.nav-reveal) .page-toolbar {
   padding-top: 12px;
 }
 .stg-editor-foot-spacer { flex: 1; }
-.stg-btn {
-  font: inherit;
-  font-size: 13px;
-  border-radius: 7px;
-  padding: 6px 14px;
-  cursor: pointer;
-  border: 1px solid transparent;
-}
-.stg-btn--primary { background: rgba(var(--accent-rgb), 0.22); border-color: rgba(var(--accent-rgb), 0.5); color: var(--snow); }
-.stg-btn--primary:hover:not(:disabled) { background: rgba(var(--accent-rgb), 0.3); }
-.stg-btn--primary:disabled { opacity: 0.4; cursor: default; }
-.stg-btn--ghost { background: none; border-color: rgba(var(--text-rgb), 0.14); color: var(--light-muted); }
-.stg-btn--ghost:hover:not(:disabled) { color: var(--snow); }
 
 /* Regex pattern rows: mono input + icon-button remove, replaces the old
    chip-style pattern pills so each pattern reads as its own row. */
@@ -7860,10 +7508,14 @@ body:has(.nav-reveal) .page-toolbar {
   }
 }
 
-/* ── Billing plan cards (cloud overlay) ──
-   Same card look as .pub-card (rgba(text) surface, thin border), the
-   featured/current card borrows the accent tint already used by
-   .bulk-bar and .members-invite-banner. */
+/* ── Pricing/billing plan cards ──
+   Shared .pricing-card primitive: same card look as .pub-card (rgba(text)
+   surface, thin border), the featured/current card borrows the accent tint
+   already used by .bulk-bar and .members-invite-banner. Used by both the
+   OSS billing settings tab (billing-plans.tsx) and the overlay marketing
+   pricing page (pricing/page.tsx), which is why it lives here rather than
+   in the marketing-only stylesheet. Radius/padding are billing-plan-card's
+   original values (already shipped, tested). */
 
 .billing-plans {
   display: grid;
@@ -7873,7 +7525,7 @@ body:has(.nav-reveal) .page-toolbar {
   margin: 0 auto;
 }
 
-.billing-plan-card {
+.pricing-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -7883,10 +7535,11 @@ body:has(.nav-reveal) .page-toolbar {
   background: rgba(var(--text-rgb), 0.03);
 }
 
-.billing-plan-card--featured,
-.billing-plan-card--current {
+.pricing-card--featured,
+.pricing-card--current {
   border-color: rgba(var(--accent-rgb), 0.2);
   background: rgba(var(--accent-rgb), 0.05);
+  position: relative;
 }
 
 .billing-plan-name {
@@ -7914,23 +7567,6 @@ body:has(.nav-reveal) .page-toolbar {
 .billing-plan-current-note {
   font-size: 12.5px;
   color: var(--light-muted);
-}
-
-.billing-plan-toggle {
-  align-self: flex-start;
-}
-
-.billing-seat-stepper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.billing-seat-count {
-  font-size: 13px;
-  color: var(--snow);
-  min-width: 60px;
-  text-align: center;
 }
 
 .billing-plan-total {

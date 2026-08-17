@@ -206,7 +206,7 @@ export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRo
           <div className="cleanup-row-top">
             <span className="cleanup-title">{flag.title}</span>
             {flag.folderName && <span className="cleanup-folder">{flag.folderName}</span>}
-            <span className={`cleanup-chip cleanup-chip--${flag.reason}`}>{flag.reason}</span>
+            <span className={`pill cleanup-chip cleanup-chip--${flag.reason}`}>{flag.reason}</span>
             <span className={`cleanup-conf cleanup-conf--${flag.confidence}`}>{flag.confidence}</span>
           </div>
           <div className="cleanup-evidence">{flag.evidence}</div>
@@ -216,10 +216,10 @@ export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRo
           </div>
         </button>
         <div className="cleanup-actions">
-          <button className="cleanup-btn" onClick={() => setPreviewSlug(previewSlug === flag.slug ? null : flag.slug)}>Review</button>
-          <button className="cleanup-btn" disabled={busy} onClick={() => disposition([flag.id], "keep")}>Keep</button>
-          <button className="cleanup-btn cleanup-btn--archive" disabled={busy} onClick={() => disposition([flag.id], "archive")}>Archive</button>
-          <button className="cleanup-btn cleanup-btn--danger" disabled={busy} onClick={() => disposition([flag.id], "delete")}>Delete</button>
+          <button className="btn btn--ghost" onClick={() => setPreviewSlug(previewSlug === flag.slug ? null : flag.slug)}>Review</button>
+          <button className="btn btn--ghost" disabled={busy} onClick={() => disposition([flag.id], "keep")}>Keep</button>
+          <button className="btn cleanup-btn--archive" disabled={busy} onClick={() => disposition([flag.id], "archive")}>Archive</button>
+          <button className="btn btn--danger" disabled={busy} onClick={() => disposition([flag.id], "delete")}>Delete</button>
         </div>
       </div>
     );
@@ -236,9 +236,9 @@ export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRo
           <div className="cleanup-meta">archived · content updated {fmtDate(page.updatedAt)}</div>
         </div>
         <div className="cleanup-actions">
-          <Link href={`/pages/${page.slug}`} className="cleanup-btn">Open</Link>
-          <button className="cleanup-btn cleanup-btn--archive" disabled={archiveBusy} onClick={() => archiveAction([page.slug], "restore")}>Restore</button>
-          <button className="cleanup-btn cleanup-btn--danger" disabled={archiveBusy} onClick={() => archiveAction([page.slug], "delete")}>Delete</button>
+          <Link href={`/pages/${page.slug}`} className="btn btn--ghost">Open</Link>
+          <button className="btn cleanup-btn--archive" disabled={archiveBusy} onClick={() => archiveAction([page.slug], "restore")}>Restore</button>
+          <button className="btn btn--danger" disabled={archiveBusy} onClick={() => archiveAction([page.slug], "delete")}>Delete</button>
         </div>
       </div>
     );
@@ -282,14 +282,14 @@ export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRo
                 <span className="cleanup-count">{initialArchived.length} archived page{initialArchived.length !== 1 ? "s" : ""}</span>
                 <div className="dash-toolbar-spacer" style={{ flex: 1 }} />
                 <button
-                  className="cleanup-btn cleanup-btn--archive"
+                  className="btn cleanup-btn--archive"
                   disabled={archiveBusy}
                   onClick={() => archiveAction(initialArchived.map((p) => p.slug), "restore")}
                 >
                   Restore all {initialArchived.length}
                 </button>
                 <button
-                  className="cleanup-btn cleanup-btn--danger"
+                  className="btn btn--danger"
                   disabled={archiveBusy}
                   onClick={() => archiveAction(initialArchived.map((p) => p.slug), "delete")}
                 >
@@ -307,7 +307,7 @@ export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRo
             {lastSweepAt ? `Last audit activity: ${fmtDate(lastSweepAt)}.` : "No audit has run yet."} Run the cleanup
             audit from any connected agent — it cross-references page content against reality and files flags here.
           </div>
-          <button className="cleanup-btn cleanup-btn--archive" onClick={copyAuditPrompt}>
+          <button className="btn cleanup-btn--archive" onClick={copyAuditPrompt}>
             {copied ? "Copied!" : "Copy audit prompt"}
           </button>
         </div>
@@ -318,7 +318,7 @@ export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRo
               <span className="cleanup-count">{rows.length} flagged page{rows.length !== 1 ? "s" : ""}</span>
               <div className="dash-toolbar-spacer" style={{ flex: 1 }} />
               <button
-                className="cleanup-btn cleanup-btn--archive"
+                className="btn cleanup-btn--archive"
                 disabled={busy}
                 onClick={() => disposition(rows.map((r) => r.id), "archive")}
                 title="Reversible — archived pages keep a restore button"
@@ -326,7 +326,7 @@ export function CleanupClient({ initialArchived }: { initialArchived: ArchivedRo
                 Archive all {rows.length}
               </button>
               <button
-                className="cleanup-btn cleanup-btn--danger"
+                className="btn btn--danger"
                 disabled={busy}
                 onClick={() => disposition(rows.map((r) => r.id), "delete")}
               >

@@ -5,5 +5,5 @@
  * entitlements come back finite, so self-hosted deployments never show it.
  */
 export function TeamChip() {
-  return <span className="stg-team-chip">Team</span>;
+  return <span className="pill pill--mono pill--team">Team</span>;
 }

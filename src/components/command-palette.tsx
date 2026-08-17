@@ -237,10 +237,10 @@ export function CommandPalette() {
                 <span className="site-search-hit-title">
                   {r.title}
                   {r.type === "page" && r.trustedBehind && (
-                    <span className="vh-list-badge" title="A newer, unapproved version exists">behind</span>
+                    <span className="pill vh-list-badge" title="A newer, unapproved version exists">behind</span>
                   )}
                   {r.type === "page" && !r.trustedBehind && !r.trusted && (
-                    <span className="vh-list-badge" title="No version of this page has been approved yet">untrusted</span>
+                    <span className="pill vh-list-badge" title="No version of this page has been approved yet">untrusted</span>
                   )}
                   <span className={`site-search-hit-type site-search-hit-type--${r.type}`}>
                     {isCopied ? "Copied ✓" : r.type === "prompt" ? "Prompt" : "Page"}

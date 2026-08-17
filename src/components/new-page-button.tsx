@@ -9,7 +9,7 @@ import { basePath } from "@/lib/api-fetch";
 type Step = "template" | "details";
 
 export function NewPageButton({
-  className = "new-page-btn",
+  className = "btn btn--ghost",
   label = "+ New Page",
 }: {
   className?: string;
@@ -124,11 +124,11 @@ export function NewPageButton({
                     {groupTemplates.map((t) => (
                       <button
                         key={t.slug}
-                        className="new-page-template-card"
+                        className="template-picker-card"
                         onClick={() => selectTemplate(t.slug, t.title)}
                       >
-                        <span className="new-page-template-card-title">{t.title}</span>
-                        <span className="new-page-template-card-desc">{t.description}</span>
+                        <span className="template-picker-card-title">{t.title}</span>
+                        <span className="template-picker-card-desc">{t.description}</span>
                       </button>
                     ))}
                   </div>
@@ -149,7 +149,7 @@ export function NewPageButton({
             </div>
 
             {templateSlug && (
-              <div className="new-page-template-badge">
+              <div className="pill new-page-template-badge">
                 {TEMPLATES.find((t) => t.slug === templateSlug)?.title}
               </div>
             )}

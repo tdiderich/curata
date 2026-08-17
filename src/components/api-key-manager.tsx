@@ -128,7 +128,7 @@ export function ApiKeyManager() {
           <option value="30d">30 days</option>
         </select>
         <button
-          className="agent-btn-primary"
+          className="btn btn--primary"
           onClick={create}
           disabled={creating || !name.trim()}
         >
@@ -180,7 +180,7 @@ export function ApiKeyManager() {
                 </td>
                 <td className="dash-td dash-td-right">
                   <button
-                    className="members-remove-btn"
+                    className="btn btn--danger"
                     onClick={() => revoke(k.id)}
                     disabled={busy === k.id}
                   >

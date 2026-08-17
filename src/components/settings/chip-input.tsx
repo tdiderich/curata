@@ -53,7 +53,7 @@ export function ChipInput({
   return (
     <div className="stg-chip-row">
       {chips.map((c) => (
-        <span key={c.id} className="stg-chip">
+        <span key={c.id} className="pill pill--mono pill--chip">
           {c.label}
           {!disabled && (
             <button

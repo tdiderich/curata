@@ -164,11 +164,11 @@ export function ApprovalRuleEditor({ scopeParam, initialApprovers, effectiveNote
             />
           )}
           <div className="cr-edit-actions" style={{ marginTop: 8 }}>
-            <button className="cr-save-btn" onClick={save} disabled={busy}>
+            <button className="btn btn--primary" onClick={save} disabled={busy}>
               {busy ? "Saving..." : "Save approvers"}
             </button>
             {hasRule && (
-              <button className="cr-cancel-btn" onClick={clear} disabled={busy}>
+              <button className="btn btn--ghost" onClick={clear} disabled={busy}>
                 Remove restriction
               </button>
             )}

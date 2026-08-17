@@ -15,7 +15,7 @@ export default function GlobalError({
           <span className="error-page-code">error</span>
           <h1 className="error-page-title">Something went wrong</h1>
           <p className="error-page-desc">A critical error occurred.</p>
-          <button className="error-page-btn" onClick={reset}>
+          <button className="btn btn--ghost" onClick={reset}>
             Try again
           </button>
         </div>

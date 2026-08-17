@@ -24,7 +24,7 @@ function relativeTime(iso: string): string {
 function VisibilityPill({ visibility }: { visibility: string }) {
   return (
     <span
-      className={`dash-visibility-badge dash-visibility-badge--${visibility}`}
+      className={`pill dash-visibility-badge dash-visibility-badge--${visibility}`}
       style={{ cursor: "default" }}
     >
       {visibility}
@@ -53,7 +53,7 @@ function SourceBadge({ createdBy }: { createdBy: string }) {
 
   const label = isAgent ? "Agent" : isWeb ? "Web" : createdBy;
   return (
-    <span className="feed-source-badge" data-agent={isAgent ? "true" : undefined}>
+    <span className="pill feed-source-badge" data-agent={isAgent ? "true" : undefined}>
       {label}
     </span>
   );

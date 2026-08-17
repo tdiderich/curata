@@ -67,11 +67,11 @@ export function ConfirmDeleteModal({
             </>
           )}
           <div className="confirm-delete-actions">
-            <button className="cleanup-btn" onClick={onCancel} disabled={busy}>
+            <button className="btn btn--ghost" onClick={onCancel} disabled={busy}>
               Cancel
             </button>
             <button
-              className="cleanup-btn cleanup-btn--danger"
+              className="btn btn--danger"
               onClick={onConfirm}
               disabled={busy || !matches}
               autoFocus={!requiresInput}

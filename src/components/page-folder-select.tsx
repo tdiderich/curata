@@ -107,7 +107,7 @@ export function VisibilityBadge({ slug, visibility }: VisibilityBadgeProps) {
 
   return (
     <button
-      className={`dash-visibility-badge dash-visibility-badge--${current}`}
+      className={`pill dash-visibility-badge dash-visibility-badge--${current}`}
       onClick={cycle}
       disabled={busy}
       title={`Visibility: ${current}. Click to change.`}

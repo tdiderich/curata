@@ -49,7 +49,7 @@ export function OrgTagsManager({
       {error && <div className="members-error">{error}</div>}
       <div className="stg-chip-row">
         {tags.map((t) => (
-          <span key={t} className="stg-chip">
+          <span key={t} className="pill pill--mono pill--chip">
             {t}
             {canManage && (
               <button

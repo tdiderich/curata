@@ -195,7 +195,7 @@ export function GroupManager({ canManage }: { canManage: boolean }) {
             }}
           />
           <button
-            className="agent-btn-primary"
+            className="btn btn--primary"
             onClick={createGroup}
             disabled={creating || !newName.trim()}
           >
@@ -233,13 +233,13 @@ export function GroupManager({ canManage }: { canManage: boolean }) {
                           autoFocus
                         />
                         <button
-                          className="agent-btn-primary"
+                          className="btn btn--primary"
                           onClick={() => saveRename(g.id)}
                           disabled={busy === g.id}
                         >
                           Save
                         </button>
-                        <button className="cleanup-btn" onClick={() => setRenamingId(null)}>
+                        <button className="btn btn--ghost" onClick={() => setRenamingId(null)}>
                           Cancel
                         </button>
                       </span>
@@ -258,7 +258,7 @@ export function GroupManager({ canManage }: { canManage: boolean }) {
                     <td className="dash-td dash-td-right">
                       <span className="stg-row-actions">
                         <button
-                          className="members-remove-btn"
+                          className="btn btn--danger"
                           onClick={() => {
                             setRenamingId(g.id);
                             setRenameValue(g.name);
@@ -267,7 +267,7 @@ export function GroupManager({ canManage }: { canManage: boolean }) {
                           Rename
                         </button>
                         <button
-                          className="members-remove-btn"
+                          className="btn btn--danger"
                           onClick={() => setPendingDelete(g)}
                           disabled={busy === g.id}
                         >
@@ -290,21 +290,21 @@ export function GroupManager({ canManage }: { canManage: boolean }) {
                               <li key={m.userId} className="group-member-row">
                                 <span className="members-email">{m.userId}</span>
                                 <span
-                                  className={`members-role-badge members-role-badge--${m.role === "owner" ? "owner" : "member"}`}
+                                  className={`pill members-role-badge members-role-badge--${m.role === "owner" ? "owner" : "member"}`}
                                 >
                                   {m.role}
                                 </span>
                                 {canManage && (
                                   <span className="group-member-actions">
                                     <button
-                                      className="members-remove-btn"
+                                      className="btn btn--danger"
                                       onClick={() => setRole(g.id, m.userId, m.role === "owner" ? "member" : "owner")}
                                       disabled={busy === key}
                                     >
                                       {m.role === "owner" ? "Remove owner" : "Make owner"}
                                     </button>
                                     <button
-                                      className="members-remove-btn"
+                                      className="btn btn--danger"
                                       onClick={() => removeMember(g.id, m.userId)}
                                       disabled={busy === key}
                                     >

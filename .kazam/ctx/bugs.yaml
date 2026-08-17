@@ -15,3 +15,19 @@ bugs:
   symptom: create_from_template rejected target_slug as an unknown parameter — TOOL_PARAMS whitelist only listed slug, but the dispatch case body reads args.target_slug throughout
   file_path: src/lib/mcp-dispatch.ts
   created: 2026-08-14T21:51:47.018056-05:00
+- id: kz-f66092
+  symptom: isRefBlock typed 'c is Comp' collapsed else-branch to never under next build tsc, TS2698 at spread; predicate must narrow to distinct RefBlock interface
+  file_path: src/lib/component-refs.ts
+  created: 2026-08-14T21:56:15.736214-05:00
+- id: kz-53b447
+  symptom: generate_digest same-week rerun shrank window to since-last-run and blanked the weekly page; resolvePreviousDigestAt must exclude the slug being generated
+  file_path: src/lib/digest.ts
+  created: 2026-08-15T06:49:46.229926-05:00
+- id: kz-a63847
+  symptom: 'seedPagesFromDir creation-only: new seed/workflows pages never reach existing orgs, skill thin-pointers 404'
+  file_path: src/lib/seed.ts
+  created: 2026-08-15T18:09:08.684296-05:00
+- id: kz-319de8
+  symptom: '40P01 TRUNCATE deadlock flake in tests/setup.ts beforeEach: fire-and-forget writes from prior test (view bumps, prune sweeps) hold row locks when TRUNCATE grabs table locks. Hit capture-thread capture_token test twice consecutively 2026-08-16 during pre-push. Fixed with bounded retry (3 attempts, backoff) in setup.ts'
+  file_path: tests/setup.ts
+  created: 2026-08-16T14:05:48.741622-05:00

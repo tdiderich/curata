@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
+import { SegmentedControl } from "@/components/settings/segmented-control";
 
 function normalizeLegacyTheme(
   theme: string | null,
@@ -102,22 +103,15 @@ export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
     <div className="theme-settings">
       <div className="theme-section">
         <span className="theme-section-label">Mode</span>
-        <div className="theme-toggle-group">
-          <button
-            className={`theme-toggle ${mode === "dark" ? "theme-toggle--active" : ""}`}
-            onClick={() => canManage && setMode("dark")}
-            disabled={!canManage}
-          >
-            Dark
-          </button>
-          <button
-            className={`theme-toggle ${mode === "light" ? "theme-toggle--active" : ""}`}
-            onClick={() => canManage && setMode("light")}
-            disabled={!canManage}
-          >
-            Light
-          </button>
-        </div>
+        <SegmentedControl<string>
+          value={mode}
+          onChange={setMode}
+          disabledOptions={canManage ? [] : ["dark", "light"]}
+          options={[
+            { value: "dark", label: "Dark" },
+            { value: "light", label: "Light" },
+          ]}
+        />
       </div>
 
       <div className="theme-section">
@@ -141,34 +135,22 @@ export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
 
       <div className="theme-section">
         <span className="theme-section-label">Background texture</span>
-        <div className="theme-toggle-group">
-          {TEXTURES.map((t) => (
-            <button
-              key={t.value}
-              className={`theme-toggle ${texture === t.value ? "theme-toggle--active" : ""}`}
-              onClick={() => canManage && setTexture(t.value)}
-              disabled={!canManage}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl<string>
+          value={texture}
+          onChange={setTexture}
+          disabledOptions={canManage ? [] : TEXTURES.map((t) => t.value)}
+          options={TEXTURES}
+        />
       </div>
 
       <div className="theme-section">
         <span className="theme-section-label">Header glow</span>
-        <div className="theme-toggle-group">
-          {GLOWS.map((g) => (
-            <button
-              key={g.value}
-              className={`theme-toggle ${glow === g.value ? "theme-toggle--active" : ""}`}
-              onClick={() => canManage && setGlow(g.value)}
-              disabled={!canManage}
-            >
-              {g.label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl<string>
+          value={glow}
+          onChange={setGlow}
+          disabledOptions={canManage ? [] : GLOWS.map((g) => g.value)}
+          options={GLOWS}
+        />
       </div>
 
       {error && (
@@ -179,7 +161,7 @@ export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
       {canManage && (
         <div className="theme-actions">
           <button
-            className="theme-save-btn"
+            className="btn btn--primary"
             onClick={save}
             disabled={!hasChanges || saving}
           >

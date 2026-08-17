@@ -178,7 +178,7 @@ export function TagsManager({ canManage }: { canManage: boolean }) {
           return (
             <tr key={tag.id} className="dash-row">
               <td className="dash-td dash-td-title">
-                <span className="stg-chip" style={{ padding: "1px 9px" }}>{tag.term}</span>
+                <span className="pill pill--mono pill--chip" style={{ padding: "1px 9px" }}>{tag.term}</span>
               </td>
               <td className="dash-td">
                 <StatusBadge tone={kindTone(tag.kind)} label={tag.kind || DEFAULT_KIND} />
@@ -222,10 +222,10 @@ export function TagsManager({ canManage }: { canManage: boolean }) {
             </FormRow>
           </div>
           <div className="stg-editor-foot">
-            <button className="stg-btn stg-btn--primary" onClick={save} disabled={busy || !formTerm.trim()}>
+            <button className="btn btn--primary" onClick={save} disabled={busy || !formTerm.trim()}>
               {busy ? "Saving…" : "Save tag"}
             </button>
-            <button className="stg-btn stg-btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
+            <button className="btn btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
             <span className="stg-editor-foot-spacer" />
             <button className="stg-qbtn" title="kz-d3668c" disabled>
               Merge into&hellip; (later)
@@ -236,7 +236,7 @@ export function TagsManager({ canManage }: { canManage: boolean }) {
 
       {canManage && !editingId && (
         <div className="stg-composer">
-          <button className="stg-btn stg-btn--ghost" onClick={startNewTag} disabled={busy}>
+          <button className="btn btn--ghost" onClick={startNewTag} disabled={busy}>
             + Add tag
           </button>
         </div>

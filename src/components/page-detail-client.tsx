@@ -672,7 +672,7 @@ export default function PageDetailClient({
                       )}
                       {(ann.status === "approved" || done) && (
                         <span
-                          className={`ann-card-badge${ann.status === "approved" ? " ann-card-badge--approved" : ""}`}
+                          className={`pill ann-card-badge${ann.status === "approved" ? " ann-card-badge--approved" : ""}`}
                         >
                           {ann.status}
                         </span>

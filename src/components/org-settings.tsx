@@ -219,7 +219,7 @@ export function OrgSettings({ canManage, isPersonalDomain, initial }: OrgSetting
       {canManage && (
         <div className="theme-actions">
           <button
-            className="theme-save-btn"
+            className="btn btn--primary"
             onClick={save}
             disabled={!hasChanges || saving || !name.trim()}
           >

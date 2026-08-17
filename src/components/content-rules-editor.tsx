@@ -621,10 +621,10 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
                     <div className="stg-editor">
                       {contentFields()}
                       <div className="stg-editor-foot">
-                        <button className="stg-btn stg-btn--primary" onClick={saveContentRule} disabled={busy || !formText.trim()}>
+                        <button className="btn btn--primary" onClick={saveContentRule} disabled={busy || !formText.trim()}>
                           {busy ? "Saving…" : "Save rule"}
                         </button>
-                        <button className="stg-btn stg-btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
+                        <button className="btn btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
                         <span className="stg-editor-foot-spacer" />
                         <button className="stg-qbtn stg-qbtn--danger" onClick={() => deleteRule(rule.id)} disabled={busy}>
                           Delete rule
@@ -649,7 +649,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
                 {approvalRule!.approvers.length > 0 ? (
                   <span className="stg-chip-row">
                     {approvalRule!.approvers.map((a) => (
-                      <span key={`${a.type}:${a.id}`} className="stg-chip" style={{ padding: "1px 8px", fontSize: 11.5 }}>
+                      <span key={`${a.type}:${a.id}`} className="pill pill--mono pill--chip" style={{ padding: "1px 8px", fontSize: 11.5 }}>
                         {approverLabel(a, groups, members)}
                       </span>
                     ))}
@@ -679,10 +679,10 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
                   <div className="stg-editor">
                     {approvalFields()}
                     <div className="stg-editor-foot">
-                      <button className="stg-btn stg-btn--primary" onClick={saveApprovalRule} disabled={busy}>
+                      <button className="btn btn--primary" onClick={saveApprovalRule} disabled={busy}>
                         {busy ? "Saving…" : "Save rule"}
                       </button>
-                      <button className="stg-btn stg-btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
+                      <button className="btn btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
                     </div>
                   </div>
                 </td>
@@ -730,10 +730,10 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
                     <div className="stg-editor">
                       {rcFields()}
                       <div className="stg-editor-foot">
-                        <button className="stg-btn stg-btn--primary" onClick={saveRcRule} disabled={busy || !formPageType.trim()}>
+                        <button className="btn btn--primary" onClick={saveRcRule} disabled={busy || !formPageType.trim()}>
                           {busy ? "Saving…" : "Save rule"}
                         </button>
-                        <button className="stg-btn stg-btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
+                        <button className="btn btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
                         <span className="stg-editor-foot-spacer" />
                         <button className="stg-qbtn stg-qbtn--danger" onClick={() => deleteRule(rule.id)} disabled={busy}>
                           Delete rule
@@ -768,7 +768,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
                 {editingKind === "required-components" && rcFields()}
                 <div className="stg-editor-foot">
                   <button
-                    className="stg-btn stg-btn--primary"
+                    className="btn btn--primary"
                     onClick={editingKind === "content" ? saveContentRule : editingKind === "approval" ? saveApprovalRule : saveRcRule}
                     disabled={
                       busy ||
@@ -778,7 +778,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
                   >
                     {busy ? "Saving…" : "Save rule"}
                   </button>
-                  <button className="stg-btn stg-btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
+                  <button className="btn btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
                 </div>
               </div>
             </td>
@@ -788,7 +788,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
 
       {canManage && (
         <div className="stg-composer">
-          <button className="stg-btn stg-btn--ghost" onClick={openNewDraft} disabled={busy || editingKind !== null}>
+          <button className="btn btn--ghost" onClick={openNewDraft} disabled={busy || editingKind !== null}>
             + Add rule
           </button>
         </div>
