@@ -10,7 +10,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepare": "bash scripts/install-hooks.sh 2>/dev/null || true; bash scripts/install-kazam.sh 2>/dev/null || true"
+    "prepare": "bash scripts/install-hooks.sh 2>/dev/null || true; bash scripts/install-kazam.sh 2>/dev/null || true",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@clerk/mcp-tools": "^0.6.0",
@@ -51,7 +53,13 @@
     "eslint-config-next": "16.2.6",
     "tsx": "^4.21.0",
     "typescript": "^5",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "storybook": "^10.5.8",
+    "@storybook/nextjs-vite": "^10.5.8",
+    "@storybook/addon-a11y": "^10.5.8",
+    "@storybook/addon-docs": "^10.5.8",
+    "vite": "^8.2.1",
+    "eslint-plugin-storybook": "^10.5.8"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

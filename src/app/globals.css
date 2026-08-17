@@ -7167,17 +7167,6 @@ body:has(.nav-reveal) .page-toolbar {
 .stg-section-head { margin-bottom: 4px; }
 .stg-section-title { font-size: 15px; font-weight: 600; color: var(--snow); margin: 0; }
 .stg-section-desc { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
-
-/* Component storyboard (src/app/(app)/storyboard) */
-.storyboard-workspace { max-width: 760px; }
-.storyboard-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-top: 14px;
-}
-
 /* Table shell: a thin wrapper around dash-table so Members/Groups/Content
    Rules/Tags share one component instead of four hand-rolled tables. */
 .stg-table { margin-top: 12px; }

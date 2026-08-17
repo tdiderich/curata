@@ -31,14 +31,13 @@ src/components/public-toggle.tsx	399	0	Private-page-editor toggle for visibility
 src/components/report-builder.tsx	5145	0	report-builder component
 src/components/review-queue-client.tsx	2644	0	review-queue-client component
 src/components/settings-tabs.tsx	449	0	settings-tabs component
-src/components/sidebar.tsx	6244	0	sidebar component
+src/components/sidebar.tsx	6192	0	sidebar component
 src/components/source-editor.tsx	2232	0	source-editor component
-src/components/storyboard-interactive.tsx	278	0	storyboard-interactive component
-src/components/storyboard-section.tsx	143	0	storyboard-section component
 src/components/tag-picker.tsx	1639	0	tag-picker component
 src/components/tags-manager.tsx	2187	0	tags-manager component
 src/components/theme-script.tsx	189	0	theme-script component
 src/components/theme-settings.tsx	1394	0	theme-settings component
+src/components/toast.stories.tsx	194	0	toast.stories component
 src/components/toast.tsx	478	0	toast component
 src/components/trust-banner.tsx	1065	0	trust-banner component
 src/components/version-history.tsx	1605	0	version-history component

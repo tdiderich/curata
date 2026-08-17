@@ -53,3 +53,6 @@ next-env.d.ts
 /.bin/
 .gstack/
 prisma/dev.db
+
+*storybook.log
+storybook-static
