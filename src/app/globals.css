@@ -7848,6 +7848,7 @@ body:has(.nav-reveal) .page-toolbar {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
   max-width: 640px;
+  margin: 0 auto;
 }
 
 .billing-plan-card {
