@@ -120,7 +120,7 @@ export default function InlineComponentEditor({
         yamlLang(),
         EditorView.theme({
           "&": { fontSize: "13px", backgroundColor: "var(--bg)" },
-          ".cm-scroller": { overflow: "auto", fontFamily: "'SF Mono', 'Fira Code', Menlo, monospace", maxHeight: "400px" },
+          ".cm-scroller": { overflow: "auto", fontFamily: "'SF Mono', 'Fira Code', Menlo, monospace" },
           ".cm-content": { padding: "8px 0", color: "var(--snow)", caretColor: "var(--teal)" },
           ".cm-cursor": { borderLeftColor: "var(--teal)" },
           ".cm-gutters": { backgroundColor: "var(--bg)", color: "var(--muted)", borderRight: "1px solid var(--border)" },
@@ -163,53 +163,60 @@ export default function InlineComponentEditor({
 
   if (loading) {
     return (
-      <div className="inline-editor">
-        <div className="inline-editor-loading">Loading component...</div>
+      <div className="component-editor-overlay" onClick={onClose}>
+        <div className="component-editor-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="inline-editor-loading">Loading component...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="inline-editor">
-      <div className="inline-editor-header">
-        <span className="inline-editor-type">{componentType}</span>
-        <span className="inline-editor-id">{componentId}</span>
-        <div className="inline-editor-spacer" />
-        {error && <span className="inline-editor-error">{error}</span>}
-        {dirty && (
+    <div className="component-editor-overlay" onClick={() => {
+      if (dirty && !confirm("Discard unsaved changes?")) return;
+      onClose();
+    }}>
+      <div className="component-editor-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="inline-editor-header">
+          <span className="inline-editor-type">{componentType}</span>
+          <span className="inline-editor-id">{componentId}</span>
+          <div className="inline-editor-spacer" />
+          {error && <span className="inline-editor-error">{error}</span>}
+          {dirty && (
+            <button
+              className="inline-editor-btn inline-editor-btn--discard"
+              onClick={() => {
+                const view = viewRef.current;
+                if (!view) return;
+                view.dispatch({
+                  changes: { from: 0, to: view.state.doc.length, insert: savedYamlRef.current },
+                });
+                setDirty(false);
+                setError("");
+              }}
+            >
+              Discard
+            </button>
+          )}
           <button
-            className="inline-editor-btn inline-editor-btn--discard"
+            className="inline-editor-btn inline-editor-btn--save"
+            disabled={!dirty || saving}
+            onClick={save}
+          >
+            {saving ? "Saving..." : "Save"}
+          </button>
+          <button
+            className="inline-editor-btn inline-editor-btn--close"
             onClick={() => {
-              const view = viewRef.current;
-              if (!view) return;
-              view.dispatch({
-                changes: { from: 0, to: view.state.doc.length, insert: savedYamlRef.current },
-              });
-              setDirty(false);
-              setError("");
+              if (dirty && !confirm("Discard unsaved changes?")) return;
+              onClose();
             }}
           >
-            Discard
+            Done
           </button>
-        )}
-        <button
-          className="inline-editor-btn inline-editor-btn--save"
-          disabled={!dirty || saving}
-          onClick={save}
-        >
-          {saving ? "Saving..." : "Save"}
-        </button>
-        <button
-          className="inline-editor-btn inline-editor-btn--close"
-          onClick={() => {
-            if (dirty && !confirm("Discard unsaved changes?")) return;
-            onClose();
-          }}
-        >
-          Done
-        </button>
+        </div>
+        <div ref={editorRef} className="inline-editor-cm" />
       </div>
-      <div ref={editorRef} className="inline-editor-cm" />
     </div>
   );
 }

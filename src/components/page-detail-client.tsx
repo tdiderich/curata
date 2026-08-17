@@ -128,6 +128,7 @@ export default function PageDetailClient({
     pageJson?.components ? JSON.parse(JSON.stringify(pageJson.components)) : [],
   );
   const [editDirty, setEditDirty] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [srcDirty, setSrcDirty] = useState(false);
   const [srcSaving, setSrcSaving] = useState(false);
   const srcControls = useRef<SourceEditorControls | null>(null);
@@ -425,6 +426,9 @@ export default function PageDetailClient({
     setEditSaving(false);
   }, [slug, localComponents, router]);
 
+  const handleDragStart = useCallback(() => { setIsDragging(true); }, []);
+  const handleDragEnd = useCallback(() => { setIsDragging(false); }, []);
+
   const ComponentWrapper = useMemo(() => {
     return function Wrapper({ comp, index, children: cv }: { comp: ComponentData; index: number; children: React.ReactNode }) {
       return (
@@ -433,15 +437,16 @@ export default function PageDetailClient({
           index={index}
           onEdit={handleEditComponent}
           onDelete={handleDeleteComponent}
-          onDragStart={() => {}}
-          onDragEnd={() => {}}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
           editingId={editingComponent?.id ?? null}
+          isDragging={isDragging}
         >
           {cv}
         </EditableComponent>
       );
     };
-  }, [handleEditComponent, handleDeleteComponent, editingComponent?.id]);
+  }, [handleEditComponent, handleDeleteComponent, handleDragStart, handleDragEnd, editingComponent?.id, isDragging]);
 
   async function restorePage() {
     try {

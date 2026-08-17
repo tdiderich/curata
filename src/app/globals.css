@@ -5070,15 +5070,96 @@ body .c-section.align-right > * { max-width: none !important; }
   font-size: 13px;
 }
 
-/* ── Inline Component Editor ── */
+/* ── Component Editor Modal ── */
 
-.inline-editor {
+.component-editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.component-editor-modal {
   background: var(--bg);
   border: 1px solid rgba(var(--accent-rgb), 0.3);
-  border-radius: 8px;
-  margin: 12px 0;
+  border-radius: 12px;
+  width: min(700px, 90vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+}
+
+.component-editor-modal .inline-editor-cm {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ── Drag Collapse ── */
+
+.drag-collapsed {
+  outline: 1px dashed var(--border) !important;
+  outline-offset: 0 !important;
+}
+
+.drag-collapsed-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.drag-collapsed-type {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent, var(--teal));
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+  border-radius: 3px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.drag-collapsed-label {
+  font-size: 13px;
+  color: var(--snow);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.component-mirror-badge {
+  font-size: 10px;
+  color: var(--accent, var(--teal));
+  opacity: 0.8;
+  white-space: nowrap;
+  margin-right: auto;
+}
+
+.mirror-back-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.mirror-back-btn:hover {
+  color: var(--snow);
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
+.add-component-item--mirror {
+  border-left: 2px solid var(--accent, var(--teal));
 }
 
 .inline-editor-header {

@@ -4,6 +4,8 @@ export interface PaletteEntry {
   description: string;
   group: string;
   stub: string;
+  /** When true, AddComponentButton shows a page search flow instead of inserting the stub. */
+  mirror?: boolean;
 }
 
 export const PALETTE: PaletteEntry[] = [
@@ -243,6 +245,24 @@ export const PALETTE: PaletteEntry[] = [
   components:
     - type: markdown
       body: "Content here."`,
+  },
+  {
+    type: "section",
+    label: "Mirror Page",
+    description: "Embed another page's content as a live mirror - updates when the source page changes",
+    group: "Structure",
+    stub: `- type: section
+  heading: Section Title
+  slug: page-slug-here`,
+    mirror: true,
+  },
+  {
+    type: "ref",
+    label: "Shared Component",
+    description: "Embed a component page's content by reference - updates when the source changes",
+    group: "Structure",
+    stub: `- type: ref
+  component: page-slug-here`,
   },
   {
     type: "accordion",
