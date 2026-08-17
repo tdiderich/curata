@@ -562,6 +562,11 @@ export function Sidebar({
             <span className="pill nav-count-badge">{reviewCount}</span>
           </Link>
         )}
+        {canManageRules && (
+          <Link href="/storyboard" className={`nav-link-item${pathname === "/storyboard" ? " nav-link-item--active" : ""}`}>
+            Storyboard
+          </Link>
+        )}
       </nav>
 
       {managedFolders.length > 0 && (
