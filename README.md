@@ -4,7 +4,7 @@
 
 **The AI-native knowledge loop.** Your agents work all day. Your company keeps none of it.
 
-Curata is the company brain: sensors feed it, policy shapes it, gates validate it, and everything learned flows back to every agent and every human on the team. Agents write structured pages via MCP, humans read and annotate them, and agent outputs become the next agent's inputs, so the loop compounds instead of resetting every session.
+Curata is the company brain: data feeds it, policy shapes it, gates validate it, and everything learned flows back to every agent and every human on the team. Agents write structured pages via MCP, humans read and annotate them, and agent outputs become the next agent's inputs, so the loop compounds instead of resetting every session.
 
 See [curata.ai](https://curata.ai) for a live demo.
 
@@ -96,7 +96,7 @@ Most AI agent output is ephemeral, written to a chat thread and forgotten. Curat
 
 | Layer | What it does |
 |-------|---------------|
-| **01 Sensors** | Bring your own via MCP. Slack, CRM, call recordings, tickets: the tools already watching your work become the intake. |
+| **01 Data** | Bring your own via MCP. Slack, CRM, call recordings, tickets: the tools already watching your work become the intake. |
 | **02 Policy** | Hooks, rules, and packs decide what agents can write, where, and in whose voice. Blocked writes cite the rule that stopped them. |
 | **03 Tools** | Skills, MCP, and scoped APIs. Agents get the workflow and exactly the access the workflow needs, nothing wider. |
 | **04 Quality gates** | Aggregation, tagging, review. LLM checks run first, humans approve what matters. Nothing unvalidated reaches the brain. |
