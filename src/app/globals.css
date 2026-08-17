@@ -4170,6 +4170,25 @@ body .c-section.align-right > * { max-width: none !important; }
   color: var(--snow);
 }
 
+/* Plan-aware CTA above the member list, styled like the bulk action bar
+   since both are a single-line banner over the same table. */
+.members-invite-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  background: rgba(var(--accent-rgb), 0.08);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  border-radius: 8px;
+}
+
+.members-invite-copy {
+  font-size: 13px;
+  color: var(--light-muted);
+}
+
 /* ── Medium screen responsiveness (tablets, narrow laptops) ── */
 
 @media (max-width: 1200px) {
@@ -7817,4 +7836,93 @@ body:has(.nav-reveal) .page-toolbar {
   .pubnav-link {
     display: none;
   }
+}
+
+/* ── Billing plan cards (cloud overlay) ──
+   Same card look as .pub-card (rgba(text) surface, thin border), the
+   featured/current card borrows the accent tint already used by
+   .bulk-bar and .members-invite-banner. */
+
+.billing-plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  max-width: 640px;
+}
+
+.billing-plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--text-rgb), 0.08);
+  background: rgba(var(--text-rgb), 0.03);
+}
+
+.billing-plan-card--featured,
+.billing-plan-card--current {
+  border-color: rgba(var(--accent-rgb), 0.2);
+  background: rgba(var(--accent-rgb), 0.05);
+}
+
+.billing-plan-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--snow);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.billing-plan-price {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--snow);
+}
+
+.billing-plan-price-unit {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--light-muted);
+}
+
+.billing-plan-sub,
+.billing-plan-hint,
+.billing-plan-current-note {
+  font-size: 12.5px;
+  color: var(--light-muted);
+}
+
+.billing-plan-toggle {
+  align-self: flex-start;
+}
+
+.billing-seat-stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.billing-seat-count {
+  font-size: 13px;
+  color: var(--snow);
+  min-width: 60px;
+  text-align: center;
+}
+
+.billing-plan-total {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--snow);
+}
+
+.billing-plan-cta {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.billing-plan-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }

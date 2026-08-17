@@ -108,7 +108,17 @@ export default async function SettingsPage() {
     {
       label: "Members",
       labelExtra: limitedPlan ? <TeamChip /> : null,
-      content: <MemberList canManage={canManage} currentUserId={ctx.userId} />,
+      // /billing and /org are cloud-overlay-only routes, never part of OSS.
+      // limitedPlan and AUTH_MODE are both false on self-hosted OSS, so
+      // invite stays undefined there and the banner never renders a link
+      // into a page that doesn't exist.
+      content: (
+        <MemberList
+          canManage={canManage}
+          currentUserId={ctx.userId}
+          invite={limitedPlan ? { kind: "upgrade", href: "/billing" } : AUTH_MODE === "clerk" ? { kind: "invite", href: "/org" } : undefined}
+        />
+      ),
     },
     ...(canManageRules ? [{
       label: "Tags",

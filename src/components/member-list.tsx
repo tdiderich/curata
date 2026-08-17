@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { basePath } from "@/lib/api-fetch";
 import { GroupPicklist } from "./group-picklist";
 import { SettingsTable } from "@/components/settings/settings-table";
@@ -23,12 +24,22 @@ interface GroupRow {
 
 const ROLES = ["owner", "admin", "member", "viewer"];
 
+// Plan-aware CTA above the list. "upgrade" points at a solo org toward the
+// paid plan that unlocks more seats; "invite" is shown to teams that already
+// have room and just need the invite surface. Undefined renders nothing, so
+// self-hosted deployments (no billing, no plan) never see this banner.
+interface MemberInvite {
+  kind: "upgrade" | "invite";
+  href: string;
+}
+
 interface MemberListProps {
   canManage: boolean;
   currentUserId: string;
+  invite?: MemberInvite;
 }
 
-export function MemberList({ canManage, currentUserId }: MemberListProps) {
+export function MemberList({ canManage, currentUserId, invite }: MemberListProps) {
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [groups, setGroups] = useState<GroupRow[]>([]);
@@ -197,6 +208,18 @@ export function MemberList({ canManage, currentUserId }: MemberListProps) {
 
   return (
     <>
+      {invite && (
+        <div className="members-invite-banner">
+          <span className="members-invite-copy">
+            {invite.kind === "upgrade"
+              ? "Personal is a solo plan. Move to Team to add teammates."
+              : "Invite teammates to join this organization."}
+          </span>
+          <Link href={invite.href} className="stg-btn stg-btn--primary">
+            {invite.kind === "upgrade" ? "Add teammates" : "Invite teammates"}
+          </Link>
+        </div>
+      )}
       {canManage && groups.length > 0 && selected.size > 0 && (
         <div className="bulk-bar">
           <span className="bulk-bar-count">{selected.size} selected</span>
