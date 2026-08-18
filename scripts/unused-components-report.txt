@@ -1,0 +1,192 @@
+===============================================================================
+                   DEAD CODE & SHARED COMPONENT REPORT                        
+===============================================================================
+Scanned 247 TypeScript / React files across curata & curata-app.
+Total exported components discovered: 117
+
+── 1. Dead / Unused Components (0) ──────────────────────────────────────
+Components with 0 live application consumers. Safe cleanup candidates:
+
+  ✓ No dead components found.
+
+── 2. Story-Only Components (0) ─────────────────────────────────────
+Components referenced in Storybook (*.stories.tsx) but with 0 application consumers:
+
+  ✓ None.
+
+── 3. Shared Component Promotion Candidates (12) ───────────────
+Components in root `components/` with high fan-in (≥3), cross-domain, or cross-repo usage.
+Recommendation: Promote to a shared UI kit folder (e.g. `components/ui/` or `settings/`)
+and ensure Storybook story exists:
+
+  ★ ConfirmDeleteModal (curata/src/components/confirm-delete-modal.tsx:10) [Storybook: ✓]
+    Fan-in: 3 live consumers
+    Suggested Target: src/components/ui/ (or shared/)
+    - High consumer fan-in (3 consumers)
+    Live Consumers:
+      • curata/src/components/cleanup-client.tsx:8
+      • curata/src/components/folder-actions.tsx:10
+      • curata/src/components/group-manager.tsx:6
+
+  ★ ContentRulesEditor (curata/src/components/content-rules-editor.tsx:99) [Storybook: MISSING]
+    Fan-in: 4 live consumers
+    Suggested Target: src/components/ui/ (or shared/)
+    - High consumer fan-in (4 consumers)
+    - Cross-domain usage across 3 feature areas: [page-viewer, settings, general]
+    Live Consumers:
+      • curata/src/app/(app)/pages/[slug]/settings/page.tsx:18
+      • curata/src/app/(app)/settings/page.tsx:15
+      • curata/src/components/folder-actions.tsx:9
+      • curata/src/components/page-detail-client.tsx:22
+
+  ★ PageContent (curata/src/components/page-viewer.tsx:16) [Storybook: MISSING]
+    Fan-in: 2 live consumers
+    Suggested Target: src/components/ui/ (or shared/)
+    - Cross-domain usage across 2 feature areas: [page-viewer, general]
+    Live Consumers:
+      • curata/src/components/page-detail-client.tsx:7
+      • curata/src/components/public-annotation-client.tsx:6
+
+  ★ TagPicker (curata/src/components/tag-picker.tsx:29) [Storybook: ✓]
+    Fan-in: 3 live consumers
+    Suggested Target: src/components/ui/ (or shared/)
+    - High consumer fan-in (3 consumers)
+    - Cross-domain usage across 2 feature areas: [dashboard, page-viewer]
+    Live Consumers:
+      • curata/src/components/dashboard-tabs.tsx:6
+      • curata/src/components/page-settings-tags.tsx:8
+      • curata/src/components/page-tags.tsx:4
+
+  ★ ThemeScript (curata/src/components/theme-script.tsx:3) [Storybook: MISSING]
+    Fan-in: 5 live consumers
+    Suggested Target: src/components/ui/ (or shared/)
+    - High consumer fan-in (5 consumers)
+    - Cross-domain usage across 2 feature areas: [general, playground]
+    Live Consumers:
+      • curata/src/app/export-preview/[slug]/page.tsx:5
+      • curata/src/app/layout.tsx:4
+      • curata/src/app/p/[orgSlug]/[pageSlug]/page.tsx:8
+      • curata/src/app/p/[orgSlug]/page.tsx:4
+      • curata/../curata-app/extensions/src/app/playground/[id]/page.tsx:7
+
+  ★ BillingPlans (curata/../curata-app/extensions/src/components/billing-plans.tsx:23) [Storybook: MISSING]
+    Fan-in: 1 live consumers
+    Suggested Target: src/components/ui/ (or shared/)
+    - Cross-repo consumption between OSS curata and hosted curata-app
+    Live Consumers:
+      • curata/../curata-app/extensions/src/app/billing/page.tsx:11
+
+  ★ CaptureTerminal (curata/../curata-app/extensions/src/components/capture-terminal.tsx:32) [Storybook: MISSING]
+    Fan-in: 1 live consumers
+    Suggested Target: src/components/ui/ (or shared/)
+    - Cross-repo consumption between OSS curata and hosted curata-app
+    Live Consumers:
+      • curata/../curata-app/extensions/src/app/page.tsx:7
+
+  ★ LoopTicker (curata/../curata-app/extensions/src/components/loop-ticker.tsx:16) [Storybook: MISSING]
+    Fan-in: 1 live consumers
+    Suggested Target: src/components/ui/ (or shared/)
+    - Cross-repo consumption between OSS curata and hosted curata-app
+    Live Consumers:
+      • curata/../curata-app/extensions/src/app/page.tsx:8
+
+  ★ MarketingFooter (curata/../curata-app/extensions/src/components/marketing-footer.tsx:8) [Storybook: ✓]
+    Fan-in: 6 live consumers
+    Suggested Target: src/components/ui/ (or shared/)
+    - High consumer fan-in (6 consumers)
+    - Cross-domain usage across 2 feature areas: [curata-app-extension, docs]
+    - Cross-repo consumption between OSS curata and hosted curata-app
+    Live Consumers:
+      • curata/../curata-app/extensions/src/app/compare/page.tsx:4
+      • curata/../curata-app/extensions/src/app/docs/layout.tsx:4
+      • curata/../curata-app/extensions/src/app/how-it-works/page.tsx:4
+      • curata/../curata-app/extensions/src/app/page.tsx:6
+      • curata/../curata-app/extensions/src/app/pricing/page.tsx:5
+      • curata/../curata-app/extensions/src/app/try/layout.tsx:4
+
+  ★ LoopMark (curata/../curata-app/extensions/src/components/marketing-nav.tsx:7) [Storybook: MISSING]
+    Fan-in: 1 live consumers
+    Suggested Target: src/components/ui/ (or shared/)
+    - Cross-repo consumption between OSS curata and hosted curata-app
+    Live Consumers:
+      • curata/../curata-app/extensions/src/components/marketing-footer.tsx:2
+
+  ★ MarketingNav (curata/../curata-app/extensions/src/components/marketing-nav.tsx:34) [Storybook: ✓]
+    Fan-in: 6 live consumers
+    Suggested Target: src/components/ui/ (or shared/)
+    - High consumer fan-in (6 consumers)
+    - Cross-domain usage across 2 feature areas: [curata-app-extension, docs]
+    - Cross-repo consumption between OSS curata and hosted curata-app
+    Live Consumers:
+      • curata/../curata-app/extensions/src/app/compare/page.tsx:3
+      • curata/../curata-app/extensions/src/app/docs/layout.tsx:3
+      • curata/../curata-app/extensions/src/app/how-it-works/page.tsx:3
+      • curata/../curata-app/extensions/src/app/page.tsx:5
+      • curata/../curata-app/extensions/src/app/pricing/page.tsx:4
+      • curata/../curata-app/extensions/src/app/try/layout.tsx:3
+
+  ★ PlaygroundBanner (curata/../curata-app/extensions/src/components/playground-banner.tsx:55) [Storybook: MISSING]
+    Fan-in: 1 live consumers
+    Suggested Target: src/components/ui/ (or shared/)
+    - Cross-repo consumption between OSS curata and hosted curata-app
+    Live Consumers:
+      • curata/../curata-app/extensions/src/app/playground/[id]/page.tsx:5
+
+── 4. Feature-Private / Single-Consumer Components (44) ────────────
+Components used by exactly one parent file (potential co-location candidates):
+
+  • ActivityFeed                 curata/src/components/activity-feed.tsx:89 -> used in curata/src/app/(app)/dashboard/page.tsx
+  • AddComponentButton           curata/src/components/add-component-button.tsx:78 -> used in curata/src/components/page-detail-client.tsx
+  • AgentConnectFlow             curata/src/components/agent-connect-flow.tsx:13 -> used in curata/src/components/agent-connect-modal.tsx
+  • AgentConnectModal            curata/src/components/agent-connect-modal.tsx:11 -> used in curata/src/components/page-detail-client.tsx
+  • ApiKeyManager                curata/src/components/api-key-manager.tsx:33 -> used in curata/src/app/(app)/settings/page.tsx
+  • ApprovalRuleEditor           curata/src/components/approval-rule-editor.tsx:41 -> used in curata/src/components/page-detail-client.tsx
+  • CleanupClient                curata/src/components/cleanup-client.tsx:48 -> used in curata/src/app/(app)/cleanup/page.tsx
+  • CommandPalette               curata/src/components/command-palette.tsx:20 -> used in curata/src/app/layout.tsx
+  • ConnectManager               curata/src/components/connect-manager.tsx:47 -> used in curata/src/app/(app)/settings/page.tsx
+  • IndexView                    curata/src/components/content-index.tsx:185 -> used in curata/src/components/dashboard-tabs.tsx
+  • ScaleView                    curata/src/components/content-index.tsx:263 -> used in curata/src/components/dashboard-tabs.tsx
+  • DashboardTabs                curata/src/components/dashboard-tabs.tsx:68 -> used in curata/src/app/(app)/dashboard/page.tsx
+  • EditableComponent            curata/src/components/editable-component.tsx:22 -> used in curata/src/components/page-detail-client.tsx
+  • NewFolderButton              curata/src/components/folder-actions.tsx:88 -> used in curata/src/components/sidebar.tsx
+  • PageMenu                     curata/src/components/folder-actions.tsx:188 -> used in curata/src/components/sidebar.tsx
+  • FolderMenu                   curata/src/components/folder-actions.tsx:450 -> used in curata/src/components/sidebar.tsx
+  • GroupManager                 curata/src/components/group-manager.tsx:29 -> used in curata/src/app/(app)/settings/page.tsx
+  • GroupPicklist                curata/src/components/group-picklist.tsx:16 -> used in curata/src/components/member-list.tsx
+  • InlineComponentEditor        curata/src/components/inline-component-editor.tsx:24 -> used in curata/src/components/page-detail-client.tsx
+  • MemberList                   curata/src/components/member-list.tsx:42 -> used in curata/src/app/(app)/settings/page.tsx
+  • NewPageButton                curata/src/components/new-page-button.tsx:11 -> used in curata/src/components/sidebar.tsx
+  • OrgSettings                  curata/src/components/org-settings.tsx:13 -> used in curata/src/app/(app)/settings/page.tsx
+  • PageDetailClient             curata/src/components/page-detail-client.tsx:62 -> used in curata/src/app/(app)/pages/[slug]/page.tsx
+  • PageFolderSelect             curata/src/components/page-folder-select.tsx:18 -> used in curata/src/components/page-settings-general.tsx
+  • PagePromptDialog             curata/src/components/page-prompt-dialog.tsx:20 -> used in curata/src/app/p/[orgSlug]/[pageSlug]/page.tsx
+  • PageSettingsGeneral          curata/src/components/page-settings-general.tsx:22 -> used in curata/src/app/(app)/pages/[slug]/settings/page.tsx
+  • PageSettingsTags             curata/src/components/page-settings-tags.tsx:27 -> used in curata/src/app/(app)/pages/[slug]/settings/page.tsx
+  • PageTags                     curata/src/components/page-tags.tsx:18 -> used in curata/src/app/(app)/pages/[slug]/page.tsx
+  • PublicAnnotationClient       curata/src/components/public-annotation-client.tsx:35 -> used in curata/src/app/p/[orgSlug]/[pageSlug]/page.tsx
+  • ReportBuilder                curata/src/components/report-builder.tsx:13 -> used in curata/src/components/sidebar.tsx
+  • ReviewQueueClient            curata/src/components/review-queue-client.tsx:106 -> used in curata/src/app/(app)/review/page.tsx
+  • Sidebar                      curata/src/components/sidebar.tsx:135 -> used in curata/src/app/(app)/layout.tsx
+  • SourceEditor                 curata/src/components/source-editor.tsx:64 -> used in curata/src/components/page-detail-client.tsx
+  • TagsManager                  curata/src/components/tags-manager.tsx:34 -> used in curata/src/app/(app)/settings/page.tsx
+  • ThemeSettings                curata/src/components/theme-settings.tsx:52 -> used in curata/src/app/(app)/settings/page.tsx
+  • Toaster                      curata/src/components/toast.tsx:45 -> used in curata/src/app/layout.tsx
+  • TrustBanner                  curata/src/components/trust-banner.tsx:27 -> used in curata/src/components/page-detail-client.tsx
+  • VersionHistoryPanel          curata/src/components/version-history.tsx:25 -> used in curata/src/components/page-detail-client.tsx
+  • VisibilityPicker             curata/src/components/visibility-picker.tsx:24 -> used in curata/src/components/page-detail-client.tsx
+  • BillingPlans                 curata/../curata-app/extensions/src/components/billing-plans.tsx:23 -> used in curata/../curata-app/extensions/src/app/billing/page.tsx
+  • CaptureTerminal              curata/../curata-app/extensions/src/components/capture-terminal.tsx:32 -> used in curata/../curata-app/extensions/src/app/page.tsx
+  • LoopTicker                   curata/../curata-app/extensions/src/components/loop-ticker.tsx:16 -> used in curata/../curata-app/extensions/src/app/page.tsx
+  • LoopMark                     curata/../curata-app/extensions/src/components/marketing-nav.tsx:7 -> used in curata/../curata-app/extensions/src/components/marketing-footer.tsx
+  • PlaygroundBanner             curata/../curata-app/extensions/src/components/playground-banner.tsx:55 -> used in curata/../curata-app/extensions/src/app/playground/[id]/page.tsx
+
+── Summary ────────────────────────────────────────────────────────────────────
+  Total Components Scanned:               117
+  Used in Application:                    59
+  Next.js Route Entrypoints:              40
+  Kazam Generated Renderers:              18
+  Story-Only (Catalog):                   0
+  Dead / Unused:                          0
+  Candidates for Shared Kit Promotion:   12
+  Single-Consumer Components:             44
+===============================================================================

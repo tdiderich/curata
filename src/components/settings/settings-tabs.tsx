@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
-interface Tab {
+export interface SettingsTab {
   label: string;
   labelExtra?: React.ReactNode;
   content: React.ReactNode;
@@ -13,13 +13,13 @@ function slugify(label: string) {
   return label.toLowerCase().replace(/\s+/g, "-");
 }
 
-export function SettingsTabs({ tabs }: { tabs: Tab[] }) {
+export function SettingsTabs({ tabs }: { tabs: SettingsTab[] }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
   const resolveIndex = useCallback(() => {
-    const param = searchParams.get("tab");
+    const param = searchParams?.get("tab");
     if (!param) return 0;
     const idx = tabs.findIndex((t) => slugify(t.label) === param);
     return idx >= 0 ? idx : 0;
@@ -33,6 +33,7 @@ export function SettingsTabs({ tabs }: { tabs: Tab[] }) {
 
   function selectTab(i: number) {
     setActive(i);
+    if (!searchParams) return;
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", slugify(tabs[i].label));
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
@@ -53,7 +54,7 @@ export function SettingsTabs({ tabs }: { tabs: Tab[] }) {
         ))}
       </nav>
       <div className="settings-tab-content">
-        {tabs[active].content}
+        {tabs[active]?.content}
       </div>
     </div>
   );

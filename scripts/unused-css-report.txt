@@ -1,8 +1,8 @@
 Unused CSS class report
 Source: src/app/globals.css
-Scanned 78 .tsx files under: src/components, src/app
+Scanned 79 .tsx files under: src/components, src/app
 
-== Unused classes (267) ==
+== Unused classes (326) ==
 No className usage (literal or dynamic-pattern) found in any .tsx file.
 
   globals.css:73  .doc-root  (selector: body .doc-root)
@@ -102,12 +102,47 @@ No className usage (literal or dynamic-pattern) found in any .tsx file.
   .page-chrome,
   .page-toolbar)
   globals.css:443  .c-section--highlighted  (selector: .c-section--highlighted)
+  globals.css:869  .agent-bar-btn  (selector: .agent-bar-btn)
+  globals.css:882  .agent-bar-btn  (selector: .agent-bar-btn:hover)
   globals.css:1055  .agent-btn-mt  (selector: .agent-btn-mt)
+  globals.css:1139  .empty-welcome  (selector: .empty-welcome)
+  globals.css:1142  .empty-welcome-heading  (selector: .empty-welcome-heading)
+  globals.css:1148  .empty-welcome-sub  (selector: .empty-welcome-sub)
+  globals.css:1153  .empty-scratch  (selector: .empty-scratch)
+  globals.css:1168  .empty-scratch  (selector: .empty-scratch:hover)
+  globals.css:1172  .empty-scratch-icon  (selector: .empty-scratch-icon)
+  globals.css:1184  .empty-scratch-title  (selector: .empty-scratch-title)
+  globals.css:1189  .empty-scratch-desc  (selector: .empty-scratch-desc)
+  globals.css:1193  .empty-divider  (selector: .empty-divider)
+  globals.css:1202  .empty-groups  (selector: .empty-groups)
+  globals.css:1208  .empty-groups  (selector: .empty-groups)
+  globals.css:1211  .empty-groups  (selector: .empty-groups)
+  globals.css:4330  .empty-groups  (selector: .empty-groups)
+  globals.css:1213  .empty-group-label  (selector: .empty-group-label)
+  globals.css:1223  .empty-group-cards  (selector: .empty-group-cards)
+  globals.css:1258  .template-picker-card--creating  (selector: .template-picker-card--creating)
+  globals.css:1289  .dash-th-sort  (selector: .dash-th-sort)
+  globals.css:1301  .dash-th-sort  (selector: .dash-th-sort:hover)
+  globals.css:1302  .dash-th-sort--active  (selector: .dash-th-sort--active)
+  globals.css:1332  .dash-page-link  (selector: .dash-page-link)
+  globals.css:1339  .dash-page-link  (selector: .dash-page-link:hover)
+  globals.css:1343  .dash-none  (selector: .dash-none)
+  globals.css:1348  .dash-ann-count  (selector: .dash-ann-count)
   globals.css:1375  .dash-breadcrumb  (selector: .dash-breadcrumb)
   globals.css:1383  .dash-breadcrumb-link  (selector: .dash-breadcrumb-link)
   globals.css:1393  .dash-breadcrumb-link  (selector: .dash-breadcrumb-link:hover)
   globals.css:1397  .dash-breadcrumb-sep  (selector: .dash-breadcrumb-sep)
   globals.css:1401  .dash-breadcrumb-current  (selector: .dash-breadcrumb-current)
+  globals.css:1406  .dash-toolbar  (selector: .dash-toolbar)
+  globals.css:1415  .dash-toolbar  (selector: .dash-toolbar .search-bar)
+  globals.css:3980  .dash-toolbar  (selector: .dash-toolbar .search-bar)
+  globals.css:4095  .dash-toolbar  (selector: .dash-toolbar .search-bar)
+  globals.css:1415  .search-bar  (selector: .dash-toolbar .search-bar)
+  globals.css:2281  .search-bar  (selector: .search-bar)
+  globals.css:3980  .search-bar  (selector: .dash-toolbar .search-bar)
+  globals.css:4095  .search-bar  (selector: .dash-toolbar .search-bar)
+  globals.css:4101  .search-bar  (selector: .search-bar)
+  globals.css:4105  .search-bar  (selector: .search-bar input)
   globals.css:1420  .dash-actions-wrap  (selector: .dash-actions-wrap)
   globals.css:1428  .dash-actions-trigger  (selector: .dash-actions-trigger)
   globals.css:1440  .dash-actions-trigger  (selector: .dash-actions-trigger:hover)
@@ -140,7 +175,22 @@ No className usage (literal or dynamic-pattern) found in any .tsx file.
   globals.css:1660  .dash-folder-drill-hint  (selector: .dash-folder-drill-hint)
   globals.css:1666  .dash-folder-drill-hint  (selector: .dash-folder-row--drillable:hover .dash-folder-drill-hint)
   globals.css:1666  .dash-folder-row--drillable  (selector: .dash-folder-row--drillable:hover .dash-folder-drill-hint)
+  globals.css:1674  .dash-visibility-badge  (selector: .dash-visibility-badge)
+  globals.css:1681  .dash-visibility-badge  (selector: .dash-visibility-badge:hover)
+  globals.css:1685  .dash-visibility-badge  (selector: .dash-visibility-badge:disabled)
+  globals.css:1690  .dash-visibility-badge--personal  (selector: .dash-visibility-badge--personal)
+  globals.css:1695  .dash-visibility-badge--shared  (selector: .dash-visibility-badge--shared)
+  globals.css:1700  .dash-visibility-badge--public  (selector: .dash-visibility-badge--public)
+  globals.css:1833  .dash-td-actions  (selector: .dash-td-actions)
+  globals.css:1839  .dash-th-actions  (selector: .dash-th-actions)
   globals.css:2165  .members-user-id  (selector: .members-user-id)
+  globals.css:2285  .search-bar-input-wrap  (selector: .search-bar-input-wrap)
+  globals.css:2296  .search-bar-input-wrap  (selector: .search-bar-input-wrap:focus-within)
+  globals.css:2300  .search-bar-icon  (selector: .search-bar-icon)
+  globals.css:2307  .search-bar-input  (selector: .search-bar-input)
+  globals.css:2318  .search-bar-input  (selector: .search-bar-input::placeholder)
+  globals.css:2322  .search-bar-clear  (selector: .search-bar-clear)
+  globals.css:2331  .search-bar-clear  (selector: .search-bar-clear:hover)
   globals.css:2333  .search-bar-spinner  (selector: .search-bar-spinner)
   globals.css:2347  .search-dropdown  (selector: .search-dropdown)
   globals.css:2361  .search-result  (selector: .search-result)
@@ -155,6 +205,20 @@ No className usage (literal or dynamic-pattern) found in any .tsx file.
   globals.css:2481  .dash-view-btn  (selector: .dash-view-btn:hover:not(.dash-view-btn--active))
   globals.css:2476  .dash-view-btn--active  (selector: .dash-view-btn--active)
   globals.css:2481  .dash-view-btn--active  (selector: .dash-view-btn:hover:not(.dash-view-btn--active))
+  globals.css:2488  .feed-list  (selector: .feed-list)
+  globals.css:2494  .feed-card  (selector: .feed-card)
+  globals.css:2503  .feed-card  (selector: .feed-card:last-child)
+  globals.css:2507  .feed-card-header  (selector: .feed-card-header)
+  globals.css:2513  .feed-card-title  (selector: .feed-card-title)
+  globals.css:2523  .feed-card-title  (selector: .feed-card-title:hover)
+  globals.css:2527  .feed-card-time  (selector: .feed-card-time)
+  globals.css:2534  .feed-card-snippet  (selector: .feed-card-snippet)
+  globals.css:2544  .feed-card-meta  (selector: .feed-card-meta)
+  globals.css:2552  .feed-source-badge  (selector: .feed-source-badge)
+  globals.css:2557  .feed-source-badge  (selector: .feed-source-badge[data-agent="true"])
+  globals.css:2562  .feed-source-user  (selector: .feed-source-user)
+  globals.css:2568  .feed-source-avatar  (selector: .feed-source-avatar)
+  globals.css:2582  .feed-card-ann  (selector: .feed-card-ann)
   globals.css:2601  .dash-settings-link  (selector: .dash-settings-link)
   globals.css:2612  .dash-settings-link  (selector: .dash-settings-link:hover)
   globals.css:2619  .dash-sort-select  (selector: .dash-sort-select)
@@ -241,6 +305,18 @@ No className usage (literal or dynamic-pattern) found in any .tsx file.
   globals.css:3545  .onboarding-step-desc  (selector: .onboarding-step-desc)
   globals.css:3552  .onboarding-org-name  (selector: .onboarding-org-name)
   globals.css:3557  .onboarding-dashboard-link  (selector: .onboarding-dashboard-link)
+  globals.css:3567  .public-toggle-wrap  (selector: .public-toggle-wrap)
+  globals.css:3573  .public-toggle  (selector: .public-toggle)
+  globals.css:3585  .public-toggle  (selector: .public-toggle:disabled)
+  globals.css:3590  .public-toggle-track  (selector: .public-toggle-track)
+  globals.css:3600  .public-toggle-track  (selector: .public-toggle--on .public-toggle-track)
+  globals.css:3600  .public-toggle--on  (selector: .public-toggle--on .public-toggle-track)
+  globals.css:3616  .public-toggle--on  (selector: .public-toggle--on .public-toggle-thumb)
+  globals.css:3605  .public-toggle-thumb  (selector: .public-toggle-thumb)
+  globals.css:3616  .public-toggle-thumb  (selector: .public-toggle--on .public-toggle-thumb)
+  globals.css:3621  .public-toggle-label  (selector: .public-toggle-label)
+  globals.css:3625  .public-toggle-copy  (selector: .public-toggle-copy)
+  globals.css:3635  .public-toggle-copy  (selector: .public-toggle-copy:hover)
   globals.css:4109  .dash-table-wrap  (selector: .dash-table-wrap)
   globals.css:4131  .theme-toggle-group  (selector: .theme-toggle-group)
   globals.css:4168  .legal-page  (selector: .legal-page)
@@ -414,110 +490,120 @@ No className usage (literal or dynamic-pattern) found in any .tsx file.
   globals.css:5544  .concepts-link-item  (selector: .concepts-link-item a:hover)
   globals.css:5548  .concepts-link-rel  (selector: .concepts-link-rel)
   globals.css:5667  .dash-home  (selector: .dash-home)
+  globals.css:5673  .dash-attention  (selector: .dash-attention)
+  globals.css:5679  .dash-attention-chip  (selector: .dash-attention-chip)
+  globals.css:5694  .dash-attention-chip  (selector: .dash-attention-chip:hover)
+  globals.css:5696  .dash-attention-chip--active  (selector: .dash-attention-chip--active)
+  globals.css:5702  .dash-attention-num  (selector: .dash-attention-num)
   globals.css:5708  .dash-quick-cards  (selector: .dash-quick-cards)
   globals.css:5714  .dash-quick-card  (selector: .dash-quick-card)
   globals.css:5728  .dash-quick-card  (selector: .dash-quick-card:hover)
   globals.css:5730  .dash-quick-star  (selector: .dash-quick-star)
   globals.css:5732  .dash-quick-card-title  (selector: .dash-quick-card-title)
+  globals.css:5740  .dash-badge  (selector: .dash-badge)
+  globals.css:5745  .dash-badge--updated  (selector: .dash-badge--updated)
+  globals.css:5746  .dash-badge--stale  (selector: .dash-badge--stale)
+  globals.css:5747  .dash-badge--due  (selector: .dash-badge--due)
+  globals.css:5748  .dash-badge--pin  (selector: .dash-badge--pin)
+  globals.css:5750  .dash-ann-count--pending  (selector: .dash-ann-count--pending)
   globals.css:5755  .dash-palette-btn  (selector: .dash-palette-btn)
   globals.css:5769  .dash-palette-btn  (selector: .dash-palette-btn:hover)
   globals.css:5771  .dash-palette-kbd  (selector: .dash-palette-kbd)
-  globals.css:6644  .cr-list  (selector: .cr-list)
-  globals.css:6646  .cr-row  (selector: .cr-row)  [co-occurs in CSS with used class(es): cr-editor]
-  globals.css:6649  .cr-row  (selector: .cr-row:first-child)  [co-occurs in CSS with used class(es): cr-editor]
-  globals.css:7500  .cr-row  (selector: .cr-editor .cr-row)  [co-occurs in CSS with used class(es): cr-editor]
-  globals.css:7503  .cr-row  (selector: .cr-editor .cr-row:last-child)  [co-occurs in CSS with used class(es): cr-editor]
-  globals.css:6651  .cr-row-summary  (selector: .cr-row-summary)
-  globals.css:6655  .cr-row-summary  (selector: .cr-row-summary:hover)
-  globals.css:6686  .cr-row-summary  (selector: .cr-row-summary:hover .cr-row-actions)
-  globals.css:6663  .cr-row-text  (selector: .cr-row-text)
-  globals.css:6669  .cr-row-meta  (selector: .cr-row-meta)
-  globals.css:6671  .cr-chip  (selector: .cr-chip)
-  globals.css:6675  .cr-chip--enforced  (selector: .cr-chip--enforced)
-  globals.css:6678  .cr-chip--guidance  (selector: .cr-chip--guidance)
-  globals.css:6682  .cr-row-actions  (selector: .cr-row-actions)
-  globals.css:6686  .cr-row-actions  (selector: .cr-row-summary:hover .cr-row-actions)
-  globals.css:6687  .cr-row-actions  (selector: .cr-row-actions button)
-  globals.css:6692  .cr-row-actions  (selector: .cr-row-actions button:hover)
-  globals.css:6693  .cr-row-delete  (selector: .cr-row-delete:hover)
-  globals.css:6696  .cr-detail  (selector: .cr-detail)
-  globals.css:6702  .cr-detail-label  (selector: .cr-detail-label)
-  globals.css:6705  .cr-detail-patterns  (selector: .cr-detail-patterns)
-  globals.css:6708  .cr-pattern-chip  (selector: .cr-pattern-chip)
-  globals.css:6716  .cr-edit-form  (selector: .cr-edit-form)
-  globals.css:6717  .cr-edit-text  (selector: .cr-edit-text)
-  globals.css:6719  .cr-field-label  (selector: .cr-field-label)
-  globals.css:6725  .cr-mode-row  (selector: .cr-mode-row)
-  globals.css:6726  .cr-mode-select  (selector: .cr-mode-select)
-  globals.css:6727  .cr-mode-hint  (selector: .cr-mode-hint)
-  globals.css:6732  .cr-bottom  (selector: .cr-bottom)
-  globals.css:6735  .cr-inline-add  (selector: .cr-inline-add)
-  globals.css:6736  .cr-inline-input  (selector: .cr-inline-input)
-  globals.css:6742  .cr-inline-input  (selector: .cr-inline-input:focus)
-  globals.css:6743  .cr-inline-input  (selector: .cr-inline-input::placeholder)
-  globals.css:6744  .cr-inline-input  (selector: .cr-inline-input:disabled)
-  globals.css:6746  .approval-editor-lists  (selector: .approval-editor-lists)
-  globals.css:6747  .approval-editor-section  (selector: .approval-editor-section)
-  globals.css:6748  .approval-editor-row  (selector: .approval-editor-row)
-  globals.css:6758  .pattern-pills-wrap  (selector: .pattern-pills-wrap)
-  globals.css:6763  .pattern-pills-wrap  (selector: .pattern-pills-wrap:focus-within)
-  globals.css:6765  .pattern-pill  (selector: .pattern-pill)
-  globals.css:6770  .pattern-pill  (selector: .pattern-pill code)
-  globals.css:6773  .pattern-pill-x  (selector: .pattern-pill-x)
-  globals.css:6778  .pattern-pill-x  (selector: .pattern-pill-x:hover)
-  globals.css:6780  .pattern-pills-input  (selector: .pattern-pills-input)
-  globals.css:6786  .pattern-pills-input  (selector: .pattern-pills-input::placeholder)
-  globals.css:6949  .kg-tag-error  (selector: .kg-tag-error)
-  globals.css:6953  .kg-focus-list  (selector: .kg-focus-list)  [co-occurs in CSS with used class(es): activity-content, activity-body, activity-meta]
-  globals.css:7008  .kg-focus-list  (selector: .kg-focus-list a:hover)  [co-occurs in CSS with used class(es): activity-content, activity-body, activity-meta]
-  globals.css:7142  .kg-focus-list  (selector: .kg-focus-list .activity-content,
+  globals.css:6558  .dash-attention-chip--cleanup  (selector: .dash-attention-chip--cleanup)
+  globals.css:6559  .dash-attention-chip--cleanup  (selector: .dash-attention-chip--cleanup:hover)
+  globals.css:6647  .cr-list  (selector: .cr-list)
+  globals.css:6649  .cr-row  (selector: .cr-row)  [co-occurs in CSS with used class(es): cr-editor]
+  globals.css:6652  .cr-row  (selector: .cr-row:first-child)  [co-occurs in CSS with used class(es): cr-editor]
+  globals.css:7503  .cr-row  (selector: .cr-editor .cr-row)  [co-occurs in CSS with used class(es): cr-editor]
+  globals.css:7506  .cr-row  (selector: .cr-editor .cr-row:last-child)  [co-occurs in CSS with used class(es): cr-editor]
+  globals.css:6654  .cr-row-summary  (selector: .cr-row-summary)
+  globals.css:6658  .cr-row-summary  (selector: .cr-row-summary:hover)
+  globals.css:6689  .cr-row-summary  (selector: .cr-row-summary:hover .cr-row-actions)
+  globals.css:6666  .cr-row-text  (selector: .cr-row-text)
+  globals.css:6672  .cr-row-meta  (selector: .cr-row-meta)
+  globals.css:6674  .cr-chip  (selector: .cr-chip)
+  globals.css:6678  .cr-chip--enforced  (selector: .cr-chip--enforced)
+  globals.css:6681  .cr-chip--guidance  (selector: .cr-chip--guidance)
+  globals.css:6685  .cr-row-actions  (selector: .cr-row-actions)
+  globals.css:6689  .cr-row-actions  (selector: .cr-row-summary:hover .cr-row-actions)
+  globals.css:6690  .cr-row-actions  (selector: .cr-row-actions button)
+  globals.css:6695  .cr-row-actions  (selector: .cr-row-actions button:hover)
+  globals.css:6696  .cr-row-delete  (selector: .cr-row-delete:hover)
+  globals.css:6699  .cr-detail  (selector: .cr-detail)
+  globals.css:6705  .cr-detail-label  (selector: .cr-detail-label)
+  globals.css:6708  .cr-detail-patterns  (selector: .cr-detail-patterns)
+  globals.css:6711  .cr-pattern-chip  (selector: .cr-pattern-chip)
+  globals.css:6719  .cr-edit-form  (selector: .cr-edit-form)
+  globals.css:6720  .cr-edit-text  (selector: .cr-edit-text)
+  globals.css:6722  .cr-field-label  (selector: .cr-field-label)
+  globals.css:6728  .cr-mode-row  (selector: .cr-mode-row)
+  globals.css:6729  .cr-mode-select  (selector: .cr-mode-select)
+  globals.css:6730  .cr-mode-hint  (selector: .cr-mode-hint)
+  globals.css:6735  .cr-bottom  (selector: .cr-bottom)
+  globals.css:6738  .cr-inline-add  (selector: .cr-inline-add)
+  globals.css:6739  .cr-inline-input  (selector: .cr-inline-input)
+  globals.css:6745  .cr-inline-input  (selector: .cr-inline-input:focus)
+  globals.css:6746  .cr-inline-input  (selector: .cr-inline-input::placeholder)
+  globals.css:6747  .cr-inline-input  (selector: .cr-inline-input:disabled)
+  globals.css:6749  .approval-editor-lists  (selector: .approval-editor-lists)
+  globals.css:6750  .approval-editor-section  (selector: .approval-editor-section)
+  globals.css:6751  .approval-editor-row  (selector: .approval-editor-row)
+  globals.css:6761  .pattern-pills-wrap  (selector: .pattern-pills-wrap)
+  globals.css:6766  .pattern-pills-wrap  (selector: .pattern-pills-wrap:focus-within)
+  globals.css:6768  .pattern-pill  (selector: .pattern-pill)
+  globals.css:6773  .pattern-pill  (selector: .pattern-pill code)
+  globals.css:6776  .pattern-pill-x  (selector: .pattern-pill-x)
+  globals.css:6781  .pattern-pill-x  (selector: .pattern-pill-x:hover)
+  globals.css:6783  .pattern-pills-input  (selector: .pattern-pills-input)
+  globals.css:6789  .pattern-pills-input  (selector: .pattern-pills-input::placeholder)
+  globals.css:6952  .kg-tag-error  (selector: .kg-tag-error)
+  globals.css:6956  .kg-focus-list  (selector: .kg-focus-list)  [co-occurs in CSS with used class(es): activity-content, activity-body, activity-meta]
+  globals.css:7011  .kg-focus-list  (selector: .kg-focus-list a:hover)  [co-occurs in CSS with used class(es): activity-content, activity-body, activity-meta]
+  globals.css:7145  .kg-focus-list  (selector: .kg-focus-list .activity-content,
 .kg-untagged-scroll .activity-content)  [co-occurs in CSS with used class(es): activity-content, activity-body, activity-meta]
-  globals.css:7148  .kg-focus-list  (selector: .kg-focus-list .activity-body,
+  globals.css:7151  .kg-focus-list  (selector: .kg-focus-list .activity-body,
 .kg-untagged-scroll .activity-body,
 .kg-focus-list .activity-meta,
 .kg-untagged-scroll .activity-meta)  [co-occurs in CSS with used class(es): activity-content, activity-body, activity-meta]
-  globals.css:7148  .kg-focus-list  (selector: .kg-focus-list .activity-body,
+  globals.css:7151  .kg-focus-list  (selector: .kg-focus-list .activity-body,
 .kg-untagged-scroll .activity-body,
 .kg-focus-list .activity-meta,
 .kg-untagged-scroll .activity-meta)  [co-occurs in CSS with used class(es): activity-content, activity-body, activity-meta]
-  globals.css:7492  .cr-head-row  (selector: .cr-head-row)
-  globals.css:7496  .cr-th-enforcement  (selector: .cr-th-enforcement)
-  globals.css:7506  .org-tags  (selector: .org-tags)
-  globals.css:7511  .org-tags-head  (selector: .org-tags-head)
-  globals.css:7517  .org-tags-title  (selector: .org-tags-title)
-  globals.css:7522  .org-tags-hint  (selector: .org-tags-hint)
-  globals.css:7885  .stg-seg-hint  (selector: .stg-seg-hint)
-  globals.css:7950  .kg-label-in  (selector: .kg-label-in)
-  globals.css:7953  .kg-label-count  (selector: .kg-label-count)
-  globals.css:8045  .billing-plans  (selector: .billing-plans)
-  globals.css:8053  .pricing-card  (selector: .pricing-card)
-  globals.css:8063  .pricing-card--featured  (selector: .pricing-card--featured,
+  globals.css:7495  .cr-head-row  (selector: .cr-head-row)
+  globals.css:7499  .cr-th-enforcement  (selector: .cr-th-enforcement)
+  globals.css:7509  .org-tags  (selector: .org-tags)
+  globals.css:7514  .org-tags-head  (selector: .org-tags-head)
+  globals.css:7520  .org-tags-title  (selector: .org-tags-title)
+  globals.css:7525  .org-tags-hint  (selector: .org-tags-hint)
+  globals.css:7889  .stg-seg-hint  (selector: .stg-seg-hint)
+  globals.css:7954  .kg-label-in  (selector: .kg-label-in)
+  globals.css:7957  .kg-label-count  (selector: .kg-label-count)
+  globals.css:8049  .billing-plans  (selector: .billing-plans)
+  globals.css:8057  .pricing-card  (selector: .pricing-card)
+  globals.css:8067  .pricing-card--featured  (selector: .pricing-card--featured,
 .pricing-card--current)
-  globals.css:8063  .pricing-card--current  (selector: .pricing-card--featured,
+  globals.css:8067  .pricing-card--current  (selector: .pricing-card--featured,
 .pricing-card--current)
-  globals.css:8070  .billing-plan-name  (selector: .billing-plan-name)
-  globals.css:8078  .billing-plan-price  (selector: .billing-plan-price)
-  globals.css:8084  .billing-plan-price-unit  (selector: .billing-plan-price-unit)
-  globals.css:8090  .billing-plan-sub  (selector: .billing-plan-sub,
+  globals.css:8074  .billing-plan-name  (selector: .billing-plan-name)
+  globals.css:8082  .billing-plan-price  (selector: .billing-plan-price)
+  globals.css:8088  .billing-plan-price-unit  (selector: .billing-plan-price-unit)
+  globals.css:8094  .billing-plan-sub  (selector: .billing-plan-sub,
 .billing-plan-hint,
 .billing-plan-current-note)
-  globals.css:8090  .billing-plan-hint  (selector: .billing-plan-sub,
+  globals.css:8094  .billing-plan-hint  (selector: .billing-plan-sub,
 .billing-plan-hint,
 .billing-plan-current-note)
-  globals.css:8090  .billing-plan-current-note  (selector: .billing-plan-sub,
+  globals.css:8094  .billing-plan-current-note  (selector: .billing-plan-sub,
 .billing-plan-hint,
 .billing-plan-current-note)
-  globals.css:8097  .billing-plan-total  (selector: .billing-plan-total)
-  globals.css:8103  .billing-plan-cta  (selector: .billing-plan-cta)
-  globals.css:8108  .billing-plan-actions  (selector: .billing-plan-actions)
+  globals.css:8101  .billing-plan-total  (selector: .billing-plan-total)
+  globals.css:8107  .billing-plan-cta  (selector: .billing-plan-cta)
+  globals.css:8112  .billing-plan-actions  (selector: .billing-plan-actions)
 
-== Possible dynamic (41) ==
+== Possible dynamic (38) ==
 Matches a dynamic prefix/suffix fragment from a template literal or
 concatenation (e.g. `${prefix}-foo`); not confirmed used, not counted as unused.
 
-  globals.css:1690  .dash-visibility-badge--personal  (selector: .dash-visibility-badge--personal)  [matches: dash-visibility-badge--*]
-  globals.css:1695  .dash-visibility-badge--shared  (selector: .dash-visibility-badge--shared)  [matches: dash-visibility-badge--*]
-  globals.css:1700  .dash-visibility-badge--public  (selector: .dash-visibility-badge--public)  [matches: dash-visibility-badge--*]
   globals.css:2183  .members-role-badge--owner  (selector: .members-role-badge--owner)  [matches: members-role-badge--*]
   globals.css:2188  .members-role-badge--admin  (selector: .members-role-badge--admin)  [matches: members-role-badge--*]
   globals.css:2193  .members-role-badge--member  (selector: .members-role-badge--member,
@@ -549,34 +635,34 @@ concatenation (e.g. `${prefix}-foo`); not confirmed used, not counted as unused.
   globals.css:6595  .activity-row--accent  (selector: .activity-row--accent .activity-icon)  [matches: activity-row--*]
   globals.css:6596  .activity-row--yellow  (selector: .activity-row--yellow .activity-icon)  [matches: activity-row--*]
   globals.css:6597  .activity-row--red  (selector: .activity-row--red .activity-icon)  [matches: activity-row--*]
-  globals.css:6660  .cr-dot--block  (selector: .cr-dot--block)  [matches: cr-dot--*]
-  globals.css:6661  .cr-dot--warn  (selector: .cr-dot--warn)  [matches: cr-dot--*]
-  globals.css:7411  .pg-tag-k-vendor  (selector: .pg-tag-k-vendor)  [matches: pg-tag-k-*]
-  globals.css:7443  .pg-tag-k-vendor  (selector: .pg-tag-k-vendor .pg-tag-kind-dot)  [matches: pg-tag-k-*]
-  globals.css:7415  .pg-tag-k-finding  (selector: .pg-tag-k-finding)  [matches: pg-tag-k-*]
-  globals.css:7444  .pg-tag-k-finding  (selector: .pg-tag-k-finding .pg-tag-kind-dot)  [matches: pg-tag-k-*]
-  globals.css:7419  .pg-tag-k-framework  (selector: .pg-tag-k-framework)  [matches: pg-tag-k-*]
-  globals.css:7445  .pg-tag-k-framework  (selector: .pg-tag-k-framework .pg-tag-kind-dot)  [matches: pg-tag-k-*]
-  globals.css:7442  .pg-dot-framework  (selector: .pg-dot-framework)  [matches: pg-dot-*]
-  globals.css:7738  .pill--block  (selector: .pill--block)  [matches: pill--*]
-  globals.css:7739  .pill--block  (selector: .pill--block .pill-dot)  [matches: pill--*]
-  globals.css:7740  .pill--review  (selector: .pill--review)  [matches: pill--*]
-  globals.css:7741  .pill--review  (selector: .pill--review .pill-dot)  [matches: pill--*]
-  globals.css:7742  .pill--guidance  (selector: .pill--guidance)  [matches: pill--*]
-  globals.css:7743  .pill--guidance  (selector: .pill--guidance .pill-dot)  [matches: pill--*]
-  globals.css:7744  .pill--approval  (selector: .pill--approval)  [matches: pill--*]
-  globals.css:7745  .pill--approval  (selector: .pill--approval .pill-dot)  [matches: pill--*]
-  globals.css:7746  .pill--topic  (selector: .pill--topic)  [matches: pill--*]
-  globals.css:7747  .pill--topic  (selector: .pill--topic .pill-dot)  [matches: pill--*]
-  globals.css:7748  .pill--vendor  (selector: .pill--vendor)  [matches: pill--*]
-  globals.css:7749  .pill--vendor  (selector: .pill--vendor .pill-dot)  [matches: pill--*]
-  globals.css:7750  .pill--finding  (selector: .pill--finding)  [matches: pill--*]
-  globals.css:7751  .pill--finding  (selector: .pill--finding .pill-dot)  [matches: pill--*]
-  globals.css:7752  .pill--framework  (selector: .pill--framework)  [matches: pill--*]
-  globals.css:7753  .pill--framework  (selector: .pill--framework .pill-dot)  [matches: pill--*]
+  globals.css:6663  .cr-dot--block  (selector: .cr-dot--block)  [matches: cr-dot--*]
+  globals.css:6664  .cr-dot--warn  (selector: .cr-dot--warn)  [matches: cr-dot--*]
+  globals.css:7414  .pg-tag-k-vendor  (selector: .pg-tag-k-vendor)  [matches: pg-tag-k-*]
+  globals.css:7446  .pg-tag-k-vendor  (selector: .pg-tag-k-vendor .pg-tag-kind-dot)  [matches: pg-tag-k-*]
+  globals.css:7418  .pg-tag-k-finding  (selector: .pg-tag-k-finding)  [matches: pg-tag-k-*]
+  globals.css:7447  .pg-tag-k-finding  (selector: .pg-tag-k-finding .pg-tag-kind-dot)  [matches: pg-tag-k-*]
+  globals.css:7422  .pg-tag-k-framework  (selector: .pg-tag-k-framework)  [matches: pg-tag-k-*]
+  globals.css:7448  .pg-tag-k-framework  (selector: .pg-tag-k-framework .pg-tag-kind-dot)  [matches: pg-tag-k-*]
+  globals.css:7445  .pg-dot-framework  (selector: .pg-dot-framework)  [matches: pg-dot-*]
+  globals.css:7741  .pill--block  (selector: .pill--block)  [matches: pill--*]
+  globals.css:7742  .pill--block  (selector: .pill--block .pill-dot)  [matches: pill--*]
+  globals.css:7743  .pill--review  (selector: .pill--review)  [matches: pill--*]
+  globals.css:7744  .pill--review  (selector: .pill--review .pill-dot)  [matches: pill--*]
+  globals.css:7745  .pill--guidance  (selector: .pill--guidance)  [matches: pill--*]
+  globals.css:7746  .pill--guidance  (selector: .pill--guidance .pill-dot)  [matches: pill--*]
+  globals.css:7747  .pill--approval  (selector: .pill--approval)  [matches: pill--*]
+  globals.css:7748  .pill--approval  (selector: .pill--approval .pill-dot)  [matches: pill--*]
+  globals.css:7749  .pill--topic  (selector: .pill--topic)  [matches: pill--*]
+  globals.css:7750  .pill--topic  (selector: .pill--topic .pill-dot)  [matches: pill--*]
+  globals.css:7751  .pill--vendor  (selector: .pill--vendor)  [matches: pill--*]
+  globals.css:7752  .pill--vendor  (selector: .pill--vendor .pill-dot)  [matches: pill--*]
+  globals.css:7753  .pill--finding  (selector: .pill--finding)  [matches: pill--*]
+  globals.css:7754  .pill--finding  (selector: .pill--finding .pill-dot)  [matches: pill--*]
+  globals.css:7755  .pill--framework  (selector: .pill--framework)  [matches: pill--*]
+  globals.css:7756  .pill--framework  (selector: .pill--framework .pill-dot)  [matches: pill--*]
 
 == Summary ==
   Total distinct classes in globals.css: 939
-  Used (literal className match):        631
-  Possible dynamic (not confirmed):      41
-  Unused:                                267
+  Used (literal className match):        575
+  Possible dynamic (not confirmed):      38
+  Unused:                                326

@@ -14,7 +14,9 @@
     "migrate:org-tags": "tsx scripts/migrate-org-tags.ts",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "find-unused-css": "tsx scripts/find-unused-css.ts"
+    "find-unused-css": "tsx scripts/find-unused-css.ts",
+    "find-unused-components": "tsx scripts/find-unused-components.ts",
+    "find-unused:all": "tsx scripts/find-unused-css.ts && tsx scripts/find-unused-components.ts"
   },
   "dependencies": {
     "@clerk/mcp-tools": "^0.6.0",

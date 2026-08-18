@@ -47,6 +47,12 @@ const preview: Preview = {
     },
   ],
   parameters: {
+    nextjs: {
+      appDirectory: true,
+      navigation: {
+        pathname: "/settings",
+      },
+    },
     backgrounds: { disable: true },
     a11y: {
       test: "todo",

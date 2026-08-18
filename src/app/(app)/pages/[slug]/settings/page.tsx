@@ -12,8 +12,7 @@ import {
 } from "@/lib/approval";
 import { getPageConcepts, normalizeTerm } from "@/lib/concepts";
 import { DEFAULT_TAGS } from "@/lib/default-tags";
-import { SettingsTabs } from "@/components/settings-tabs";
-import { SettingsSection } from "@/components/settings/settings-section";
+import { SettingsTabs, SettingsSection } from "@/components/settings";
 import { PageSettingsGeneral } from "@/components/page-settings-general";
 import { PageSettingsTags } from "@/components/page-settings-tags";
 import { ContentRulesEditor } from "@/components/content-rules-editor";

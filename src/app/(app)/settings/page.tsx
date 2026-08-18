@@ -14,9 +14,7 @@ import { ApiKeyManager } from "@/components/api-key-manager";
 import { ConnectManager } from "@/components/connect-manager";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
 import { TagsManager } from "@/components/tags-manager";
-import { SettingsTabs } from "@/components/settings-tabs";
-import { SettingsSection } from "@/components/settings/settings-section";
-import { TeamChip } from "@/components/settings/team-chip";
+import { SettingsTabs, SettingsSection, TeamChip } from "@/components/settings";
 import { getEntitlements } from "@/lib/entitlements";
 
 export const dynamic = "force-dynamic";

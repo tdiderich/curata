@@ -1,1978 +1,2042 @@
-scanned: 2026-08-17T14:58:37.250559-05:00
+scanned: 2026-08-18T12:59:56.835604-05:00
 files:
 - path: CLAUDE.md
   description: Claude Code project instructions
   tokens: 781
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: CONTRIBUTING.md
   description: Markdown document
   tokens: 389
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: Dockerfile
   description: Docker container definition
   tokens: 330
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: LICENSE
   description: License file
   tokens: 267
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: README.md
   description: Project readme
   tokens: 2215
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: debug-storybook.log
   tokens: 3259
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/agent-skills-workflows.yaml
   description: YAML configuration/data
   tokens: 4927
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/ai-tool-pack.yaml
   description: YAML configuration/data
   tokens: 281
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/data/chart-group.yaml
   description: chart-group data/seed file
   tokens: 395
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/data/chart.yaml
   description: chart data/seed file
   tokens: 174
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/data/gauge.yaml
   description: gauge data/seed file
   tokens: 288
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/data/graph.yaml
   description: graph data/seed file
   tokens: 317
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/data/progress-bar.yaml
   description: progress-bar data/seed file
   tokens: 393
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/data/quadrant.yaml
   description: quadrant data/seed file
   tokens: 327
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/data/radar.yaml
   description: radar data/seed file
   tokens: 377
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/data/sankey.yaml
   description: sankey data/seed file
   tokens: 344
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/data/venn.yaml
   description: venn data/seed file
   tokens: 203
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/layout/aside.yaml
   description: YAML configuration/data
   tokens: 699
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/layout/columns.yaml
   description: YAML configuration/data
   tokens: 764
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/layout/empty-state.yaml
   description: YAML configuration/data
   tokens: 520
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/layout/hero-banner.yaml
   description: YAML configuration/data
   tokens: 523
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/layout/image.yaml
   description: YAML configuration/data
   tokens: 392
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/layout/split-compare.yaml
   description: YAML configuration/data
   tokens: 496
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/sequence/before-after.yaml
   description: YAML configuration/data
   tokens: 394
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/sequence/event-timeline.yaml
   description: YAML configuration/data
   tokens: 987
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/sequence/priority-queue.yaml
   description: YAML configuration/data
   tokens: 1126
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/showcase-callouts.yaml
   description: YAML configuration/data
   tokens: 334
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/showcase-deck.yaml
   description: YAML configuration/data
   tokens: 457
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/showcase-document.yaml
   description: YAML configuration/data
   tokens: 510
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/showcase-hub.yaml
   description: YAML configuration/data
   tokens: 435
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/showcase-ref-embeds.yaml
   description: YAML configuration/data
   tokens: 301
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/showcase-shared-component.yaml
   description: YAML configuration/data
   tokens: 218
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/showcase-stat-timeline.yaml
   description: YAML configuration/data
   tokens: 365
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/showcase-steps-checklist.yaml
   description: YAML configuration/data
   tokens: 389
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/showcase-tables.yaml
   description: YAML configuration/data
   tokens: 538
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/showcase-tabs-accordion.yaml
   description: YAML configuration/data
   tokens: 548
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/skill.yaml
   description: YAML configuration/data
   tokens: 1176
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/structure/architecture-diagram.yaml
   description: YAML configuration/data
   tokens: 261
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/structure/org-chart.yaml
   description: YAML configuration/data
   tokens: 483
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/structure/pipeline.yaml
   description: YAML configuration/data
   tokens: 282
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/structure/role-map.yaml
   description: YAML configuration/data
   tokens: 617
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: demos/templates/structure/tree.yaml
   description: YAML configuration/data
   tokens: 1214
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: dev.sh
   description: Shell script
   tokens: 524
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: docker-compose.test.yml
   description: YAML configuration/data
   tokens: 85
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: docker-compose.yml
   description: YAML configuration/data
   tokens: 174
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: docs/agents-reference.md
   description: Markdown document
   tokens: 6459
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: docs/agl-reference.md
   description: Markdown document
   tokens: 503
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: docs/semantic-tagging.md
   description: Markdown document
   tokens: 790
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: docs/superpowers/plans/2026-05-20-patch-page.md
   description: Markdown document
   tokens: 7287
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: docs/superpowers/plans/2026-06-10-curata-at-a-glance-phase1.md
   description: Markdown document
   tokens: 3787
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: docs/superpowers/specs/2026-05-20-patch-page-design.md
   description: Markdown document
   tokens: 1494
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: entrypoint.sh
   description: Shell script
   tokens: 92
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: eslint.config.mjs
   tokens: 165
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: next-env.d.ts
   description: TypeScript source
-  tokens: 61
+  tokens: 62
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: next.config.ts
   description: TypeScript source
   tokens: 644
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: package.json
   description: Node.js package manifest
-  tokens: 610
+  tokens: 666
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/cli/package.json
   description: Node.js package manifest
   tokens: 96
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/cli/src/api-key.ts
   description: TypeScript source
   tokens: 1108
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/cli/src/index.ts
   description: TypeScript source
   tokens: 290
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/cli/src/init.ts
   description: TypeScript source
   tokens: 823
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/cli/src/up.ts
   description: TypeScript source
   tokens: 713
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/cli/tsconfig.json
   description: TypeScript configuration
   tokens: 86
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/mcp-server/README.md
   description: Project readme
   tokens: 728
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/mcp-server/dist/index.d.ts
   description: TypeScript source
   tokens: 7
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/mcp-server/dist/index.js
   description: JavaScript source
   tokens: 5593
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/mcp-server/dist/index.js.map
   tokens: 5707
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/mcp-server/dist/lib.d.ts
   description: TypeScript source
   tokens: 155
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/mcp-server/dist/lib.js
   description: JavaScript source
   tokens: 1130
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/mcp-server/dist/lib.js.map
   tokens: 1310
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/mcp-server/package.json
   description: Node.js package manifest
   tokens: 215
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/mcp-server/src/index.ts
   description: TypeScript source
   tokens: 6708
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/mcp-server/src/lib.test.ts
   description: TypeScript source
   tokens: 1701
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/mcp-server/src/lib.ts
   description: TypeScript source
   tokens: 1272
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/mcp-server/tsconfig.json
   description: TypeScript configuration
   tokens: 89
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: packages/mcp-server/vitest.config.ts
   description: TypeScript source
   tokens: 32
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: pnpm-lock.yaml
   description: YAML configuration/data
-  tokens: 69453
+  tokens: 69724
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: pnpm-workspace.yaml
   description: YAML configuration/data
   tokens: 47
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: prisma.config.ts
   description: TypeScript source
   tokens: 56
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: prisma/dev.db
   tokens: 0
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: prisma/migrations/20260716000000_add_content_rules/migration.sql
   description: SQL query/migration
   tokens: 71
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: prisma/migrations/20260812200000_add_folder_locked/migration.sql
   description: SQL query/migration
   tokens: 23
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: prisma/migrations/20260815000000_add_page_token_count/migration.sql
   description: SQL query/migration
   tokens: 18
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: prisma/migrations/20260817000000_add_org_member_email/migration.sql
   description: SQL query/migration
   tokens: 31
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: prisma/migrations/20260818000000_add_page_type/migration.sql
+  description: SQL query/migration
+  tokens: 15
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: prisma/migrations/migration_lock.toml
   description: migration_lock migration
   tokens: 31
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: prisma/schema.prisma
-  tokens: 2632
+  tokens: 2828
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: scripts/backfill-page-type.ts
+  description: TypeScript source
+  tokens: 332
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: scripts/find-unused-css.ts
+  description: TypeScript source
+  tokens: 3191
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: scripts/hooks/pre-commit
   tokens: 65
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: scripts/hooks/pre-push
   tokens: 22
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: scripts/install-hooks.sh
   description: Shell script
   tokens: 95
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: scripts/install-kazam.sh
   description: Shell script
   tokens: 342
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: scripts/migrate-org-tags.ts
+  description: TypeScript source
+  tokens: 434
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: scripts/migrate-trust-rules.ts
+  description: TypeScript source
+  tokens: 710
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: scripts/migrate-visibility.sql
   description: SQL query/migration
   tokens: 189
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: scripts/normalize-concept-terms.ts
   description: TypeScript source
   tokens: 651
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: scripts/reseed.ts
   description: TypeScript source
   tokens: 112
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: scripts/run-seed-home.sh
   description: Shell script
   tokens: 79
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: scripts/seed-home.ts
   description: TypeScript source
   tokens: 1083
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: scripts/unused-css-report.txt
+  tokens: 9782
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/getting-started/architecture.yaml
   description: YAML configuration/data
   tokens: 1618
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/getting-started/connecting-your-agent.yaml
   description: YAML configuration/data
   tokens: 1317
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/getting-started/mcp-tools-reference.yaml
   description: YAML configuration/data
   tokens: 1176
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/getting-started/page-structure.yaml
   description: YAML configuration/data
   tokens: 2978
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/architecture-diagram.yaml
   description: YAML configuration/data
   tokens: 261
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/aside.yaml
   description: YAML configuration/data
   tokens: 699
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/before-after.yaml
   description: YAML configuration/data
   tokens: 394
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/chart-group.yaml
   description: YAML configuration/data
   tokens: 395
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/chart.yaml
   description: YAML configuration/data
   tokens: 174
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/columns.yaml
   description: YAML configuration/data
   tokens: 764
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/empty-state.yaml
   description: YAML configuration/data
   tokens: 520
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/event-timeline.yaml
   description: YAML configuration/data
   tokens: 987
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/gauge.yaml
   description: YAML configuration/data
   tokens: 288
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/graph.yaml
   description: YAML configuration/data
   tokens: 317
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/hero-banner.yaml
   description: YAML configuration/data
   tokens: 523
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/image.yaml
   description: YAML configuration/data
   tokens: 392
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/org-chart.yaml
   description: YAML configuration/data
   tokens: 483
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/pipeline.yaml
   description: YAML configuration/data
   tokens: 282
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/priority-queue.yaml
   description: YAML configuration/data
   tokens: 1126
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/progress-bar.yaml
   description: YAML configuration/data
   tokens: 393
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/quadrant.yaml
   description: YAML configuration/data
   tokens: 327
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/radar.yaml
   description: YAML configuration/data
   tokens: 377
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/role-map.yaml
   description: YAML configuration/data
   tokens: 617
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/sankey.yaml
   description: YAML configuration/data
   tokens: 344
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/split-compare.yaml
   description: YAML configuration/data
   tokens: 496
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/tree.yaml
   description: YAML configuration/data
   tokens: 1214
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/templates/venn.yaml
   description: YAML configuration/data
   tokens: 203
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/workflows/curata-account-health-review.yaml
   description: YAML configuration/data
   tokens: 1744
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/workflows/curata-brain-health.yaml
   description: YAML configuration/data
   tokens: 1420
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/workflows/curata-call-debrief.yaml
   description: YAML configuration/data
   tokens: 1527
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/workflows/curata-call-prep.yaml
   description: YAML configuration/data
   tokens: 1748
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/workflows/curata-deal-review.yaml
   description: YAML configuration/data
   tokens: 1708
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/workflows/curata-faq-capture.yaml
   description: YAML configuration/data
   tokens: 1193
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/workflows/curata-import-wiki.yaml
   description: YAML configuration/data
   tokens: 1561
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/workflows/curata-map-org.yaml
   description: YAML configuration/data
   tokens: 1520
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/workflows/curata-planning.yaml
   description: YAML configuration/data
   tokens: 1092
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: seed/workflows/curata-scout-repos.yaml
   description: YAML configuration/data
   tokens: 1177
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/README.md
   description: Project readme
   tokens: 499
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/curata-brain-health/SKILL.md
   description: Markdown document
   tokens: 574
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/curata-capture/SKILL.md
   description: Markdown document
   tokens: 424
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/curata-digest/SKILL.md
   description: Markdown document
   tokens: 919
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/curata-import-wiki/SKILL.md
   description: Markdown document
   tokens: 713
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/curata-map-org/SKILL.md
   description: Markdown document
   tokens: 713
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/curata-plan/SKILL.md
   description: Markdown document
   tokens: 290
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/curata-read/SKILL.md
   description: Markdown document
   tokens: 203
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/curata-review/SKILL.md
   description: Markdown document
   tokens: 1199
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/curata-scout-repos/SKILL.md
   description: Markdown document
   tokens: 1082
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/curata-setup/SKILL.md
   description: Markdown document
   tokens: 662
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/curata-workflow/SKILL.md
   description: Markdown document
   tokens: 401
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/curata-write/SKILL.md
   description: Markdown document
   tokens: 555
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: skills/send-it/SKILL.md
   description: Markdown document
   tokens: 610
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/(app)/cleanup/page.tsx
   description: TypeScript source
   tokens: 326
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/(app)/dashboard/layout.tsx
   description: TypeScript source
   tokens: 30
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/(app)/dashboard/loading.tsx
   description: TypeScript source
   tokens: 424
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/(app)/dashboard/page.tsx
   description: TypeScript source
   tokens: 810
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/(app)/layout.tsx
   description: TypeScript source
   tokens: 1317
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/(app)/pages/[slug]/loading.tsx
   description: TypeScript source
   tokens: 255
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/(app)/pages/[slug]/page.tsx
   description: 'server component: resolves org, reads page JSON + annotations + sections, builds hub context, renders PageEditor (edit mode) or PageDetailClient+PageRenderer (view mode); no rules fetching yet'
-  tokens: 2622
+  tokens: 2757
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: src/app/(app)/pages/[slug]/settings/page.tsx
+  description: TypeScript source
+  tokens: 1414
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/(app)/pages/layout.tsx
   description: layout view/page
   tokens: 29
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/(app)/review/page.tsx
   description: TypeScript source
   tokens: 375
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/(app)/settings/loading.tsx
   description: TypeScript source
   tokens: 407
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/(app)/settings/page.tsx
   description: TypeScript source
   tokens: 1689
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/annotations/route.ts
   description: TypeScript source
   tokens: 801
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/auth/[...nextauth]/route.ts
   description: TypeScript source
   tokens: 21
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/docs/agents/route.ts
   description: TypeScript source
   tokens: 185
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/docs/agl/route.ts
   description: TypeScript source
   tokens: 163
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/docs/components/route.ts
   description: route component
   tokens: 92
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/docs/prompt/route.ts
   description: TypeScript source
   tokens: 445
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/edit/route.ts
   description: TypeScript source
   tokens: 1850
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/export/route.ts
   description: TypeScript source
   tokens: 1407
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/flags/route.ts
   description: TypeScript source
   tokens: 1215
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/folders/route.ts
   description: TypeScript source
   tokens: 1752
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/groups/members/route.ts
   description: TypeScript source
   tokens: 1165
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/groups/route.ts
   description: TypeScript source
   tokens: 1095
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/health/route.ts
   description: TypeScript source
   tokens: 90
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/keys/route.ts
   description: POST mints a new API key (calls generateApiKey), supports expiresIn 1h/24h/7d/30d/never; GET lists non-revoked keys for org; DELETE revokes a key
   tokens: 1089
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/mcp/route.ts
   description: TypeScript source
   tokens: 1506
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/mcp/stream/route.ts
   description: Streamable-HTTP MCP transport (McpServer + server.tool registrations) mirroring /api/mcp's dispatch registry; restore_page_version now delegates to restorePageVersion in @/lib/pages instead of creating a PageVersion row directly
   tokens: 12378
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/members/route.ts
   description: TypeScript source
   tokens: 1298
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/og/route.tsx
   description: TypeScript source
   tokens: 518
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/org-logo/route.ts
   description: TypeScript source
   tokens: 252
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/org-settings/logo/route.ts
   description: TypeScript source
   tokens: 467
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/org-settings/route.ts
   description: TypeScript source
   tokens: 1241
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/org-tags/route.ts
   description: TypeScript source
-  tokens: 473
+  tokens: 358
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/pages/bulk/route.ts
   description: TypeScript source
   tokens: 1167
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: src/app/api/pages/component-yaml/route.ts
+  description: TypeScript source
+  tokens: 1464
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/pages/markdown/route.ts
   description: TypeScript source
   tokens: 346
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/pages/reorder/route.ts
   description: TypeScript source
-  tokens: 683
+  tokens: 1286
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/pages/route.ts
   description: route view/page
   tokens: 1916
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/pages/share-link/route.ts
   description: TypeScript source
   tokens: 1325
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/pages/shares/route.ts
   description: TypeScript source
   tokens: 1389
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/pages/yaml/route.ts
   description: GET/PUT raw page YAML by slug; requires resolveOrg() session auth (Clerk/oauth/tailscale/none) — not a public endpoint
-  tokens: 572
+  tokens: 815
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/public-annotations/route.ts
   description: TypeScript source
   tokens: 492
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/rules/route.ts
   description: TypeScript source
-  tokens: 3276
+  tokens: 3316
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/search/route.ts
   description: TypeScript source
   tokens: 257
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/tags/org/route.ts
   description: TypeScript source
-  tokens: 2131
+  tokens: 2956
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/tags/route.ts
   description: TypeScript source
   tokens: 829
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/versions/route.ts
   description: TypeScript source
   tokens: 782
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/versions/trust/route.ts
   description: TypeScript source
-  tokens: 754
+  tokens: 864
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/well-known/agent-skills/route.ts
   description: TypeScript source
   tokens: 577
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/well-known/api-catalog/route.ts
   description: TypeScript source
   tokens: 326
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/well-known/mcp-server-card/route.ts
   description: TypeScript source
   tokens: 426
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/well-known/oauth-authorization-server/route.ts
   description: RFC 8414 auth-server metadata proxied from Clerk FAPI, compatibility shim for MCP clients that expect AS metadata on the resource origin
   tokens: 266
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/api/well-known/oauth-protected-resource/route.ts
   description: RFC 9728 protected-resource metadata for MCP OAuth discovery, clerk-mode only, served at /.well-known via next.config rewrites
   tokens: 444
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/error.tsx
   description: TypeScript source
   tokens: 208
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/export-preview/[slug]/page.tsx
   description: TypeScript source
   tokens: 1103
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/global-error.tsx
   description: TypeScript source
   tokens: 148
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/globals.css
   description: Stylesheet
-  tokens: 40609
+  tokens: 42125
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/kazam.css
   description: Stylesheet
   tokens: 29081
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/layout.tsx
   description: TypeScript source
-  tokens: 709
+  tokens: 691
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/llms-full.txt/route.ts
   description: TypeScript source
   tokens: 405
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/llms.txt/route.ts
   description: TypeScript source
   tokens: 440
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/not-found.tsx
   description: TypeScript source
   tokens: 144
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/p/[orgSlug]/[pageSlug]/md/route.ts
   description: 'Public GET: page rendered to markdown via pageToMarkdown, same resolvePublicPage gate as /raw'
   tokens: 684
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/p/[orgSlug]/[pageSlug]/page.tsx
   description: 'Public page view: gates on visibility=public or valid share token, renders PageRenderer + PublicAnnotationClient wrapper, shows install banner for pack pages'
   tokens: 2118
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/p/[orgSlug]/[pageSlug]/prompt/route.ts
   description: 'Public GET: plain-text share prompt for the page via buildPagePrompt, same resolvePublicPage gate'
   tokens: 769
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/p/[orgSlug]/[pageSlug]/raw/route.ts
   description: 'Public GET: raw page YAML, gated by resolvePublicPage (visibility=public or valid share token), 404s on any denial'
   tokens: 457
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/p/[orgSlug]/page.tsx
   description: TypeScript source
   tokens: 763
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/p/layout.tsx
   description: TypeScript source
   tokens: 318
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/page.tsx
   description: TypeScript source
   tokens: 36
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/robots.txt/route.ts
   description: TypeScript source
   tokens: 401
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/sign-in/page.tsx
   description: TypeScript source
   tokens: 149
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/app/sitemap.xml/route.ts
   description: TypeScript source
   tokens: 446
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/activity-feed.tsx
   description: activity-feed component
   tokens: 1277
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: src/components/add-component-button.tsx
+  description: add-component-button component
+  tokens: 1590
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/agent-connect-button.tsx
   description: agent-connect-button component
   tokens: 153
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/agent-connect-flow.tsx
   description: 'Renders the two-step ''Connect an agent'' flow: generate API key button, then prompt display with copy-to-clipboard and 1h expiry warning'
   tokens: 653
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/agent-connect-modal.tsx
   description: agent-connect-modal component
   tokens: 186
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/api-key-manager.tsx
   description: api-key-manager component
   tokens: 1469
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/approval-rule-editor.tsx
   description: approval-rule-editor component
-  tokens: 1669
+  tokens: 3037
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/cleanup-client.tsx
   description: cleanup-client component
   tokens: 4075
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/command-palette.tsx
   description: command-palette component
   tokens: 2208
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/confirm-delete-modal.tsx
   description: confirm-delete-modal component
   tokens: 700
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/connect-manager.tsx
   description: connect-manager component
   tokens: 1556
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/content-index.tsx
   description: content-index component
   tokens: 3199
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/content-rules-editor.tsx
   description: content-rules-editor component
-  tokens: 7953
+  tokens: 9056
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/dashboard-client.tsx
   description: dashboard-client component
   tokens: 4269
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/dashboard-feed.tsx
   description: dashboard-feed component
   tokens: 815
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/dashboard-tabs.tsx
   description: dashboard-tabs component
   tokens: 1088
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: src/components/editable-component.tsx
+  description: editable-component component
+  tokens: 762
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/folder-actions.tsx
   description: folder-actions component
-  tokens: 8102
+  tokens: 8385
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/group-manager.tsx
   description: group-manager component
   tokens: 2984
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/group-picklist.tsx
   description: group-picklist component
   tokens: 494
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: src/components/inline-component-editor.tsx
+  description: inline-component-editor component
+  tokens: 1903
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/member-list.tsx
   description: member-list component
   tokens: 2860
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/new-page-button.tsx
   description: new-page-button component
   tokens: 1617
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/org-settings.tsx
   description: org-settings component
   tokens: 2003
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/org-tags-manager.tsx
   description: org-tags-manager component
   tokens: 606
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/page-detail-client.tsx
   description: page-detail-client component
-  tokens: 7862
+  tokens: 9138
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/page-folder-select.tsx
   description: page-folder-select component
-  tokens: 753
+  tokens: 384
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/page-prompt-dialog.tsx
   description: page-prompt-dialog component
   tokens: 1051
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: src/components/page-settings-general.tsx
+  description: page-settings-general component
+  tokens: 427
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: src/components/page-settings-tags.tsx
+  description: page-settings-tags component
+  tokens: 928
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/page-tags.tsx
-  description: page-tags component
+  description: 'PageTags: renders a page''s tags as kind-tinted chips with add/remove/re-kind actions, hits POST/DELETE /api/tags, delegates the add-tag UI to TagPicker in tag-picker.tsx'
   tokens: 1303
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/page-viewer.tsx
   description: page-viewer component
-  tokens: 2830
+  tokens: 2773
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/public-annotation-client.tsx
   description: public-annotation-client component
   tokens: 2869
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
-- path: src/components/public-toggle.tsx
-  description: Private-page-editor toggle for visibility public/org + Copy link button using navigator.clipboard.writeText; appears currently unreferenced in JSX
-  tokens: 399
-  reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/report-builder.tsx
   description: report-builder component
   tokens: 5145
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/review-queue-client.tsx
   description: review-queue-client component
   tokens: 2644
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/settings-tabs.tsx
   description: settings-tabs component
-  tokens: 449
+  tokens: 410
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/settings/chip-input.tsx
   description: TypeScript source
   tokens: 723
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/settings/form-row.tsx
   description: TypeScript source
   tokens: 111
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/settings/index.ts
   description: TypeScript source
   tokens: 97
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/settings/segmented-control.stories.tsx
   description: TypeScript source
-  tokens: 444
+  tokens: 486
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/settings/segmented-control.tsx
   description: TypeScript source
   tokens: 213
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/settings/settings-section.tsx
   description: TypeScript source
   tokens: 154
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/settings/settings-table.tsx
   description: TypeScript source
   tokens: 217
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/settings/status-badge.stories.tsx
   description: TypeScript source
   tokens: 208
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/settings/status-badge.tsx
   description: TypeScript source
   tokens: 150
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/settings/team-chip.stories.tsx
   description: TypeScript source
   tokens: 75
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/settings/team-chip.tsx
   description: TypeScript source
   tokens: 102
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/sidebar.tsx
   description: sidebar component
   tokens: 6192
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/source-editor.tsx
   description: source-editor component
-  tokens: 2700
+  tokens: 2744
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/tag-picker.tsx
   description: tag-picker component
   tokens: 1639
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/tags-manager.tsx
   description: tags-manager component
-  tokens: 2187
+  tokens: 2883
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/theme-script.tsx
   description: theme-script component
   tokens: 189
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/theme-settings.tsx
   description: theme-settings component
   tokens: 1394
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/toast.stories.tsx
   description: toast.stories component
   tokens: 194
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/toast.tsx
   description: toast component
   tokens: 478
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/trust-banner.tsx
   description: trust-banner component
-  tokens: 1065
+  tokens: 1104
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/version-history.tsx
   description: version-history component
   tokens: 1605
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/components/visibility-picker.tsx
   description: visibility-picker component
-  tokens: 1582
+  tokens: 1403
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/kazam-renderer-server.tsx
   description: TypeScript source
-  tokens: 58273
+  tokens: 58359
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/kazam-renderer.tsx
   description: TypeScript source
-  tokens: 58276
+  tokens: 58363
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/kazam.ts
   description: TypeScript source
   tokens: 3964
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/browser.ts
   description: TypeScript source
   tokens: 470
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/client.ts
   description: TypeScript source
   tokens: 713
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/commonInputTypes.ts
   description: TypeScript source
   tokens: 6840
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/enums.ts
   description: TypeScript source
   tokens: 84
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/internal/class.ts
   description: TypeScript source
-  tokens: 28239
+  tokens: 28721
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/internal/prismaNamespace.ts
   description: TypeScript source
-  tokens: 18039
+  tokens: 18058
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/internal/prismaNamespaceBrowser.ts
   description: TypeScript source
-  tokens: 2378
+  tokens: 2397
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models.ts
   description: TypeScript source
   tokens: 235
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/Annotation.ts
   description: Annotation model
   tokens: 15584
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/ApiKey.ts
   description: ApiKey model
   tokens: 13754
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/AuditLog.ts
   description: AuditLog model
   tokens: 13576
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/Concept.ts
   description: Concept model
-  tokens: 12439
+  tokens: 13071
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/Folder.ts
   description: Folder model
   tokens: 18634
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/Group.ts
   description: Group model
   tokens: 13542
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/GroupMember.ts
   description: GroupMember model
   tokens: 12661
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/OrgMember.ts
   description: OrgMember model
   tokens: 12344
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/Organization.ts
   description: Organization model
   tokens: 25383
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/Page.ts
   description: Page model
-  tokens: 39627
+  tokens: 40497
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/PageConcept.ts
   description: PageConcept model
   tokens: 14922
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/PageFlag.ts
   description: PageFlag model
   tokens: 15098
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/PageLink.ts
   description: PageLink model
   tokens: 14929
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/PageShare.ts
   description: PageShare model
   tokens: 12661
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/PageVersion.ts
   description: PageVersion model
   tokens: 13432
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/generated/prisma/models/ShareLink.ts
   description: ShareLink model
   tokens: 13453
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/hooks/use-approval-directory.ts
   description: TypeScript source
   tokens: 493
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/hooks/use-highlights.ts
   description: TypeScript source
   tokens: 1263
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
+- path: src/hooks/use-visibility.ts
+  description: TypeScript source
+  tokens: 403
+  reads: 0
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/instrumentation.ts
   description: TypeScript source
   tokens: 19
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/access.ts
   description: 'resolvePageAccess: creator > share > org/shared (needs orgMemberRole) > public (any anonymous) > share-link token; defines visibility rank for folder boundary checks'
   tokens: 1051
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/activity.ts
   description: activity library module
   tokens: 3805
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/agent-prompt.ts
   description: Exports buildAgentPrompt({baseUrl, token?, slug?}) which returns the '# Curata Agent Instructions' markdown prompt with MCP connection info, API format examples, tool table, and workflow steps
   tokens: 1929
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/api-fetch.ts
   description: api-fetch library module
   tokens: 16
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/api-key.ts
   description: generateApiKey() mints ck_ prefixed random key + sha256 hash + prefix; hashApiKey() re-hashes a key for lookup/verification
   tokens: 113
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/approval.ts
   description: approval library module
-  tokens: 3018
+  tokens: 3962
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/audit.ts
   description: audit library module
   tokens: 183
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/auth.ts
   description: auth library module
   tokens: 3224
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/capture-dedup.ts
   description: capture-dedup library module
   tokens: 2406
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/capture-gate.ts
   description: capture-gate library module
   tokens: 790
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/capture-token.ts
   description: capture-token library module
   tokens: 1808
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/component-ids.ts
   description: component-ids library module
   tokens: 1987
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/component-palette.ts
   description: component-palette library module
-  tokens: 3608
+  tokens: 3766
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/component-refs.ts
   description: component-refs library module
-  tokens: 3087
+  tokens: 3092
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/concept-kinds.ts
   description: concept-kinds library module
   tokens: 261
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/concepts.ts
   description: concepts library module
   tokens: 3271
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/content-negotiation.ts
   description: content-negotiation library module
   tokens: 557
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/content-rules.ts
   description: content-rules library module
-  tokens: 1720
+  tokens: 1738
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/copy-for-agent.ts
   description: copy-for-agent library module
   tokens: 679
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/db.ts
   description: db library module
   tokens: 145
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/default-tags.ts
   description: default-tags library module
   tokens: 168
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/digest.ts
   description: digest library module
   tokens: 3285
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/entitlements.ts
   description: entitlements library module
   tokens: 238
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/export-nonce.ts
   description: export-nonce library module
   tokens: 1458
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/export-render.ts
   description: export-render library module
   tokens: 853
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/export.ts
   description: export library module
   tokens: 1105
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/glance-prompts.ts
   description: glance-prompts library module
   tokens: 3629
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/graph.ts
   description: graph library module
-  tokens: 1810
+  tokens: 1805
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/groups.ts
   description: groups library module
   tokens: 1522
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/kazam.ts
   description: kazam library module
   tokens: 1270
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/mcp-dispatch.ts
   description: mcp-dispatch library module
-  tokens: 21250
+  tokens: 21606
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/mcp-instructions.ts
   description: mcp-instructions library module
   tokens: 2348
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/next-auth.ts
   description: next-auth library module
   tokens: 229
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/org-tags.ts
   description: org-tags library module
-  tokens: 387
+  tokens: 709
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/page-actions.ts
   description: page-actions library module
   tokens: 203
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/page-markdown.ts
   description: page-markdown library module
   tokens: 6268
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/pages.ts
   description: 'Page read/write library: listPages/readPage/searchPages, brain-usage getBrainUsage, the _writePageInternal write choke point (stamps tokenCount, brain-cap check, inline pruneVersions) behind writePage/writePageJson, and restorePageVersion which now routes restore_page_version through the same choke point instead of writing a PageVersion directly'
-  tokens: 10652
+  tokens: 11157
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/permissions.ts
   description: permissions library module
   tokens: 265
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/personal-domains.ts
   description: personal-domains library module
   tokens: 196
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/pins.ts
   description: pins library module
   tokens: 530
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/public-catalog.ts
   description: public-catalog library module
   tokens: 863
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/public-page.ts
   description: public-page library module
   tokens: 626
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/request-origin.ts
   description: request-origin library module
   tokens: 164
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/required-components.ts
   description: required-components library module
   tokens: 3394
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/salient-terms.ts
   description: salient-terms library module
   tokens: 384
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/seed-page.ts
   description: seed-page library module
   tokens: 1887
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/seed.ts
   description: seed library module
   tokens: 2980
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/share-prompt.ts
   description: share-prompt library module
   tokens: 1025
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/slug-words.ts
   description: slug-words library module
   tokens: 755
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/templates-server.ts
   description: getTemplateContent(slug) reads demos/templates/<slug>.yaml from disk — backs POST /api/pages (templateSlug) for the web UI's 'create from template' flow
   tokens: 144
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/templates.ts
   description: Static in-code TEMPLATES array (persona-grouped starter pages, e.g. sales-forecast, incident-postmortem) with slug/title/description/previewUrl; used by template gallery UI, not by MCP create_from_template
   tokens: 2473
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/theme.ts
   description: theme library module
   tokens: 201
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/tokens.ts
   description: tokens library module
   tokens: 141
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/lib/version-retention.ts
   description: 'pruneVersions(pageId)/sweepVersions(orgId): version retention policy (RETENTION_DAYS=30, decided 2026-08-15) - always keeps trusted + newest PageVersion, deletes older intermediates; wired into _writePageInternal (inline, non-fatal) and generate_digest dispatch (weekly sweep, non-fatal); AuditLog untouched'
   tokens: 702
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/middleware.ts
   description: Auth-mode-aware middleware (clerk/tailscale/oauth/none), applies CSP/security headers incl. Cloudflare Turnstile domains, marks /p/ as public prefix
   tokens: 2751
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: src/stories/primitives.stories.tsx
   description: TypeScript source
   tokens: 981
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/activity.test.ts
   description: activity.test tests
   tokens: 455
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/api-key.test.ts
   description: api-key.test tests
   tokens: 240
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/approval.test.ts
   description: approval.test tests
   tokens: 2614
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/auth.test.ts
   description: auth.test tests
   tokens: 1121
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/brain-usage.test.ts
   description: brain-usage.test tests
   tokens: 2020
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/capture-dedup.test.ts
   description: capture-dedup.test tests
   tokens: 1098
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/capture-thread.test.ts
   description: capture-thread.test tests
   tokens: 3630
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/capture-token.test.ts
   description: capture-token.test tests
   tokens: 1222
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/component-ids.test.ts
   description: component-ids.test tests
   tokens: 2323
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/component-ref.test.ts
   description: component-ref.test tests
-  tokens: 5031
+  tokens: 5038
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/concepts.test.ts
   description: concepts.test tests
   tokens: 2833
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/content-negotiation.test.ts
   description: content-negotiation.test tests
   tokens: 788
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/digest.test.ts
   description: digest.test tests
-  tokens: 5872
+  tokens: 5896
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/entitlements.test.ts
   description: entitlements.test tests
   tokens: 1667
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/export-nonce.test.ts
   description: export-nonce.test tests
   tokens: 806
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/export-preview-page.test.ts
   description: export-preview-page.test tests
   tokens: 588
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/glance-prompts.test.ts
   description: glance-prompts.test tests
   tokens: 3522
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/global-setup.ts
   description: global-setup tests
   tokens: 298
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/graph.test.ts
   description: graph.test tests
-  tokens: 1216
+  tokens: 1189
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/groups.test.ts
   description: groups.test tests
   tokens: 2892
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/helpers.ts
   description: helpers tests
   tokens: 537
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/mcp-dispatch-agent-ux.test.ts
   description: mcp-dispatch-agent-ux.test tests
   tokens: 1329
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/mcp-instructions.test.ts
   description: mcp-instructions.test tests
   tokens: 1023
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/mcp-oauth.test.ts
   description: 'Tests for decodeOrgIdClaim + resolveOrgFromClerkOAuth: org claim resolution, sole-membership fallback, fail-closed ambiguity, viewer scopes'
   tokens: 1666
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/mcp-review-queue.test.ts
   description: mcp-review-queue.test tests
-  tokens: 1646
+  tokens: 1682
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/mcp-tool-parity.test.ts
   description: mcp-tool-parity.test tests
   tokens: 439
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/mcp-trust.test.ts
   description: mcp-trust.test tests
-  tokens: 1834
+  tokens: 1907
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/middleware-rate-limit.test.ts
   description: middleware-rate-limit.test tests
   tokens: 170
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/page-markdown.test.ts
   description: page-markdown.test tests
   tokens: 2222
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/pages.test.ts
   description: pages.test tests
-  tokens: 6430
+  tokens: 6776
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/required-components.test.ts
   description: required-components.test tests
   tokens: 3721
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/restore-cap.test.ts
   description: restore-cap.test tests
   tokens: 2094
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/seed.test.ts
   description: seed.test tests
   tokens: 2821
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/setup.ts
   description: setup tests
   tokens: 361
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/share-prompt.test.ts
   description: share-prompt.test tests
   tokens: 1418
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/tags-org.test.ts
   description: tags-org.test tests
   tokens: 2930
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/version-retention.test.ts
   description: 'tests for pruneVersions/sweepVersions: trusted+latest immune at any age, 31-day intermediates deleted, fresh intermediates kept, prune failure doesn''t fail the write, sweep across pages, restore lookup on a surviving vs pruned id, digest hot-spot count (7-day window) unaffected by 30-day pruning'
   tokens: 2649
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tests/versions-trust.test.ts
   description: versions-trust.test tests
-  tokens: 1007
+  tokens: 1025
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tsconfig.json
   description: TypeScript configuration
-  tokens: 169
+  tokens: 179
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: tsconfig.tsbuildinfo
-  tokens: 102757
+  tokens: 93186
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
 - path: vitest.config.ts
   description: TypeScript source
   tokens: 113
   reads: 0
-  last_scanned: 2026-08-17T14:58:37.250559-05:00
+  last_scanned: 2026-08-18T12:59:56.835604-05:00
