@@ -74,7 +74,7 @@ export async function buildServerInstructions(
       where: { id: orgId },
       select: { rules: true },
     });
-    const blessed = extractOrgTags(org?.rules);
+    const blessed = await extractOrgTags(orgId);
     if (blessed.length > 0) {
       sections.push(
         `ORG TAGS (recommended by this organization's admins - prefer these over inventing near-synonyms): ${blessed.join(", ")}`

@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { db } from "@/lib/db";
 import { extractOrgTags, withOrgTags } from "@/lib/org-tags";
-import type { Prisma } from "@/generated/prisma/client";
 
 /** Recommended organization tags: read for anyone in the org. */
 export async function GET() {
   const ctx = await resolveOrg();
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const org = await db.organization.findUnique({
-    where: { id: ctx.orgId },
-    select: { rules: true },
-  });
-  return NextResponse.json({ tags: extractOrgTags(org?.rules) });
+  return NextResponse.json({ tags: await extractOrgTags(ctx.orgId) });
 }
 
 /** Replace the recommended list. Owners/admins only (same gate as content rules). */
@@ -37,15 +31,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "too many tags (max 100)" }, { status: 400 });
   }
 
-  const org = await db.organization.findUnique({
-    where: { id: ctx.orgId },
-    select: { rules: true },
-  });
-  const updated = withOrgTags(org?.rules, body.tags as string[]);
-  await db.organization.update({
-    where: { id: ctx.orgId },
-    data: { rules: updated as Prisma.InputJsonValue },
-  });
-
-  return NextResponse.json({ tags: extractOrgTags(updated) });
+  const tags = await withOrgTags(ctx.orgId, body.tags as string[]);
+  return NextResponse.json({ tags });
 }

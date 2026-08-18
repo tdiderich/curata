@@ -11,8 +11,9 @@ export interface GraphTag {
   tokens: number;
   /**
    * default = curata's canonical starter tags; org = recommended by an
-   * owner/admin in settings (the org-tags entry in content rules);
-   * personal = everything else. Folder-derived tags resolve through the
+   * owner/admin in settings (a Concept row with isRecommended: true for this
+   * org - see lib/org-tags.ts); personal = everything else. Folder-derived
+   * tags resolve through the
    * same ladder by name.
    */
   tier: TagTier;
@@ -80,8 +81,8 @@ interface PageRow {
  * agent TSV and human graph. Untagged = no concept tags AND no folder.
  */
 export async function buildKnowledgeGraph(orgId: string): Promise<KnowledgeGraph> {
-  const [org, folders, pageRows] = await Promise.all([
-    db.organization.findUnique({ where: { id: orgId }, select: { rules: true } }),
+  const [blessedTags, folders, pageRows] = await Promise.all([
+    extractOrgTags(orgId),
     db.folder.findMany({ where: { orgId }, select: { id: true, name: true } }),
     db.$queryRaw<PageRow[]>`
       SELECT p.id, p.slug, p.title, p.folder_id, p.updated_at,
@@ -95,7 +96,7 @@ export async function buildKnowledgeGraph(orgId: string): Promise<KnowledgeGraph
       ORDER BY p.updated_at DESC
     `,
   ]);
-  const blessed = new Set(extractOrgTags(org?.rules));
+  const blessed = new Set(blessedTags);
   const defaultNames = new Set<string>(DEFAULT_TAGS);
   // Folder names collide constantly (every customer folder tends to have its
   // own "Pages" or "Assets" subfolder), and a name shared across unrelated

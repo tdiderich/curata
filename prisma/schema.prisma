@@ -252,11 +252,22 @@ model Concept {
   displayName    String   @map("display_name")
   kind           String   @default("")
   usageCount     Int      @default(1) @map("usage_count")
+  // Recommended-tag bookkeeping: when isRecommended is true, orgId names the
+  // org whose owner/admin picked this term as a suggested tag (see
+  // lib/org-tags.ts) - this replaces the old org.rules "org-tags" JSON entry.
+  // Concepts stay globally shared for page tagging regardless of this flag:
+  // orgId/isRecommended only annotate who currently recommends the term, they
+  // don't fence which org can attach it to a page. No FK to Organization on
+  // purpose - a hard relation would cascade-delete a shared concept (still
+  // used by other orgs' pages) when the recommending org is removed.
+  orgId         String?  @map("org_id")
+  isRecommended Boolean  @default(false) @map("is_recommended")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   pages PageConcept[]
 
+  @@index([orgId, isRecommended])
   @@map("concepts")
 }
 
