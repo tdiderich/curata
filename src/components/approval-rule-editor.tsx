@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
 import { ChipInput, type ChipInputChip, type ChipInputOption } from "@/components/settings/chip-input";
+import { FormRow } from "@/components/settings/form-row";
 import { useApprovalDirectory, type ApprovalApproverInput } from "@/hooks/use-approval-directory";
 
 export type { ApprovalApproverInput };
@@ -19,6 +20,10 @@ interface ApprovalRuleEditorProps {
   trustMode?: "auto" | "locked";
   /** Whether a trust rule exists at THIS scope (not inherited). */
   hasTrustRuleAtScope?: boolean;
+  /** Render in settings-page layout (FormRow fields) instead of inline panel layout. */
+  settingsLayout?: boolean;
+  /** Trust status label for settings layout. */
+  trustStatusLabel?: string;
 }
 
 function splitApproverId(prefixed: string): ApprovalApproverInput {
@@ -33,7 +38,7 @@ function splitApproverId(prefixed: string): ApprovalApproverInput {
  * either via the Content Rules settings tab (which embeds the same
  * groups/members directory + save/clear logic) or the set_rules MCP tool.
  */
-export function ApprovalRuleEditor({ scopeParam, initialApprovers, effectiveNote, canManage, trustMode: initialTrustMode = "auto", hasTrustRuleAtScope = false }: ApprovalRuleEditorProps) {
+export function ApprovalRuleEditor({ scopeParam, initialApprovers, effectiveNote, canManage, trustMode: initialTrustMode = "auto", hasTrustRuleAtScope = false, settingsLayout = false, trustStatusLabel }: ApprovalRuleEditorProps) {
   const router = useRouter();
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(
     new Set((initialApprovers ?? []).filter((a) => a.type === "group").map((a) => a.id))
@@ -160,18 +165,6 @@ export function ApprovalRuleEditor({ scopeParam, initialApprovers, effectiveNote
     }
   }
 
-  if (!canManage) {
-    return effectiveNote ? (
-      <div className="rules-panel-row" style={{ color: "var(--text-muted)", fontSize: 13, padding: "8px 20px" }}>
-        {effectiveNote}
-      </div>
-    ) : (
-      <div className="rules-panel-row" style={{ color: "var(--text-muted)", fontSize: 13, padding: "8px 20px" }}>
-        No approval restriction — anyone who can edit this page can approve.
-      </div>
-    );
-  }
-
   const chips: ChipInputChip[] = [
     ...[...selectedGroups].map((id) => ({ id: `group:${id}`, label: groups.find((g) => g.id === id)?.name ?? id })),
     ...[...selectedUsers].map((id) => ({ id: `user:${id}`, label: members.find((m) => m.userId === id)?.email ?? id })),
@@ -184,6 +177,83 @@ export function ApprovalRuleEditor({ scopeParam, initialApprovers, effectiveNote
     })),
     ...members.map((m) => ({ id: `user:${m.userId}`, label: m.email ?? m.userId, sublabel: "member" })),
   ];
+
+  if (settingsLayout) {
+    return (
+      <div className="cr-editor">
+        {error && <div className="cr-error">{error}</div>}
+        <FormRow label="Trust mode" hint="Auto-trust publishes every save immediately. Locked requires explicit approval.">
+          <div className="stg-seg">
+            <button
+              className={`stg-seg-btn${localTrustMode === "auto" ? " stg-seg-btn--on" : ""}`}
+              disabled={!canManage || busy}
+              onClick={() => localTrustMode !== "auto" && toggleTrustMode()}
+            >
+              Auto
+            </button>
+            <button
+              className={`stg-seg-btn${localTrustMode === "locked" ? " stg-seg-btn--on" : ""}`}
+              disabled={!canManage || busy}
+              onClick={() => localTrustMode !== "locked" && toggleTrustMode()}
+            >
+              Locked
+            </button>
+          </div>
+        </FormRow>
+        {trustStatusLabel && (
+          <FormRow label="Status">
+            <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{trustStatusLabel}</span>
+          </FormRow>
+        )}
+        {localTrustMode === "locked" && (
+          <FormRow label="Approvers" hint={effectiveNote ?? "Restrict who can approve new versions."}>
+            {!canManage ? (
+              <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
+                {effectiveNote || "No approval restriction."}
+              </span>
+            ) : !loaded ? (
+              <div className="vh-empty">Loading&hellip;</div>
+            ) : groups.length === 0 && members.length === 0 ? (
+              <div className="cr-empty">No groups or members to restrict approval to yet.</div>
+            ) : (
+              <>
+                <ChipInput
+                  chips={chips}
+                  onRemove={removeApprover}
+                  options={options}
+                  onAdd={addApprover}
+                  placeholder="Add a group or person..."
+                  disabled={busy}
+                />
+                <div className="cr-edit-actions" style={{ marginTop: 8 }}>
+                  <button className="btn btn--primary" onClick={save} disabled={busy}>
+                    {busy ? "Saving..." : "Save approvers"}
+                  </button>
+                  {hasRule && (
+                    <button className="btn btn--ghost" onClick={clear} disabled={busy}>
+                      Remove restriction
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </FormRow>
+        )}
+      </div>
+    );
+  }
+
+  if (!canManage) {
+    return effectiveNote ? (
+      <div className="rules-panel-row" style={{ color: "var(--text-muted)", fontSize: 13, padding: "8px 20px" }}>
+        {effectiveNote}
+      </div>
+    ) : (
+      <div className="rules-panel-row" style={{ color: "var(--text-muted)", fontSize: 13, padding: "8px 20px" }}>
+        No approval restriction - anyone who can edit this page can approve.
+      </div>
+    );
+  }
 
   return (
     <div className="cr-editor" style={{ padding: "4px 20px 12px" }}>

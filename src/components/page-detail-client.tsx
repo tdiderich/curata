@@ -515,19 +515,7 @@ export default function PageDetailClient({
         },
       },
       { id: "edit-source", label: "Edit source YAML", run: () => setViewTab("source") },
-      { id: "tags", label: "Add tags", run: () => window.dispatchEvent(new Event("curata-open-tags")) },
-      { id: "trusted-versions", label: "Trusted versions", run: () => setVersionHistoryOpen(true) },
-      {
-        id: "visibility",
-        label: "Change visibility",
-        hint: visibility,
-        run: () => window.dispatchEvent(new Event("curata-open-visibility")),
-      },
-      {
-        id: "rules",
-        label: `Content rules (${inheritedRules.length + pageRules.length})`,
-        run: () => setRulesOpen(true),
-      },
+      { id: "page-settings", label: "Page settings", run: () => router.push(`/pages/${slug}/settings`) },
       { id: "export-png", label: "Export PNG", run: () => handleExport("png") },
       { id: "export-pdf", label: "Export PDF", run: () => handleExport("pdf") },
       {
@@ -551,7 +539,7 @@ export default function PageDetailClient({
         : []),
     ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewTab, visibility, showResolved, expandAll, resolvedCount, activeAnns.length, inheritedRules.length, pageRules.length, slug]);
+  }, [viewTab, showResolved, expandAll, resolvedCount, activeAnns.length, slug]);
 
   return (
     <div className="page-detail-layout">

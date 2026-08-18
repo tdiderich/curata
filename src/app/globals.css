@@ -7690,7 +7690,7 @@ body:has(.nav-reveal) .page-toolbar {
   padding-top: 24px;
   border-top: 1px solid rgba(var(--text-rgb), 0.08);
 }
-.stg-section-head { margin-bottom: 4px; }
+.stg-section-head { margin-bottom: 16px; }
 .stg-section-title { font-size: 15px; font-weight: 600; color: var(--snow); margin: 0; }
 .stg-section-desc { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
 /* Table shell: a thin wrapper around dash-table so Members/Groups/Content
@@ -7842,6 +7842,7 @@ body:has(.nav-reveal) .page-toolbar {
 
 /* FormRow: labeled field wrapper. */
 .stg-form-row { display: flex; flex-direction: column; gap: 6px; }
+.stg-form-row + .stg-form-row { margin-top: 20px; }
 .stg-form-row-label {
   font-family: "SF Mono", Monaco, "Cascadia Mono", monospace;
   font-size: 10px;
@@ -7865,7 +7866,7 @@ body:has(.nav-reveal) .page-toolbar {
 .stg-input:focus, .stg-textarea:focus { outline: none; border-color: rgba(var(--accent-rgb), 0.4); }
 
 /* SegmentedControl: 2–4 fixed choices. */
-.stg-seg { display: inline-flex; border: 1px solid rgba(var(--text-rgb), 0.12); border-radius: 8px; overflow: hidden; }
+.stg-seg { display: inline-flex; align-self: flex-start; border: 1px solid rgba(var(--text-rgb), 0.12); border-radius: 8px; overflow: hidden; }
 .stg-seg-btn {
   display: inline-flex;
   align-items: center;

@@ -40,6 +40,14 @@ interface RequiredComponentsRuleData {
   requireConcepts?: boolean;
 }
 
+interface InheritedRule {
+  id: string;
+  text: string;
+  mode: string;
+  scope: string;
+  patterns?: string[];
+}
+
 interface ContentRulesEditorProps {
   scopeParam: string;
   initialRules: ContentRule[];
@@ -47,6 +55,14 @@ interface ContentRulesEditorProps {
   /** Shows a small "Team" chip next to the approvers picker. Pay-to-play
    * signal only — approval groups still work the same either way. */
   limitedPlan?: boolean;
+  /** Read-only rules inherited from folder/org scope, rendered at the top of the table. */
+  inheritedRules?: InheritedRule[];
+  /** Trust mode for page-level settings: shows segmented control above the rules table. */
+  trustMode?: "auto" | "locked";
+  /** Whether a trust rule exists at THIS scope (not inherited). */
+  hasTrustRuleAtScope?: boolean;
+  /** Status label for trust mode display. */
+  trustStatusLabel?: string;
 }
 
 type Enforcement = "block" | "review" | "guidance";
@@ -80,7 +96,7 @@ function splitApproverId(prefixed: string): ApprovalApproverInput {
   return { type: "user", id: prefixed.slice(5) };
 }
 
-export function ContentRulesEditor({ scopeParam, initialRules, canManage, limitedPlan }: ContentRulesEditorProps) {
+export function ContentRulesEditor({ scopeParam, initialRules, canManage, limitedPlan, inheritedRules, trustMode: initialTrustMode, hasTrustRuleAtScope = false, trustStatusLabel }: ContentRulesEditorProps) {
   const router = useRouter();
   const [rules, setRules] = useState<ContentRule[]>(initialRules);
   const [approvalRule, setApprovalRule] = useState<ApprovalRuleData | null>(null);
@@ -102,6 +118,9 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
   const [formRequiredIds, setFormRequiredIds] = useState<string[]>([]);
   const [formRequiredFields, setFormRequiredFields] = useState<string[]>([]);
   const [formRequireConcepts, setFormRequireConcepts] = useState(true);
+
+  const [localTrustMode, setLocalTrustMode] = useState<"auto" | "locked">(initialTrustMode ?? "auto");
+  const showTrustControls = initialTrustMode !== undefined;
 
   const { groups, members } = useApprovalDirectory(canManage);
 
@@ -224,6 +243,34 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
       resetContentForm();
       resetApprovalForm();
       setFormRequiredIds((prev) => (prev.length > 0 ? prev : [""]));
+    }
+  }
+
+  async function toggleTrustMode() {
+    const newMode = localTrustMode === "locked" ? "auto" : "locked";
+    setBusy(true);
+    setError(null);
+    try {
+      if (newMode === "locked") {
+        const method = hasTrustRuleAtScope ? "PUT" : "POST";
+        const res = await fetch(`${basePath}/api/rules?${scopeParam}`, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: "trust", kind: "trust", mode: "locked" }),
+        });
+        if (!res.ok) {
+          const json = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(json.error || "Failed to update trust mode.");
+        }
+      } else {
+        await fetch(`${basePath}/api/rules?${scopeParam}&ruleId=trust`, { method: "DELETE" });
+      }
+      setLocalTrustMode(newMode);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update trust mode.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -564,23 +611,74 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
 
   const isNewDraft = editingKind !== null && editingId === null;
   const showApprovalRow = !!approvalRule;
-  const hasAnyRows = rules.length > 0 || showApprovalRow || rcRules.length > 0 || isNewDraft;
+  const hasInherited = inheritedRules && inheritedRules.length > 0;
+  const hasAnyRows = rules.length > 0 || showApprovalRow || rcRules.length > 0 || isNewDraft || !!hasInherited;
+  const totalCols = (hasInherited ? 4 : 3) + (canManage ? 1 : 0);
 
   return (
     <div className="cr-editor">
       {error && <div className="cr-error">{error}</div>}
 
+      {showTrustControls && (
+        <FormRow label="Trust mode" hint={trustStatusLabel}>
+          <div className="stg-seg">
+            <button
+              className={`stg-seg-btn${localTrustMode === "auto" ? " stg-seg-btn--on" : ""}`}
+              disabled={!canManage || busy}
+              onClick={() => localTrustMode !== "auto" && toggleTrustMode()}
+            >
+              Auto
+            </button>
+            <button
+              className={`stg-seg-btn${localTrustMode === "locked" ? " stg-seg-btn--on" : ""}`}
+              disabled={!canManage || busy}
+              onClick={() => localTrustMode !== "locked" && toggleTrustMode()}
+            >
+              Locked
+            </button>
+          </div>
+        </FormRow>
+      )}
+
       <SettingsTable
         head={
           <>
-            <th className="dash-th dash-th-title" style={{ width: "52%" }}>Rule</th>
+            <th className="dash-th dash-th-title" style={{ width: hasInherited ? "44%" : "52%" }}>Rule</th>
             <th className="dash-th">Enforcement</th>
+            {hasInherited && <th className="dash-th">Scope</th>}
             <th className="dash-th">Patterns</th>
             {canManage && <th className="dash-th stg-th-right">&nbsp;</th>}
           </>
         }
         empty={!hasAnyRows ? "No content rules configured." : undefined}
       >
+        {hasInherited && inheritedRules!.map((rule) => {
+          const asContent = { ...rule, mode: rule.mode as "warn" | "block" };
+          const badge = ENFORCEMENT_BADGE[enforcementOf(asContent)] ?? { tone: "guidance" as StatusBadgeTone, label: rule.mode };
+          return (
+            <tr key={`inherited-${rule.id}`} className="dash-row" style={{ opacity: 0.65 }}>
+              <td className="dash-td dash-td-title">{rule.text}</td>
+              <td className="dash-td">
+                <StatusBadge tone={badge.tone} label={badge.label} />
+              </td>
+              <td className="dash-td">
+                <a href="/settings?tab=content-rules" className="stg-pcount" style={{ textDecoration: "underline", textUnderlineOffset: 2 }}>
+                  {rule.scope}
+                </a>
+              </td>
+              <td className="dash-td">
+                {rule.patterns && rule.patterns.length > 0 ? (
+                  <span className="stg-pcount">
+                    {rule.patterns.length} pattern{rule.patterns.length !== 1 ? "s" : ""}
+                  </span>
+                ) : (
+                  <span className="stg-pcount">&mdash;</span>
+                )}
+              </td>
+              {canManage && <td className="dash-td stg-td-right" />}
+            </tr>
+          );
+        })}
         {rules.map((rule) => {
           const badge = ENFORCEMENT_BADGE[enforcementOf(rule)];
           const isEditing = editingKind === "content" && editingId === rule.id;
@@ -591,6 +689,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
                 <td className="dash-td">
                   <StatusBadge tone={badge.tone} label={badge.label} />
                 </td>
+                {hasInherited && <td className="dash-td"><span className="stg-pcount">Page</span></td>}
                 <td className="dash-td">
                   {rule.patterns && rule.patterns.length > 0 ? (
                     <span className="stg-pcount">
@@ -617,7 +716,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
               </tr>
               {isEditing && (
                 <tr className="dash-row">
-                  <td className="dash-td" colSpan={canManage ? 4 : 3}>
+                  <td className="dash-td" colSpan={totalCols}>
                     <div className="stg-editor">
                       {contentFields()}
                       <div className="stg-editor-foot">
@@ -645,6 +744,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
               <td className="dash-td">
                 <StatusBadge tone="approval" label="Approval" />
               </td>
+              {hasInherited && <td className="dash-td"><span className="stg-pcount">Page</span></td>}
               <td className="dash-td">
                 {approvalRule!.approvers.length > 0 ? (
                   <span className="stg-chip-row">
@@ -675,7 +775,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
             </tr>
             {editingKind === "approval" && editingId === approvalRule!.id && (
               <tr className="dash-row">
-                <td className="dash-td" colSpan={canManage ? 4 : 3}>
+                <td className="dash-td" colSpan={totalCols}>
                   <div className="stg-editor">
                     {approvalFields()}
                     <div className="stg-editor-foot">
@@ -704,6 +804,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
                 <td className="dash-td">
                   <StatusBadge tone="framework" label="Required shape" />
                 </td>
+                {hasInherited && <td className="dash-td"><span className="stg-pcount">Page</span></td>}
                 <td className="dash-td">
                   <span className="stg-pcount">
                     {rule.requiredComponentIds.length} component{rule.requiredComponentIds.length !== 1 ? "s" : ""}
@@ -726,7 +827,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
               </tr>
               {isEditing && (
                 <tr className="dash-row">
-                  <td className="dash-td" colSpan={canManage ? 4 : 3}>
+                  <td className="dash-td" colSpan={totalCols}>
                     <div className="stg-editor">
                       {rcFields()}
                       <div className="stg-editor-foot">
@@ -749,7 +850,7 @@ export function ContentRulesEditor({ scopeParam, initialRules, canManage, limite
 
         {isNewDraft && (
           <tr className="dash-row">
-            <td className="dash-td" colSpan={canManage ? 4 : 3}>
+            <td className="dash-td" colSpan={totalCols}>
               <div className="stg-editor">
                 <FormRow label="Rule kind" hint={KIND_HINT[editingKind!]}>
                   <SegmentedControl<"content" | "approval" | "required-components">
