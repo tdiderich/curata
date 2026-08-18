@@ -16,7 +16,7 @@ interface EditableComponentProps {
 }
 
 function compLabel(comp: ComponentData): string {
-  return (comp.heading as string) || (comp.title as string) || (comp.eyebrow as string) || (comp.label as string) || "";
+  return (comp.heading as string) || (comp.title as string) || (comp.eyebrow as string) || (comp.label as string) || (comp.type as string) || "";
 }
 
 export function EditableComponent({
@@ -41,7 +41,7 @@ export function EditableComponent({
     (e: React.DragEvent) => {
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", id);
-      onDragStart?.(id);
+      requestAnimationFrame(() => onDragStart?.(id));
     },
     [id, onDragStart],
   );

@@ -28,7 +28,7 @@ import { getChromium, previewUrl, screenshotPage, renderHtmlToPng } from "@/lib/
 import { validateContent, checkUnsupportedComponents, invalidContentMessage } from "@/lib/kazam";
 import { checkFolderBoundary, mcpDefaultVisibility, listPagesWhere } from "@/lib/access";
 import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
-import { validateApprovalRule, canApprove, getApprovers, describeApprovalRule, makeApprovalRuleResolver } from "@/lib/approval";
+import { validateApprovalRule, canApprove, getApprovers, describeApprovalRule, makeApprovalRuleResolver, resolveEffectiveTrustMode } from "@/lib/approval";
 import type { Role } from "@/lib/permissions";
 import { resolveRequiredComponentsRules, validateRequiredComponents, validateRequiredComponentsRule, ensureDefaultRequiredComponentsRules } from "@/lib/required-components";
 import { enforceCaptureGate } from "@/lib/capture-gate";
@@ -390,6 +390,10 @@ export async function dispatch(
       const links = page ? await getPageLinks(orgId, page.id) : [];
       const rules = await resolveRules(orgId, page?.folderId ?? null, page?.rules);
 
+      const trustResolved = page
+        ? await resolveEffectiveTrustMode(orgId, page.folderId, page.rules)
+        : { mode: "auto" as const, scope: "default" };
+
       const response: Record<string, unknown> = {
         slug: args.slug,
         yaml: result.yaml,
@@ -400,6 +404,7 @@ export async function dispatch(
         links,
         trusted: result.trusted,
         trustedBehind: result.trustedBehind,
+        trustMode: trustResolved.mode,
       };
 
       const visibleRules = page?.visibility === "public"
@@ -1009,6 +1014,24 @@ export async function dispatch(
         actorId,
         metadata: { slug: args.slug },
       });
+      const wpPageAfter = await db.page.findUnique({
+        where: { orgId_slug: { orgId, slug: args.slug } },
+        select: { folderId: true, rules: true },
+      });
+      if (wpPageAfter) {
+        const { mode: wpTrustMode } = await resolveEffectiveTrustMode(orgId, wpPageAfter.folderId, wpPageAfter.rules);
+        if (wpTrustMode === "locked") {
+          const wpEligible = await resolveTrustEligibility(orgId, userId, args.slug);
+          if (wpEligible) {
+            const wpLatest = await db.pageVersion.findFirst({
+              where: { page: { orgId, slug: args.slug } },
+              orderBy: { createdAt: "desc" },
+              select: { id: true },
+            });
+            if (wpLatest) await markTrusted(orgId, args.slug, wpLatest.id, userId || "agent");
+          }
+        }
+      }
       const wpResult: Record<string, unknown> = { ...writeResult };
       if (wpRuleCheck.warnings.length > 0) {
         wpResult.contentWarnings = wpRuleCheck.warnings.map((w) => ({
@@ -1719,6 +1742,15 @@ export async function dispatch(
       if (!args.slug) throw new Error("slug is required");
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       const actorUserId = userId || "agent";
+
+      const mtPageRow = await db.page.findUnique({
+        where: { orgId_slug: { orgId, slug: args.slug } },
+        select: { folderId: true, rules: true },
+      });
+      if (mtPageRow) {
+        const { mode } = await resolveEffectiveTrustMode(orgId, mtPageRow.folderId, mtPageRow.rules);
+        if (mode === "auto") return { ok: true, noop: true, slug: args.slug };
+      }
 
       const eligible = await resolveTrustEligibility(orgId, userId, args.slug);
       if (!eligible) throw new Error(await trustDenialMessage(orgId, args.slug));

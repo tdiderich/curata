@@ -84,7 +84,13 @@ describe("expandComponentRefs", () => {
         createdBy: "test-user",
       },
     });
-    await testDb.page.update({ where: { id: page.id }, data: { trustedVersionId: v1Id } });
+    await testDb.page.update({
+      where: { id: page.id },
+      data: {
+        trustedVersionId: v1Id,
+        rules: [{ id: "trust", kind: "trust", mode: "locked" }],
+      },
+    });
 
     const trustedOut = await expandComponentRefs([refBlock("shared-versioned")], {
       orgId,

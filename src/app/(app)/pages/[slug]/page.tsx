@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
 import { resolveRules } from "@/lib/content-rules";
 import type { ResolvedRule } from "@/lib/content-rules";
-import { canApprove, getApprovers, describeApprovalRule, parseApprovalRules } from "@/lib/approval";
+import { canApprove, getApprovers, describeApprovalRule, parseApprovalRules, resolveEffectiveTrustMode, parseTrustRule } from "@/lib/approval";
 import type { ApprovalApprover } from "@/lib/approval";
 import { PageRenderer } from "@/generated/kazam-renderer";
 import PageDetailClient from "@/components/page-detail-client";
@@ -85,6 +85,12 @@ export default async function PageDetailView({
   }
   const canApproveEffective = canEditPage && approvalEligible;
 
+  const trustResolved = pageRow
+    ? await resolveEffectiveTrustMode(ctx.orgId, pageRow.folderId, pageRow.rules)
+    : { mode: "auto" as const, scope: "default" };
+  const trustMode = trustResolved.mode;
+  const hasTrustRuleAtScope = pageRow ? parseTrustRule(pageRow.rules) !== null : false;
+
   const pageTitle = (pageData.json.title as string) || slug;
 
   const pageTags: Array<{ term: string; kind: string }> = [];
@@ -97,7 +103,7 @@ export default async function PageDetailView({
       select: { name: true, locked: true },
     });
     folderTag = normalizeTerm(folder?.name ?? "") || undefined;
-    showTrustBanner = shouldShowTrustBanner(folder?.locked);
+    showTrustBanner = shouldShowTrustBanner(folder?.locked, trustMode);
   }
   if (pageRow) {
     const [concepts, orgConcepts] = await Promise.all([
@@ -246,7 +252,11 @@ export default async function PageDetailView({
           previewingLatest,
           canApprove: canApproveEffective,
           approversNote,
+          trustMode,
         }}
+        autoTrust={trustMode === "locked" && canApproveEffective}
+        trustMode={trustMode}
+        hasTrustRuleAtScope={hasTrustRuleAtScope}
         tagsRow={
           pageRow ? (
             <PageTags

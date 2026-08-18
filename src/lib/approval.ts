@@ -179,6 +179,114 @@ export async function canApprove(orgId: string, userId: string, orgRole: Role, s
   return isUserEligible(orgId, userId, resolved.rule);
 }
 
+// ── Trust rules ──────────────────────────────────────────────────────
+// Trust rules ride the same `rules` JSON column, with kind: "trust".
+// Absence of a trust rule at all scopes = "auto" (latest = trusted).
+
+export interface TrustRule {
+  id: string;
+  kind: "trust";
+  mode: "locked";
+}
+
+export const TRUST_RULE_ID = "trust";
+
+export function parseTrustRule(json: unknown): TrustRule | null {
+  if (!json || !Array.isArray(json)) return null;
+  const found = json.find(
+    (r): r is Record<string, unknown> =>
+      typeof r === "object" && r !== null && (r as Record<string, unknown>).kind === "trust"
+  );
+  if (!found || found.mode !== "locked") return null;
+  return { id: (found.id as string) ?? TRUST_RULE_ID, kind: "trust", mode: "locked" };
+}
+
+export function validateTrustRule(
+  candidate: unknown
+): { ok: true; rule: TrustRule } | { ok: false; error: string } {
+  if (!candidate || typeof candidate !== "object") {
+    return { ok: false, error: "rule must be an object" };
+  }
+  const r = candidate as Record<string, unknown>;
+  if (r.mode !== "locked") {
+    return { ok: false, error: "trust rule mode must be \"locked\"" };
+  }
+  return {
+    ok: true,
+    rule: { id: typeof r.id === "string" && r.id ? r.id : TRUST_RULE_ID, kind: "trust", mode: "locked" },
+  };
+}
+
+export type TrustMode = "auto" | "locked";
+
+export async function resolveEffectiveTrustMode(
+  orgId: string,
+  folderId: string | null,
+  pageRulesJson: unknown
+): Promise<{ mode: TrustMode; scope: string }> {
+  const pageTrust = parseTrustRule(pageRulesJson);
+  if (pageTrust) return { mode: "locked", scope: "page" };
+
+  if (folderId) {
+    const folders = await db.folder.findMany({
+      where: { orgId },
+      select: { id: true, parentId: true, name: true, rules: true },
+    });
+    const folderMap = new Map(folders.map((f) => [f.id, f]));
+
+    const ancestry: typeof folders = [];
+    let current = folderMap.get(folderId);
+    const visited = new Set<string>();
+    while (current && !visited.has(current.id)) {
+      visited.add(current.id);
+      ancestry.unshift(current);
+      current = current.parentId ? folderMap.get(current.parentId) : undefined;
+    }
+
+    for (let i = ancestry.length - 1; i >= 0; i--) {
+      const folder = ancestry[i];
+      const trust = parseTrustRule(folder.rules);
+      if (trust) return { mode: "locked", scope: `folder:${folder.name}` };
+    }
+  }
+
+  const org = await db.organization.findUnique({ where: { id: orgId }, select: { rules: true } });
+  const orgTrust = parseTrustRule(org?.rules);
+  if (orgTrust) return { mode: "locked", scope: "global" };
+
+  return { mode: "auto", scope: "default" };
+}
+
+export function makeTrustModeResolver(
+  folders: FolderRuleRow[],
+  orgRulesJson: unknown
+): (folderId: string | null, pageRulesJson: unknown) => TrustMode {
+  const folderMap = new Map(folders.map((f) => [f.id, f]));
+  const orgTrust = parseTrustRule(orgRulesJson);
+
+  return function resolve(folderId: string | null, pageRulesJson: unknown): TrustMode {
+    const pageTrust = parseTrustRule(pageRulesJson);
+    if (pageTrust) return "locked";
+
+    if (folderId) {
+      const ancestry: FolderRuleRow[] = [];
+      let current = folderMap.get(folderId);
+      const visited = new Set<string>();
+      while (current && !visited.has(current.id)) {
+        visited.add(current.id);
+        ancestry.unshift(current);
+        current = current.parentId ? folderMap.get(current.parentId) : undefined;
+      }
+      for (let i = ancestry.length - 1; i >= 0; i--) {
+        const trust = parseTrustRule(ancestry[i].rules);
+        if (trust) return "locked";
+      }
+    }
+
+    return orgTrust ? "locked" : "auto";
+  };
+}
+
 export interface FolderRuleRow {
   id: string;
   parentId: string | null;

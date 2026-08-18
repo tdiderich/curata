@@ -15,6 +15,10 @@ interface ApprovalRuleEditorProps {
   /** Human-readable description of whichever scope is currently effective (page, folder, or global), for context. */
   effectiveNote: string | null;
   canManage: boolean;
+  /** Effective trust mode for this scope — "auto" means latest is trusted, "locked" means explicit approval required. */
+  trustMode?: "auto" | "locked";
+  /** Whether a trust rule exists at THIS scope (not inherited). */
+  hasTrustRuleAtScope?: boolean;
 }
 
 function splitApproverId(prefixed: string): ApprovalApproverInput {
@@ -29,7 +33,7 @@ function splitApproverId(prefixed: string): ApprovalApproverInput {
  * either via the Content Rules settings tab (which embeds the same
  * groups/members directory + save/clear logic) or the set_rules MCP tool.
  */
-export function ApprovalRuleEditor({ scopeParam, initialApprovers, effectiveNote, canManage }: ApprovalRuleEditorProps) {
+export function ApprovalRuleEditor({ scopeParam, initialApprovers, effectiveNote, canManage, trustMode: initialTrustMode = "auto", hasTrustRuleAtScope = false }: ApprovalRuleEditorProps) {
   const router = useRouter();
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(
     new Set((initialApprovers ?? []).filter((a) => a.type === "group").map((a) => a.id))
@@ -39,6 +43,7 @@ export function ApprovalRuleEditor({ scopeParam, initialApprovers, effectiveNote
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [localTrustMode, setLocalTrustMode] = useState<"auto" | "locked">(initialTrustMode);
   const hasRule = initialApprovers !== null && initialApprovers.length > 0;
 
   const { groups, members, loaded } = useApprovalDirectory(canManage);
@@ -66,6 +71,39 @@ export function ApprovalRuleEditor({ scopeParam, initialApprovers, effectiveNote
     }
   }
 
+  async function saveTrustRule(mode: "locked" | "remove") {
+    const method = mode === "remove" ? "DELETE" : hasTrustRuleAtScope ? "PUT" : "POST";
+    const url = mode === "remove"
+      ? `${basePath}/api/rules?${scopeParam}&ruleId=trust`
+      : `${basePath}/api/rules?${scopeParam}`;
+    const res = await fetch(url, {
+      method,
+      ...(mode !== "remove" ? {
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: "trust", kind: "trust", mode: "locked" }),
+      } : {}),
+    });
+    if (!res.ok && res.status !== 404 && res.status !== 409) {
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(json.error || "Failed to update trust mode.");
+    }
+  }
+
+  async function toggleTrustMode() {
+    const newMode = localTrustMode === "locked" ? "auto" : "locked";
+    setBusy(true);
+    setError(null);
+    try {
+      await saveTrustRule(newMode === "locked" ? "locked" : "remove");
+      setLocalTrustMode(newMode);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update trust mode.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function save() {
     const approvers: ApprovalApproverInput[] = [
       ...[...selectedGroups].map((id) => ({ type: "group" as const, id })),
@@ -88,6 +126,10 @@ export function ApprovalRuleEditor({ scopeParam, initialApprovers, effectiveNote
         const json = (await res.json().catch(() => ({}))) as { error?: string };
         setError(json.error || "Failed to save approval rule.");
         return;
+      }
+      if (localTrustMode !== "locked") {
+        try { await saveTrustRule("locked"); } catch { /* best-effort auto-lock */ }
+        setLocalTrustMode("locked");
       }
       router.refresh();
     } catch {
@@ -171,6 +213,23 @@ export function ApprovalRuleEditor({ scopeParam, initialApprovers, effectiveNote
               <button className="btn btn--ghost" onClick={clear} disabled={busy}>
                 Remove restriction
               </button>
+            )}
+          </div>
+          <div className="cr-trust-toggle" style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
+            <label style={{ fontSize: 13, color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={localTrustMode === "locked"}
+                onChange={toggleTrustMode}
+                disabled={busy}
+                style={{ accentColor: "var(--accent)" }}
+              />
+              Require approval before publishing
+            </label>
+            {localTrustMode === "locked" && (
+              <span style={{ fontSize: 12, color: "var(--text-muted)", opacity: 0.7 }}>
+                Viewers see the last approved version
+              </span>
             )}
           </div>
         </>

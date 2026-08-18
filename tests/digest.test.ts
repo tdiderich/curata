@@ -347,7 +347,13 @@ describe("digest — gatherDigestData", () => {
     const inWindow = new Date(windowStart.getTime() + 60_000);
     const behind = await makePage(orgId, "behind-page", inWindow);
     await addVersion(behind.id, new Date(inWindow.getTime() + 1000), "behind-page-v2");
-    await testDb.page.update({ where: { id: behind.id }, data: { trustedVersionId: behind.versions[0].id } });
+    await testDb.page.update({
+      where: { id: behind.id },
+      data: {
+        trustedVersionId: behind.versions[0].id,
+        rules: [{ id: "trust", kind: "trust", mode: "locked" }],
+      },
+    });
 
     await makePage(orgId, "never-trusted-page", inWindow);
 

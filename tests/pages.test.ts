@@ -234,8 +234,16 @@ components:
       return page!.versions.map((v) => v.id);
     }
 
+    async function lockTrust(slug: string) {
+      await testDb.page.update({
+        where: { orgId_slug: { orgId, slug } },
+        data: { rules: [{ id: "trust", kind: "trust", mode: "locked" }] },
+      });
+    }
+
     it("serves the trusted pointer while latest moves ahead, and labels both channels", async () => {
       await writePage(orgId, orgSlug, "trust-page", "title: V1\nshell: document\ncomponents: []\n", "user1");
+      await lockTrust("trust-page");
       const [v1Id] = await versionIdsDesc("trust-page");
 
       const mark = await markTrusted(orgId, "trust-page", v1Id, "reviewer1");
@@ -258,6 +266,7 @@ components:
 
     it("falls back to latest labeled untrusted when nothing has been marked", async () => {
       await writePage(orgId, orgSlug, "untrusted-page", DEFAULT_YAML, "user1");
+      await lockTrust("untrusted-page");
 
       const result = await readPageYaml(orgId, "untrusted-page", "trusted");
       expect(result).not.toBeNull();
@@ -268,6 +277,7 @@ components:
 
     it("readPage carries the same trust labels as readPageYaml", async () => {
       await writePage(orgId, orgSlug, "trust-json-page", DEFAULT_YAML, "user1");
+      await lockTrust("trust-json-page");
       const result = await readPage(orgId, "trust-json-page", "trusted");
       expect(result).not.toBeNull();
       expect(result!.trusted).toBe(false);
@@ -276,6 +286,7 @@ components:
 
     it("reflects trust state in listPages and searchPages results", async () => {
       await writePage(orgId, orgSlug, "trust-list-page", "title: Findable\nshell: document\ncomponents: []\n", "user1");
+      await lockTrust("trust-list-page");
       const [v1Id] = await versionIdsDesc("trust-list-page");
       await markTrusted(orgId, "trust-list-page", v1Id, "reviewer1");
       await writePage(orgId, orgSlug, "trust-list-page", "title: Findable V2\nshell: document\ncomponents: []\n", "user1");
@@ -411,6 +422,10 @@ components:
 
     it("computes sections against the trusted version, not always latest", async () => {
       await writePage(orgId, orgSlug, "sections-page", V1, "user1");
+      await testDb.page.update({
+        where: { orgId_slug: { orgId, slug: "sections-page" } },
+        data: { rules: [{ id: "trust", kind: "trust", mode: "locked" }] },
+      });
       const [v1Id] = await versionIdsDesc("sections-page");
       await markTrusted(orgId, "sections-page", v1Id, "reviewer1");
       await writePage(orgId, orgSlug, "sections-page", V2, "user1");
@@ -451,7 +466,10 @@ components:
           orgId,
           name: "Gated Folder",
           createdBy: "test-user",
-          rules: [{ id: "approval", kind: "approval", approvers: [{ type: "user", id: "alice" }] }],
+          rules: [
+            { id: "approval", kind: "approval", approvers: [{ type: "user", id: "alice" }] },
+            { id: "trust", kind: "trust", mode: "locked" },
+          ],
         },
       });
       await writePage(orgId, orgSlug, "never-trusted-in-gated-folder", DEFAULT_YAML, "user1");
@@ -470,7 +488,10 @@ components:
     it("a global approval rule queues all never-trusted pages", async () => {
       await testDb.organization.update({
         where: { id: orgId },
-        data: { rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] }] },
+        data: { rules: [
+          { id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] },
+          { id: "trust", kind: "trust", mode: "locked" },
+        ] },
       });
       await writePage(orgId, orgSlug, "never-trusted-under-global-rule", DEFAULT_YAML, "user1");
 
@@ -482,6 +503,10 @@ components:
 
     it("includes pages whose trusted pointer has fallen behind latest", async () => {
       await writePage(orgId, orgSlug, "behind-page", "title: V1\nshell: document\ncomponents: []\n", "user1");
+      await testDb.page.update({
+        where: { orgId_slug: { orgId, slug: "behind-page" } },
+        data: { rules: [{ id: "trust", kind: "trust", mode: "locked" }] },
+      });
       const [v1Id] = await versionIdsDesc("behind-page");
       await markTrusted(orgId, "behind-page", v1Id, "reviewer1");
       await writePage(orgId, orgSlug, "behind-page", "title: V2\nshell: document\ncomponents: []\n", "user1");
@@ -497,10 +522,13 @@ components:
     it("queues a trustedBehind page regardless of approval rules (no rule anywhere in scope)", async () => {
       // No org/folder/page approval rule exists at all here — trustedBehind
       // pages queue unconditionally, unlike never-trusted pages which need a
-      // rule in scope. This is the same scenario as the un-ruled org above,
-      // just proving the trustedBehind path doesn't share the never-trusted
-      // gate.
+      // rule in scope. Trust rule on the page is needed so trust mode
+      // resolves to "locked" (auto pages skip the queue entirely).
       await writePage(orgId, orgSlug, "behind-no-rule", "title: V1\nshell: document\ncomponents: []\n", "user1");
+      await testDb.page.update({
+        where: { orgId_slug: { orgId, slug: "behind-no-rule" } },
+        data: { rules: [{ id: "trust", kind: "trust", mode: "locked" }] },
+      });
       const [v1Id] = await versionIdsDesc("behind-no-rule");
       await markTrusted(orgId, "behind-no-rule", v1Id, "reviewer1");
       await writePage(orgId, orgSlug, "behind-no-rule", "title: V2\nshell: document\ncomponents: []\n", "user1");
@@ -558,7 +586,10 @@ components:
       // queue — this test is about sort order, not the rule-scope gate.
       await testDb.organization.update({
         where: { id: orgId },
-        data: { rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] }] },
+        data: { rules: [
+          { id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] },
+          { id: "trust", kind: "trust", mode: "locked" },
+        ] },
       });
       await writePage(orgId, orgSlug, "older-unreviewed", DEFAULT_YAML, "user1");
       await new Promise((r) => setTimeout(r, 5));
@@ -578,7 +609,10 @@ components:
       // the rule-scope gate.
       await testDb.organization.update({
         where: { id: orgId },
-        data: { rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] }] },
+        data: { rules: [
+          { id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] },
+          { id: "trust", kind: "trust", mode: "locked" },
+        ] },
       });
       await writePage(orgId, orgSlug, "mine-page", DEFAULT_YAML, "me");
       await writePage(orgId, orgSlug, "annotated-page", DEFAULT_YAML, "someone-else");
@@ -598,7 +632,10 @@ components:
       // the queue — otherwise both sides of the comparison are trivially 0.
       await testDb.organization.update({
         where: { id: orgId },
-        data: { rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] }] },
+        data: { rules: [
+          { id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] },
+          { id: "trust", kind: "trust", mode: "locked" },
+        ] },
       });
       await writePage(orgId, orgSlug, "count-page-a", DEFAULT_YAML, "user1");
       await writePage(orgId, orgSlug, "count-page-b", DEFAULT_YAML, "user1");
@@ -613,14 +650,15 @@ components:
   });
 
   describe("shouldShowTrustBanner", () => {
-    it("shows the banner when the folder is unlocked or the page has no folder", () => {
-      expect(shouldShowTrustBanner(false)).toBe(true);
-      expect(shouldShowTrustBanner(null)).toBe(true);
-      expect(shouldShowTrustBanner(undefined)).toBe(true);
+    it("shows the banner when trust mode is locked and folder is unlocked", () => {
+      expect(shouldShowTrustBanner(false, "locked")).toBe(true);
+      expect(shouldShowTrustBanner(null, "locked")).toBe(true);
+      expect(shouldShowTrustBanner(undefined, "locked")).toBe(true);
     });
 
-    it("suppresses the banner for pages in a locked (curata-managed) folder", () => {
-      expect(shouldShowTrustBanner(true)).toBe(false);
+    it("suppresses the banner for auto trust mode or locked folders", () => {
+      expect(shouldShowTrustBanner(false)).toBe(false);
+      expect(shouldShowTrustBanner(true, "locked")).toBe(false);
     });
   });
 });

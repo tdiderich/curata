@@ -60,7 +60,11 @@ describe("MCP dispatch — get_review_queue", () => {
         rules: [{ id: "approval", kind: "approval", approvers: [{ type: "user", id: "alice" }] }],
       },
     });
-    const page = await createTestPage(orgId, { slug: "gated-never-trusted", folderId: folder.id });
+    const page = await createTestPage(orgId, {
+      slug: "gated-never-trusted",
+      folderId: folder.id,
+      rules: [{ id: "trust", kind: "trust", mode: "locked" }],
+    });
 
     const rows = (await dispatch("get_review_queue", {}, orgId, orgSlug, "apikey-1")) as ReviewQueueToolRow[];
     const entry = rows.find((r) => r.slug === "gated-never-trusted");
@@ -76,6 +80,7 @@ describe("MCP dispatch — get_review_queue", () => {
     const page = await createTestPage(orgId, {
       slug: "behind-page",
       yamlContent: "title: V1\nshell: document\ncomponents: []\n",
+      rules: [{ id: "trust", kind: "trust", mode: "locked" }],
     });
     const v1Id = page.versions[0].id;
     await testDb.page.update({ where: { id: page.id }, data: { trustedVersionId: v1Id } });

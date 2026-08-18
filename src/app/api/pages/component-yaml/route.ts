@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import yaml from "js-yaml";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { readPage, writePageJson } from "@/lib/pages";
+import { readPage, writePageJson, markTrusted } from "@/lib/pages";
 import { db } from "@/lib/db";
+import { resolveEffectiveTrustMode, canApprove } from "@/lib/approval";
 
 type Comp = Record<string, unknown>;
 
@@ -102,6 +103,7 @@ export async function PUT(request: NextRequest) {
     id?: string;
     yaml?: string;
     expectedHash?: string;
+    autoTrust?: boolean;
   };
 
   if (!body.slug || !body.id || !body.yaml) {
@@ -169,6 +171,27 @@ export async function PUT(request: NextRequest) {
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 409 });
+  }
+
+  if (body.autoTrust) {
+    const pageRow = await db.page.findUnique({
+      where: { orgId_slug: { orgId: ctx.orgId, slug: body.slug } },
+      select: { folderId: true, rules: true },
+    });
+    if (pageRow) {
+      const trustMode = (await resolveEffectiveTrustMode(ctx.orgId, pageRow.folderId, pageRow.rules)).mode;
+      if (trustMode === "locked") {
+        const eligible = await canApprove(ctx.orgId, ctx.userId, ctx.role, body.slug);
+        if (eligible) {
+          const latestVersion = await db.pageVersion.findFirst({
+            where: { page: { orgId: ctx.orgId, slug: body.slug } },
+            orderBy: { createdAt: "desc" },
+            select: { id: true },
+          });
+          if (latestVersion) await markTrusted(ctx.orgId, body.slug, latestVersion.id, ctx.userId);
+        }
+      }
+    }
   }
 
   return NextResponse.json({ ok: true, contentHash: result.contentHash });

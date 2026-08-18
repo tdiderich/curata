@@ -35,7 +35,10 @@ describe("MCP dispatch — mark_trusted / clear_trusted", () => {
 
   it("flips the trusted pointer to the latest version by default and audits the write", async () => {
     await testDb.orgMember.create({ data: { orgId, userId: "owner-1", role: "owner" } });
-    const page = await createTestPage(orgId, { slug: "gated-page" });
+    const page = await createTestPage(orgId, {
+      slug: "gated-page",
+      rules: [{ id: "trust", kind: "trust", mode: "locked" }],
+    });
     const versionId = page.versions[0].id;
 
     const result = (await dispatch(
@@ -60,7 +63,10 @@ describe("MCP dispatch — mark_trusted / clear_trusted", () => {
 
   it("accepts an explicit version_id", async () => {
     await testDb.orgMember.create({ data: { orgId, userId: "owner-1", role: "owner" } });
-    const page = await createTestPage(orgId, { slug: "gated-page" });
+    const page = await createTestPage(orgId, {
+      slug: "gated-page",
+      rules: [{ id: "trust", kind: "trust", mode: "locked" }],
+    });
     const firstVersionId = page.versions[0].id;
 
     // second version becomes "latest"
@@ -88,7 +94,10 @@ describe("MCP dispatch — mark_trusted / clear_trusted", () => {
     const group = await testDb.group.create({ data: { orgId, name: "Test", slug: "test" } });
     await createTestPage(orgId, {
       slug: "gated-page",
-      rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: group.id }] }],
+      rules: [
+        { id: "approval", kind: "approval", approvers: [{ type: "group", id: group.id }] },
+        { id: "trust", kind: "trust", mode: "locked" },
+      ],
     });
     await testDb.orgMember.create({ data: { orgId, userId: "outsider", role: "member" } });
 
@@ -104,7 +113,10 @@ describe("MCP dispatch — mark_trusted / clear_trusted", () => {
     const group = await testDb.group.create({ data: { orgId, name: "Test", slug: "test" } });
     const page = await createTestPage(orgId, {
       slug: "gated-page",
-      rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: group.id }] }],
+      rules: [
+        { id: "approval", kind: "approval", approvers: [{ type: "group", id: group.id }] },
+        { id: "trust", kind: "trust", mode: "locked" },
+      ],
     });
     await testDb.orgMember.create({ data: { orgId, userId: "insider", role: "member" } });
     await testDb.groupMember.create({ data: { groupId: group.id, userId: "insider", role: "member" } });

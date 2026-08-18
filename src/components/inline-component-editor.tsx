@@ -17,6 +17,7 @@ interface InlineComponentEditorProps {
   onClose: () => void;
   onSaved: () => void;
   initialYaml?: string;
+  autoTrust?: boolean;
   onLocalSave?: (componentId: string, parsed: Record<string, unknown>) => void;
 }
 
@@ -27,6 +28,7 @@ export default function InlineComponentEditor({
   onClose,
   onSaved,
   initialYaml,
+  autoTrust,
   onLocalSave,
 }: InlineComponentEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -88,6 +90,7 @@ export default function InlineComponentEditor({
           id: componentId,
           yaml: content,
           expectedHash: hashRef.current,
+          autoTrust,
         }),
       });
 

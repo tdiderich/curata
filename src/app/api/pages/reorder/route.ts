@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { readPage, writePageJson } from "@/lib/pages";
+import { readPage, writePageJson, markTrusted } from "@/lib/pages";
 import { db } from "@/lib/db";
+import { resolveEffectiveTrustMode, canApprove } from "@/lib/approval";
 
 type Comp = Record<string, unknown>;
 
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { slug, componentId, targetId, position, op, component, components: replaceAll } = body as {
+  const { slug, componentId, targetId, position, op, component, components: replaceAll, autoTrust } = body as {
     slug: string;
     componentId?: string;
     targetId?: string;
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest) {
     op?: "remove" | "append" | "replace-all";
     component?: Comp;
     components?: Comp[];
+    autoTrust?: boolean;
   };
 
   if (!slug) {
@@ -75,12 +77,32 @@ export async function POST(request: NextRequest) {
 
   const components = [...((page.json.components ?? []) as Comp[])];
 
+  async function maybeAutoTrust() {
+    if (!autoTrust) return;
+    const pageRow = await db.page.findUnique({
+      where: { orgId_slug: { orgId: ctx!.orgId, slug } },
+      select: { folderId: true, rules: true },
+    });
+    if (!pageRow) return;
+    const trustMode = (await resolveEffectiveTrustMode(ctx!.orgId, pageRow.folderId, pageRow.rules)).mode;
+    if (trustMode !== "locked") return;
+    const eligible = await canApprove(ctx!.orgId, ctx!.userId, ctx!.role, slug);
+    if (!eligible) return;
+    const latestVersion = await db.pageVersion.findFirst({
+      where: { page: { orgId: ctx!.orgId, slug } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+    if (latestVersion) await markTrusted(ctx!.orgId, slug, latestVersion.id, ctx!.userId);
+  }
+
   if (op === "replace-all") {
     const newJson = { ...page.json, components: replaceAll };
     const result = await writePageJson(ctx.orgId, ctx.orgSlug, slug, newJson, "web", page.contentHash);
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 409 });
     }
+    await maybeAutoTrust();
     return NextResponse.json({ ok: true });
   }
 
@@ -91,6 +113,7 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 409 });
     }
+    await maybeAutoTrust();
     return NextResponse.json({ ok: true });
   }
 
@@ -110,6 +133,7 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 409 });
     }
+    await maybeAutoTrust();
     return NextResponse.json({ ok: true });
   }
 
@@ -129,6 +153,7 @@ export async function POST(request: NextRequest) {
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 409 });
   }
+  await maybeAutoTrust();
 
   return NextResponse.json({ ok: true });
 }

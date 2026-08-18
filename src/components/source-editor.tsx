@@ -63,11 +63,13 @@ export interface SourceEditorControls {
 
 export default function SourceEditor({
   slug,
+  autoTrust,
   onSaved,
   onStateChange,
   controlsRef,
 }: {
   slug: string;
+  autoTrust?: boolean;
   onSaved?: () => void;
   onStateChange?: (dirty: boolean, saving: boolean) => void;
   controlsRef?: React.MutableRefObject<SourceEditorControls | null>;
@@ -117,7 +119,7 @@ export default function SourceEditor({
         const res = await fetch(`${basePath}/api/pages/yaml`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug, yaml: content, expectedHash: currentHash }),
+          body: JSON.stringify({ slug, yaml: content, expectedHash: currentHash, autoTrust }),
         });
 
         if (res.ok) {
@@ -152,7 +154,7 @@ export default function SourceEditor({
       setError("Network error");
       setSaving(false);
     }
-  }, [slug, hash, router, onSaved]);
+  }, [slug, hash, autoTrust, router, onSaved]);
 
   // Initialize CodeMirror
   useEffect(() => {

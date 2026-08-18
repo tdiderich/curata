@@ -476,6 +476,8 @@ export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRu
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [folderRules, setFolderRules] = useState<Array<{ id: string; text: string; mode: "warn" | "block"; patterns?: string[] }>>([]);
   const [rulesLoaded, setRulesLoaded] = useState(false);
+  const [trustMode, setTrustMode] = useState<"auto" | "locked" | null>(null);
+  const [hasTrustRule, setHasTrustRule] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
@@ -632,6 +634,44 @@ export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRu
     setRulesOpen(true);
   }
 
+  async function fetchTrustMode() {
+    if (trustMode !== null) return;
+    try {
+      const res = await fetch(`${basePath}/api/rules?scope=folder:${folder.id}`);
+      if (res.ok) {
+        const data = await res.json() as { rules: Array<{ id: string; kind?: string; mode?: string }> };
+        const trustRule = data.rules.find((r) => r.kind === "trust");
+        setTrustMode(trustRule?.mode === "locked" ? "locked" : "auto");
+        setHasTrustRule(!!trustRule);
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function toggleFolderTrust() {
+    const newMode = trustMode === "locked" ? "auto" : "locked";
+    setBusy(true);
+    try {
+      if (newMode === "locked") {
+        const method = hasTrustRule ? "PUT" : "POST";
+        await fetch(`${basePath}/api/rules?scope=folder:${folder.id}`, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: "trust", kind: "trust", mode: "locked" }),
+        });
+        setHasTrustRule(true);
+      } else {
+        await fetch(`${basePath}/api/rules?scope=folder:${folder.id}&ruleId=trust`, { method: "DELETE" });
+        setHasTrustRule(false);
+      }
+      setTrustMode(newMode);
+      router.refresh();
+    } catch {
+      toast.error("Couldn't update trust level.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function createPageHere() {
     setBusy(true);
     setOpen(false);
@@ -776,12 +816,24 @@ export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRu
             </button>
           )}
           {canManageRules && (
-            <button
-              className="dash-folder-actions-item"
-              onClick={openFolderRules}
-            >
-              Content rules
-            </button>
+            <>
+              <button
+                className="dash-folder-actions-item"
+                onClick={openFolderRules}
+              >
+                Content rules
+              </button>
+              <button
+                className="dash-folder-actions-item"
+                onClick={async () => {
+                  await fetchTrustMode();
+                  await toggleFolderTrust();
+                }}
+                disabled={busy}
+              >
+                {trustMode === "locked" ? "Unlock trust (auto)" : "Require approval"}
+              </button>
+            </>
           )}
           {allFolders.length > 0 && (() => {
             const viewingParent = browseParent === undefined ? "__root" : browseParent;

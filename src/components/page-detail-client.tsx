@@ -80,6 +80,9 @@ export default function PageDetailClient({
   approvalEffectiveNote = null,
   tagsRow,
   trustBanner,
+  autoTrust,
+  trustMode: trustModeProp,
+  hasTrustRuleAtScope,
   pageJson,
 }: {
   slug: string;
@@ -103,6 +106,9 @@ export default function PageDetailClient({
   approvalEffectiveNote?: string | null;
   tagsRow?: React.ReactNode;
   trustBanner?: Omit<TrustBannerProps, "slug">;
+  autoTrust?: boolean;
+  trustMode?: "auto" | "locked";
+  hasTrustRuleAtScope?: boolean;
   pageJson?: PageData;
 }) {
   const router = useRouter();
@@ -409,7 +415,7 @@ export default function PageDetailClient({
       const res = await fetch(`${basePath}/api/pages/reorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, op: "replace-all", components: localComponents }),
+        body: JSON.stringify({ slug, op: "replace-all", components: localComponents, autoTrust }),
       });
       if (res.ok) {
         setEditDirty(false);
@@ -424,7 +430,7 @@ export default function PageDetailClient({
       toast.error("Save failed");
     }
     setEditSaving(false);
-  }, [slug, localComponents, router]);
+  }, [slug, localComponents, autoTrust, router]);
 
   const handleDragStart = useCallback(() => { setIsDragging(true); }, []);
   const handleDragEnd = useCallback(() => { setIsDragging(false); }, []);
@@ -716,6 +722,8 @@ export default function PageDetailClient({
                       initialApprovers={pageApprovers}
                       effectiveNote={approvalEffectiveNote}
                       canManage={canEditPageRules}
+                      trustMode={trustModeProp}
+                      hasTrustRuleAtScope={hasTrustRuleAtScope}
                     />
                   </div>
                 )}
@@ -735,6 +743,7 @@ export default function PageDetailClient({
       {viewTab === "source" ? (
         <SourceEditor
           slug={slug}
+          autoTrust={autoTrust}
           onSaved={() => {
             toast.success("Page saved");
             setViewTab("preview");
@@ -780,6 +789,7 @@ export default function PageDetailClient({
             slug={slug}
             componentId={editingComponent.id}
             componentType={editingComponent.type}
+            autoTrust={autoTrust}
             onClose={() => setEditingComponent(null)}
             onSaved={() => setEditingComponent(null)}
             initialYaml={(() => {

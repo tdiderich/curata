@@ -16,13 +16,15 @@ export interface TrustBannerProps {
   canApprove: boolean;
   /** Set whenever an approval rule governs this page — shown in place of the button when ineligible. */
   approversNote?: string | null;
+  /** Trust mode — "auto" pages never show the banner. */
+  trustMode?: "auto" | "locked";
 }
 
 /// Read-path banner for the approval-gate flow. Purely derived from the
 /// trusted/trustedBehind labels readPage/getPageSections already compute —
 /// no extra state, no write-path involvement until "Approve latest" is
 /// clicked.
-export function TrustBanner({ slug, trusted, trustedBehind, previewingLatest, canApprove, approversNote }: TrustBannerProps) {
+export function TrustBanner({ slug, trusted, trustedBehind, previewingLatest, canApprove, approversNote, trustMode = "locked" }: TrustBannerProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -57,6 +59,8 @@ export function TrustBanner({ slug, trusted, trustedBehind, previewingLatest, ca
       setApproving(false);
     }
   }
+
+  if (trustMode === "auto") return null;
 
   // Fully synced (trusted and nothing newer) — nothing to say.
   if (trusted && !trustedBehind) return null;

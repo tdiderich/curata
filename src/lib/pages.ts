@@ -11,7 +11,8 @@ import { getEntitlements } from "./entitlements";
 import { estimateTokens } from "./tokens";
 import { pruneVersions } from "./version-retention";
 import { extractSalientTerms } from "./salient-terms";
-import { makeApprovalRuleResolver } from "./approval";
+import { makeApprovalRuleResolver, makeTrustModeResolver, resolveEffectiveTrustMode } from "./approval";
+import type { TrustMode } from "./approval";
 
 /// npm dist-tag style read channel: "latest" is the current behavior (newest
 /// version); "trusted" resolves to the version a human pinned via
@@ -35,8 +36,13 @@ export interface ChannelLabel {
 function resolveChannel(
   trustedVersionId: string | null,
   latestVersionId: string,
-  channel: Channel
+  channel: Channel,
+  trustMode: TrustMode = "auto"
 ): { versionId: string; label: ChannelLabel } {
+  if (trustMode === "auto") {
+    return { versionId: latestVersionId, label: { trusted: true, trustedBehind: false } };
+  }
+
   const hasTrusted = !!trustedVersionId;
   const trustedIsLatest = hasTrusted && trustedVersionId === latestVersionId;
   const trustedBehind = hasTrusted && !trustedIsLatest;
@@ -44,9 +50,6 @@ function resolveChannel(
   if (channel === "trusted" && hasTrusted) {
     return { versionId: trustedVersionId as string, label: { trusted: true, trustedBehind } };
   }
-  // "latest" channel, or "trusted" requested with nothing marked yet — serve
-  // latest either way, but only label it trusted if it happens to be the
-  // pinned version.
   return { versionId: latestVersionId, label: { trusted: trustedIsLatest, trustedBehind } };
 }
 
@@ -57,8 +60,10 @@ function resolveChannel(
 /// — mirroring getReviewQueue's unconditional exclusion of locked-folder
 /// pages. Exported as a pure function so the page-view server component and
 /// tests share one source of truth instead of duplicating the check.
-export function shouldShowTrustBanner(folderLocked: boolean | null | undefined): boolean {
-  return !folderLocked;
+export function shouldShowTrustBanner(folderLocked: boolean | null | undefined, trustMode: TrustMode = "auto"): boolean {
+  if (folderLocked) return false;
+  if (trustMode === "auto") return false;
+  return true;
 }
 
 export interface PageMeta {
@@ -152,6 +157,15 @@ export async function listPages(
     : [];
   const overrideByPageId = new Map(overrides.map((v) => [v.pageId, v]));
 
+  // Batch-resolve each page's effective trust mode (page > folder ancestry >
+  // org > default "auto") the same way getReviewCandidates does — one folder
+  // query, one org query, for the whole page list rather than per page.
+  const [trustFolders, trustOrg] = await Promise.all([
+    db.folder.findMany({ where: { orgId }, select: { id: true, parentId: true, name: true, rules: true } }),
+    db.organization.findUnique({ where: { id: orgId }, select: { rules: true } }),
+  ]);
+  const resolveTrust = makeTrustModeResolver(trustFolders, trustOrg?.rules);
+
   const mapped = pages.map((p) => {
     const latestAnnotation = p.annotations[0]?.createdAt;
     const lastActivity = latestAnnotation && latestAnnotation > p.updatedAt
@@ -180,7 +194,8 @@ export async function listPages(
       p.lastViewedAt
     );
 
-    const { label } = resolveChannel(p.trustedVersionId, latestVersion?.id ?? "", channel);
+    const trustMode = resolveTrust(p.folderId, p.rules);
+    const { label } = resolveChannel(p.trustedVersionId, latestVersion?.id ?? "", channel, trustMode);
 
     return {
       slug: p.slug,
@@ -313,7 +328,8 @@ export async function readPageYaml(
   if (!page || page.versions.length === 0) return null;
 
   const latest = page.versions[0];
-  const { versionId, label } = resolveChannel(page.trustedVersionId, latest.id, channel);
+  const { mode: trustMode } = await resolveEffectiveTrustMode(orgId, page.folderId, page.rules);
+  const { versionId, label } = resolveChannel(page.trustedVersionId, latest.id, channel, trustMode);
 
   let v = latest;
   if (versionId !== latest.id) {
@@ -344,7 +360,8 @@ export async function readPage(
   if (!page || page.versions.length === 0) return null;
 
   const latest = page.versions[0];
-  const { versionId, label } = resolveChannel(page.trustedVersionId, latest.id, channel);
+  const { mode: trustMode } = await resolveEffectiveTrustMode(orgId, page.folderId, page.rules);
+  const { versionId, label } = resolveChannel(page.trustedVersionId, latest.id, channel, trustMode);
 
   let v = latest;
   if (versionId !== latest.id) {
@@ -414,9 +431,20 @@ export async function loadSearchIndex(
       title: true,
       dashboardEnabled: true,
       trustedVersionId: true,
+      folderId: true,
+      rules: true,
       versions: { orderBy: { createdAt: "desc" as const }, take: 1, select: { id: true, yamlContent: true, jsonContent: true } },
     },
   });
+
+  // Batch-resolve each page's effective trust mode the same way listPages/
+  // getReviewCandidates do — one folder query, one org query, for the whole
+  // page list rather than per page.
+  const [trustFolders, trustOrg] = await Promise.all([
+    db.folder.findMany({ where: { orgId }, select: { id: true, parentId: true, name: true, rules: true } }),
+    db.organization.findUnique({ where: { id: orgId }, select: { rules: true } }),
+  ]);
+  const resolveTrust = makeTrustModeResolver(trustFolders, trustOrg?.rules);
 
   // Batch-resolve trusted-channel overrides the same way listPages does.
   const overrideIds = channel === "trusted"
@@ -438,7 +466,8 @@ export async function loadSearchIndex(
     const latestV = page.versions[0];
     const override = overrideByPageId.get(page.id);
     const servedV = override ?? latestV;
-    const { label } = resolveChannel(page.trustedVersionId, latestV.id, channel);
+    const trustMode = resolveTrust(page.folderId, page.rules);
+    const { label } = resolveChannel(page.trustedVersionId, latestV.id, channel, trustMode);
     entries.push({
       slug: page.slug,
       title: page.title,
@@ -956,10 +985,13 @@ async function getReviewCandidates(
 
   const lockedFolderIds = new Set(folders.filter((f) => f.locked).map((f) => f.id));
   const resolveApprovalRule = makeApprovalRuleResolver(folders, org?.rules);
+  const resolveTrust = makeTrustModeResolver(folders, org?.rules);
 
   const candidates: ReviewCandidate[] = [];
   for (const p of pages) {
     if (p.folderId && lockedFolderIds.has(p.folderId)) continue;
+
+    if (resolveTrust(p.folderId, p.rules) === "auto") continue;
 
     const latest = p.versions[0];
     if (!latest) continue;

@@ -33,7 +33,10 @@ describe("POST/DELETE /api/versions/trust — approval-eligibility enforcement",
     const group = await testDb.group.create({ data: { orgId, name: "Test", slug: "test" } });
     const page = await createTestPage(orgId, {
       slug: "gated-page",
-      rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: group.id }] }],
+      rules: [
+        { id: "approval", kind: "approval", approvers: [{ type: "group", id: group.id }] },
+        { id: "trust", kind: "trust", mode: "locked" },
+      ],
     });
     versionId = page.versions[0].id;
   });

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { markTrusted, clearTrusted } from "@/lib/pages";
-import { canApprove, getApprovers, describeApprovalRule } from "@/lib/approval";
+import { canApprove, getApprovers, describeApprovalRule, resolveEffectiveTrustMode } from "@/lib/approval";
+import { db } from "@/lib/db";
 
 /// markTrusted/clearTrusted stay dumb pointer-movers (see pages.ts) —
 /// approval-eligibility enforcement lives here at the route layer, matching
@@ -33,6 +34,17 @@ export async function POST(request: NextRequest) {
         { error: "slug and versionId are required" },
         { status: 400 }
       );
+    }
+
+    const pageRow = await db.page.findUnique({
+      where: { orgId_slug: { orgId: ctx.orgId, slug } },
+      select: { folderId: true, rules: true },
+    });
+    if (pageRow) {
+      const { mode } = await resolveEffectiveTrustMode(ctx.orgId, pageRow.folderId, pageRow.rules);
+      if (mode === "auto") {
+        return NextResponse.json({ ok: true, noop: true });
+      }
     }
 
     const eligible = await canApprove(ctx.orgId, ctx.userId, ctx.role, slug);

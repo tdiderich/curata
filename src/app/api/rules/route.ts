@@ -4,11 +4,11 @@ import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import type { ContentRule } from "@/lib/content-rules";
-import { validateApprovalRule, type ApprovalRule } from "@/lib/approval";
+import { validateApprovalRule, type ApprovalRule, validateTrustRule, type TrustRule } from "@/lib/approval";
 import { validateRequiredComponentsRule, type RequiredComponentsRule } from "@/lib/required-components";
 import { Prisma } from "@/generated/prisma/client";
 
-type StoredRule = ContentRule | ApprovalRule | RequiredComponentsRule;
+type StoredRule = ContentRule | ApprovalRule | RequiredComponentsRule | TrustRule;
 
 function parseRulesJson(raw: unknown): StoredRule[] {
   if (!raw || !Array.isArray(raw)) return [];
@@ -17,6 +17,7 @@ function parseRulesJson(raw: unknown): StoredRule[] {
     const obj = r as Record<string, unknown>;
     if (typeof obj.id !== "string") return false;
     if (obj.kind === "approval") return Array.isArray(obj.approvers);
+    if (obj.kind === "trust") return obj.mode === "locked";
     if (obj.kind === "required-components") return typeof obj.pageType === "string";
     return typeof obj.text === "string";
   });
@@ -27,6 +28,7 @@ function validateRule(rule: unknown): { ok: true; rule: StoredRule } | { ok: fal
   const r = rule as Record<string, unknown>;
 
   if (r.kind === "approval") return validateApprovalRule(r);
+  if (r.kind === "trust") return validateTrustRule(r);
   if (r.kind === "required-components") return validateRequiredComponentsRule(r);
 
   if (!r.text || typeof r.text !== "string" || r.text.trim().length === 0) {
