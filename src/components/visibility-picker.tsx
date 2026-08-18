@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
 import { toast } from "./toast";
+import { useVisibility } from "@/hooks/use-visibility";
 
 const LEVELS = [
   { value: "private", label: "Private", desc: "Only you" },
@@ -22,10 +22,8 @@ interface VisibilityPickerProps {
 }
 
 export function VisibilityPicker({ slug, orgSlug, visibility, authMode, hideTrigger }: VisibilityPickerProps) {
-  const router = useRouter();
-  const [current, setCurrent] = useState(visibility);
+  const { current, busy, setVisibility: patchVisibility } = useVisibility(slug, visibility, authMode);
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,7 +35,6 @@ export function VisibilityPicker({ slug, orgSlug, visibility, authMode, hideTrig
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
 
-  // The command palette's "Change visibility" action opens this picker.
   useEffect(() => {
     const openFromPalette = () => setOpen(true);
     window.addEventListener("curata-open-visibility", openFromPalette);
@@ -50,30 +47,12 @@ export function VisibilityPicker({ slug, orgSlug, visibility, authMode, hideTrig
 
   async function setVisibility(value: string) {
     if (value === current) { setOpen(false); return; }
-    setBusy(true);
     setOpen(false);
-    try {
-      const res = await fetch(`${basePath}/api/pages`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, visibility: value }),
-      });
-      if (res.ok) {
-        setCurrent(value);
-        if (value === "public") {
-          const url = `${window.location.origin}${basePath.replace(/\/$/, "")}/p/${orgSlug}/${slug}`;
-          await navigator.clipboard.writeText(url);
-          toast.success("Public link copied");
-        }
-      } else {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        toast.error(`Couldn't update visibility: ${data.error ?? "unknown error"}`);
-      }
-    } catch {
-      toast.error("Couldn't update visibility — check your connection and try again.");
-    } finally {
-      setBusy(false);
-      router.refresh();
+    await patchVisibility(value);
+    if (value === "public") {
+      const url = `${window.location.origin}${basePath.replace(/\/$/, "")}/p/${orgSlug}/${slug}`;
+      await navigator.clipboard.writeText(url);
+      toast.success("Public link copied");
     }
   }
 

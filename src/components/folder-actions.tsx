@@ -8,6 +8,7 @@ import { toast } from "@/components/toast";
 import { isPinned, togglePin } from "@/lib/pins";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { useVisibility } from "@/hooks/use-visibility";
 import { copyPagesForAgent } from "@/lib/copy-for-agent";
 
 interface Folder {
@@ -190,7 +191,7 @@ export function PageMenu({ slug, title, folderId, folders, visibility = "org", o
   const [busy, setBusy] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [visOpen, setVisOpen] = useState(false);
-  const [currentVis, setCurrentVis] = useState(visibility);
+  const { current: currentVis, busy: visBusy, setVisibility: patchVis } = useVisibility(slug, visibility, authMode);
   const [browseParent, setBrowseParent] = useState<string | null | undefined>(undefined);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -221,7 +222,7 @@ export function PageMenu({ slug, title, folderId, folders, visibility = "org", o
         toast.error(`${failMsg}: ${data.error ?? "unknown error"}`);
       }
     } catch {
-      toast.error(`${failMsg} — check your connection and try again.`);
+      toast.error(`${failMsg} - check your connection and try again.`);
     } finally {
       setBusy(false);
       router.refresh();
@@ -392,29 +393,12 @@ export function PageMenu({ slug, title, folderId, folders, visibility = "org", o
                 <button
                   key={v}
                   className={`dash-page-actions-item${v === currentVis ? " dash-page-actions-item--active" : ""}`}
+                  disabled={visBusy}
                   onClick={async () => {
                     if (v === currentVis) return;
-                    setBusy(true);
                     setOpen(false);
                     setVisOpen(false);
-                    try {
-                      const res = await fetch(`${basePath}/api/pages`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ slug, visibility: v }),
-                      });
-                      if (res.ok) {
-                        setCurrentVis(v);
-                      } else {
-                        const data = (await res.json().catch(() => ({}))) as { error?: string };
-                        toast.error(`Couldn't update visibility: ${data.error ?? "unknown error"}`);
-                      }
-                    } catch {
-                      toast.error("Couldn't update visibility — check your connection and try again.");
-                    } finally {
-                      setBusy(false);
-                      router.refresh();
-                    }
+                    await patchVis(v);
                   }}
                 >
                   {v === "private" ? "Private" : v === "org" ? "Org" : "Public"}
