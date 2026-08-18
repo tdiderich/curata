@@ -1,6 +1,10 @@
 title: Role Assignments
 shell: standard
 components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "role_map is a slot component: it only takes a title. Without a host-app renderer wired up it falls back to a placeholder ('Roles configured in site settings'), so the actual role data below is authored as a plain table. Use role_map to mark a section as role/ownership content; use the table for the assignments themselves."
   - type: section
     heading: Incident Response Readiness
     components:

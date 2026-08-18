@@ -7,7 +7,7 @@ components:
     body: "The five-layer loop that makes a knowledge brain compound instead of reset. Each node is a layer, each connection is labeled with what actually flows between them."
   - type: architecture
     title: Knowledge Loop
-    direction: top_to_bottom
+    direction: left_to_right
     nodes:
       - id: capture
         label: Capture
@@ -35,6 +35,3 @@ components:
       - from: brain
         to: output
         label: query
-      - from: output
-        to: capture
-        label: feedback

@@ -116,7 +116,7 @@ The quality-gate layer is the key differentiator: humans annotate agent output, 
 - **Search** — full-text search across all pages and YAML content
 - **API key auth** — scoped read/write keys for agent access
 - **Theme system** — 7 accent colors, light/dark mode, texture overlays
-- **AI tool packs**: pages marked with a `pack:` block install into repos via `kazam install`, compiling into CLAUDE.md / .cursorrules
+- **AI tool packs** - your org's private rules and standards, compiled into every repo's CLAUDE.md / .cursorrules via `kazam install`. Drift-tracked against the source page so copies stay current
 - **Agent-readable public pages**: markdown, YAML, and a paste-ready prompt for any public page, plus the standard discovery documents
 - **Templates** — component showcases and typed page structures, each teaching a pattern worth stealing
 

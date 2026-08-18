@@ -1,27 +1,111 @@
-title: "Customer Health by ARR"
+title: "Customer Health Charts"
 shell: standard
 components:
   - type: callout
     variant: info
     title: What this page shows
-    body: "A bar chart with labeled segments and semantic colors. Each bar represents a customer health tier, sized by annual recurring revenue."
-  - type: chart
-    kind: bar
-    title: "ARR by Health Tier"
-    y_label: "ARR ($K)"
-    data:
-      - label: "Healthy"
-        value: 2450
-        color: green
-      - label: "Monitor"
-        value: 870
-        color: yellow
-      - label: "At Risk"
-        value: 340
-        color: red
-      - label: "New (<90d)"
-        value: 520
-        color: teal
-      - label: "Churned"
-        value: 180
-        color: default
+    body: "The three chart kinds side by side: bar (grouped totals with semantic colors), pie (share of a whole), and timeseries (multi-series trend lines over time)."
+  - type: section
+    heading: "Bar: ARR by Health Tier"
+    components:
+      - type: markdown
+        body: "Each bar represents a customer health tier, sized by annual recurring revenue."
+      - type: chart
+        kind: bar
+        title: "ARR by Health Tier"
+        y_label: "ARR ($K)"
+        data:
+          - label: "Healthy"
+            value: 2450
+            color: green
+          - label: "Monitor"
+            value: 870
+            color: yellow
+          - label: "At Risk"
+            value: 340
+            color: red
+          - label: "New (<90d)"
+            value: 520
+            color: teal
+          - label: "Churned"
+            value: 180
+            color: default
+  - type: section
+    heading: "Pie: Support Tickets by Category"
+    components:
+      - type: markdown
+        body: "Ticket volume for the last 30 days, split by category."
+      - type: chart
+        kind: pie
+        title: "Support Ticket Mix"
+        data:
+          - label: "Bug Report"
+            value: 142
+            color: red
+          - label: "Feature Request"
+            value: 88
+            color: teal
+          - label: "How-To"
+            value: 210
+            color: green
+          - label: "Billing"
+            value: 34
+            color: yellow
+          - label: "Other"
+            value: 19
+            color: default
+  - type: section
+    heading: "Timeseries: MRR by Plan"
+    components:
+      - type: markdown
+        body: "Monthly recurring revenue by plan tier, last 6 months. Multiple series on one chart show how the mix is shifting toward Enterprise."
+      - type: chart
+        kind: timeseries
+        title: "MRR by Plan Tier"
+        y_label: "MRR ($K)"
+        series:
+          - label: "Enterprise"
+            color: green
+            points:
+              - label: "Mar"
+                value: 88
+              - label: "Apr"
+                value: 96
+              - label: "May"
+                value: 110
+              - label: "Jun"
+                value: 128
+              - label: "Jul"
+                value: 145
+              - label: "Aug"
+                value: 168
+          - label: "Growth"
+            color: teal
+            points:
+              - label: "Mar"
+                value: 52
+              - label: "Apr"
+                value: 55
+              - label: "May"
+                value: 54
+              - label: "Jun"
+                value: 58
+              - label: "Jul"
+                value: 61
+              - label: "Aug"
+                value: 63
+          - label: "Starter"
+            color: yellow
+            points:
+              - label: "Mar"
+                value: 21
+              - label: "Apr"
+                value: 19
+              - label: "May"
+                value: 18
+              - label: "Jun"
+                value: 16
+              - label: "Jul"
+                value: 15
+              - label: "Aug"
+                value: 14

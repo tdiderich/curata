@@ -1,54 +1,51 @@
-title: "Curata Org Activity"
+title: "Q3 Regional Performance"
 shell: standard
 components:
   - type: callout
     variant: info
     title: What this page shows
-    body: "Two charts side by side using a columns layout: a timeseries line for pages written per day, and a bar chart for trust rate by week."
-  - type: columns
-    columns:
-      - - type: chart
-          kind: timeseries
-          title: "Pages Written Per Day"
-          y_label: "Pages"
-          series:
-            - label: "All pages"
-              color: teal
-              points:
-                - label: "Aug 01"
-                  value: 4
-                - label: "Aug 02"
-                  value: 7
-                - label: "Aug 03"
-                  value: 3
-                - label: "Aug 04"
-                  value: 9
-                - label: "Aug 05"
-                  value: 12
-                - label: "Aug 06"
-                  value: 6
-                - label: "Aug 07"
-                  value: 8
-                - label: "Aug 08"
-                  value: 15
-                - label: "Aug 09"
-                  value: 11
-                - label: "Aug 10"
-                  value: 5
-      - - type: chart
-          kind: bar
-          title: "Trust Rate by Week"
-          y_label: "% Trusted"
-          data:
-            - label: "Week 1"
-              value: 62
-              color: yellow
-            - label: "Week 2"
-              value: 78
-              color: green
-            - label: "Week 3"
-              value: 85
-              color: green
-            - label: "Week 4"
-              value: 71
-              color: yellow
+    body: "A chart_group lays out multiple charts as one titled unit with a shared column count, instead of hand-wiring a columns layout. Here: quarterly revenue by region next to the customer acquisition cost trend."
+  - type: chart_group
+    title: "Q3 Regional Performance"
+    columns: 2
+    components:
+      - type: chart
+        kind: bar
+        title: "Revenue by Region"
+        y_label: "Revenue ($K)"
+        data:
+          - label: "AMER"
+            value: 1840
+            color: green
+          - label: "EMEA"
+            value: 1120
+            color: teal
+          - label: "APAC"
+            value: 640
+            color: yellow
+          - label: "LATAM"
+            value: 210
+            color: default
+      - type: chart
+        kind: timeseries
+        title: "Customer Acquisition Cost"
+        y_label: "CAC ($)"
+        series:
+          - label: "AMER"
+            color: green
+            points:
+              - label: "Jul"
+                value: 420
+              - label: "Aug"
+                value: 395
+              - label: "Sep"
+                value: 360
+          - label: "EMEA"
+            color: teal
+            points:
+              - label: "Jul"
+                value: 510
+              - label: "Aug"
+                value: 540
+              - label: "Sep"
+                value: 480

@@ -17,42 +17,42 @@ components:
       - "Question Mark"
     points:
       - label: "SSO enforcement"
-        x: 20
-        y: 85
+        x: 0.20
+        y: 0.85
         color: green
       - label: "Bulk CSV export"
-        x: 15
-        y: 70
+        x: 0.15
+        y: 0.70
         color: green
       - label: "Custom themes"
-        x: 30
-        y: 25
+        x: 0.30
+        y: 0.25
         color: default
       - label: "AI summaries"
-        x: 70
-        y: 80
+        x: 0.70
+        y: 0.80
         color: teal
       - label: "Audit retention"
-        x: 80
-        y: 75
+        x: 0.80
+        y: 0.75
         color: teal
       - label: "Webhooks"
-        x: 75
-        y: 30
+        x: 0.75
+        y: 0.30
         color: yellow
       - label: "PDF watermark"
-        x: 65
-        y: 15
+        x: 0.65
+        y: 0.15
         color: default
       - label: "Real-time collab"
-        x: 85
-        y: 90
+        x: 0.85
+        y: 0.90
         color: red
       - label: "Dark mode"
-        x: 25
-        y: 40
+        x: 0.25
+        y: 0.40
         color: default
       - label: "Mobile push"
-        x: 40
-        y: 20
+        x: 0.40
+        y: 0.20
         color: yellow

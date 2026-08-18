@@ -1,54 +1,110 @@
-title: "How This Brain Connects"
+title: "Event Pipeline Architecture"
 shell: standard
 components:
   - type: callout
     variant: info
     title: What this page shows
-    body: "A concept graph where pages are nodes and shared tags are edges. A new hire sees the brain's shape in one image."
+    body: "A microservices data pipeline. Shapes distinguish node kinds (box = service, diamond = decision, pill = store/sink), groups cluster related services, ports label named connection points, dashed edges mark async/optional paths, and status badges show build progress on the newer services."
   - type: graph
-    title: "Page Relationship Map"
-    height: 400
+    title: "Clickstream Event Pipeline"
+    height: 480
+    direction: left_to_right
+    groups:
+      - id: ingestion
+        label: "Ingestion"
+        color: teal
+      - id: processing
+        label: "Processing Cluster"
+        color: default
+      - id: consumers
+        label: "Consumers"
+        color: green
     nodes:
-      - id: onboarding
-        label: "Onboarding"
-        shape: box
-        color: green
-      - id: architecture
-        label: "Architecture"
+      - id: producers
+        label: "Web & Mobile SDKs"
         shape: box
         color: teal
-      - id: runbook
-        label: "Runbook"
-        shape: box
-        color: red
-      - id: api
-        label: "API Docs"
+        group: ingestion
+      - id: broker
+        label: "Kafka Broker"
         shape: box
         color: teal
-      - id: security
-        label: "Security"
-        shape: box
+        group: ingestion
+        ports:
+          - side: left
+            label: "producers"
+          - side: right
+            label: "consumers"
+      - id: validate
+        label: "Schema Valid?"
+        shape: diamond
         color: yellow
-      - id: faq
-        label: "FAQ"
+        group: processing
+      - id: enrich
+        label: "Enrichment Service"
         shape: box
+        color: default
+        group: processing
+        status: completed
+      - id: dedup
+        label: "Dedup Service"
+        shape: box
+        color: default
+        group: processing
+        status: completed
+      - id: route
+        label: "Route by Event Type"
+        shape: diamond
+        color: yellow
+        group: processing
+      - id: analytics_store
+        label: "Analytics Warehouse"
+        shape: pill
         color: green
+        group: consumers
+        status: completed
+      - id: alerting
+        label: "Alerting Service"
+        shape: pill
+        color: red
+        group: consumers
+        status: active
+      - id: notify_worker
+        label: "Notification Worker"
+        shape: box
+        color: default
+        group: consumers
+        status: upcoming
+      - id: dead_letter
+        label: "Dead Letter Queue"
+        shape: pill
+        color: red
     edges:
-      - from: onboarding
-        to: architecture
-        label: "infra"
-      - from: architecture
-        to: api
-        label: "api"
-      - from: runbook
-        to: architecture
-        label: "ops"
-      - from: security
-        to: architecture
-        label: "policy"
-      - from: faq
-        to: api
-        label: "integration"
-      - from: onboarding
-        to: faq
-        label: "getting started"
+      - from: producers
+        to: broker
+        label: "publish"
+      - from: broker
+        to: validate
+        label: "consume"
+      - from: validate
+        to: enrich
+        label: "valid"
+      - from: validate
+        to: dead_letter
+        label: "invalid"
+        style: dashed
+        color: red
+      - from: enrich
+        to: dedup
+      - from: dedup
+        to: route
+      - from: route
+        to: analytics_store
+        label: "all events"
+      - from: route
+        to: alerting
+        label: "threshold breach"
+      - from: alerting
+        to: notify_worker
+        style: dashed
+        color: yellow
