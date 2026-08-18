@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "storybook-static/**",
+    "_site/**",
     "next-env.d.ts",
     "demos/**",
     "src/generated/**",
