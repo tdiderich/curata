@@ -23,11 +23,11 @@ async function main() {
 
   for (const org of orgs) {
     if (!Array.isArray(org.rules)) continue;
-    const entry = org.rules.find(isOrgTagsEntry);
+    const entry = org.rules.find(isOrgTagsEntry) as { id: string; tags?: unknown } | undefined;
     if (!entry) continue;
 
     const tags = Array.isArray(entry.tags)
-      ? entry.tags.filter((t): t is string => typeof t === "string" && !!t)
+      ? (entry.tags as unknown[]).filter((t): t is string => typeof t === "string" && !!t)
       : [];
 
     if (tags.length > 0) {
