@@ -6623,40 +6623,6 @@ body .c-section.align-right > * { max-width: none !important; }
   overflow-x: auto;
 }
 
-.settings-tab-bar--grouped {
-  align-items: flex-end;
-  gap: 4px;
-}
-
-/* Section grouping: label + row of tabs, separated by a thin divider. */
-.settings-tab-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.settings-tab-group-label {
-  padding: 0 20px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-}
-
-.settings-tab-group-buttons {
-  display: flex;
-}
-
-.settings-tab-group-divider {
-  align-self: stretch;
-  width: 1px;
-  flex-shrink: 0;
-  margin: 0 8px;
-  background: rgba(var(--text-rgb), 0.1);
-}
 
 .settings-tab {
   padding: 10px 20px; font-size: 13px; font-weight: 500;
