@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "prepare": "bash scripts/install-hooks.sh 2>/dev/null || true; bash scripts/install-kazam.sh 2>/dev/null || true",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "find-unused-css": "tsx scripts/find-unused-css.ts"
   },
   "dependencies": {
     "@clerk/mcp-tools": "^0.6.0",
@@ -56,6 +57,9 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "eslint-plugin-storybook": "^10.5.8",
+    "postcss": "^8.5.26",
+    "postcss-selector-parser": "^7.1.5",
+    "postcss-value-parser": "^4.2.0",
     "storybook": "^10.5.8",
     "tsx": "^4.21.0",
     "typescript": "^5",
