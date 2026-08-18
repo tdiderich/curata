@@ -1,0 +1,582 @@
+Unused CSS class report
+Source: src/app/globals.css
+Scanned 78 .tsx files under: src/components, src/app
+
+== Unused classes (267) ==
+No className usage (literal or dynamic-pattern) found in any .tsx file.
+
+  globals.css:73  .doc-root  (selector: body .doc-root)
+  globals.css:4296  .doc-root  (selector: body .doc-root)
+  globals.css:4651  .doc-root  (selector: .page-content-wrap,
+  .container,
+  .doc-root)
+  globals.css:74  .c-section  (selector: body .c-section.align-center > *)
+  globals.css:75  .c-section  (selector: body .c-section.align-right > *)
+  globals.css:74  .align-center  (selector: body .c-section.align-center > *)
+  globals.css:75  .align-right  (selector: body .c-section.align-right > *)
+  globals.css:79  .auth-page  (selector: .auth-page)
+  globals.css:153  .page-toolbar-divider  (selector: .page-toolbar-divider)
+  globals.css:4012  .page-toolbar-divider  (selector: .page-toolbar-divider)
+  globals.css:159  .page-toolbar-btn  (selector: .page-toolbar-btn)
+  globals.css:170  .page-toolbar-btn  (selector: .page-toolbar-btn:hover)
+  globals.css:177  .toolbar-mode-toggle  (selector: .toolbar-mode-toggle)
+  globals.css:190  .toolbar-mode-track  (selector: .toolbar-mode-track)
+  globals.css:200  .toolbar-mode-track  (selector: .toolbar-mode-toggle--edit .toolbar-mode-track)
+  globals.css:200  .toolbar-mode-toggle--edit  (selector: .toolbar-mode-toggle--edit .toolbar-mode-track)
+  globals.css:216  .toolbar-mode-toggle--edit  (selector: .toolbar-mode-toggle--edit .toolbar-mode-thumb)
+  globals.css:205  .toolbar-mode-thumb  (selector: .toolbar-mode-thumb)
+  globals.css:216  .toolbar-mode-thumb  (selector: .toolbar-mode-toggle--edit .toolbar-mode-thumb)
+  globals.css:221  .toolbar-mode-label  (selector: .toolbar-mode-label)
+  globals.css:228  .page-actions-wrap  (selector: .page-actions-wrap)
+  globals.css:232  .page-actions-trigger  (selector: .page-actions-trigger)
+  globals.css:243  .page-actions-trigger  (selector: .page-actions-trigger:hover)
+  globals.css:248  .page-actions-menu  (selector: .page-actions-menu)
+  globals.css:261  .page-actions-item  (selector: .page-actions-item)
+  globals.css:275  .page-actions-item  (selector: .page-actions-item:hover)
+  globals.css:280  .page-actions-section  (selector: .page-actions-section)
+  globals.css:284  .page-actions-stat  (selector: .page-actions-stat)
+  globals.css:290  .page-actions-divider  (selector: .page-actions-divider)
+  globals.css:298  .ann-bar  (selector: .ann-bar)
+  globals.css:4023  .ann-bar  (selector: .ann-bar)
+  globals.css:4635  .ann-bar  (selector: .ann-bar,
+  .ann-margin,
+  .ann-bubble,
+  .ann-bubble--add,
+  .ann-card,
+  .ann-mode-toggle,
+  .ann-highlight-overlay,
+  .page-detail-nav,
+  .page-detail-actions,
+  .page-chrome,
+  .page-toolbar)
+  globals.css:308  .ann-bar-count  (selector: .ann-bar-count)
+  globals.css:4016  .ann-bar-count  (selector: .ann-bar-count,
+  .ann-bar-toggle,
+  .ann-bar-review,
+  .ann-mode-toggle)
+  globals.css:314  .ann-bar-toggle  (selector: .ann-bar-toggle)
+  globals.css:325  .ann-bar-toggle  (selector: .ann-bar-toggle:hover)
+  globals.css:4016  .ann-bar-toggle  (selector: .ann-bar-count,
+  .ann-bar-toggle,
+  .ann-bar-review,
+  .ann-mode-toggle)
+  globals.css:329  .ann-bar-review  (selector: .ann-bar-review)
+  globals.css:342  .ann-bar-review  (selector: .ann-bar-review:hover)
+  globals.css:4016  .ann-bar-review  (selector: .ann-bar-count,
+  .ann-bar-toggle,
+  .ann-bar-review,
+  .ann-mode-toggle)
+  globals.css:347  .ann-bar-review--active  (selector: .ann-bar-review--active)
+  globals.css:353  .ann-mode-toggle  (selector: .ann-mode-toggle)
+  globals.css:4016  .ann-mode-toggle  (selector: .ann-bar-count,
+  .ann-bar-toggle,
+  .ann-bar-review,
+  .ann-mode-toggle)
+  globals.css:4635  .ann-mode-toggle  (selector: .ann-bar,
+  .ann-margin,
+  .ann-bubble,
+  .ann-bubble--add,
+  .ann-card,
+  .ann-mode-toggle,
+  .ann-highlight-overlay,
+  .page-detail-nav,
+  .page-detail-actions,
+  .page-chrome,
+  .page-toolbar)
+  globals.css:361  .ann-mode-btn  (selector: .ann-mode-btn)
+  globals.css:373  .ann-mode-btn  (selector: .ann-mode-btn:first-child)
+  globals.css:382  .ann-mode-btn  (selector: .ann-mode-btn:hover:not(.ann-mode-btn--active))
+  globals.css:377  .ann-mode-btn--active  (selector: .ann-mode-btn--active)
+  globals.css:382  .ann-mode-btn--active  (selector: .ann-mode-btn:hover:not(.ann-mode-btn--active))
+  globals.css:431  .ann-highlight-overlay  (selector: .ann-highlight-overlay)
+  globals.css:437  .ann-highlight-overlay  (selector: .ann-highlight-overlay:hover)
+  globals.css:4635  .ann-highlight-overlay  (selector: .ann-bar,
+  .ann-margin,
+  .ann-bubble,
+  .ann-bubble--add,
+  .ann-card,
+  .ann-mode-toggle,
+  .ann-highlight-overlay,
+  .page-detail-nav,
+  .page-detail-actions,
+  .page-chrome,
+  .page-toolbar)
+  globals.css:443  .c-section--highlighted  (selector: .c-section--highlighted)
+  globals.css:1055  .agent-btn-mt  (selector: .agent-btn-mt)
+  globals.css:1375  .dash-breadcrumb  (selector: .dash-breadcrumb)
+  globals.css:1383  .dash-breadcrumb-link  (selector: .dash-breadcrumb-link)
+  globals.css:1393  .dash-breadcrumb-link  (selector: .dash-breadcrumb-link:hover)
+  globals.css:1397  .dash-breadcrumb-sep  (selector: .dash-breadcrumb-sep)
+  globals.css:1401  .dash-breadcrumb-current  (selector: .dash-breadcrumb-current)
+  globals.css:1420  .dash-actions-wrap  (selector: .dash-actions-wrap)
+  globals.css:1428  .dash-actions-trigger  (selector: .dash-actions-trigger)
+  globals.css:1440  .dash-actions-trigger  (selector: .dash-actions-trigger:hover)
+  globals.css:1445  .dash-actions-menu  (selector: .dash-actions-menu)
+  globals.css:1458  .dash-actions-section-label  (selector: .dash-actions-section-label)
+  globals.css:1467  .dash-actions-item  (selector: .dash-actions-item)
+  globals.css:1483  .dash-actions-item  (selector: .dash-actions-item:hover)
+  globals.css:1488  .dash-actions-item--active  (selector: .dash-actions-item--active)
+  globals.css:1492  .dash-actions-check  (selector: .dash-actions-check)
+  globals.css:1497  .dash-actions-divider  (selector: .dash-actions-divider)
+  globals.css:1503  .dash-actions-folder-row  (selector: .dash-actions-folder-row)
+  globals.css:1509  .dash-new-folder-btn  (selector: .dash-new-folder-btn)
+  globals.css:1522  .dash-new-folder-btn  (selector: .dash-new-folder-btn:hover)
+  globals.css:1587  .dash-folder-td  (selector: .dash-folder-td)
+  globals.css:1596  .dash-folder-td  (selector: .dash-folder-row:hover .dash-folder-td)
+  globals.css:1645  .dash-folder-td  (selector: .dash-folder-row--child .dash-folder-td)
+  globals.css:1596  .dash-folder-row  (selector: .dash-folder-row:hover .dash-folder-td)
+  globals.css:1600  .dash-folder-row-inner  (selector: .dash-folder-row-inner)
+  globals.css:1606  .dash-folder-chevron  (selector: .dash-folder-chevron)
+  globals.css:1615  .dash-folder-chevron  (selector: .dash-folder-row--collapsed .dash-folder-chevron)
+  globals.css:1615  .dash-folder-row--collapsed  (selector: .dash-folder-row--collapsed .dash-folder-chevron)
+  globals.css:1619  .dash-folder-name  (selector: .dash-folder-name)
+  globals.css:1653  .dash-folder-name  (selector: .dash-folder-row--child .dash-folder-name)
+  globals.css:1627  .dash-folder-count  (selector: .dash-folder-count)
+  globals.css:1633  .dash-folder-menu  (selector: .dash-folder-menu)
+  globals.css:1641  .dash-row--deep  (selector: .dash-row--deep .dash-td-title)  [co-occurs in CSS with used class(es): dash-td-title]
+  globals.css:1645  .dash-folder-row--child  (selector: .dash-folder-row--child .dash-folder-td)
+  globals.css:1653  .dash-folder-row--child  (selector: .dash-folder-row--child .dash-folder-name)
+  globals.css:1649  .dash-folder-row-inner--child  (selector: .dash-folder-row-inner--child)
+  globals.css:1660  .dash-folder-drill-hint  (selector: .dash-folder-drill-hint)
+  globals.css:1666  .dash-folder-drill-hint  (selector: .dash-folder-row--drillable:hover .dash-folder-drill-hint)
+  globals.css:1666  .dash-folder-row--drillable  (selector: .dash-folder-row--drillable:hover .dash-folder-drill-hint)
+  globals.css:2165  .members-user-id  (selector: .members-user-id)
+  globals.css:2333  .search-bar-spinner  (selector: .search-bar-spinner)
+  globals.css:2347  .search-dropdown  (selector: .search-dropdown)
+  globals.css:2361  .search-result  (selector: .search-result)
+  globals.css:2376  .search-result  (selector: .search-result:last-child)
+  globals.css:2380  .search-result  (selector: .search-result:hover)
+  globals.css:2384  .search-result-title  (selector: .search-result-title)
+  globals.css:2390  .search-result-match  (selector: .search-result-match)
+  globals.css:2398  .search-no-results  (selector: .search-no-results)
+  globals.css:2453  .dash-view-toggle  (selector: .dash-view-toggle)
+  globals.css:2460  .dash-view-btn  (selector: .dash-view-btn)
+  globals.css:2472  .dash-view-btn  (selector: .dash-view-btn:first-child)
+  globals.css:2481  .dash-view-btn  (selector: .dash-view-btn:hover:not(.dash-view-btn--active))
+  globals.css:2476  .dash-view-btn--active  (selector: .dash-view-btn--active)
+  globals.css:2481  .dash-view-btn--active  (selector: .dash-view-btn:hover:not(.dash-view-btn--active))
+  globals.css:2601  .dash-settings-link  (selector: .dash-settings-link)
+  globals.css:2612  .dash-settings-link  (selector: .dash-settings-link:hover)
+  globals.css:2619  .dash-sort-select  (selector: .dash-sort-select)
+  globals.css:2636  .dash-sort-select  (selector: .dash-sort-select:focus)
+  globals.css:2650  .cleanup-check  (selector: .dash-th-check input,
+.dash-td-check input,
+.cleanup-check)
+  globals.css:2667  .cleanup-check  (selector: .dash-th-check input:hover,
+.dash-td-check input:hover,
+.cleanup-check:hover)
+  globals.css:2674  .cleanup-check  (selector: .dash-th-check input:checked,
+.dash-td-check input:checked,
+.cleanup-check:checked)
+  globals.css:2681  .cleanup-check  (selector: .dash-th-check input:checked::after,
+.dash-td-check input:checked::after,
+.cleanup-check:checked::after)
+  globals.css:6308  .cleanup-check  (selector: .cleanup-check)
+  globals.css:2692  .dash-row--selected  (selector: .dash-row--selected)
+  globals.css:3082  .pe-edit-link  (selector: .pe-edit-link)
+  globals.css:3093  .pe-edit-link  (selector: .pe-edit-link:hover)
+  globals.css:3098  .pe-root  (selector: .pe-root)
+  globals.css:3104  .pe-meta  (selector: .pe-meta)
+  globals.css:3111  .pe-field  (selector: .pe-field)
+  globals.css:3117  .pe-label  (selector: .pe-label)
+  globals.css:3141  .pe-input-title  (selector: .pe-input-title)
+  globals.css:3150  .pe-input-title  (selector: .pe-input-title::placeholder)
+  globals.css:3154  .pe-input-title  (selector: .pe-input-title:focus)
+  globals.css:3158  .pe-input-subtitle  (selector: .pe-input-subtitle)
+  globals.css:3166  .pe-input-subtitle  (selector: .pe-input-subtitle::placeholder)
+  globals.css:3170  .pe-input-subtitle  (selector: .pe-input-subtitle:focus)
+  globals.css:3174  .pe-input-short  (selector: .pe-input-short)
+  globals.css:3189  .pe-textarea  (selector: .pe-textarea)
+  globals.css:3202  .pe-textarea  (selector: .pe-textarea:focus)
+  globals.css:3207  .pe-textarea-code  (selector: .pe-textarea-code)
+  globals.css:3212  .pe-components  (selector: .pe-components)
+  globals.css:3218  .pe-component  (selector: .pe-component)
+  globals.css:3225  .pe-component  (selector: .pe-component:hover)
+  globals.css:3229  .pe-component  (selector: .pe-component:focus-within)
+  globals.css:3242  .pe-component  (selector: .pe-component:hover .pe-component-header,
+.pe-component:focus-within .pe-component-header)
+  globals.css:3242  .pe-component  (selector: .pe-component:hover .pe-component-header,
+.pe-component:focus-within .pe-component-header)
+  globals.css:3233  .pe-component-header  (selector: .pe-component-header)
+  globals.css:3242  .pe-component-header  (selector: .pe-component:hover .pe-component-header,
+.pe-component:focus-within .pe-component-header)
+  globals.css:3242  .pe-component-header  (selector: .pe-component:hover .pe-component-header,
+.pe-component:focus-within .pe-component-header)
+  globals.css:3247  .pe-component-type  (selector: .pe-component-type)
+  globals.css:3255  .pe-component-actions  (selector: .pe-component-actions)
+  globals.css:3260  .pe-move-btn  (selector: .pe-move-btn, .pe-remove-btn)
+  globals.css:3271  .pe-move-btn  (selector: .pe-move-btn:hover)
+  globals.css:3260  .pe-remove-btn  (selector: .pe-move-btn, .pe-remove-btn)
+  globals.css:3276  .pe-remove-btn  (selector: .pe-remove-btn:hover)
+  globals.css:3281  .pe-component-body  (selector: .pe-component-body)
+  globals.css:3288  .pe-divider-label  (selector: .pe-divider-label)
+  globals.css:3294  .pe-list-editor  (selector: .pe-list-editor)
+  globals.css:3300  .pe-list-item  (selector: .pe-list-item)
+  globals.css:3310  .pe-list-item-row  (selector: .pe-list-item-row)
+  globals.css:3316  .pe-list-remove  (selector: .pe-list-remove)
+  globals.css:3325  .pe-list-remove  (selector: .pe-list-remove:hover)
+  globals.css:3329  .pe-list-add  (selector: .pe-list-add)
+  globals.css:3340  .pe-list-add  (selector: .pe-list-add:hover)
+  globals.css:3345  .pe-table-editor  (selector: .pe-table-editor)
+  globals.css:3351  .pe-table-grid  (selector: .pe-table-grid)
+  globals.css:3356  .pe-table-header  (selector: .pe-table-header)
+  globals.css:3360  .pe-table-actions  (selector: .pe-table-actions)
+  globals.css:3365  .pe-add-wrap  (selector: .pe-add-wrap)
+  globals.css:3370  .pe-add-btn  (selector: .pe-add-btn)
+  globals.css:3384  .pe-add-btn  (selector: .pe-add-btn:hover)
+  globals.css:3389  .pe-add-menu  (selector: .pe-add-menu)
+  globals.css:3406  .pe-add-option  (selector: .pe-add-option)
+  globals.css:3421  .pe-add-option  (selector: .pe-add-option:hover)
+  globals.css:3426  .pe-add-option-icon  (selector: .pe-add-option-icon)
+  globals.css:3441  .pe-add-option-label  (selector: .pe-add-option-label)
+  globals.css:3448  .pe-add-option-desc  (selector: .pe-add-option-desc)
+  globals.css:3454  .pe-saved  (selector: .pe-saved)
+  globals.css:3497  .onboarding-root  (selector: .onboarding-root)
+  globals.css:3503  .onboarding-steps  (selector: .onboarding-steps)
+  globals.css:3509  .onboarding-step  (selector: .onboarding-step)
+  globals.css:3515  .onboarding-step-number  (selector: .onboarding-step-number)
+  globals.css:3531  .onboarding-step-body  (selector: .onboarding-step-body)  [co-occurs in CSS with used class(es): agent-step]
+  globals.css:3563  .onboarding-step-body  (selector: .onboarding-step-body .agent-step)  [co-occurs in CSS with used class(es): agent-step]
+  globals.css:3538  .onboarding-step-title  (selector: .onboarding-step-title)
+  globals.css:3545  .onboarding-step-desc  (selector: .onboarding-step-desc)
+  globals.css:3552  .onboarding-org-name  (selector: .onboarding-org-name)
+  globals.css:3557  .onboarding-dashboard-link  (selector: .onboarding-dashboard-link)
+  globals.css:4109  .dash-table-wrap  (selector: .dash-table-wrap)
+  globals.css:4131  .theme-toggle-group  (selector: .theme-toggle-group)
+  globals.css:4168  .legal-page  (selector: .legal-page)
+  globals.css:4176  .legal-page  (selector: .legal-page h1)
+  globals.css:4183  .legal-page  (selector: .legal-page .legal-updated)
+  globals.css:4188  .legal-page  (selector: .legal-page h2)
+  globals.css:4194  .legal-page  (selector: .legal-page p)
+  globals.css:4195  .legal-page  (selector: .legal-page ul)
+  globals.css:4199  .legal-page  (selector: .legal-page li)
+  globals.css:4200  .legal-page  (selector: .legal-page a)
+  globals.css:4205  .legal-page  (selector: .legal-page a:hover)
+  globals.css:4183  .legal-updated  (selector: .legal-page .legal-updated)
+  globals.css:4209  .site-footer  (selector: .site-footer)
+  globals.css:4219  .site-footer  (selector: .site-footer a)
+  globals.css:4224  .site-footer  (selector: .site-footer a:hover)
+  globals.css:4228  .docs-main  (selector: .docs-main)
+  globals.css:4320  .docs-main  (selector: .docs-main)
+  globals.css:4234  .docs-index-header  (selector: .docs-index-header)
+  globals.css:4238  .docs-index-title  (selector: .docs-index-title)
+  globals.css:4245  .docs-index-subtitle  (selector: .docs-index-subtitle)
+  globals.css:4252  .docs-index-grid  (selector: .docs-index-grid)
+  globals.css:4319  .docs-index-grid  (selector: .docs-index-grid)
+  globals.css:4258  .docs-index-card  (selector: .docs-index-card)
+  globals.css:4268  .docs-index-card  (selector: .docs-index-card:hover)
+  globals.css:4273  .docs-index-card-title  (selector: .docs-index-card-title)
+  globals.css:4280  .docs-index-card-desc  (selector: .docs-index-card-desc)
+  globals.css:4287  .docs-page  (selector: .docs-page)
+  globals.css:4302  .dash-sidebar  (selector: .dash-sidebar)
+  globals.css:4305  .c-card-grid  (selector: .c-card-grid)
+  globals.css:4306  .c-stat-grid  (selector: .c-stat-grid)
+  globals.css:4309  .c-table  (selector: .c-table)
+  globals.css:4313  .site-bar-right  (selector: .site-bar-right)
+  globals.css:4316  .docs-start-title  (selector: .docs-start-title)
+  globals.css:4317  .docs-start-pre  (selector: .docs-start-pre)
+  globals.css:4318  .docs-start-try  (selector: .docs-start-try)
+  globals.css:4323  .landing-hero  (selector: .landing-hero)
+  globals.css:4335  .landing-hero  (selector: .landing-hero)
+  globals.css:4570  .landing-hero  (selector: .landing-hero)
+  globals.css:4324  .landing-demo  (selector: .landing-demo)
+  globals.css:4340  .landing-demo  (selector: .landing-demo)
+  globals.css:4574  .landing-demo  (selector: .landing-demo)
+  globals.css:4346  .landing-video-wrap  (selector: .landing-video-wrap)
+  globals.css:4356  .landing-video  (selector: .landing-video)
+  globals.css:4362  .landing-loop-section  (selector: .landing-loop-section)
+  globals.css:4579  .landing-loop-section  (selector: .landing-loop-section)
+  globals.css:4368  .landing-manifesto  (selector: .landing-manifesto)
+  globals.css:4618  .landing-manifesto  (selector: .landing-manifesto)
+  globals.css:4374  .landing-templates  (selector: .landing-templates)
+  globals.css:4623  .landing-templates  (selector: .landing-templates)
+  globals.css:4381  .landing-templates-heading  (selector: .landing-templates-heading)
+  globals.css:4390  .landing-templates-sub  (selector: .landing-templates-sub)
+  globals.css:4396  .landing-templates-grid  (selector: .landing-templates-grid)
+  globals.css:4627  .landing-templates-grid  (selector: .landing-templates-grid)
+  globals.css:4403  .landing-template-tag  (selector: .landing-template-tag)
+  globals.css:4411  .landing-template-title  (selector: .landing-template-title)
+  globals.css:4419  .landing-template-desc  (selector: .landing-template-desc)
+  globals.css:4426  .landing-templates-footer  (selector: .landing-templates-footer)
+  globals.css:4430  .landing-templates-browse  (selector: .landing-templates-browse)
+  globals.css:4438  .landing-templates-browse  (selector: .landing-templates-browse:hover)
+  globals.css:4444  .landing-loop  (selector: .landing-loop)
+  globals.css:4584  .landing-loop  (selector: .landing-loop)
+  globals.css:4453  .landing-loop-step  (selector: .landing-loop-step)
+  globals.css:4590  .landing-loop-step  (selector: .landing-loop-step)
+  globals.css:4463  .landing-loop-icon  (selector: .landing-loop-icon)
+  globals.css:4477  .landing-loop-title  (selector: .landing-loop-title)
+  globals.css:4484  .landing-loop-desc  (selector: .landing-loop-desc)
+  globals.css:4491  .landing-loop-arrow  (selector: .landing-loop-arrow)
+  globals.css:4501  .landing-loop-arrow  (selector: .landing-loop-arrow::after)
+  globals.css:4595  .landing-loop-arrow  (selector: .landing-loop-arrow)
+  globals.css:4603  .landing-loop-arrow  (selector: .landing-loop-arrow::after)
+  globals.css:4514  .landing-install  (selector: .landing-install)
+  globals.css:4610  .landing-install  (selector: .landing-install)
+  globals.css:4521  .landing-install-heading  (selector: .landing-install-heading)
+  globals.css:4530  .landing-install-sub  (selector: .landing-install-sub)
+  globals.css:4536  .landing-install-steps  (selector: .landing-install-steps)
+  globals.css:4614  .landing-install-steps  (selector: .landing-install-steps)
+  globals.css:4543  .landing-install-label  (selector: .landing-install-label)
+  globals.css:4553  .landing-install-code  (selector: .landing-install-code)
+  globals.css:4565  .landing-install-code  (selector: .landing-install-code code)
+  globals.css:4635  .page-detail-nav  (selector: .ann-bar,
+  .ann-margin,
+  .ann-bubble,
+  .ann-bubble--add,
+  .ann-card,
+  .ann-mode-toggle,
+  .ann-highlight-overlay,
+  .page-detail-nav,
+  .page-detail-actions,
+  .page-chrome,
+  .page-toolbar)
+  globals.css:4635  .page-detail-actions  (selector: .ann-bar,
+  .ann-margin,
+  .ann-bubble,
+  .ann-bubble--add,
+  .ann-card,
+  .ann-mode-toggle,
+  .ann-highlight-overlay,
+  .page-detail-nav,
+  .page-detail-actions,
+  .page-chrome,
+  .page-toolbar)
+  globals.css:4635  .page-chrome  (selector: .ann-bar,
+  .ann-margin,
+  .ann-bubble,
+  .ann-bubble--add,
+  .ann-card,
+  .ann-mode-toggle,
+  .ann-highlight-overlay,
+  .page-detail-nav,
+  .page-detail-actions,
+  .page-chrome,
+  .page-toolbar)
+  globals.css:4768  .cm-editor  (selector: .source-editor-cm .cm-editor)  [co-occurs in CSS with used class(es): source-editor-cm]
+  globals.css:4772  .cm-gutters  (selector: .source-editor-cm .cm-gutters)  [co-occurs in CSS with used class(es): source-editor-cm]
+  globals.css:4778  .c-section-heading  (selector: .c-section-heading)
+  globals.css:4800  .c-section-heading  (selector: .c-section-heading:hover .section-anchor,
+.section-anchor:focus-visible)
+  globals.css:4782  .section-anchor  (selector: .section-anchor)
+  globals.css:4800  .section-anchor  (selector: .c-section-heading:hover .section-anchor,
+.section-anchor:focus-visible)
+  globals.css:4800  .section-anchor  (selector: .c-section-heading:hover .section-anchor,
+.section-anchor:focus-visible)
+  globals.css:4805  .section-anchor  (selector: .section-anchor:hover)
+  globals.css:4810  .section-anchor--copied  (selector: .section-anchor--copied)
+  globals.css:4925  .dragging  (selector: .dragging)
+  globals.css:4929  .drop-indicator  (selector: .drop-indicator)
+  globals.css:5252  .cm-tooltip-autocomplete  (selector: .source-editor-cm .cm-tooltip-autocomplete)  [co-occurs in CSS with used class(es): source-editor-cm]
+  globals.css:5261  .cm-tooltip-autocomplete  (selector: .source-editor-cm .cm-tooltip-autocomplete ul)  [co-occurs in CSS with used class(es): source-editor-cm]
+  globals.css:5266  .cm-tooltip-autocomplete  (selector: .source-editor-cm .cm-tooltip-autocomplete li)  [co-occurs in CSS with used class(es): source-editor-cm]
+  globals.css:5274  .cm-tooltip-autocomplete  (selector: .source-editor-cm .cm-tooltip-autocomplete li[aria-selected])  [co-occurs in CSS with used class(es): source-editor-cm]
+  globals.css:5279  .cm-completionLabel  (selector: .source-editor-cm .cm-completionLabel)  [co-occurs in CSS with used class(es): source-editor-cm]
+  globals.css:5285  .cm-completionDetail  (selector: .source-editor-cm .cm-completionDetail)  [co-occurs in CSS with used class(es): source-editor-cm]
+  globals.css:5292  .cm-completionInfo  (selector: .source-editor-cm .cm-completionInfo)  [co-occurs in CSS with used class(es): source-editor-cm]
+  globals.css:5304  .concepts-root  (selector: .concepts-root)
+  globals.css:5308  .concepts-header  (selector: .concepts-header)
+  globals.css:5312  .concepts-title  (selector: .concepts-title)
+  globals.css:5319  .concepts-subtitle  (selector: .concepts-subtitle)
+  globals.css:5325  .concepts-gap  (selector: .concepts-gap)
+  globals.css:5329  .concepts-controls  (selector: .concepts-controls)
+  globals.css:5335  .concepts-search  (selector: .concepts-search)
+  globals.css:5348  .concepts-search  (selector: .concepts-search:focus)
+  globals.css:5352  .concepts-kind-filter  (selector: .concepts-kind-filter)
+  globals.css:5364  .concepts-layout  (selector: .concepts-layout)
+  globals.css:5372  .concepts-layout  (selector: .concepts-layout)
+  globals.css:5377  .concepts-list  (selector: .concepts-list)
+  globals.css:5382  .concepts-table  (selector: .concepts-table)
+  globals.css:5388  .concepts-table  (selector: .concepts-table th)
+  globals.css:5403  .concepts-row  (selector: .concepts-row)
+  globals.css:5408  .concepts-row  (selector: .concepts-row:hover)
+  globals.css:5420  .concepts-row  (selector: .concepts-row td)
+  globals.css:5412  .concepts-row--active  (selector: .concepts-row--active)
+  globals.css:5416  .concepts-row--active  (selector: .concepts-row--active:hover)
+  globals.css:5425  .concepts-term  (selector: .concepts-term)
+  globals.css:5430  .concepts-count  (selector: .concepts-count)
+  globals.css:5436  .concepts-kind-badge  (selector: .concepts-kind-badge)
+  globals.css:5448  .concepts-kind-badge--lg  (selector: .concepts-kind-badge--lg)
+  globals.css:5454  .concepts-empty  (selector: .concepts-empty)
+  globals.css:5460  .concepts-detail  (selector: .concepts-detail)
+  globals.css:5469  .concepts-detail-title  (selector: .concepts-detail-title)
+  globals.css:5476  .concepts-detail-section  (selector: .concepts-detail-section)
+  globals.css:5485  .concepts-detail-empty  (selector: .concepts-detail-empty)
+  globals.css:5495  .concepts-page-list  (selector: .concepts-page-list)
+  globals.css:5501  .concepts-page-list  (selector: .concepts-page-list li)
+  globals.css:5506  .concepts-page-list  (selector: .concepts-page-list li:last-child)
+  globals.css:5510  .concepts-page-link  (selector: .concepts-page-link)
+  globals.css:5516  .concepts-page-link  (selector: .concepts-page-link:hover)
+  globals.css:5520  .concepts-link-list  (selector: .concepts-link-list)
+  globals.css:5526  .concepts-link-item  (selector: .concepts-link-item)
+  globals.css:5535  .concepts-link-item  (selector: .concepts-link-item:last-child)
+  globals.css:5539  .concepts-link-item  (selector: .concepts-link-item a)
+  globals.css:5544  .concepts-link-item  (selector: .concepts-link-item a:hover)
+  globals.css:5548  .concepts-link-rel  (selector: .concepts-link-rel)
+  globals.css:5667  .dash-home  (selector: .dash-home)
+  globals.css:5708  .dash-quick-cards  (selector: .dash-quick-cards)
+  globals.css:5714  .dash-quick-card  (selector: .dash-quick-card)
+  globals.css:5728  .dash-quick-card  (selector: .dash-quick-card:hover)
+  globals.css:5730  .dash-quick-star  (selector: .dash-quick-star)
+  globals.css:5732  .dash-quick-card-title  (selector: .dash-quick-card-title)
+  globals.css:5755  .dash-palette-btn  (selector: .dash-palette-btn)
+  globals.css:5769  .dash-palette-btn  (selector: .dash-palette-btn:hover)
+  globals.css:5771  .dash-palette-kbd  (selector: .dash-palette-kbd)
+  globals.css:6644  .cr-list  (selector: .cr-list)
+  globals.css:6646  .cr-row  (selector: .cr-row)  [co-occurs in CSS with used class(es): cr-editor]
+  globals.css:6649  .cr-row  (selector: .cr-row:first-child)  [co-occurs in CSS with used class(es): cr-editor]
+  globals.css:7500  .cr-row  (selector: .cr-editor .cr-row)  [co-occurs in CSS with used class(es): cr-editor]
+  globals.css:7503  .cr-row  (selector: .cr-editor .cr-row:last-child)  [co-occurs in CSS with used class(es): cr-editor]
+  globals.css:6651  .cr-row-summary  (selector: .cr-row-summary)
+  globals.css:6655  .cr-row-summary  (selector: .cr-row-summary:hover)
+  globals.css:6686  .cr-row-summary  (selector: .cr-row-summary:hover .cr-row-actions)
+  globals.css:6663  .cr-row-text  (selector: .cr-row-text)
+  globals.css:6669  .cr-row-meta  (selector: .cr-row-meta)
+  globals.css:6671  .cr-chip  (selector: .cr-chip)
+  globals.css:6675  .cr-chip--enforced  (selector: .cr-chip--enforced)
+  globals.css:6678  .cr-chip--guidance  (selector: .cr-chip--guidance)
+  globals.css:6682  .cr-row-actions  (selector: .cr-row-actions)
+  globals.css:6686  .cr-row-actions  (selector: .cr-row-summary:hover .cr-row-actions)
+  globals.css:6687  .cr-row-actions  (selector: .cr-row-actions button)
+  globals.css:6692  .cr-row-actions  (selector: .cr-row-actions button:hover)
+  globals.css:6693  .cr-row-delete  (selector: .cr-row-delete:hover)
+  globals.css:6696  .cr-detail  (selector: .cr-detail)
+  globals.css:6702  .cr-detail-label  (selector: .cr-detail-label)
+  globals.css:6705  .cr-detail-patterns  (selector: .cr-detail-patterns)
+  globals.css:6708  .cr-pattern-chip  (selector: .cr-pattern-chip)
+  globals.css:6716  .cr-edit-form  (selector: .cr-edit-form)
+  globals.css:6717  .cr-edit-text  (selector: .cr-edit-text)
+  globals.css:6719  .cr-field-label  (selector: .cr-field-label)
+  globals.css:6725  .cr-mode-row  (selector: .cr-mode-row)
+  globals.css:6726  .cr-mode-select  (selector: .cr-mode-select)
+  globals.css:6727  .cr-mode-hint  (selector: .cr-mode-hint)
+  globals.css:6732  .cr-bottom  (selector: .cr-bottom)
+  globals.css:6735  .cr-inline-add  (selector: .cr-inline-add)
+  globals.css:6736  .cr-inline-input  (selector: .cr-inline-input)
+  globals.css:6742  .cr-inline-input  (selector: .cr-inline-input:focus)
+  globals.css:6743  .cr-inline-input  (selector: .cr-inline-input::placeholder)
+  globals.css:6744  .cr-inline-input  (selector: .cr-inline-input:disabled)
+  globals.css:6746  .approval-editor-lists  (selector: .approval-editor-lists)
+  globals.css:6747  .approval-editor-section  (selector: .approval-editor-section)
+  globals.css:6748  .approval-editor-row  (selector: .approval-editor-row)
+  globals.css:6758  .pattern-pills-wrap  (selector: .pattern-pills-wrap)
+  globals.css:6763  .pattern-pills-wrap  (selector: .pattern-pills-wrap:focus-within)
+  globals.css:6765  .pattern-pill  (selector: .pattern-pill)
+  globals.css:6770  .pattern-pill  (selector: .pattern-pill code)
+  globals.css:6773  .pattern-pill-x  (selector: .pattern-pill-x)
+  globals.css:6778  .pattern-pill-x  (selector: .pattern-pill-x:hover)
+  globals.css:6780  .pattern-pills-input  (selector: .pattern-pills-input)
+  globals.css:6786  .pattern-pills-input  (selector: .pattern-pills-input::placeholder)
+  globals.css:6949  .kg-tag-error  (selector: .kg-tag-error)
+  globals.css:6953  .kg-focus-list  (selector: .kg-focus-list)  [co-occurs in CSS with used class(es): activity-content, activity-body, activity-meta]
+  globals.css:7008  .kg-focus-list  (selector: .kg-focus-list a:hover)  [co-occurs in CSS with used class(es): activity-content, activity-body, activity-meta]
+  globals.css:7142  .kg-focus-list  (selector: .kg-focus-list .activity-content,
+.kg-untagged-scroll .activity-content)  [co-occurs in CSS with used class(es): activity-content, activity-body, activity-meta]
+  globals.css:7148  .kg-focus-list  (selector: .kg-focus-list .activity-body,
+.kg-untagged-scroll .activity-body,
+.kg-focus-list .activity-meta,
+.kg-untagged-scroll .activity-meta)  [co-occurs in CSS with used class(es): activity-content, activity-body, activity-meta]
+  globals.css:7148  .kg-focus-list  (selector: .kg-focus-list .activity-body,
+.kg-untagged-scroll .activity-body,
+.kg-focus-list .activity-meta,
+.kg-untagged-scroll .activity-meta)  [co-occurs in CSS with used class(es): activity-content, activity-body, activity-meta]
+  globals.css:7492  .cr-head-row  (selector: .cr-head-row)
+  globals.css:7496  .cr-th-enforcement  (selector: .cr-th-enforcement)
+  globals.css:7506  .org-tags  (selector: .org-tags)
+  globals.css:7511  .org-tags-head  (selector: .org-tags-head)
+  globals.css:7517  .org-tags-title  (selector: .org-tags-title)
+  globals.css:7522  .org-tags-hint  (selector: .org-tags-hint)
+  globals.css:7885  .stg-seg-hint  (selector: .stg-seg-hint)
+  globals.css:7950  .kg-label-in  (selector: .kg-label-in)
+  globals.css:7953  .kg-label-count  (selector: .kg-label-count)
+  globals.css:8045  .billing-plans  (selector: .billing-plans)
+  globals.css:8053  .pricing-card  (selector: .pricing-card)
+  globals.css:8063  .pricing-card--featured  (selector: .pricing-card--featured,
+.pricing-card--current)
+  globals.css:8063  .pricing-card--current  (selector: .pricing-card--featured,
+.pricing-card--current)
+  globals.css:8070  .billing-plan-name  (selector: .billing-plan-name)
+  globals.css:8078  .billing-plan-price  (selector: .billing-plan-price)
+  globals.css:8084  .billing-plan-price-unit  (selector: .billing-plan-price-unit)
+  globals.css:8090  .billing-plan-sub  (selector: .billing-plan-sub,
+.billing-plan-hint,
+.billing-plan-current-note)
+  globals.css:8090  .billing-plan-hint  (selector: .billing-plan-sub,
+.billing-plan-hint,
+.billing-plan-current-note)
+  globals.css:8090  .billing-plan-current-note  (selector: .billing-plan-sub,
+.billing-plan-hint,
+.billing-plan-current-note)
+  globals.css:8097  .billing-plan-total  (selector: .billing-plan-total)
+  globals.css:8103  .billing-plan-cta  (selector: .billing-plan-cta)
+  globals.css:8108  .billing-plan-actions  (selector: .billing-plan-actions)
+
+== Possible dynamic (41) ==
+Matches a dynamic prefix/suffix fragment from a template literal or
+concatenation (e.g. `${prefix}-foo`); not confirmed used, not counted as unused.
+
+  globals.css:1690  .dash-visibility-badge--personal  (selector: .dash-visibility-badge--personal)  [matches: dash-visibility-badge--*]
+  globals.css:1695  .dash-visibility-badge--shared  (selector: .dash-visibility-badge--shared)  [matches: dash-visibility-badge--*]
+  globals.css:1700  .dash-visibility-badge--public  (selector: .dash-visibility-badge--public)  [matches: dash-visibility-badge--*]
+  globals.css:2183  .members-role-badge--owner  (selector: .members-role-badge--owner)  [matches: members-role-badge--*]
+  globals.css:2188  .members-role-badge--admin  (selector: .members-role-badge--admin)  [matches: members-role-badge--*]
+  globals.css:2193  .members-role-badge--member  (selector: .members-role-badge--member,
+.members-role-badge--viewer)  [matches: members-role-badge--*]
+  globals.css:2193  .members-role-badge--viewer  (selector: .members-role-badge--member,
+.members-role-badge--viewer)  [matches: members-role-badge--*]
+  globals.css:3669  .vis-picker-trigger--private  (selector: .vis-picker-trigger--private)  [matches: vis-picker-trigger--*]
+  globals.css:3670  .vis-picker-trigger--org  (selector: .vis-picker-trigger--org)  [matches: vis-picker-trigger--*]
+  globals.css:3671  .vis-picker-trigger--public  (selector: .vis-picker-trigger--public)  [matches: vis-picker-trigger--*]
+  globals.css:5590  .toast--error  (selector: .toast--error)  [matches: toast--*]
+  globals.css:5591  .toast--error  (selector: .toast--error .toast-message)  [matches: toast--*]
+  globals.css:5592  .toast--success  (selector: .toast--success)  [matches: toast--*]
+  globals.css:5651  .site-search-hit-type--page  (selector: .site-search-hit-type--page)  [matches: site-search-hit*]
+  globals.css:5655  .site-search-hit-type--prompt  (selector: .site-search-hit-type--prompt)  [matches: site-search-hit*]
+  globals.css:5976  .nav-pin-dropzone--before  (selector: .nav-pin-dropzone--before::before,
+.nav-pin-dropzone--after::after)  [matches: nav-pin-dropzone*]
+  globals.css:5986  .nav-pin-dropzone--before  (selector: .nav-pin-dropzone--before::before)  [matches: nav-pin-dropzone*]
+  globals.css:5976  .nav-pin-dropzone--after  (selector: .nav-pin-dropzone--before::before,
+.nav-pin-dropzone--after::after)  [matches: nav-pin-dropzone*]
+  globals.css:5987  .nav-pin-dropzone--after  (selector: .nav-pin-dropzone--after::after)  [matches: nav-pin-dropzone*]
+  globals.css:6334  .cleanup-chip--superseded  (selector: .cleanup-chip--superseded, .cleanup-chip--duplicate)  [matches: cleanup-chip--*]
+  globals.css:6334  .cleanup-chip--duplicate  (selector: .cleanup-chip--superseded, .cleanup-chip--duplicate)  [matches: cleanup-chip--*]
+  globals.css:6335  .cleanup-chip--stale  (selector: .cleanup-chip--stale, .cleanup-chip--one-off-expired)  [matches: cleanup-chip--*]
+  globals.css:6335  .cleanup-chip--one-off-expired  (selector: .cleanup-chip--stale, .cleanup-chip--one-off-expired)  [matches: cleanup-chip--*]
+  globals.css:6336  .cleanup-chip--shipped-not-closed  (selector: .cleanup-chip--shipped-not-closed)  [matches: cleanup-chip--*]
+  globals.css:6339  .cleanup-conf--high  (selector: .cleanup-conf--high)  [matches: cleanup-conf--*]
+  globals.css:6340  .cleanup-conf--medium  (selector: .cleanup-conf--medium)  [matches: cleanup-conf--*]
+  globals.css:6341  .cleanup-conf--low  (selector: .cleanup-conf--low)  [matches: cleanup-conf--*]
+  globals.css:6595  .activity-row--accent  (selector: .activity-row--accent .activity-icon)  [matches: activity-row--*]
+  globals.css:6596  .activity-row--yellow  (selector: .activity-row--yellow .activity-icon)  [matches: activity-row--*]
+  globals.css:6597  .activity-row--red  (selector: .activity-row--red .activity-icon)  [matches: activity-row--*]
+  globals.css:6660  .cr-dot--block  (selector: .cr-dot--block)  [matches: cr-dot--*]
+  globals.css:6661  .cr-dot--warn  (selector: .cr-dot--warn)  [matches: cr-dot--*]
+  globals.css:7411  .pg-tag-k-vendor  (selector: .pg-tag-k-vendor)  [matches: pg-tag-k-*]
+  globals.css:7443  .pg-tag-k-vendor  (selector: .pg-tag-k-vendor .pg-tag-kind-dot)  [matches: pg-tag-k-*]
+  globals.css:7415  .pg-tag-k-finding  (selector: .pg-tag-k-finding)  [matches: pg-tag-k-*]
+  globals.css:7444  .pg-tag-k-finding  (selector: .pg-tag-k-finding .pg-tag-kind-dot)  [matches: pg-tag-k-*]
+  globals.css:7419  .pg-tag-k-framework  (selector: .pg-tag-k-framework)  [matches: pg-tag-k-*]
+  globals.css:7445  .pg-tag-k-framework  (selector: .pg-tag-k-framework .pg-tag-kind-dot)  [matches: pg-tag-k-*]
+  globals.css:7442  .pg-dot-framework  (selector: .pg-dot-framework)  [matches: pg-dot-*]
+  globals.css:7738  .pill--block  (selector: .pill--block)  [matches: pill--*]
+  globals.css:7739  .pill--block  (selector: .pill--block .pill-dot)  [matches: pill--*]
+  globals.css:7740  .pill--review  (selector: .pill--review)  [matches: pill--*]
+  globals.css:7741  .pill--review  (selector: .pill--review .pill-dot)  [matches: pill--*]
+  globals.css:7742  .pill--guidance  (selector: .pill--guidance)  [matches: pill--*]
+  globals.css:7743  .pill--guidance  (selector: .pill--guidance .pill-dot)  [matches: pill--*]
+  globals.css:7744  .pill--approval  (selector: .pill--approval)  [matches: pill--*]
+  globals.css:7745  .pill--approval  (selector: .pill--approval .pill-dot)  [matches: pill--*]
+  globals.css:7746  .pill--topic  (selector: .pill--topic)  [matches: pill--*]
+  globals.css:7747  .pill--topic  (selector: .pill--topic .pill-dot)  [matches: pill--*]
+  globals.css:7748  .pill--vendor  (selector: .pill--vendor)  [matches: pill--*]
+  globals.css:7749  .pill--vendor  (selector: .pill--vendor .pill-dot)  [matches: pill--*]
+  globals.css:7750  .pill--finding  (selector: .pill--finding)  [matches: pill--*]
+  globals.css:7751  .pill--finding  (selector: .pill--finding .pill-dot)  [matches: pill--*]
+  globals.css:7752  .pill--framework  (selector: .pill--framework)  [matches: pill--*]
+  globals.css:7753  .pill--framework  (selector: .pill--framework .pill-dot)  [matches: pill--*]
+
+== Summary ==
+  Total distinct classes in globals.css: 939
+  Used (literal className match):        631
+  Possible dynamic (not confirmed):      41
+  Unused:                                267
