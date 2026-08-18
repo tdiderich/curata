@@ -124,7 +124,7 @@ export async function PATCH(request: NextRequest) {
       const collision = await db.concept.findUnique({ where: { normalizedName: normalized } });
       if (collision) {
         return NextResponse.json(
-          { error: "a tag with that name already exists — merging tags isn't supported yet" },
+          { error: "a tag with that name already exists - use Merge instead" },
           { status: 409 }
         );
       }
@@ -151,7 +151,7 @@ export async function PATCH(request: NextRequest) {
     // letting the unique-constraint violation surface as a 500.
     if (data.normalizedName && err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       return NextResponse.json(
-        { error: "a tag with that name already exists — merging tags isn't supported yet" },
+        { error: "a tag with that name already exists - use Merge instead" },
         { status: 409 }
       );
     }
@@ -167,6 +167,79 @@ export async function PATCH(request: NextRequest) {
   }).catch(() => {});
 
   const pageCount = await db.pageConcept.count({ where: { conceptId, page: { orgId: ctx.orgId, status: "active" } } });
+  return NextResponse.json({
+    concept: { id: updated.id, term: updated.displayName, kind: updated.kind || DEFAULT_KIND, pageCount },
+  });
+}
+
+/**
+ * Merges source concept into target: PageConcept rows reassigned (deduped),
+ * usage recomputed, source row hard-deleted.
+ */
+export async function PUT(request: NextRequest) {
+  const ctx = await resolveOrg();
+  if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!requireManage(ctx.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  let body: { sourceConceptId?: string; targetConceptId?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
+  }
+  const { sourceConceptId, targetConceptId } = body;
+  if (!sourceConceptId || !targetConceptId) {
+    return NextResponse.json({ error: "sourceConceptId and targetConceptId are required" }, { status: 400 });
+  }
+  if (sourceConceptId === targetConceptId) {
+    return NextResponse.json({ error: "cannot merge a tag into itself" }, { status: 400 });
+  }
+
+  const [source, target] = await Promise.all([
+    db.concept.findUnique({ where: { id: sourceConceptId } }),
+    db.concept.findUnique({ where: { id: targetConceptId } }),
+  ]);
+  if (!source) return NextResponse.json({ error: "source tag not found" }, { status: 404 });
+  if (!target) return NextResponse.json({ error: "target tag not found" }, { status: 404 });
+
+  const [sourceUsedByOrg, targetUsedByOrg] = await Promise.all([
+    db.pageConcept.findFirst({ where: { conceptId: sourceConceptId, page: { orgId: ctx.orgId, status: "active" } } }),
+    db.pageConcept.findFirst({ where: { conceptId: targetConceptId, page: { orgId: ctx.orgId, status: "active" } } }),
+  ]);
+  if (!sourceUsedByOrg) return NextResponse.json({ error: "source tag not used by this organization" }, { status: 404 });
+  if (!targetUsedByOrg) return NextResponse.json({ error: "target tag not used by this organization" }, { status: 404 });
+
+  const updated = await db.$transaction(async (tx) => {
+    const sourcePageConcepts = await tx.pageConcept.findMany({ where: { conceptId: sourceConceptId } });
+
+    for (const pc of sourcePageConcepts) {
+      const targetHasPage = await tx.pageConcept.findFirst({
+        where: { conceptId: targetConceptId, pageId: pc.pageId },
+      });
+      if (targetHasPage) {
+        await tx.pageConcept.delete({ where: { id: pc.id } });
+      } else {
+        await tx.pageConcept.update({ where: { id: pc.id }, data: { conceptId: targetConceptId } });
+      }
+    }
+
+    const usageCount = await tx.pageConcept.count({ where: { conceptId: targetConceptId } });
+    const mergedTarget = await tx.concept.update({ where: { id: targetConceptId }, data: { usageCount } });
+    await tx.concept.delete({ where: { id: sourceConceptId } });
+
+    return mergedTarget;
+  });
+
+  logAudit({
+    orgId: ctx.orgId,
+    action: "merge_concept",
+    resourceType: "concept",
+    resourceId: targetConceptId,
+    actorId: ctx.userId,
+    metadata: { source: { id: sourceConceptId, term: source.displayName }, target: { id: targetConceptId, term: updated.displayName } },
+  }).catch(() => {});
+
+  const pageCount = await db.pageConcept.count({ where: { conceptId: targetConceptId, page: { orgId: ctx.orgId, status: "active" } } });
   return NextResponse.json({
     concept: { id: updated.id, term: updated.displayName, kind: updated.kind || DEFAULT_KIND, pageCount },
   });

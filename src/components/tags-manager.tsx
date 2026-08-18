@@ -43,6 +43,9 @@ export function TagsManager({ canManage }: { canManage: boolean }) {
   const [formTerm, setFormTerm] = useState("");
   const [formKind, setFormKind] = useState<ConceptKind>(DEFAULT_KIND);
 
+  const [merging, setMerging] = useState(false);
+  const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     try {
       const res = await fetch(`${basePath}/api/tags/org`);
@@ -70,6 +73,8 @@ export function TagsManager({ canManage }: { canManage: boolean }) {
     setEditingId(tag.id);
     setFormTerm(tag.term);
     setFormKind(isCuratedKind(tag.kind) ? tag.kind : DEFAULT_KIND);
+    setMerging(false);
+    setMergeTargetId(null);
     setNote(null);
     setError(null);
   }
@@ -78,6 +83,8 @@ export function TagsManager({ canManage }: { canManage: boolean }) {
     setEditingId(NEW_TAG);
     setFormTerm("");
     setFormKind(DEFAULT_KIND);
+    setMerging(false);
+    setMergeTargetId(null);
     setNote(null);
     setError(null);
   }
@@ -86,6 +93,51 @@ export function TagsManager({ canManage }: { canManage: boolean }) {
     setEditingId(null);
     setFormTerm("");
     setFormKind(DEFAULT_KIND);
+    setMerging(false);
+    setMergeTargetId(null);
+  }
+
+  function startMerge() {
+    setMerging(true);
+    setMergeTargetId(null);
+    setError(null);
+  }
+
+  function cancelMerge() {
+    setMerging(false);
+    setMergeTargetId(null);
+  }
+
+  async function confirmMerge() {
+    if (!editingId || editingId === NEW_TAG || !mergeTargetId) return;
+    const source = tags.find((t) => t.id === editingId);
+    const target = tags.find((t) => t.id === mergeTargetId);
+    if (!source || !target) return;
+    if (!confirm(`Merge "${source.term}" into "${target.term}"? Every page tagged "${source.term}" will be retagged, and "${source.term}" will be deleted.`)) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`${basePath}/api/tags/org`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceConceptId: editingId, targetConceptId: mergeTargetId }),
+      });
+      const data = (await res.json()) as { error?: string; concept?: TagRow };
+      if (!res.ok || !data.concept) {
+        setError(data.error ?? "Failed to merge tag.");
+        return;
+      }
+      setTags((prev) => prev.filter((t) => t.id !== editingId).map((t) => (t.id === mergeTargetId ? data.concept! : t)));
+      cancelEdit();
+      setNote(`Merged "${source.term}" into "${target.term}".`);
+      router.refresh();
+    } catch {
+      setError("Network error.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function save() {
@@ -221,15 +273,38 @@ export function TagsManager({ canManage }: { canManage: boolean }) {
               />
             </FormRow>
           </div>
+          {editingId !== NEW_TAG && merging && (
+            <div className="stg-editor-foot" style={{ marginTop: 8 }}>
+              <select
+                className="stg-input"
+                value={mergeTargetId ?? ""}
+                onChange={(e) => setMergeTargetId(e.target.value || null)}
+                disabled={busy}
+              >
+                <option value="">Select a tag to merge into&hellip;</option>
+                {tags
+                  .filter((t) => t.id !== editingId)
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>{t.term}</option>
+                  ))}
+              </select>
+              <button className="btn btn--primary" onClick={confirmMerge} disabled={busy || !mergeTargetId}>
+                {busy ? "Merging…" : "Confirm merge"}
+              </button>
+              <button className="btn btn--ghost" onClick={cancelMerge} disabled={busy}>Cancel merge</button>
+            </div>
+          )}
           <div className="stg-editor-foot">
-            <button className="btn btn--primary" onClick={save} disabled={busy || !formTerm.trim()}>
+            <button className="btn btn--primary" onClick={save} disabled={busy || !formTerm.trim() || merging}>
               {busy ? "Saving…" : "Save tag"}
             </button>
             <button className="btn btn--ghost" onClick={cancelEdit} disabled={busy}>Cancel</button>
             <span className="stg-editor-foot-spacer" />
-            <button className="stg-qbtn" title="kz-d3668c" disabled>
-              Merge into&hellip; (later)
-            </button>
+            {editingId !== NEW_TAG && !merging && (
+              <button className="stg-qbtn" onClick={startMerge} disabled={busy}>
+                Merge into&hellip;
+              </button>
+            )}
           </div>
         </div>
       )}
