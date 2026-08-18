@@ -46,12 +46,12 @@ export default async function PageSettingsView({
 
   const pageRow = await db.page.findUnique({
     where: { orgId_slug: { orgId: ctx.orgId, slug } },
-    select: { id: true, folderId: true, rules: true, trustedVersionId: true, createdAt: true },
+    select: { id: true, folderId: true, rules: true, trustedVersionId: true, createdAt: true, pageType: true },
   });
   if (!pageRow) notFound();
 
   const pageTitle = (pageData.json.title as string) || slug;
-  const pageType = typeof pageData.json.pageType === "string" ? (pageData.json.pageType as string) : undefined;
+  const pageType = pageRow.pageType ?? undefined;
 
   const canEditPage = can(ctx.role, "page:edit");
   const folders = await db.folder.findMany({

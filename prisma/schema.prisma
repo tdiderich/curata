@@ -131,6 +131,7 @@ model Page {
   // "trusted" read for agents. Null = no trusted version yet (no backfill).
   // Writes never touch this column — only markTrusted/clearTrusted do.
   trustedVersionId String? @map("trusted_version_id")
+  pageType   String?   @map("page_type")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 

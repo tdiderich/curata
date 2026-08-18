@@ -11,6 +11,7 @@ import { getEntitlements } from "./entitlements";
 import { estimateTokens } from "./tokens";
 import { pruneVersions } from "./version-retention";
 import { extractSalientTerms } from "./salient-terms";
+import { extractDeclaredPageType } from "./required-components";
 import { makeApprovalRuleResolver, makeTrustModeResolver, resolveEffectiveTrustMode } from "./approval";
 import type { TrustMode } from "./approval";
 
@@ -731,7 +732,8 @@ async function _writePageInternal(
   let pageId: string;
 
   if (existing) {
-    const pageUpdateData: Record<string, unknown> = { title, updatedAt: new Date(), dashboardEnabled, tokenCount: newTokens };
+    const pageType = extractDeclaredPageType(yamlContent) ?? null;
+    const pageUpdateData: Record<string, unknown> = { title, updatedAt: new Date(), dashboardEnabled, tokenCount: newTokens, pageType };
     if (sortOrder !== undefined) pageUpdateData.sortOrder = sortOrder;
 
     await db.$transaction([
@@ -745,6 +747,7 @@ async function _writePageInternal(
     ]);
     pageId = existing.id;
   } else {
+    const pageType = extractDeclaredPageType(yamlContent) ?? null;
     const createData: Record<string, unknown> = {
       orgId,
       slug,
@@ -753,6 +756,7 @@ async function _writePageInternal(
       visibility: visibility ?? defaultPageVisibility(),
       dashboardEnabled,
       tokenCount: newTokens,
+      pageType,
       versions: {
         create: { yamlContent, jsonContent, contentHash, createdBy },
       },
