@@ -74,6 +74,7 @@ export default async function SettingsPage() {
   const tabs = [
     {
       label: "Admin",
+      group: "General",
       content: (
         <OrgSettings
           canManage={canManage}
@@ -84,6 +85,7 @@ export default async function SettingsPage() {
     },
     {
       label: "Theme",
+      group: "General",
       content: (
         <ThemeSettings
           canManage={canManage}
@@ -97,16 +99,14 @@ export default async function SettingsPage() {
       ),
     },
     {
-      label: "Connect",
-      content: <ConnectManager authMode={AUTH_MODE} canManageKeys={canManageKeys} />,
-    },
-    {
       label: "Groups",
+      group: "Access",
       labelExtra: limitedPlan ? <TeamChip /> : null,
       content: <GroupManager canManage={canManage} />,
     },
     {
       label: "Members",
+      group: "Access",
       labelExtra: limitedPlan ? <TeamChip /> : null,
       // /billing and /org are cloud-overlay-only routes, never part of OSS.
       // limitedPlan and AUTH_MODE are both false on self-hosted OSS, so
@@ -124,6 +124,7 @@ export default async function SettingsPage() {
     // deployments have no subscription to manage.
     ...(AUTH_MODE === "clerk" ? [{
       label: "Billing",
+      group: "Access",
       labelExtra: limitedPlan ? <TeamChip /> : null,
       content: (
         <SettingsSection
@@ -145,10 +146,12 @@ export default async function SettingsPage() {
     }] : []),
     ...(canManageRules ? [{
       label: "Tags",
+      group: "Content",
       content: <TagsManager canManage={canManageRules} />,
     }] : []),
     ...(canManageRules ? [{
       label: "Content Rules",
+      group: "Content",
       content: (
         <SettingsSection
           title="Content rules"
@@ -163,8 +166,14 @@ export default async function SettingsPage() {
         </SettingsSection>
       ),
     }] : []),
+    {
+      label: "Connect",
+      group: "Developer",
+      content: <ConnectManager authMode={AUTH_MODE} canManageKeys={canManageKeys} />,
+    },
     ...(canManageKeys ? [{
       label: "API Keys",
+      group: "Developer",
       content: <ApiKeyManager />,
     }] : []),
   ];
