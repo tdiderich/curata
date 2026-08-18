@@ -110,7 +110,7 @@ export function AddComponentButton({ onAdd, disabled }: AddComponentButtonProps)
         setMirrorMode(true);
         return;
       }
-      const stub = entry.stub.replace(/^- /, "");
+      const stub = entry.stub.replace(/^- /, "").replace(/\n  /g, "\n");
       const parsed = yaml.load(stub) as Record<string, unknown>;
       onAdd(parsed);
       close();
