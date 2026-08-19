@@ -7545,6 +7545,9 @@ button.pg-tag-kind-dot:hover {
   padding: 4px 11px;
   cursor: pointer;
 }
+.doc-actions-btn--compact {
+  display: none;
+}
 .doc-actions-btn:hover {
   border-color: rgba(var(--accent-rgb), 0.6);
   color: rgba(var(--text-rgb), 0.95);
@@ -7652,6 +7655,13 @@ body:has(.nav-reveal) .page-toolbar {
   .page-toolbar-right {
     width: 100%;
     justify-content: flex-end;
+  }
+  .edit-toggle-btn,
+  .doc-actions-btn--full {
+    display: none;
+  }
+  .doc-actions-btn--compact {
+    display: inline-flex;
   }
 }
 

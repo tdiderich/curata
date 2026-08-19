@@ -514,6 +514,22 @@ export default function PageDetailClient({
           });
         },
       },
+      {
+        id: "edit-inline",
+        label: editMode ? (editDirty ? "Save edits" : "Exit edit mode") : "Edit page",
+        run: () => {
+          if (editMode) {
+            if (editDirty) saveAllEdits();
+            else { setEditingComponent(null); setEditMode(false); }
+          } else {
+            setLocalComponents(
+              pageJson?.components ? JSON.parse(JSON.stringify(pageJson.components)) : [],
+            );
+            setEditDirty(false);
+            setEditMode(true);
+          }
+        },
+      },
       { id: "edit-source", label: "Edit source YAML", run: () => setViewTab("source") },
       { id: "page-settings", label: "Page settings", run: () => router.push(`/pages/${slug}/settings`) },
       { id: "export-png", label: "Export PNG", run: () => handleExport("png") },
@@ -539,7 +555,7 @@ export default function PageDetailClient({
         : []),
     ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewTab, showResolved, expandAll, resolvedCount, activeAnns.length, slug]);
+  }, [viewTab, showResolved, expandAll, resolvedCount, activeAnns.length, slug, editMode, editDirty]);
 
   return (
     <div className="page-detail-layout">
@@ -609,7 +625,7 @@ export default function PageDetailClient({
             )}
             <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} hideTrigger />
             <button
-              className={`view-tab${editMode ? " view-tab--active" : ""}`}
+              className={`view-tab edit-toggle-btn${editMode ? " view-tab--active" : ""}`}
               disabled={editSaving}
               onClick={() => {
                 if (editMode) {
@@ -631,10 +647,17 @@ export default function PageDetailClient({
               {editSaving ? "Saving Page..." : editMode ? "Done" : "Edit"}
             </button>
             <button
-              className="doc-actions-btn"
+              className="doc-actions-btn doc-actions-btn--full"
               onClick={() => window.dispatchEvent(new Event("curata-open-palette"))}
             >
               Actions <kbd>⌘K</kbd>
+            </button>
+            <button
+              className="doc-actions-btn doc-actions-btn--compact"
+              onClick={() => window.dispatchEvent(new Event("curata-open-palette"))}
+              aria-label="Actions"
+            >
+              &hellip;
             </button>
           </div>
         </div>
