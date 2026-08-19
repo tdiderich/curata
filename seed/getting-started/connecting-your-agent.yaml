@@ -32,6 +32,39 @@ components:
                   claude mcp add --transport http curata https://curata.ai/api/mcp/stream
               - type: markdown
                 body: "Start a session and run `/mcp` to complete the browser sign-in. No key in your config, nothing to rotate."
+          - label: Cursor
+            components:
+              - type: markdown
+                body: "Add to `.cursor/mcp.json` in your project root (or `~/.cursor/mcp.json` for global):"
+              - type: code
+                language: json
+                code: |
+                  {
+                    "mcpServers": {
+                      "curata": {
+                        "url": "https://curata.ai/api/mcp/stream"
+                      }
+                    }
+                  }
+              - type: markdown
+                body: "Cursor handles the OAuth flow automatically. You'll see a browser sign-in prompt on first use."
+          - label: GitHub Copilot
+            components:
+              - type: markdown
+                body: "Add to `.vscode/mcp.json` in your project root:"
+              - type: code
+                language: json
+                code: |
+                  {
+                    "servers": {
+                      "curata": {
+                        "type": "http",
+                        "url": "https://curata.ai/api/mcp/stream"
+                      }
+                    }
+                  }
+              - type: markdown
+                body: "Note: Copilot uses `servers` (not `mcpServers`) and `type: http`. The OAuth flow runs in your browser on first tool call."
           - label: Other clients
             components:
               - type: markdown
@@ -51,6 +84,12 @@ components:
         body: |
           Use an API key when there is no browser to sign in with: cron jobs, CI pipelines, server-side agents, or a client without OAuth support. Create one at **Settings → API Keys**. Keys start with `ck_` and act with your permissions.
 
+          Store the key in a `.env` file, never in config files under version control:
+
+          ```
+          CURATA_API_KEY=ck_your_key_here
+          ```
+
       - type: tabs
         tabs:
           - label: Claude Code
@@ -66,7 +105,7 @@ components:
                         "type": "url",
                         "url": "https://curata.ai/api/mcp/stream",
                         "headers": {
-                          "Authorization": "Bearer ck_your_api_key_here"
+                          "Authorization": "Bearer ${CURATA_API_KEY}"
                         }
                       }
                     }
@@ -81,18 +120,96 @@ components:
                   {
                     "mcpServers": {
                       "curata": {
-                        "type": "url",
                         "url": "https://curata.ai/api/mcp/stream",
                         "headers": {
-                          "Authorization": "Bearer ck_your_api_key_here"
+                          "Authorization": "Bearer ${CURATA_API_KEY}"
                         }
                       }
                     }
                   }
+          - label: GitHub Copilot
+            components:
+              - type: markdown
+                body: "Add to `.vscode/mcp.json` in your project root:"
+              - type: code
+                language: json
+                code: |
+                  {
+                    "servers": {
+                      "curata": {
+                        "type": "http",
+                        "url": "https://curata.ai/api/mcp/stream",
+                        "headers": {
+                          "Authorization": "Bearer ${CURATA_API_KEY}"
+                        }
+                      }
+                    }
+                  }
+          - label: OpenAI Codex
+            components:
+              - type: markdown
+                body: "Add to `.codex/config.toml` in your project root (or `~/.codex/config.toml` for global):"
+              - type: code
+                language: toml
+                code: |
+                  [mcp_servers.curata]
+                  url = "https://curata.ai/api/mcp/stream"
+                  bearer_token_env_var = "CURATA_API_KEY"
+              - type: markdown
+                body: "Codex reads the key from your environment. Make sure `CURATA_API_KEY` is set in your shell or `.env`."
+          - label: Gemini CLI
+            components:
+              - type: markdown
+                body: "Add to `~/.gemini/settings.json` (or `.gemini/settings.json` in your repo):"
+              - type: code
+                language: json
+                code: |
+                  {
+                    "mcpServers": {
+                      "curata": {
+                        "httpUrl": "https://curata.ai/api/mcp/stream",
+                        "headers": {
+                          "Authorization": "Bearer ${CURATA_API_KEY}"
+                        }
+                      }
+                    }
+                  }
+          - label: Windsurf
+            components:
+              - type: markdown
+                body: "Add to `~/.codeium/windsurf/mcp_config.json` (user-level only, no repo-level support):"
+              - type: code
+                language: json
+                code: |
+                  {
+                    "mcpServers": {
+                      "curata": {
+                        "serverUrl": "https://curata.ai/api/mcp/stream"
+                      }
+                    }
+                  }
+              - type: markdown
+                body: "Windsurf doesn't support OAuth or header auth natively for remote MCP. Use `npx mcp-remote` as a stdio wrapper if you need authenticated access, or connect on a self-hosted instance with `AUTH_MODE=none`."
+          - label: Cline
+            components:
+              - type: markdown
+                body: "Cline stores MCP config at the VS Code extension level. Open the Cline MCP settings and add:"
+              - type: code
+                language: json
+                code: |
+                  {
+                    "mcpServers": {
+                      "curata": {
+                        "url": "https://curata.ai/api/mcp/stream"
+                      }
+                    }
+                  }
+              - type: markdown
+                body: "For authenticated access, use `npx mcp-remote https://curata.ai/api/mcp/stream` as a stdio command, which handles the OAuth dance for clients that don't support it natively."
           - label: Any MCP client
             components:
               - type: markdown
-                body: "The pattern is the same everywhere: streamable HTTP transport, the `/api/mcp/stream` URL, and an `Authorization: Bearer ck_...` header."
+                body: "The pattern is the same everywhere: streamable HTTP transport, the `/api/mcp/stream` URL, and an `Authorization: Bearer ck_...` header. Store the key in your environment, not in the config file."
 
       - type: callout
         variant: warn
