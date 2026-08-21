@@ -591,7 +591,6 @@ export default function PageDetailClient({
               className="view-tab view-tab--active"
               disabled={srcSaving}
               onClick={() => {
-                // One state-aware button: saves when dirty, exits when clean.
                 if (srcDirty) srcControls.current?.save();
                 else setViewTab("preview");
               }}
@@ -601,66 +600,7 @@ export default function PageDetailClient({
           </div>
         </div>
       ) : (
-        <div className="page-toolbar">
-          <div className="pt-identity">
-            {pageTitle && <span className="pt-title">{pageTitle}</span>}
-            <span className="pt-tags">{tagsRow}</span>
-          </div>
-          <div className="page-toolbar-spacer" />
-          <div className="page-toolbar-right">
-            {shell === "deck" && (
-              <button
-                className="deck-present-btn"
-                onClick={() => {
-                  const root = document.querySelector(".deck-root") as HTMLElement | null;
-                  if (root?.requestFullscreen) root.requestFullscreen();
-                  else {
-                    const wk = root as HTMLElement & { webkitRequestFullscreen?: () => void };
-                    if (wk.webkitRequestFullscreen) wk.webkitRequestFullscreen();
-                  }
-                }}
-              >
-                Present
-              </button>
-            )}
-            <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} hideTrigger />
-            <button
-              className={`view-tab edit-toggle-btn${editMode ? " view-tab--active" : ""}`}
-              disabled={editSaving}
-              onClick={() => {
-                if (editMode) {
-                  if (editDirty) {
-                    saveAllEdits();
-                  } else {
-                    setEditingComponent(null);
-                    setEditMode(false);
-                  }
-                } else {
-                  setLocalComponents(
-                    pageJson?.components ? JSON.parse(JSON.stringify(pageJson.components)) : [],
-                  );
-                  setEditDirty(false);
-                  setEditMode(true);
-                }
-              }}
-            >
-              {editSaving ? "Saving Page..." : editMode ? "Done" : "Edit"}
-            </button>
-            <button
-              className="doc-actions-btn doc-actions-btn--full"
-              onClick={() => window.dispatchEvent(new Event("curata-open-palette"))}
-            >
-              Actions <kbd>⌘K</kbd>
-            </button>
-            <button
-              className="doc-actions-btn doc-actions-btn--compact"
-              onClick={() => window.dispatchEvent(new Event("curata-open-palette"))}
-              aria-label="Actions"
-            >
-              &hellip;
-            </button>
-          </div>
-        </div>
+        null
       )}
       {agentOpen &&
         createPortal(
@@ -764,6 +704,51 @@ export default function PageDetailClient({
         />
       ) : (
       <div className="page-content-wrap">
+        {viewTab === "preview" && (
+          <div className="page-hero">
+            <div className="page-hero-identity">
+              {pageTitle && <h1 className="page-hero-title">{pageTitle}</h1>}
+              {pageJson?.subtitle && (
+                <p className="page-hero-subtitle">{pageJson.subtitle}</p>
+              )}
+              <div className="page-hero-tags">{tagsRow}</div>
+            </div>
+            <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} hideTrigger />
+            {editMode && (
+              <div className="page-hero-edit-bar">
+                <button
+                  className="btn btn--primary"
+                  disabled={editSaving}
+                  onClick={() => {
+                    if (editDirty) {
+                      saveAllEdits();
+                    } else {
+                      setEditingComponent(null);
+                      setEditMode(false);
+                    }
+                  }}
+                >
+                  {editSaving ? "Saving..." : editDirty ? "Save" : "Done"}
+                </button>
+              </div>
+            )}
+            {shell === "deck" && (
+              <button
+                className="btn btn--ghost"
+                onClick={() => {
+                  const root = document.querySelector(".deck-root") as HTMLElement | null;
+                  if (root?.requestFullscreen) root.requestFullscreen();
+                  else {
+                    const wk = root as HTMLElement & { webkitRequestFullscreen?: () => void };
+                    if (wk.webkitRequestFullscreen) wk.webkitRequestFullscreen();
+                  }
+                }}
+              >
+                Present
+              </button>
+            )}
+          </div>
+        )}
         <PageContent
           ref={contentRef}
           editMode={editMode}

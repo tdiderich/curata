@@ -154,15 +154,14 @@ export default async function PageSettingsView({
 
   return (
     <>
-      <div className="site-bar">
-        <Link href={`/pages/${slug}`} className="site-bar-back">
-          &larr; {pageTitle}
-        </Link>
-        <span className="site-bar-title">Settings</span>
-      </div>
       <div className="dash-root">
         <div className="dash-workspace">
           <SettingsTabs tabs={tabs} />
+          <div style={{ display: "flex", justifyContent: "center", padding: "32px 0" }}>
+            <Link href={`/pages/${slug}`} className="btn btn--ghost">
+              Return to page
+            </Link>
+          </div>
         </div>
       </div>
     </>

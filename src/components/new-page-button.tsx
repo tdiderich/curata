@@ -11,30 +11,41 @@ type Step = "template" | "details";
 export function NewPageButton({
   className = "btn btn--ghost",
   label = "+ New Page",
+  children,
+  folderId,
+  defaultOpen = false,
+  onClose,
+  presetTemplate,
 }: {
   className?: string;
   label?: string;
+  children?: React.ReactNode;
+  folderId?: string | null;
+  defaultOpen?: boolean;
+  onClose?: () => void;
+  presetTemplate?: string | null;
 } = {}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<Step>("template");
+  const [open, setOpen] = useState(defaultOpen);
+  const [step, setStep] = useState<Step>(presetTemplate ? "details" : "template");
   const [title, setTitle] = useState("");
   const [shell, setShell] = useState("standard");
-  const [templateSlug, setTemplateSlug] = useState<string | null>(null);
+  const [templateSlug, setTemplateSlug] = useState<string | null>(presetTemplate ?? null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   function openModal() {
     setOpen(true);
-    setStep("template");
+    setStep(presetTemplate ? "details" : "template");
     setTitle("");
     setShell("standard");
-    setTemplateSlug(null);
+    setTemplateSlug(presetTemplate ?? null);
     setError("");
   }
 
   function closeModal() {
     setOpen(false);
+    onClose?.();
   }
 
   function selectScratch() {
@@ -80,14 +91,23 @@ export function NewPageButton({
       return;
     }
 
+    if (folderId && data.slug) {
+      await fetch(`${basePath}/api/pages`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: data.slug, folderId }),
+      });
+    }
+
     setOpen(false);
     router.push(`/pages/${data.slug}`);
   }
 
   if (!open) {
+    if (defaultOpen) return null;
     return (
       <button className={className} onClick={openModal}>
-        {label}
+        {children || label}
       </button>
     );
   }

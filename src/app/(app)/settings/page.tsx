@@ -169,12 +169,6 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <div className="site-bar">
-        <Link href="/dashboard" className="site-bar-back">
-          &larr; Dashboard
-        </Link>
-        <span className="site-bar-title">Settings</span>
-      </div>
       <div className="dash-root">
         <div className="dash-workspace">
           <SettingsTabs tabs={tabs} />

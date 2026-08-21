@@ -16,6 +16,7 @@ interface Folder {
   name: string;
   visibility: string;
   parentId?: string | null;
+  locked?: boolean;
 }
 
 // Dropdown menus portal to <body> with fixed positioning so they can't be
@@ -754,15 +755,17 @@ export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRu
       </button>
       {open && (
         <AnchoredMenu anchorRef={btnRef} menuRef={portalRef} className="dash-folder-actions-menu">
-          <button
-            className="dash-folder-actions-item"
-            onClick={() => {
-              setOpen(false);
-              setRenaming(true);
-            }}
-          >
-            Rename
-          </button>
+          {!folder.locked && (
+            <button
+              className="dash-folder-actions-item"
+              onClick={() => {
+                setOpen(false);
+                setRenaming(true);
+              }}
+            >
+              Rename
+            </button>
+          )}
           <button
             className="dash-folder-actions-item"
             onClick={createPageHere}
@@ -799,7 +802,7 @@ export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRu
               + Add folder
             </button>
           )}
-          {canManageRules && (
+          {canManageRules && !folder.locked && (
             <>
               <button
                 className="dash-folder-actions-item"
@@ -819,7 +822,7 @@ export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRu
               </button>
             </>
           )}
-          {allFolders.length > 0 && (() => {
+          {!folder.locked && allFolders.length > 0 && (() => {
             const viewingParent = browseParent === undefined ? "__root" : browseParent;
             const visibleFolders = allFolders.filter((f) => {
               if (f.id === folder.id) return false;
@@ -878,13 +881,17 @@ export function FolderMenu({ folder, allFolders = [], allPages = [], canManageRu
               </>
             );
           })()}
-          <div className="dash-page-actions-divider" />
-          <button
-            className="dash-folder-actions-item dash-folder-actions-item--danger"
-            onClick={startDelete}
-          >
-            Delete
-          </button>
+          {!folder.locked && (
+            <>
+              <div className="dash-page-actions-divider" />
+              <button
+                className="dash-folder-actions-item dash-folder-actions-item--danger"
+                onClick={startDelete}
+              >
+                Delete
+              </button>
+            </>
+          )}
         </AnchoredMenu>
       )}
       {confirmOpen && (

@@ -256,6 +256,12 @@ export async function seedOrgContent(orgId: string): Promise<void> {
   } catch (err) {
     console.error("[seed] templates folder/pages failed:", err);
   }
+
+  try {
+    await findOrCreateFolder(orgId, "Quick Actions", true);
+  } catch (err) {
+    console.error("[seed] quick-actions folder failed:", err);
+  }
 }
 
 // seedOrgContent runs at org creation only (seedOrg above). An org created

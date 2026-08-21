@@ -1,10 +1,6 @@
 export default function SettingsLoading() {
   return (
     <>
-      <div className="site-bar">
-        <span className="skel skel-text" style={{ width: 100 }} />
-        <span className="skel skel-text" style={{ width: 60 }} />
-      </div>
       <div className="dash-root">
         <div className="dash-workspace">
           <div className="dash-workspace-header dash-workspace-header--top">

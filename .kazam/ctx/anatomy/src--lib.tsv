@@ -17,7 +17,7 @@ src/lib/concept-kinds.ts	261	0	concept-kinds library module
 src/lib/concepts.ts	3271	0	concepts library module
 src/lib/content-negotiation.ts	557	0	content-negotiation library module
 src/lib/content-rules.ts	1738	0	content-rules library module
-src/lib/copy-for-agent.ts	679	0	copy-for-agent library module
+src/lib/copy-for-agent.ts	853	0	copy-for-agent library module
 src/lib/db.ts	145	0	db library module
 src/lib/default-tags.ts	168	0	default-tags library module
 src/lib/digest.ts	3285	0	digest library module
@@ -45,7 +45,7 @@ src/lib/request-origin.ts	164	0	request-origin library module
 src/lib/required-components.ts	3394	0	required-components library module
 src/lib/salient-terms.ts	384	0	salient-terms library module
 src/lib/seed-page.ts	1887	0	seed-page library module
-src/lib/seed.ts	2980	0	seed library module
+src/lib/seed.ts	3018	0	Seeds/refreshes the three locked stock folders (Getting Started, Skills, Templates) from seed/ YAML on org creation and lazily for existing orgs; findOrCreateFolder sets locked=true, seedPagesFromDir syncs pages and archives retired ones
 src/lib/share-prompt.ts	1025	0	share-prompt library module
 src/lib/slug-words.ts	755	0	slug-words library module
 src/lib/templates-server.ts	144	0	getTemplateContent(slug) reads demos/templates/<slug>.yaml from disk — backs POST /api/pages (templateSlug) for the web UI's 'create from template' flow

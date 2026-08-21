@@ -44,6 +44,29 @@ function contextHeader(label: string, pageCount: number, baseUrl: string): strin
 export type CopyResult = "ok" | "empty" | "error";
 
 /** Copies one or more pages to the clipboard as agent-ready context, with provenance. */
+export async function copyReferenceForAgent(label: string, pages: CopyPageRef[]): Promise<CopyResult> {
+  if (pages.length === 0) return "empty";
+  const baseUrl = `${window.location.origin}${basePath}`;
+  const lines = pages.map((p) => `- ${p.title} | ${baseUrl}/pages/${p.slug}`);
+  const body = [
+    `# Curata page reference: ${label}`,
+    `Source: ${baseUrl}`,
+    `MCP endpoint: ${baseUrl}/api/mcp`,
+    "",
+    `${pages.length} page${pages.length === 1 ? "" : "s"} listed by title and URL.`,
+    "Connect via MCP to read full content.",
+    "",
+    ...lines,
+  ].join("\n");
+
+  try {
+    await navigator.clipboard.writeText(body);
+    return "ok";
+  } catch {
+    return "error";
+  }
+}
+
 export async function copyPagesForAgent(label: string, pages: CopyPageRef[]): Promise<CopyResult> {
   if (pages.length === 0) return "empty";
 

@@ -116,6 +116,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "folder not found" }, { status: 404 });
     }
 
+    if (folder.locked) {
+      return NextResponse.json({ error: "stock folders cannot be modified" }, { status: 403 });
+    }
+
     const isCreator = folder.createdBy === ctx.userId;
     const isPrivileged =
       ctx.role === "owner" || ctx.role === "admin";
@@ -184,6 +188,10 @@ export async function DELETE(request: NextRequest) {
 
     if (!folder) {
       return NextResponse.json({ error: "folder not found" }, { status: 404 });
+    }
+
+    if (folder.locked) {
+      return NextResponse.json({ error: "stock folders cannot be deleted" }, { status: 403 });
     }
 
     const isCreator = folder.createdBy === ctx.userId;

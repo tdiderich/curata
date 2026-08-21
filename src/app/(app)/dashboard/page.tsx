@@ -3,14 +3,14 @@ import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { seedOrg, seedOrgContent } from "@/lib/seed";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { ActivityFeed } from "@/components/activity-feed";
-import { buildActivitySessions } from "@/lib/activity";
-import { buildKnowledgeGraph } from "@/lib/graph";
-import { DashboardTabs } from "@/components/dashboard-tabs";
+import { getVocabulary } from "@/lib/concepts";
+import { basePath } from "@/lib/api-fetch";
+import { ActionBarHome } from "@/components/action-bar-home";
+import type { ActionBarFolder, ActionBarPage } from "@/components/action-bar-types";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: "Dashboard" };
+  return { title: "Home" };
 }
 
 export default async function DashboardPage() {
@@ -21,14 +21,8 @@ export default async function DashboardPage() {
   }
   if (!ctx) redirect(AUTH_MODE === "clerk" ? "/onboarding" : "/sign-in");
 
-  // Idempotent: backfills any seed templates/workflows added to this build
-  // since the org was created. seedOrg() only seeds brand-new orgs, so
-  // existing orgs would otherwise never pick up new seed content.
   await seedOrgContent(ctx.orgId);
 
-  // First-run: while the brain holds nothing but seed content, land people on
-  // the getting-started walkthrough instead of an empty dashboard. The first
-  // captured page flips the dashboard back to normal.
   const humanPages = await db.page.count({
     where: { orgId: ctx.orgId, createdBy: { not: "system" } },
   });
@@ -40,36 +34,76 @@ export default async function DashboardPage() {
     if (gettingStarted) redirect("/pages/getting-started");
   }
 
-  const [graph, org, pageTitles, auditRows] = await Promise.all([
-    buildKnowledgeGraph(ctx.orgId),
-    db.organization.findUnique({ where: { id: ctx.orgId }, select: { name: true } }),
-    db.page.findMany({ where: { orgId: ctx.orgId }, select: { slug: true, title: true } }),
-    db.auditLog.findMany({ where: { orgId: ctx.orgId }, orderBy: { createdAt: "desc" }, take: 100 }),
+  const folderVisFilter = AUTH_MODE === "none"
+    ? { orgId: ctx.orgId }
+    : {
+        orgId: ctx.orgId,
+        OR: [
+          { visibility: { in: ["org", "shared"] } },
+          { visibility: "private", createdBy: ctx.userId },
+        ],
+      };
+
+  const pageVisFilter = AUTH_MODE === "none"
+    ? { orgId: ctx.orgId, status: { not: "archived" } }
+    : {
+        orgId: ctx.orgId,
+        status: { not: "archived" },
+        OR: [
+          { createdBy: ctx.userId },
+          { shares: { some: { userId: ctx.userId } } },
+          { visibility: { in: ["org", "public", "shared"] } },
+        ],
+      };
+
+  const [vocab, rawFolders, rawPages, org, qaFolder] = await Promise.all([
+    getVocabulary(),
+    db.folder.findMany({
+      where: folderVisFilter,
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, parentId: true, visibility: true, locked: true },
+    }),
+    db.page.findMany({
+      where: pageVisFilter,
+      orderBy: { title: "asc" },
+      select: { slug: true, title: true, folderId: true, pinned: true, visibility: true },
+    }),
+    db.organization.findUnique({
+      where: { id: ctx.orgId },
+      select: { name: true, logoUrl: true, logoMime: true, updatedAt: true },
+    }),
+    db.folder.findFirst({
+      where: { orgId: ctx.orgId, name: "Quick Actions", locked: true },
+      select: { rules: true },
+    }),
   ]);
 
-  const pagesBySlug = new Map(pageTitles.map((p) => [p.slug, p.title]));
+  // Quick action refs live in the QA folder's rules JSON as a non-rule entry
+  // (see /api/quick-actions). Only surface refs the viewer can actually see.
+  const visibleSlugs = new Set(rawPages.map((p) => p.slug));
+  const quickRefs: string[] = (() => {
+    const rules = qaFolder?.rules;
+    if (!Array.isArray(rules)) return [];
+    const entry = rules.find(
+      (r) => typeof r === "object" && r !== null && (r as Record<string, unknown>).id === "quick-refs"
+    ) as Record<string, unknown> | undefined;
+    if (!entry || !Array.isArray(entry.refs)) return [];
+    return entry.refs.filter((s): s is string => typeof s === "string" && visibleSlugs.has(s));
+  })();
 
-  // Batch-resolve apikey actorIds (the key's `prefix`) to the key's `name` in
-  // one query instead of one lookup per row. Revoked keys are excluded on
-  // purpose — actorLabel falls back to the raw prefix for those, same as a
-  // fully deleted key, rather than naming a key that no longer has access.
-  const apiKeyPrefixes = [...new Set(auditRows.filter((r) => r.actorType === "apikey").map((r) => r.actorId))];
-  const apiKeys = apiKeyPrefixes.length
-    ? await db.apiKey.findMany({
-        where: { orgId: ctx.orgId, prefix: { in: apiKeyPrefixes }, revokedAt: null },
-        select: { prefix: true, name: true },
-      })
-    : [];
-  const apiKeyNamesByPrefix = new Map(apiKeys.map((k) => [k.prefix, k.name]));
-
-  const activityFeed = buildActivitySessions(auditRows, pagesBySlug, apiKeyNamesByPrefix).slice(0, 50);
+  const orgName = org?.name || "curata";
+  const logoUrl = org?.logoMime
+    ? `${basePath}/api/org-logo?v=${org.updatedAt.getTime()}`
+    : (org?.logoUrl ?? null);
 
   return (
-    <div className="dash-root">
-      <div className="cleanup-header">
-        <h1 className="cleanup-heading">{org?.name ?? "Knowledge"}</h1>
-      </div>
-      <DashboardTabs graph={graph} activity={<ActivityFeed entries={activityFeed} />} />
-    </div>
+    <ActionBarHome
+      vocabulary={vocab}
+      folders={rawFolders as ActionBarFolder[]}
+      pages={rawPages as ActionBarPage[]}
+      orgName={orgName}
+      logoUrl={logoUrl}
+      quickRefs={quickRefs}
+    />
   );
 }

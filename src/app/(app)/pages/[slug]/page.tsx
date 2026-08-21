@@ -272,13 +272,11 @@ export default async function PageDetailView({
         }
         pageJson={page}
       >
-        <div className="page-detail-content">
-          <PageRenderer
-            page={page}
-            activeHubHref={hubContext ? `${slug}?hub=${encodeURIComponent(hubContext)}` : slug}
-            resolveHubHref={undefined}
-          />
-        </div>
+        <PageRenderer
+          page={page}
+          activeHubHref={hubContext ? `${slug}?hub=${encodeURIComponent(hubContext)}` : slug}
+          resolveHubHref={undefined}
+        />
       </PageDetailClient>
     </>
   );

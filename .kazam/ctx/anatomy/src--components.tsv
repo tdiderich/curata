@@ -1,30 +1,31 @@
 path	tokens	reads	description
+src/components/action-bar-home.tsx	9466	0	action-bar-home component
+src/components/action-bar-types.ts	68	0	action-bar-types component
+src/components/action-bar.tsx	2796	0	action-bar component
 src/components/activity-feed.tsx	1277	0	activity-feed component
 src/components/add-component-button.tsx	1590	0	add-component-button component
-src/components/agent-connect-button.tsx	153	0	agent-connect-button component
 src/components/agent-connect-flow.tsx	653	0	Renders the two-step 'Connect an agent' flow: generate API key button, then prompt display with copy-to-clipboard and 1h expiry warning
 src/components/agent-connect-modal.tsx	186	0	agent-connect-modal component
 src/components/api-key-manager.tsx	1469	0	api-key-manager component
 src/components/approval-rule-editor.tsx	3037	0	approval-rule-editor component
 src/components/cleanup-client.tsx	4075	0	cleanup-client component
-src/components/command-palette.tsx	2208	0	command-palette component
+src/components/confirm-delete-modal.stories.tsx	311	0	confirm-delete-modal.stories component
 src/components/confirm-delete-modal.tsx	700	0	confirm-delete-modal component
 src/components/connect-manager.tsx	1556	0	connect-manager component
 src/components/content-index.tsx	3199	0	content-index component
 src/components/content-rules-editor.tsx	9056	0	content-rules-editor component
-src/components/dashboard-client.tsx	4269	0	dashboard-client component
-src/components/dashboard-feed.tsx	815	0	dashboard-feed component
+src/components/context-menu.tsx	484	0	context-menu component
 src/components/dashboard-tabs.tsx	1088	0	dashboard-tabs component
 src/components/editable-component.tsx	762	0	editable-component component
-src/components/folder-actions.tsx	8385	0	folder-actions component
+src/components/folder-actions.tsx	8441	0	FolderMenu/PageMenu: the '...' dropdown for rename/move/delete/trust-toggle on folders and pages; does not check folder.locked before allowing rename/move/delete
+src/components/glance-card-grid.tsx	394	0	glance-card-grid component
 src/components/group-manager.tsx	2984	0	group-manager component
 src/components/group-picklist.tsx	494	0	group-picklist component
 src/components/inline-component-editor.tsx	1903	0	inline-component-editor component
 src/components/member-list.tsx	2860	0	member-list component
-src/components/new-page-button.tsx	1617	0	new-page-button component
+src/components/new-page-button.tsx	1771	0	new-page-button component
 src/components/org-settings.tsx	2003	0	org-settings component
-src/components/org-tags-manager.tsx	606	0	org-tags-manager component
-src/components/page-detail-client.tsx	9138	0	page-detail-client component
+src/components/page-detail-client.tsx	9180	0	Client component for the single-page view (/pages/[slug]): renders sticky page-toolbar header (title, tags, VisibilityPicker, Edit toggle, Actions/⌘K button), source-YAML toolbar variant, inline component editing, annotation margin/bubbles, and modals for agent-connect/version-history/content-rules
 src/components/page-folder-select.tsx	384	0	page-folder-select component
 src/components/page-prompt-dialog.tsx	1051	0	page-prompt-dialog component
 src/components/page-settings-general.tsx	427	0	page-settings-general component
@@ -34,9 +35,8 @@ src/components/page-viewer.tsx	2773	0	page-viewer component
 src/components/public-annotation-client.tsx	2869	0	public-annotation-client component
 src/components/report-builder.tsx	5145	0	report-builder component
 src/components/review-queue-client.tsx	2644	0	review-queue-client component
-src/components/settings-tabs.tsx	410	0	settings-tabs component
-src/components/sidebar.tsx	6192	0	sidebar component
 src/components/source-editor.tsx	2744	0	source-editor component
+src/components/tag-picker.stories.tsx	220	0	tag-picker.stories component
 src/components/tag-picker.tsx	1639	0	tag-picker component
 src/components/tags-manager.tsx	2883	0	tags-manager component
 src/components/theme-script.tsx	189	0	theme-script component
