@@ -1,5 +1,5 @@
 path	tokens	reads	description
-src/components/action-bar-home.tsx	9466	0	action-bar-home component
+src/components/action-bar-home.tsx	10424	0	action-bar-home component
 src/components/action-bar-types.ts	68	0	action-bar-types component
 src/components/action-bar.tsx	2796	0	action-bar component
 src/components/activity-feed.tsx	1277	0	activity-feed component

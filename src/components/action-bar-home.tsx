@@ -11,6 +11,7 @@ import { toast } from "@/components/toast";
 import { basePath } from "@/lib/api-fetch";
 import ReportBuilder from "@/components/report-builder";
 import { NewPageButton } from "@/components/new-page-button";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import { kindSlug } from "@/lib/concept-kinds";
 
 interface VocabConcept {
@@ -33,13 +34,7 @@ interface ActionBarHomeProps {
   quickRefs?: string[];
 }
 
-const SEARCH_PHRASES = [
-  "Search your brain or take action...",
-  "What data is flowing in?",
-  "Which policies need attention?",
-  "Find a tool or skill...",
-  "What did the brain learn this week?",
-];
+const SEARCH_PLACEHOLDER = "What are you looking for?";
 
 const STOCK_ACTIONS = [
   { id: "create-folder", title: "Create Folder", summary: "Organize pages into a named folder", route: null },
@@ -128,14 +123,12 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
   const [addPageFolderId, setAddPageFolderId] = useState<string | null>(null);
   const [addPagePreset, setAddPagePreset] = useState<string | null>(null);
   const [skillPickerOpen, setSkillPickerOpen] = useState(false);
+  const [deletePageSlug, setDeletePageSlug] = useState<string | null>(null);
+  const [deleteFolderId, setDeleteFolderId] = useState<string | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [renameFolderId, setRenameFolderId] = useState<string | null>(null);
   const [renameFolderValue, setRenameFolderValue] = useState("");
   const [moveFolderId, setMoveFolderId] = useState<string | null>(null);
-  const [phraseIdx, setPhraseIdx] = useState(0);
-  // Random pick must wait for mount: doing it in the useState initializer
-  // desyncs the server- and client-rendered placeholder (hydration error).
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setPhraseIdx(Math.floor(Math.random() * SEARCH_PHRASES.length)); }, []);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -412,6 +405,7 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
         items.push({ label: "", divider: true, onClick: () => {} });
         items.push({ label: "Rename", onClick: () => { setRenameFolderId(f.id); setRenameFolderValue(f.name); } });
         items.push({ label: "Move", onClick: () => { setMoveFolderId(f.id); } });
+        items.push({ label: "Delete", danger: true, onClick: () => { setDeleteFolderId(f.id); } });
       }
       return items;
     }
@@ -433,6 +427,7 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
       { label: "Move to folder", onClick: () => { setMovePageSlug(ctxMenu.name); } },
       { label: "", divider: true, onClick: () => {} },
       { label: "Set visibility", onClick: () => { setVisPageSlug(ctxMenu.name); } },
+      { label: "Delete page", danger: true, onClick: () => { setDeletePageSlug(ctxMenu.name); } },
     ];
   }
 
@@ -501,6 +496,66 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
     setSkillPickerOpen(false);
   }
 
+  // Deleting a folder cascades: subfolders and every page inside go with it
+  // (matches the /api/folders DELETE behavior). Used by the confirm modal to
+  // show exactly what the cascade takes out.
+  function descendantPagesOf(folderId: string) {
+    const ids = new Set<string>([folderId]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const f of folders) {
+        if (f.parentId && ids.has(f.parentId) && !ids.has(f.id)) {
+          ids.add(f.id);
+          grew = true;
+        }
+      }
+    }
+    return pages.filter((p) => p.folderId && ids.has(p.folderId));
+  }
+
+  async function deletePage(slug: string) {
+    setDeleteBusy(true);
+    try {
+      const res = await fetch(`${basePath}/api/pages?slug=${encodeURIComponent(slug)}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Page deleted");
+      } else {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error || "Failed to delete page");
+      }
+    } catch {
+      toast.error("Failed to delete page — check your connection");
+    } finally {
+      setDeleteBusy(false);
+      setDeletePageSlug(null);
+      router.refresh();
+    }
+  }
+
+  async function deleteFolder(id: string) {
+    setDeleteBusy(true);
+    try {
+      const res = await fetch(`${basePath}/api/folders`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        toast.success("Folder deleted");
+      } else {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error || "Failed to delete folder");
+      }
+    } catch {
+      toast.error("Failed to delete folder — check your connection");
+    } finally {
+      setDeleteBusy(false);
+      setDeleteFolderId(null);
+      router.refresh();
+    }
+  }
+
   async function removeQuickAction(slug: string) {
     const res = await fetch(`${basePath}/api/quick-actions`, {
       method: "DELETE",
@@ -537,7 +592,7 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
           ref={inputRef}
           type="text"
           className="abh-search-input"
-          placeholder={query ? "" : SEARCH_PHRASES[phraseIdx]}
+          placeholder={query ? "" : SEARCH_PLACEHOLDER}
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           autoFocus
@@ -922,6 +977,56 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
           </div>
         </div>
       )}
+
+      {deletePageSlug && (
+        <ConfirmDeleteModal
+          title={<>Delete &ldquo;{pages.find((p) => p.slug === deletePageSlug)?.title ?? deletePageSlug}&rdquo;?</>}
+          confirmButtonLabel="Delete page"
+          busyLabel="Deleting…"
+          busy={deleteBusy}
+          onCancel={() => setDeletePageSlug(null)}
+          onConfirm={() => deletePage(deletePageSlug)}
+        >
+          <p className="confirm-delete-warning">This cannot be undone.</p>
+        </ConfirmDeleteModal>
+      )}
+
+      {deleteFolderId && (() => {
+        const f = folders.find((fo) => fo.id === deleteFolderId);
+        if (!f) return null;
+        const descendants = descendantPagesOf(f.id);
+        return (
+          <ConfirmDeleteModal
+            title={<>Delete folder &ldquo;{f.name}&rdquo;?</>}
+            confirmValue={f.name}
+            confirmPrompt={<>Type <strong>{f.name}</strong> to confirm</>}
+            confirmButtonLabel="Delete folder"
+            busyLabel="Deleting…"
+            busy={deleteBusy}
+            onCancel={() => setDeleteFolderId(null)}
+            onConfirm={() => deleteFolder(f.id)}
+          >
+            {descendants.length > 0 ? (
+              <>
+                <p className="confirm-delete-warning">
+                  This also deletes {descendants.length} page{descendants.length !== 1 ? "s" : ""} inside
+                  this folder and its subfolders. This cannot be undone.
+                </p>
+                <ul className="confirm-delete-list">
+                  {descendants.slice(0, 5).map((p) => (
+                    <li key={p.slug}>{p.title}</li>
+                  ))}
+                  {descendants.length > 5 && (
+                    <li className="confirm-delete-more">+{descendants.length - 5} more</li>
+                  )}
+                </ul>
+              </>
+            ) : (
+              <p className="confirm-delete-warning">This folder is empty. Deleting it cannot be undone.</p>
+            )}
+          </ConfirmDeleteModal>
+        );
+      })()}
     </div>
   );
 }
