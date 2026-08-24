@@ -1,68 +1,84 @@
-title: "Skill - Scout Repos"
-subtitle: Cluster related repos, find what they should share, riff with a human, then build packs and PR skills that make cross-repo work better.
+title: Skill - Scout Repos
+subtitle: Cluster related repos, find what they should share, riff with a human, then build packs and PR skills that make
+  cross-repo work better.
 shell: standard
 skill:
-  trigger: "scout repos, figure out what our repos should share, set up cross-repo context"
+  trigger: scout repos, figure out what our repos should share, set up cross-repo context
   setup:
-    - key: repo_scope
-      ask: "Which repos should this skill scan? Name them, or say 'everything this agent has access to'."
+  - key: repo_scope
+    ask: Which repos should this skill scan? Name them, or say 'everything this agent has access to'.
+  requires:
+  - search_pages
+  - list_rules
+  - create_from_template
 dashboard:
   prompt: |
     Run the Scout Repos skill. Tell me which repos to scan (or say all of
     them). I'll propose repo clusters and shared-context opportunities,
     then we riff before anything gets written.
-  description: "Find what your repos should share, then build it"
+  description: Find what your repos should share, then build it
 components:
-  - type: section
-    eyebrow: Overview
-    heading: What this skill does
-    components:
-      - type: callout
-        variant: info
-        title: The unit of value is a relationship between repos
-        body: |
-          Scans for relationship signals (shared dependencies, CI cross-references, sync scripts, copied configs), proposes repo clusters with evidence, names the shared context or skills that would raise work quality in each cluster, then stops for a riff with the human who has the org knowledge. Only ratified opportunities get built: pack pages that compile into every repo's agent config, PR skills for drift-prone pairs, seam pages where a contract between repos deserves prose.
-      - type: definition_list
-        items:
-          - term: Trigger
-            definition: Manual - run against a set of repos, then re-run as the org's repo landscape changes. Reruns update the same pages instead of duplicating.
-          - term: Data Sources
-            definition: Relationship signals only - dependency files, CI workflows, sync scripts, submodules, cross-repo links, tool configs. Never content extraction.
-          - term: Output
-            definition: Pack pages (installed into CLAUDE.md/.cursorrules via kazam install), PR skill instances for drift-prone repo pairs, seam pages where warranted. Everything lands untrusted.
-
-  - type: section
-    eyebrow: Flow
-    heading: The four steps
-    components:
-      - type: steps
-        numbered: true
-        items:
-          - title: Cluster
-            detail: "Light scan for relationship signals: lockfile overlap, CI workflows referencing other repos, sync scripts, vendored copies, cross-repo URLs, deploy targets, configs that rhyme. Output is repo sets with evidence lines. No evidence, no cluster."
-          - title: Opportunity
-            detail: "Per cluster: which convention exists in one sibling and is missing in the others, which repo pairs drift (a change in A should always update B), what setup pain repeats, what implicit seam contract nothing documents. Each opportunity names its proposed output type."
-          - title: Riff
-            detail: "Mandatory gate. Present clusters and opportunities numbered, then stop. The human corrects clusters, kills false positives, adds the seams only they know about, and picks what matters. Nothing is written before this conversation."
-          - title: Build and maintain
-            detail: "Pack pages via the ai-tool-pack template (kazam install compiles them into each repo, kazam check catches drift), PR skills for drift pairs (docs-drift is the archetype), seam pages where connective tissue deserves prose. Reruns patch the same slugs."
-
-  - type: section
-    eyebrow: Guardrails
-    heading: What this skill never does
-    components:
-      - type: markdown
-        body: |
-          - **No fact extraction.** Scout v1 scraped facts from READMEs into page-shaped scraps; that flow is dead. Repo content stays in repos.
-          - **No FAQ synthesis.** The FAQ shape belongs to import-wiki (digesting a targeted legacy wiki) and live captured Q&A. Never seeded from repo scans.
-          - **No writes before the riff.** The human's org knowledge is what separates a real cluster from a coincidence.
-          - **No trusted marks.** Pages land untrusted; humans approve from /review where an approval rule applies.
-          - **No duplicates on rerun.** search_pages first, patch the cluster's existing pages, stable slugs.
-
-  - type: section
-    eyebrow: Mechanics
-    heading: Write mechanics
-    components:
-      - type: markdown
-        body: |
-          Before the first write, call `list_rules` so drafts fit the org's blocking rules. Pack pages come from `create_from_template` with the `ai-tool-pack` template. Tag every page with concepts so it shows in the brain map. End with a summary: clusters found, what the riff changed, pages written or updated, and the `kazam install <org>/<pack-slug>` command for each pack.
+- type: section
+  eyebrow: Overview
+  heading: What this skill does
+  components:
+  - type: callout
+    variant: info
+    title: The unit of value is a relationship between repos
+    body: |
+      Scans for relationship signals (shared dependencies, CI cross-references, sync scripts, copied configs), proposes repo clusters with evidence, names the shared context or skills that would raise work quality in each cluster, then stops for a riff with the human who has the org knowledge. Only ratified opportunities get built: pack pages that compile into every repo's agent config, PR skills for drift-prone pairs, seam pages where a contract between repos deserves prose.
+  - type: definition_list
+    items:
+    - term: Trigger
+      definition: Manual - run against a set of repos, then re-run as the org's repo landscape changes. Reruns update the
+        same pages instead of duplicating.
+    - term: Data Sources
+      definition: Relationship signals only - dependency files, CI workflows, sync scripts, submodules, cross-repo links,
+        tool configs. Never content extraction.
+    - term: Output
+      definition: Pack pages (installed into CLAUDE.md/.cursorrules via kazam install), PR skill instances for drift-prone
+        repo pairs, seam pages where warranted. Everything lands untrusted.
+- type: section
+  eyebrow: Flow
+  heading: The four steps
+  components:
+  - type: steps
+    numbered: true
+    items:
+    - title: Cluster
+      detail: 'Light scan for relationship signals: lockfile overlap, CI workflows referencing other repos, sync scripts,
+        vendored copies, cross-repo URLs, deploy targets, configs that rhyme. Output is repo sets with evidence lines. No
+        evidence, no cluster.'
+    - title: Opportunity
+      detail: 'Per cluster: which convention exists in one sibling and is missing in the others, which repo pairs drift (a
+        change in A should always update B), what setup pain repeats, what implicit seam contract nothing documents. Each
+        opportunity names its proposed output type.'
+    - title: Riff
+      detail: Mandatory gate. Present clusters and opportunities numbered, then stop. The human corrects clusters, kills false
+        positives, adds the seams only they know about, and picks what matters. Nothing is written before this conversation.
+    - title: Build and maintain
+      detail: Pack pages via the ai-tool-pack template (kazam install compiles them into each repo, kazam check catches drift),
+        PR skills for drift pairs (docs-drift is the archetype), seam pages where connective tissue deserves prose. Reruns
+        patch the same slugs.
+- type: section
+  eyebrow: Guardrails
+  heading: What this skill never does
+  components:
+  - type: markdown
+    body: |
+      - **No fact extraction.** Scout v1 scraped facts from READMEs into page-shaped scraps; that flow is dead. Repo content stays in repos.
+      - **No FAQ synthesis.** The FAQ shape belongs to import-wiki (digesting a targeted legacy wiki) and live captured Q&A. Never seeded from repo scans.
+      - **No writes before the riff.** The human's org knowledge is what separates a real cluster from a coincidence.
+      - **No trusted marks.** Pages land untrusted; humans approve from /review where an approval rule applies.
+      - **No duplicates on rerun.** search_pages first, patch the cluster's existing pages, stable slugs.
+- type: section
+  eyebrow: Mechanics
+  heading: Write mechanics
+  components:
+  - type: markdown
+    body: |
+      Before the first write, call `list_rules` so drafts fit the org's blocking rules. Pack pages come from `create_from_template` with the `ai-tool-pack` template. Tag every page with concepts so it shows in the brain map. End with a summary: clusters found, what the riff changed, pages written or updated, and the `kazam install <org>/<pack-slug>` command for each pack.
+pack:
+  targets:
+  - claude
+  - cursor

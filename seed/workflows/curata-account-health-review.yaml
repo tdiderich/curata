@@ -1,132 +1,139 @@
-title: "Skill - Account Health Review"
+title: Skill - Account Health Review
 subtitle: Score an account's health from real signals and write the review back to the customer's pages.
 shell: standard
 skill:
-  trigger: "account health, health review, how is this account doing"
+  trigger: account health, health review, how is this account doing
   setup:
-    - key: crm_tool
-      ask: "Which tool holds this customer's base data - ARR, renewal date, lifecycle stage? Name the exact MCP tool."
-    - key: crm_fields
-      ask: "Confirm the exact field names for ARR, renewal date, and lifecycle stage - and the health field, if your CRM tracks one."
-    - key: recording_tool
-      ask: "Which tool has call recordings or transcripts, if you have one connected? Recent calls are the freshest health signal."
-    - key: chatter_tools
-      ask: "Which tools have this customer's chatter - Slack, Teams, email, a ticketing system? Name each one that applies."
-    - key: chatter_channels
-      ask: "What's the channel naming pattern for this customer's Slack/Teams channels?"
-    - key: chatter_domains
-      ask: "Which email domains count as this customer, if you're pulling from email?"
-    - key: chatter_tickets
-      ask: "Which project or label identifies this customer's tickets, if support volume feeds your health read?"
+  - key: crm_tool
+    ask: Which tool holds this customer's base data - ARR, renewal date, lifecycle stage? Name the exact MCP tool.
+  - key: crm_fields
+    ask: Confirm the exact field names for ARR, renewal date, and lifecycle stage - and the health field, if your CRM tracks
+      one.
+  - key: recording_tool
+    ask: Which tool has call recordings or transcripts, if you have one connected? Recent calls are the freshest health signal.
+  - key: chatter_tools
+    ask: Which tools have this customer's chatter - Slack, Teams, email, a ticketing system? Name each one that applies.
+  - key: chatter_channels
+    ask: What's the channel naming pattern for this customer's Slack/Teams channels?
+  - key: chatter_domains
+    ask: Which email domains count as this customer, if you're pulling from email?
+  - key: chatter_tickets
+    ask: Which project or label identifies this customer's tickets, if support volume feeds your health read?
+  requires:
+  - read_page
+  - patch_page
 dashboard:
   prompt: |
     Run the Account Health Review skill. Ask me which customer, then follow
     the flow on this page to score health and update the customer's pages.
-  description: "Signal-backed account health review"
+  description: Signal-backed account health review
 components:
-  - type: section
-    eyebrow: Overview
-    heading: What this skill does
-    components:
-      - type: callout
-        variant: info
-        title: Health backed by signals
-        body: |
-          Reads the customer's pages, pulls CRM base data, recent chatter, and recent calls, then scores health against a simple rubric: engagement, momentum, risk. The output names the signals behind the score, so every rating can be checked against its evidence.
-      - type: definition_list
-        items:
-          - term: Trigger
-            definition: Manual or scheduled - monthly per account, or before any renewal conversation and QBR.
-          - term: Data Sources
-            definition: Customer pages, CRM record, chatter, and recent calls. See the Data Model reference for how each gets used differently.
-          - term: Output
-            definition: A health section on the customer's page with score, signals, and the one thing to do about it - plus the CRM health field synced, if you track one.
+- type: section
+  eyebrow: Overview
+  heading: What this skill does
+  components:
+  - type: callout
+    variant: info
+    title: Health backed by signals
+    body: |
+      Reads the customer's pages, pulls CRM base data, recent chatter, and recent calls, then scores health against a simple rubric: engagement, momentum, risk. The output names the signals behind the score, so every rating can be checked against its evidence.
+  - type: definition_list
+    items:
+    - term: Trigger
+      definition: Manual or scheduled - monthly per account, or before any renewal conversation and QBR.
+    - term: Data Sources
+      definition: Customer pages, CRM record, chatter, and recent calls. See the Data Model reference for how each gets used
+        differently.
+    - term: Output
+      definition: A health section on the customer's page with score, signals, and the one thing to do about it - plus the
+        CRM health field synced, if you track one.
+- type: section
+  eyebrow: Setup
+  heading: Answer this before you run this skill for your org
+  components:
+  - type: callout
+    variant: warn
+    title: One-time setup
+    body: |
+      Every {{placeholder}}-style tool name in the flow below stands in for a real MCP tool. Answer this once, replace the placeholder, and you're done - not something you re-answer per run.
+  - type: definition_list
+    items:
+    - term: CRM tool
+      definition: Which tool holds this customer's base data - ARR, renewal date, lifecycle stage? Name the exact MCP tool.
+    - term: CRM fields
+      definition: Confirm the exact field names for ARR, renewal date, and lifecycle stage - and the health field, if your
+        CRM tracks one.
+    - term: Recording tool
+      definition: Which tool has call recordings or transcripts, if you have one connected? Recent calls are the freshest
+        health signal.
+- type: section
+  eyebrow: Setup
+  heading: Customer Context
+  components:
+  - type: callout
+    variant: warn
+    title: Slack, email, tickets - the chatter layer
+    body: |
+      Different from CRM base data: confirm which tools and patterns actually identify this customer before pulling anything in. Response gaps and ticket spikes show up here before they show up in the CRM.
+  - type: definition_list
+    items:
+    - term: Tools
+      definition: Which tools have this customer's chatter - Slack, Teams, email, a ticketing system? Name each one that applies.
+    - term: Channel pattern
+      definition: What's the channel naming pattern for this customer's Slack/Teams channels?
+    - term: Email domains
+      definition: Which email domains count as this customer, if you're pulling from email?
+    - term: Ticket project/label
+      definition: Which project or label identifies this customer's tickets, if support volume feeds your health read?
+- type: section
+  eyebrow: Prerequisites
+  heading: Before you run this skill
+  components:
+  - type: callout
+    variant: warn
+    title: Required inputs
+    body: |
+      - Customer name or account identifier
+      - At least one customer page in curata
 
-  - type: section
-    eyebrow: Setup
-    heading: Answer this before you run this skill for your org
-    components:
-      - type: callout
-        variant: warn
-        title: One-time setup
-        body: |
-          Every {{placeholder}}-style tool name in the flow below stands in for a real MCP tool. Answer this once, replace the placeholder, and you're done - not something you re-answer per run.
-      - type: definition_list
-        items:
-          - term: CRM tool
-            definition: Which tool holds this customer's base data - ARR, renewal date, lifecycle stage? Name the exact MCP tool.
-          - term: CRM fields
-            definition: Confirm the exact field names for ARR, renewal date, and lifecycle stage - and the health field, if your CRM tracks one.
-          - term: Recording tool
-            definition: Which tool has call recordings or transcripts, if you have one connected? Recent calls are the freshest health signal.
+      Works with partial data - a missing recording tool shrinks the signal set, it doesn't block the review.
+- type: section
+  eyebrow: Flow
+  heading: Validated Flow
+  components:
+  - type: markdown
+    body: |
+      `YourCRM`/`YourChatterTool` below stand in for whatever tools you named in answer to the setup questions above - replace them with the real tool names before running this for your org. Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
 
-  - type: section
-    eyebrow: Setup
-    heading: Customer Context
-    components:
-      - type: callout
-        variant: warn
-        title: Slack, email, tickets - the chatter layer
-        body: |
-          Different from CRM base data: confirm which tools and patterns actually identify this customer before pulling anything in. Response gaps and ticket spikes show up here before they show up in the CRM.
-      - type: definition_list
-        items:
-          - term: Tools
-            definition: Which tools have this customer's chatter - Slack, Teams, email, a ticketing system? Name each one that applies.
-          - term: Channel pattern
-            definition: What's the channel naming pattern for this customer's Slack/Teams channels?
-          - term: Email domains
-            definition: Which email domains count as this customer, if you're pulling from email?
-          - term: Ticket project/label
-            definition: Which project or label identifies this customer's tickets, if support volume feeds your health read?
+      ```agl
+      spec AccountHealthReview {
+        in: customer: str
+        out: health_written: bool
+        description: "Score an account's health from real signals and write the review back to the customer's pages."
+        requires: read_page, patch_page, YourCRM, YourChatterTool
 
-  - type: section
-    eyebrow: Prerequisites
-    heading: Before you run this skill
-    components:
-      - type: callout
-        variant: warn
-        title: Required inputs
-        body: |
-          - Customer name or account identifier
-          - At least one customer page in curata
-
-          Works with partial data - a missing recording tool shrinks the signal set, it doesn't block the review.
-
-  - type: section
-    eyebrow: Flow
-    heading: Validated Flow
-    components:
-      - type: markdown
-        body: |
-          `YourCRM`/`YourChatterTool` below stand in for whatever tools you named in answer to the setup questions above - replace them with the real tool names before running this for your org. Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
-
-          ```agl
-          spec AccountHealthReview {
-            in: customer: str
-            out: health_written: bool
-            description: "Score an account's health from real signals and write the review back to the customer's pages."
-            requires: read_page, patch_page, YourCRM, YourChatterTool
-
-            flow {
-              state READ_PAGES -> call(read_page, "the customer's priorities, account plan, and recent meeting notes") -> next
-              state PULL_CRM -> call(YourCRM, "ARR, renewal date, and lifecycle stage from the confirmed fields") -> next
-              state PULL_CHATTER -> call(YourChatterTool, "customer channels, emails, and tickets from the confirmed patterns, past 30 days") -> next
-              state SCORE_HEALTH -> evaluate(signals vs engagement_momentum_risk_rubric) -> next
-              state DRAFT_REVIEW -> evaluate(scored_signals vs review_shape) -> next
-              state PROPOSE_REVIEW -> gate(human_approval) -> WRITE_REVIEW
-              state WRITE_REVIEW -> call(patch_page, "the health section of the customer's page") -> next
-              state SYNC_CRM -> call(YourCRM, "the health field, if your CRM tracks one") -> TERMINATE("Health review written, signals cited")
-            }
-          }
-          ```
-
-  - type: section
-    eyebrow: Key Rules
-    heading: Rules for this skill
-    components:
-      - type: callout
-        variant: info
-        title: Every score cites its signals
-        body: |
-          A health score with no evidence attached gets rejected at review. Name the signal, its source, and how fresh it is. If two signals conflict - happy calls, spiking tickets - surface the conflict instead of averaging it away.
+        flow {
+          state READ_PAGES -> call(read_page, "the customer's priorities, account plan, and recent meeting notes") -> next
+          state PULL_CRM -> call(YourCRM, "ARR, renewal date, and lifecycle stage from the confirmed fields") -> next
+          state PULL_CHATTER -> call(YourChatterTool, "customer channels, emails, and tickets from the confirmed patterns, past 30 days") -> next
+          state SCORE_HEALTH -> evaluate(signals vs engagement_momentum_risk_rubric) -> next
+          state DRAFT_REVIEW -> evaluate(scored_signals vs review_shape) -> next
+          state PROPOSE_REVIEW -> gate(human_approval) -> WRITE_REVIEW
+          state WRITE_REVIEW -> call(patch_page, "the health section of the customer's page") -> next
+          state SYNC_CRM -> call(YourCRM, "the health field, if your CRM tracks one") -> TERMINATE("Health review written, signals cited")
+        }
+      }
+      ```
+- type: section
+  eyebrow: Key Rules
+  heading: Rules for this skill
+  components:
+  - type: callout
+    variant: info
+    title: Every score cites its signals
+    body: |
+      A health score with no evidence attached gets rejected at review. Name the signal, its source, and how fresh it is. If two signals conflict - happy calls, spiking tickets - surface the conflict instead of averaging it away.
+pack:
+  targets:
+  - claude
+  - cursor

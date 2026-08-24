@@ -1,132 +1,141 @@
-title: "Skill - Call Prep"
+title: Skill - Call Prep
 subtitle: Research a customer before a call and draft a proposed agenda.
 shell: standard
 skill:
-  trigger: "call prep, pre-call research, prepare for a call"
+  trigger: call prep, pre-call research, prepare for a call
   setup:
-    - key: crm_tool
-      ask: "Which tool holds this customer's base data - domain, deal stage, contract dates? Name the exact MCP tool."
-    - key: crm_fields
-      ask: "Confirm the exact field names in that tool for deal stage, close date, and ARR - don't assume, these vary a lot by org."
-    - key: calendar_tool
-      ask: "Which tool has the customer's calendar event for this call? The agenda gets written into the event description, not just read for context."
-    - key: chatter_tools
-      ask: "Which tools have this customer's chatter - Slack, Teams, email, a ticketing system? Name each one you want pulled in."
-    - key: chatter_channels
-      ask: "What's the channel naming pattern for this customer's Slack/Teams channels (like int-deal-acme or ext-acme)?"
-    - key: chatter_domains
-      ask: "Which email domains count as this customer, if you're pulling from email?"
-    - key: chatter_tickets
-      ask: "If a ticketing system counts as customer context, which project or label identifies tickets for this customer?"
+  - key: crm_tool
+    ask: Which tool holds this customer's base data - domain, deal stage, contract dates? Name the exact MCP tool.
+  - key: crm_fields
+    ask: Confirm the exact field names in that tool for deal stage, close date, and ARR - don't assume, these vary a lot by
+      org.
+  - key: calendar_tool
+    ask: Which tool has the customer's calendar event for this call? The agenda gets written into the event description, not
+      just read for context.
+  - key: chatter_tools
+    ask: Which tools have this customer's chatter - Slack, Teams, email, a ticketing system? Name each one you want pulled
+      in.
+  - key: chatter_channels
+    ask: What's the channel naming pattern for this customer's Slack/Teams channels (like int-deal-acme or ext-acme)?
+  - key: chatter_domains
+    ask: Which email domains count as this customer, if you're pulling from email?
+  - key: chatter_tickets
+    ask: If a ticketing system counts as customer context, which project or label identifies tickets for this customer?
+  requires:
+  - read_page
+  - patch_page
 dashboard:
   prompt: |
     Run the Call Prep skill. Ask me which customer and when the call is,
     then follow the flow on this page to build the prep page.
-  description: "Pre-call research and agenda prep"
+  description: Pre-call research and agenda prep
 components:
-  - type: section
-    eyebrow: Overview
-    heading: What this skill does
-    components:
-      - type: callout
-        variant: info
-        title: Arrive to the call already caught up
-        body: |
-          Reads the customer's existing pages plus whatever CRM, calendar, or messaging tools you have connected, then drafts a proposed agenda from what's actually open. Run it 30-60 minutes before the call.
-      - type: definition_list
-        items:
-          - term: Trigger
-            definition: Manual - run before any customer call. Can also be triggered by a calendar event or CRM stage change.
-          - term: Data Sources
-            definition: Your connected CRM, calendar, and messaging tools, plus the customer's pages in this curata instance. See the Data Model reference for how each gets used differently. Works with partial data.
-          - term: Output
-            definition: A prep page with the customer's current state, open items, and a proposed agenda.
+- type: section
+  eyebrow: Overview
+  heading: What this skill does
+  components:
+  - type: callout
+    variant: info
+    title: Arrive to the call already caught up
+    body: |
+      Reads the customer's existing pages plus whatever CRM, calendar, or messaging tools you have connected, then drafts a proposed agenda from what's actually open. Run it 30-60 minutes before the call.
+  - type: definition_list
+    items:
+    - term: Trigger
+      definition: Manual - run before any customer call. Can also be triggered by a calendar event or CRM stage change.
+    - term: Data Sources
+      definition: Your connected CRM, calendar, and messaging tools, plus the customer's pages in this curata instance. See
+        the Data Model reference for how each gets used differently. Works with partial data.
+    - term: Output
+      definition: A prep page with the customer's current state, open items, and a proposed agenda.
+- type: section
+  eyebrow: Setup
+  heading: Answer this before you run this skill for your org
+  components:
+  - type: callout
+    variant: warn
+    title: One-time setup
+    body: |
+      Every {{placeholder}}-style tool name in the flow below stands in for a real MCP tool. Answer this once, replace the placeholder, and you're done - not something you re-answer per run.
+  - type: definition_list
+    items:
+    - term: CRM tool
+      definition: Which tool holds this customer's base data - domain, deal stage, contract dates? Name the exact MCP tool.
+    - term: CRM fields
+      definition: Confirm the exact field names in that tool for deal stage, close date, and ARR - don't assume, these vary
+        a lot by org.
+    - term: Calendar tool
+      definition: Which tool has the customer's calendar event for this call? The agenda gets written into the event description,
+        not just read for context.
+- type: section
+  eyebrow: Setup
+  heading: Customer Context
+  components:
+  - type: callout
+    variant: warn
+    title: Slack, email, tickets - the chatter layer
+    body: |
+      This is the noisy, high-volume layer. Different from CRM base data: confirm which tools and patterns actually identify this customer before pulling anything in.
+  - type: definition_list
+    items:
+    - term: Tools
+      definition: Which tools have this customer's chatter - Slack, Teams, email, a ticketing system? Name each one you want
+        pulled in.
+    - term: Channel pattern
+      definition: What's the channel naming pattern for this customer's Slack/Teams channels (like int-deal-acme or ext-acme)?
+    - term: Email domains
+      definition: Which email domains count as this customer, if you're pulling from email?
+    - term: Ticket project/label
+      definition: If a ticketing system counts as customer context, which project or label identifies tickets for this customer?
+- type: section
+  eyebrow: Prerequisites
+  heading: Before you run this skill
+  components:
+  - type: callout
+    variant: warn
+    title: Required inputs
+    body: |
+      - Customer name or account identifier
+      - At least one customer page in curata (priorities, account plan, or meeting notes)
 
-  - type: section
-    eyebrow: Setup
-    heading: Answer this before you run this skill for your org
-    components:
-      - type: callout
-        variant: warn
-        title: One-time setup
-        body: |
-          Every {{placeholder}}-style tool name in the flow below stands in for a real MCP tool. Answer this once, replace the placeholder, and you're done - not something you re-answer per run.
-      - type: definition_list
-        items:
-          - term: CRM tool
-            definition: Which tool holds this customer's base data - domain, deal stage, contract dates? Name the exact MCP tool.
-          - term: CRM fields
-            definition: Confirm the exact field names in that tool for deal stage, close date, and ARR - don't assume, these vary a lot by org.
-          - term: Calendar tool
-            definition: Which tool has the customer's calendar event for this call? The agenda gets written into the event description, not just read for context.
+      If you have no prior customer pages, create at least one page for the customer first - even rough notes give the prep something to build on.
+- type: section
+  eyebrow: Skill
+  heading: Validated Flow
+  components:
+  - type: markdown
+    body: |
+      `YourCRM`/`YourChatterTool`/`YourCalendar` below stand in for whatever tools you named in answer to the setup questions above - replace them with the real tool names before running this for your org. Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
 
-  - type: section
-    eyebrow: Setup
-    heading: Customer Context
-    components:
-      - type: callout
-        variant: warn
-        title: Slack, email, tickets - the chatter layer
-        body: |
-          This is the noisy, high-volume layer. Different from CRM base data: confirm which tools and patterns actually identify this customer before pulling anything in.
-      - type: definition_list
-        items:
-          - term: Tools
-            definition: Which tools have this customer's chatter - Slack, Teams, email, a ticketing system? Name each one you want pulled in.
-          - term: Channel pattern
-            definition: What's the channel naming pattern for this customer's Slack/Teams channels (like int-deal-acme or ext-acme)?
-          - term: Email domains
-            definition: Which email domains count as this customer, if you're pulling from email?
-          - term: Ticket project/label
-            definition: If a ticketing system counts as customer context, which project or label identifies tickets for this customer?
+      ```agl
+      spec CallPrep {
+        in: customer: str
+        out: agenda_ready: bool
+        description: "Research a customer before a call and draft a proposed agenda."
+        requires: read_page, patch_page, YourCRM, YourChatterTool, YourCalendar
 
-  - type: section
-    eyebrow: Prerequisites
-    heading: Before you run this skill
-    components:
-      - type: callout
-        variant: warn
-        title: Required inputs
-        body: |
-          - Customer name or account identifier
-          - At least one customer page in curata (priorities, account plan, or meeting notes)
-
-          If you have no prior customer pages, create at least one page for the customer first - even rough notes give the prep something to build on.
-
-  - type: section
-    eyebrow: Skill
-    heading: Validated Flow
-    components:
-      - type: markdown
-        body: |
-          `YourCRM`/`YourChatterTool`/`YourCalendar` below stand in for whatever tools you named in answer to the setup questions above - replace them with the real tool names before running this for your org. Before executing the fence, fetch `GET /api/docs/agl` for execution semantics.
-
-          ```agl
-          spec CallPrep {
-            in: customer: str
-            out: agenda_ready: bool
-            description: "Research a customer before a call and draft a proposed agenda."
-            requires: read_page, patch_page, YourCRM, YourChatterTool, YourCalendar
-
-            flow {
-              state READ_PAGES -> call(read_page, "the customer's priorities, account plan, and recent meeting notes") -> next
-              state PULL_CRM_ACTIVITY -> call(YourCRM, "deal stage, close date, and ARR from the confirmed fields") -> next
-              state PULL_CHATTER -> call(YourChatterTool, "customer channels and emails from the confirmed domains, past 30 days") -> next
-              state IDENTIFY_OPEN_ITEMS -> evaluate(last_call_commitments vs what_actually_happened) -> next
-              state DRAFT_AGENDA -> evaluate(open_items vs call_type) -> next
-              state PROPOSE_PREP -> gate(human_approval) -> WRITE_PREP
-              state WRITE_PREP -> call(patch_page, "prep summary and proposed agenda") -> next
-              state SYNC_CALENDAR -> call(YourCalendar, "write the agenda into the call event's description") -> TERMINATE("Prep page ready, agenda on the calendar")
-            }
-          }
-          ```
-
-  - type: section
-    eyebrow: Key Rules
-    heading: Rules for this skill
-    components:
-      - type: callout
-        variant: info
-        title: Propose before you write
-        body: |
-          Always present the proposed agenda for human review before writing it to the page. If the customer sent their own pre-call agenda, merge it in rather than overwriting it.
+        flow {
+          state READ_PAGES -> call(read_page, "the customer's priorities, account plan, and recent meeting notes") -> next
+          state PULL_CRM_ACTIVITY -> call(YourCRM, "deal stage, close date, and ARR from the confirmed fields") -> next
+          state PULL_CHATTER -> call(YourChatterTool, "customer channels and emails from the confirmed domains, past 30 days") -> next
+          state IDENTIFY_OPEN_ITEMS -> evaluate(last_call_commitments vs what_actually_happened) -> next
+          state DRAFT_AGENDA -> evaluate(open_items vs call_type) -> next
+          state PROPOSE_PREP -> gate(human_approval) -> WRITE_PREP
+          state WRITE_PREP -> call(patch_page, "prep summary and proposed agenda") -> next
+          state SYNC_CALENDAR -> call(YourCalendar, "write the agenda into the call event's description") -> TERMINATE("Prep page ready, agenda on the calendar")
+        }
+      }
+      ```
+- type: section
+  eyebrow: Key Rules
+  heading: Rules for this skill
+  components:
+  - type: callout
+    variant: info
+    title: Propose before you write
+    body: |
+      Always present the proposed agenda for human review before writing it to the page. If the customer sent their own pre-call agenda, merge it in rather than overwriting it.
+pack:
+  targets:
+  - claude
+  - cursor
