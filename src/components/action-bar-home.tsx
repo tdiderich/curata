@@ -717,16 +717,6 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
                       ))}
                     </>
                   )}
-                  {groupPages.map((p) => (
-                    <PageRow
-                      key={p.slug}
-                      page={p}
-                      onCopy={copyPage}
-                      onCtxMenu={showCtxMenu}
-                      inLockedFolder={!!isLocked}
-                      isAction={isQA}
-                    />
-                  ))}
                   {folderEntry && (childFoldersByParent.get(folderEntry.id) ?? []).map((child) => {
                     const childGroup = folderGroups.get(child.name);
                     const childPages = childGroup?.pages ?? [];
@@ -758,6 +748,16 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
                       </div>
                     );
                   })}
+                  {groupPages.map((p) => (
+                    <PageRow
+                      key={p.slug}
+                      page={p}
+                      onCopy={copyPage}
+                      onCtxMenu={showCtxMenu}
+                      inLockedFolder={!!isLocked}
+                      isAction={isQA}
+                    />
+                  ))}
                   {isQA && (
                     <div className="abh-add-action-row" onClick={() => setSkillPickerOpen(true)}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">

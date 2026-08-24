@@ -8647,6 +8647,14 @@ body:has(.nav-reveal) .page-toolbar {
   gap: 12px;
   padding: 8px 24px;
   background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background 0.2s ease, border-color 0.2s ease, backdrop-filter 0.2s ease;
+}
+.ab-topbar--scrolled {
+  background: rgba(var(--bg-rgb), 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(var(--text-rgb), 0.08);
 }
 .ab-logo {
   display: flex;

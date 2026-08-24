@@ -37,6 +37,7 @@ export function ActionBar({ orgName, logoUrl, pages, authControls }: ActionBarPr
   const router = useRouter();
   const pathname = usePathname();
   const [overlayOpen, setOverlayOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selected, setSelected] = useState(-1);
@@ -62,6 +63,13 @@ export function ActionBar({ orgName, logoUrl, pages, authControls }: ActionBarPr
       document.removeEventListener("keydown", onKey);
       window.removeEventListener("curata-open-palette", onOpenEvent);
     };
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -160,7 +168,7 @@ export function ActionBar({ orgName, logoUrl, pages, authControls }: ActionBarPr
 
   return (
     <>
-      {!isLanding && <header className="ab-topbar">
+      {!isLanding && <header className={`ab-topbar${scrolled ? " ab-topbar--scrolled" : ""}`}>
         <Link href="/dashboard" className="ab-logo" title={orgName}>
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
