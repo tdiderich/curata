@@ -157,12 +157,15 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
     if (semantic && semantic.pages.length > 0) {
       const semanticSlugs = new Set(semantic.pages.map((p) => p.slug));
       const conceptMap = new Map(semantic.pages.map((p) => [p.slug, p.sharedConcepts]));
-      const matched = pages
-        .filter((p) => semanticSlugs.has(p.slug))
+      const semanticOnly = pages
+        .filter((p) => semanticSlugs.has(p.slug) && !p.title.toLowerCase().includes(q))
         .map((p) => ({ ...p, _concepts: conceptMap.get(p.slug) }));
-      const titleMatches = pages
+      const titleMatchSemantic = pages
+        .filter((p) => semanticSlugs.has(p.slug) && p.title.toLowerCase().includes(q))
+        .map((p) => ({ ...p, _concepts: conceptMap.get(p.slug) }));
+      const titleMatchOther = pages
         .filter((p) => !semanticSlugs.has(p.slug) && p.title.toLowerCase().includes(q));
-      return [...matched, ...titleMatches];
+      return [...titleMatchSemantic, ...titleMatchOther, ...semanticOnly];
     }
     return pages.filter((p) => p.title.toLowerCase().includes(q));
   }, [query, pages, semantic]);
@@ -265,6 +268,43 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
     }
     return ordered;
   }, [folderGroups, pinnedPages, folders]);
+
+  function renderSubfolders(parentId: string): React.ReactNode {
+    const children = childFoldersByParent.get(parentId);
+    if (!children || children.length === 0) return null;
+    return children.map((child) => {
+      const childGroup = folderGroups.get(child.name);
+      const childPages = childGroup?.pages ?? [];
+      const childOpen = effectiveExpanded.has(child.name);
+      return (
+        <div key={child.id} className="abh-folder-group abh-subfolder">
+          <div className="abh-folder-label" onClick={() => toggleFolder(child.name)}>
+            <span className={`abh-chevron${childOpen ? "" : " abh-chevron--collapsed"}`}>&#9662;</span>
+            <FolderIcon />
+            <span className="abh-folder-name">{child.name}</span>
+            <div className="abh-folder-actions">
+              <button type="button" className="abh-action-btn" onClick={(e) => { e.stopPropagation(); copyFolder(child.name); }} title="Copy for agent">
+                <CopyIcon />
+              </button>
+              {!child.locked && (
+                <button type="button" className="abh-action-btn" onClick={(e) => showCtxMenu(e, "folder", child.name)} title="More actions">
+                  <DotsIcon />
+                </button>
+              )}
+            </div>
+          </div>
+          {childOpen && (
+            <div className="abh-folder-pages">
+              {renderSubfolders(child.id)}
+              {childPages.map((p) => (
+                <PageRow key={p.slug} page={p} onCopy={copyPage} onCtxMenu={showCtxMenu} inLockedFolder={!!child.locked} />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    });
+  }
 
   function toggleFolder(name: string) {
     setExpandedFolders((prev) => {
@@ -717,37 +757,7 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
                       ))}
                     </>
                   )}
-                  {folderEntry && (childFoldersByParent.get(folderEntry.id) ?? []).map((child) => {
-                    const childGroup = folderGroups.get(child.name);
-                    const childPages = childGroup?.pages ?? [];
-                    const childOpen = effectiveExpanded.has(child.name);
-                    return (
-                      <div key={child.id} className="abh-folder-group abh-subfolder">
-                        <div className="abh-folder-label" onClick={() => toggleFolder(child.name)}>
-                          <span className={`abh-chevron${childOpen ? "" : " abh-chevron--collapsed"}`}>&#9662;</span>
-                          <FolderIcon />
-                          <span className="abh-folder-name">{child.name}</span>
-                          <div className="abh-folder-actions">
-                            <button type="button" className="abh-action-btn" onClick={(e) => { e.stopPropagation(); copyFolder(child.name); }} title="Copy for agent">
-                              <CopyIcon />
-                            </button>
-                            {!child.locked && (
-                              <button type="button" className="abh-action-btn" onClick={(e) => showCtxMenu(e, "folder", child.name)} title="More actions">
-                                <DotsIcon />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        {childOpen && (
-                          <div className="abh-folder-pages">
-                            {childPages.map((p) => (
-                              <PageRow key={p.slug} page={p} onCopy={copyPage} onCtxMenu={showCtxMenu} inLockedFolder={!!child.locked} />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {folderEntry && renderSubfolders(folderEntry.id)}
                   {groupPages.map((p) => (
                     <PageRow
                       key={p.slug}

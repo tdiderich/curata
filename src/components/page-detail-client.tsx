@@ -715,7 +715,7 @@ export default function PageDetailClient({
             </div>
             <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} hideTrigger />
             {editMode && (
-              <div className="page-hero-edit-bar">
+              <div className="page-edit-floating-bar">
                 <button
                   className="btn btn--primary"
                   disabled={editSaving}
@@ -728,7 +728,7 @@ export default function PageDetailClient({
                     }
                   }}
                 >
-                  {editSaving ? "Saving..." : editDirty ? "Save" : "Done"}
+                  {editSaving ? "Saving..." : "Done editing"}
                 </button>
               </div>
             )}

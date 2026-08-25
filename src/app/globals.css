@@ -221,6 +221,26 @@ body .c-section.align-right > * { max-width: none !important; }
   gap: 8px;
 }
 
+.page-edit-floating-bar {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+  animation: fadeInUp 0.2s ease;
+}
+
+.page-edit-floating-bar .btn {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 10px 20px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @media (max-width: 640px) {
   .page-hero { padding: 20px 16px 16px; }
   .page-hero-title { font-size: 20px; }

@@ -175,8 +175,8 @@ export default function InlineComponentEditor({
   }
 
   return (
-    <div className="component-editor-overlay" onClick={() => {
-      if (dirty && !confirm("Discard unsaved changes?")) return;
+    <div className="component-editor-overlay" onClick={async () => {
+      if (dirty) await save();
       onClose();
     }}>
       <div className="component-editor-modal" onClick={(e) => e.stopPropagation()}>
@@ -210,8 +210,8 @@ export default function InlineComponentEditor({
           </button>
           <button
             className="inline-editor-btn inline-editor-btn--close"
-            onClick={() => {
-              if (dirty && !confirm("Discard unsaved changes?")) return;
+            onClick={async () => {
+              if (dirty) await save();
               onClose();
             }}
           >
