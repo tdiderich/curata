@@ -84,6 +84,7 @@ export default function PageDetailClient({
   trustMode: trustModeProp,
   hasTrustRuleAtScope,
   pageJson,
+  readOnly = false,
 }: {
   slug: string;
   children?: React.ReactNode;
@@ -110,6 +111,7 @@ export default function PageDetailClient({
   trustMode?: "auto" | "locked";
   hasTrustRuleAtScope?: boolean;
   pageJson?: PageData;
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -514,7 +516,7 @@ export default function PageDetailClient({
           });
         },
       },
-      {
+      ...(readOnly ? [] : [{
         id: "edit-inline",
         label: editMode ? (editDirty ? "Save edits" : "Exit edit mode") : "Edit page",
         run: () => {
@@ -529,9 +531,9 @@ export default function PageDetailClient({
             setEditMode(true);
           }
         },
-      },
-      { id: "edit-source", label: "Edit source YAML", run: () => setViewTab("source") },
-      { id: "page-settings", label: "Page settings", run: () => router.push(`/pages/${slug}/settings`) },
+      }]),
+      ...(readOnly ? [] : [{ id: "edit-source", label: "Edit source YAML", run: () => setViewTab("source") }]),
+      ...(readOnly ? [] : [{ id: "page-settings", label: "Page settings", run: () => router.push(`/pages/${slug}/settings`) }]),
       { id: "export-png", label: "Export PNG", run: () => handleExport("png") },
       { id: "export-pdf", label: "Export PDF", run: () => handleExport("pdf") },
       {
@@ -555,7 +557,7 @@ export default function PageDetailClient({
         : []),
     ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewTab, showResolved, expandAll, resolvedCount, activeAnns.length, slug, editMode, editDirty]);
+  }, [viewTab, showResolved, expandAll, resolvedCount, activeAnns.length, slug, editMode, editDirty, readOnly]);
 
   return (
     <div className="page-detail-layout">

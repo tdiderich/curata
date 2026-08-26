@@ -779,7 +779,6 @@ export async function dispatch(
       if (args.folder_id) {
         const cpFolder = await db.folder.findFirst({ where: { id: args.folder_id, orgId } });
         if (!cpFolder) throw new Error(`folder not found: ${args.folder_id}`);
-        if (cpFolder.locked) throw new Error("cannot create: folder is curata-managed (view + copy only)");
         checkFolderBoundary(cpVis, cpFolder.visibility);
       }
       let cpPageRules: unknown;
@@ -868,15 +867,14 @@ export async function dispatch(
         include: { folder: { select: { name: true, locked: true } } },
       });
       if (!movePage) throw new Error(`page not found: ${args.slug}`);
-      if ((movePage as unknown as { folder: { locked: boolean } | null }).folder?.locked) {
-        throw new Error("cannot move: page is in a curata-managed folder (view + copy only)");
+      if (movePage.seeded) {
+        throw new Error("cannot move: page is seeded by curata and will be overwritten on next sync");
       }
       const folderId = args.folder_id || null;
       let targetFolderName: string | null = null;
       if (folderId) {
         const folder = await db.folder.findFirst({ where: { id: folderId, orgId } });
         if (!folder) throw new Error(`folder not found: ${folderId}`);
-        if (folder.locked) throw new Error("cannot move: destination folder is curata-managed (view + copy only)");
         targetFolderName = folder.name;
         checkFolderBoundary(movePage.visibility ?? "org", folder.visibility);
       }

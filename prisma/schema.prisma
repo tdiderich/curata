@@ -89,10 +89,8 @@ model Folder {
   name       String
   visibility String   @default("org")
   rules      Json?
-  // Curata-managed folders (Templates, Skills): seeded/backfilled by the
-  // app itself, view + copy only. Content edits are blocked at the write
-  // choke points (_writePageInternal, mcp-dispatch); seed.ts writes
-  // directly to the DB so backfill is unaffected.
+  // UI-only badge for folders created by the seed script. Access control
+  // is per-page via Page.seeded, not per-folder.
   locked     Boolean  @default(false)
   createdBy  String   @map("created_by")
   createdAt  DateTime @default(now()) @map("created_at")
@@ -131,6 +129,7 @@ model Page {
   // "trusted" read for agents. Null = no trusted version yet (no backfill).
   // Writes never touch this column — only markTrusted/clearTrusted do.
   trustedVersionId String? @map("trusted_version_id")
+  seeded     Boolean   @default(false)
   pageType   String?   @map("page_type")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")

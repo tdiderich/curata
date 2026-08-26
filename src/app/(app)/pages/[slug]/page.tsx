@@ -53,7 +53,7 @@ export default async function PageDetailView({
 
   const pageRow = await db.page.findUnique({
     where: { orgId_slug: { orgId: ctx.orgId, slug } },
-    select: { id: true, status: true, supersededBy: true, updatedAt: true, folderId: true, rules: true },
+    select: { id: true, status: true, supersededBy: true, updatedAt: true, folderId: true, rules: true, seeded: true },
   });
   if (pageRow) bumpViewCount(pageRow.id).catch(() => {});
 
@@ -97,6 +97,7 @@ export default async function PageDetailView({
   let tagOptions: Array<{ term: string; kind: string }> = [];
   let folderTag: string | undefined;
   let showTrustBanner = true;
+  const seededReadOnly = !!pageRow?.seeded;
   if (pageRow?.folderId) {
     const folder = await db.folder.findUnique({
       where: { id: pageRow.folderId },
@@ -271,6 +272,7 @@ export default async function PageDetailView({
           ) : undefined
         }
         pageJson={page}
+        readOnly={seededReadOnly}
       >
         <PageRenderer
           page={page}

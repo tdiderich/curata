@@ -169,7 +169,9 @@ export async function seedGettingStartedPage(orgId: string, createdBy: string, f
     // Backfill: adopt a pre-existing loose getting-started page into the
     // Getting Started folder without touching its content.
     if (folderId && !existing.folderId) {
-      await db.page.update({ where: { id: existing.id }, data: { folderId } });
+      await db.page.update({ where: { id: existing.id }, data: { folderId, seeded: true } });
+    } else if (!existing.seeded) {
+      await db.page.update({ where: { id: existing.id }, data: { seeded: true } });
     }
     return;
   }
@@ -184,6 +186,7 @@ export async function seedGettingStartedPage(orgId: string, createdBy: string, f
       title: GETTING_STARTED_PAGE.title,
       folderId,
       createdBy,
+      seeded: true,
       versions: {
         create: {
           yamlContent,

@@ -692,12 +692,11 @@ async function _writePageInternal(
     where: { orgId_slug: { orgId, slug } },
     include: {
       versions: { orderBy: { createdAt: "desc" }, take: 1 },
-      folder: { select: { locked: true } },
     },
   });
 
-  if (existing?.folder?.locked) {
-    return { ok: false, error: "cannot edit: page is in a curata-managed folder (view + copy only)" };
+  if (existing?.seeded) {
+    return { ok: false, error: "cannot edit: page is seeded by curata and will be overwritten on next sync (view + copy only)" };
   }
 
   if (expectedHash && existing && existing.versions.length > 0) {

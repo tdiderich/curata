@@ -17,9 +17,6 @@ async function findOrCreateFolder(
 ): Promise<string> {
   const existing = await db.folder.findFirst({ where: { orgId, name } });
   if (existing) {
-    if (locked && !existing.locked) {
-      await db.folder.update({ where: { id: existing.id }, data: { locked: true } });
-    }
     return existing.id;
   }
   // A folder rename (e.g. Workflows -> Skills) needs to rename the existing
@@ -94,6 +91,7 @@ async function seedPagesFromDir(
           id: true,
           folderId: true,
           status: true,
+          seeded: true,
           trustedVersionId: true,
           versions: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true, contentHash: true } },
         },
@@ -109,7 +107,7 @@ async function seedPagesFromDir(
         // reads (the read_page default) to stale content even after a
         // refresh lands, so pointer currency is part of "up to date" here.
         const trustedCurrent = !existing.trustedVersionId || (latest && existing.trustedVersionId === latest.id);
-        if (latestMatchesSeed && existing.status === "active" && trustedCurrent) {
+        if (latestMatchesSeed && existing.status === "active" && trustedCurrent && existing.seeded) {
           continue;
         }
         // Archived-but-current pages just reactivate; only a real content
@@ -136,6 +134,7 @@ async function seedPagesFromDir(
           data: {
             title,
             status: "active",
+            seeded: true,
             ...(existing.trustedVersionId && currentVersionId ? { trustedVersionId: currentVersionId } : {}),
           },
         });
@@ -149,6 +148,7 @@ async function seedPagesFromDir(
           title,
           folderId,
           createdBy: "system",
+          seeded: true,
           versions: {
             create: {
               yamlContent,
@@ -165,18 +165,16 @@ async function seedPagesFromDir(
     }
   }
 
-  // Retire pages this folder no longer seeds. A locked folder is
-  // curata-managed wholesale — deployments created their seed pages through
-  // different paths over time (system seeder, dashboard migration scripts),
-  // so createdBy is not a reliable ownership signal and is deliberately not
-  // filtered on. Archive is reversible; anything a human wants kept belongs
-  // in an unlocked folder anyway, which is exactly where move_page puts it.
+  // Retire seeded pages this folder no longer ships. Only targets pages
+  // with seeded=true so org-custom pages in the same locked folder are
+  // never touched by the sweep.
   try {
     const strays = await db.page.findMany({
       where: {
         orgId,
         folderId,
         status: "active",
+        seeded: true,
         slug: { notIn: [...seededSlugs] },
       },
       select: { id: true, slug: true },

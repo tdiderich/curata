@@ -111,13 +111,13 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
 
-    const deleteFolder = await db.page.findUnique({
+    const deleteCheck = await db.page.findUnique({
       where: { id: pageWithAccess.id },
-      select: { folder: { select: { locked: true } } },
+      select: { seeded: true },
     });
-    if (deleteFolder?.folder?.locked) {
+    if (deleteCheck?.seeded) {
       return NextResponse.json(
-        { error: "cannot delete: page is in a curata-managed folder (view + copy only)" },
+        { error: "cannot delete: page is seeded by curata and will be overwritten on next sync" },
         { status: 403 }
       );
     }
@@ -174,13 +174,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (body.folderId !== undefined) {
-      const currentFolder = await db.page.findUnique({
+      const moveCheck = await db.page.findUnique({
         where: { id: pageWithAccess.id },
-        select: { folder: { select: { locked: true } } },
+        select: { seeded: true },
       });
-      if (currentFolder?.folder?.locked) {
+      if (moveCheck?.seeded) {
         return NextResponse.json(
-          { error: "cannot move: page is in a curata-managed folder (view + copy only)" },
+          { error: "cannot move: page is seeded by curata and will be overwritten on next sync" },
           { status: 403 }
         );
       }
@@ -190,12 +190,6 @@ export async function PATCH(request: NextRequest) {
     if (body.folderId) {
       const folder = await db.folder.findFirst({ where: { id: body.folderId, orgId: ctx.orgId } });
       if (folder) {
-        if (folder.locked) {
-          return NextResponse.json(
-            { error: "cannot move: destination folder is curata-managed (view + copy only)" },
-            { status: 403 }
-          );
-        }
         try { checkFolderBoundary(effectiveVis, folder.visibility); } catch (e) {
           return NextResponse.json({ error: (e as Error).message }, { status: 400 });
         }

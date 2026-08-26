@@ -140,7 +140,7 @@ describe("locked-folder seed refresh", () => {
     expect(after?.status).toBe("active");
   });
 
-  it("archives a system page whose seed file no longer ships", async () => {
+  it("archives a seeded page whose seed file no longer ships", async () => {
     const folder = await testDb.folder.findFirst({ where: { orgId, name: "Getting Started" } });
     await testDb.page.create({
       data: {
@@ -149,6 +149,7 @@ describe("locked-folder seed refresh", () => {
         title: "Self-Hosting",
         folderId: folder!.id,
         createdBy: "system",
+        seeded: true,
         versions: { create: { yamlContent: "title: Self-Hosting\ncomponents: []\n", contentHash: "retired-hash", createdBy: "system" } },
       },
     });
@@ -159,9 +160,7 @@ describe("locked-folder seed refresh", () => {
     expect(after?.status).toBe("archived");
   });
 
-  it("archives any non-seed page in a locked folder regardless of createdBy", async () => {
-    // curata.ai's own getting-started pages were created via the dashboard
-    // (createdBy web), so the sweep must not filter on creator.
+  it("leaves non-seeded org-custom pages in a locked folder untouched", async () => {
     const folder = await testDb.folder.findFirst({ where: { orgId, name: "Getting Started" } });
     await testDb.page.create({
       data: {
@@ -177,6 +176,26 @@ describe("locked-folder seed refresh", () => {
     await seedOrgContent(orgId);
 
     const after = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "legacy-doc" } } });
+    expect(after?.status).toBe("active");
+  });
+
+  it("archives a seeded page whose seed file was removed", async () => {
+    const folder = await testDb.folder.findFirst({ where: { orgId, name: "Getting Started" } });
+    await testDb.page.create({
+      data: {
+        orgId,
+        slug: "retired-seed",
+        title: "Retired Seed",
+        folderId: folder!.id,
+        createdBy: "system",
+        seeded: true,
+        versions: { create: { yamlContent: "title: Retired Seed\ncomponents: []\n", contentHash: "retired-hash", createdBy: "system" } },
+      },
+    });
+
+    await seedOrgContent(orgId);
+
+    const after = await testDb.page.findUnique({ where: { orgId_slug: { orgId, slug: "retired-seed" } } });
     expect(after?.status).toBe("archived");
   });
 
