@@ -124,6 +124,7 @@ export default async function ExportPreview({
           background: transparent !important;
           padding: 32px 28px !important;
         }
+        .hub-masthead { display: none !important; }
         .export-title-block {
           text-align: center;
           padding: 24px 28px 20px;
