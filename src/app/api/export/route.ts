@@ -42,6 +42,8 @@ export async function GET(request: NextRequest) {
   const pageData = await readPage(ctx.orgId, slug);
   if (!pageData) return NextResponse.json({ error: "page not found" }, { status: 404 });
 
+  const pageTitle = (pageData.json as { title?: string }).title || slug;
+
   let chromium;
   try {
     chromium = await getChromium();
@@ -64,13 +66,14 @@ export async function GET(request: NextRequest) {
   if (format === "pdf") {
     const { PDFDocument } = await import("pdf-lib");
     const doc = await PDFDocument.create();
-    doc.setTitle(slug);
+    doc.setTitle(pageTitle);
     await addPngPage(doc, pngBuffer);
     const pdfBytes = await doc.save();
+    const safeName = pageTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${slug}_${ts()}.pdf"`,
+        "Content-Disposition": `attachment; filename="${safeName}_${ts()}.pdf"`,
       },
     });
   }

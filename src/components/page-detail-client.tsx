@@ -707,8 +707,8 @@ export default function PageDetailClient({
         {viewTab === "preview" && (
           <div className="page-hero">
             <div className="page-hero-identity">
-              {pageTitle && <h1 className="page-hero-title">{pageTitle}</h1>}
-              {pageJson?.subtitle && (
+              {shell !== "hub" && pageTitle && <h1 className="page-hero-title">{pageTitle}</h1>}
+              {shell !== "hub" && pageJson?.subtitle && (
                 <p className="page-hero-subtitle">{pageJson.subtitle}</p>
               )}
               <div className="page-hero-tags">{tagsRow}</div>

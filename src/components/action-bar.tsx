@@ -126,11 +126,15 @@ export function ActionBar({ orgName, logoUrl, pages, authControls }: ActionBarPr
     ? actions.filter((a) => a.label.toLowerCase().includes(trimmed))
     : actions;
 
-  const shownPages = trimmed
+  const shownPages = (trimmed
     ? pages.filter((p) => p.title.toLowerCase().includes(trimmed))
-    : pages;
+    : pages
+  ).slice(0, 20);
 
-  const totalItems = shownActions.length + results.length + shownPages.length;
+  const navSlugs = new Set(shownPages.map((p) => p.slug));
+  const filteredResults = results.filter((r) => !navSlugs.has(r.slug));
+
+  const totalItems = shownActions.length + shownPages.length + filteredResults.length;
 
   function onKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Escape") {
@@ -148,18 +152,18 @@ export function ActionBar({ orgName, logoUrl, pages, authControls }: ActionBarPr
         const a = shownActions[selected];
         setOverlayOpen(false);
         a.run();
-      } else if (selected < shownActions.length + results.length) {
-        const r = results[selected - shownActions.length];
+      } else if (selected < shownActions.length + shownPages.length) {
+        const p = shownPages[selected - shownActions.length];
+        setOverlayOpen(false);
+        router.push(`/pages/${p.slug}`);
+      } else {
+        const r = filteredResults[selected - shownActions.length - shownPages.length];
         if (r.type === "prompt" && r.prompt) {
           navigator.clipboard.writeText(r.prompt).catch(() => {});
         } else {
           setOverlayOpen(false);
           router.push(`/pages/${r.slug}`);
         }
-      } else {
-        const p = shownPages[selected - shownActions.length - results.length];
-        setOverlayOpen(false);
-        router.push(`/pages/${p.slug}`);
       }
     }
   }
@@ -226,15 +230,38 @@ export function ActionBar({ orgName, logoUrl, pages, authControls }: ActionBarPr
                   ))}
                 </>
               )}
-              {searching && results.length === 0 && (
+              {shownPages.length > 0 && (
+                <>
+                  <div className="ab-section-divider" />
+                  <div className="ab-section-label">Navigate</div>
+                  {shownPages.map((p, i) => {
+                    const idx = shownActions.length + i;
+                    return (
+                      <button
+                        key={p.slug}
+                        className={`ab-action-item ab-nav-item${idx === selected ? " ab-item-active" : ""}`}
+                        onClick={() => { setOverlayOpen(false); router.push(`/pages/${p.slug}`); }}
+                        onMouseEnter={() => setSelected(idx)}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <path d="M14 2v6h6" />
+                        </svg>
+                        <span>{p.title}</span>
+                      </button>
+                    );
+                  })}
+                </>
+              )}
+              {searching && filteredResults.length === 0 && shownPages.length === 0 && (
                 <div className="ab-overlay-empty">Searching...</div>
               )}
-              {results.length > 0 && (
+              {filteredResults.length > 0 && (
                 <>
                   <div className="ab-section-divider" />
                   <div className="ab-section-label">Search results</div>
-                  {results.map((r, i) => {
-                    const idx = shownActions.length + i;
+                  {filteredResults.map((r, i) => {
+                    const idx = shownActions.length + shownPages.length + i;
                     return (
                       <button
                         key={`${r.slug}-${i}`}
@@ -262,30 +289,7 @@ export function ActionBar({ orgName, logoUrl, pages, authControls }: ActionBarPr
                   })}
                 </>
               )}
-              {(shownPages.length > 0 || (!trimmed && pages.length > 0)) && (
-                <>
-                  <div className="ab-section-divider" />
-                  <div className="ab-section-label">Navigate</div>
-                  {shownPages.slice(0, 20).map((p, i) => {
-                    const idx = shownActions.length + results.length + i;
-                    return (
-                      <button
-                        key={p.slug}
-                        className={`ab-action-item ab-nav-item${idx === selected ? " ab-item-active" : ""}`}
-                        onClick={() => { setOverlayOpen(false); router.push(`/pages/${p.slug}`); }}
-                        onMouseEnter={() => setSelected(idx)}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <path d="M14 2v6h6" />
-                        </svg>
-                        <span>{p.title}</span>
-                      </button>
-                    );
-                  })}
-                </>
-              )}
-              {trimmed && shownActions.length === 0 && results.length === 0 && shownPages.length === 0 && !searching && (
+              {trimmed && shownActions.length === 0 && filteredResults.length === 0 && shownPages.length === 0 && !searching && (
                 <div className="ab-overlay-empty">
                   No results for &ldquo;{query.trim()}&rdquo;
                 </div>

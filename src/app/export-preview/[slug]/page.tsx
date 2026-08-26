@@ -110,15 +110,44 @@ export default async function ExportPreview({
           padding: 10px 0; margin-bottom: 8px;
           border-bottom: 1px solid rgba(255,255,255,0.08);
         }
+        html { overflow: hidden !important; }
+        [data-nextjs-dialog-overlay],
+        [data-nextjs-toast],
+        nextjs-portal,
+        #__next-build-indicator,
+        .__next-build-watcher { display: none !important; }
         body::before, body::after {
           position: absolute !important;
           min-height: 100% !important;
         }
         .export-root {
           background: transparent !important;
+          padding: 32px 28px !important;
+        }
+        .export-title-block {
+          text-align: center;
+          padding: 24px 28px 20px;
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+          margin-bottom: 8px;
+        }
+        .export-title-block h1 {
+          font-size: 22px;
+          font-weight: 700;
+          color: var(--snow);
+          margin: 0 0 4px;
+          line-height: 1.3;
+        }
+        .export-title-block p {
+          font-size: 14px;
+          color: rgba(255,255,255,0.5);
+          margin: 0;
         }
       `}</style>
       <div className="page-detail-content export-root">
+        <div className="export-title-block">
+          <h1>{page.title}</h1>
+          {page.subtitle && <p>{page.subtitle}</p>}
+        </div>
         <PageRenderer page={page} exportMode={true} />
       </div>
     </div>

@@ -41,7 +41,7 @@ export function buildTitlePageHtml(
 <html ${themeAttrs(theme)}>
 <head><meta charset="utf-8"><style>${getKazamCss()}</style></head>
 <body class="shell-standard" style="margin:0;min-height:100vh;">
-  <div style="max-width:1000px;margin:0 auto;padding:120px 56px 80px;min-height:100vh;box-sizing:border-box;display:flex;flex-direction:column;">
+  <div style="max-width:1000px;margin:0 auto;padding:80px 40px 60px;min-height:100vh;box-sizing:border-box;display:flex;flex-direction:column;">
     <div style="flex:1;">
       <div style="font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--teal);margin-bottom:16px;">Report</div>
       <h1 style="font-size:40px;font-weight:700;color:var(--snow);margin:0 0 12px;line-height:1.2;">${esc(title)}</h1>
@@ -78,7 +78,7 @@ export function buildAppendixHtml(
 <html ${themeAttrs(theme)}>
 <head><meta charset="utf-8"><style>${getKazamCss()}</style></head>
 <body class="shell-standard" style="margin:0;">
-  <div style="max-width:1000px;margin:0 auto;padding:80px 56px;">
+  <div style="max-width:1000px;margin:0 auto;padding:60px 40px;">
     <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.4);margin-bottom:24px;">Appendix</div>
     <h2 style="font-size:24px;font-weight:600;color:var(--snow);margin:0 0 32px;">Pages included in this report</h2>
     <table style="width:100%;border-collapse:collapse;">

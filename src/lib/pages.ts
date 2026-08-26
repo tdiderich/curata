@@ -553,6 +553,12 @@ export async function searchPages(
     return salientTermFallback(entries, query, glanceCtx);
   }
 
+  results.sort((a, b) => {
+    const aTitle = a.title.toLowerCase().includes(q) ? 1 : 0;
+    const bTitle = b.title.toLowerCase().includes(q) ? 1 : 0;
+    return bTitle - aTitle;
+  });
+
   return results;
 }
 
