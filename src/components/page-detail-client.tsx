@@ -711,7 +711,7 @@ export default function PageDetailClient({
               {shell !== "hub" && pageJson?.subtitle && (
                 <p className="page-hero-subtitle">{pageJson.subtitle}</p>
               )}
-              <div className="page-hero-tags">{tagsRow}</div>
+              {shell !== "hub" && <div className="page-hero-tags">{tagsRow}</div>}
             </div>
             <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} hideTrigger />
             {editMode && (
