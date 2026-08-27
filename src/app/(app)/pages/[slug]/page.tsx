@@ -222,6 +222,7 @@ export default async function PageDetailView({
       components?: Array<{ type: string; [key: string]: unknown }>;
     }> | undefined,
     freshness: pageData.json.freshness as { updated?: string; review_every?: string; owner?: string; expires?: string } | "never" | undefined,
+    presentation: pageData.json.presentation as { breaks?: number[]; labels?: string[] } | undefined,
   };
 
   return (

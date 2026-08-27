@@ -139,6 +139,7 @@ export default function PageDetailClient({
   const [isDragging, setIsDragging] = useState(false);
   const [srcDirty, setSrcDirty] = useState(false);
   const [srcSaving, setSrcSaving] = useState(false);
+  const [presenting, setPresenting] = useState(false);
   const srcControls = useRef<SourceEditorControls | null>(null);
   const onSourceState = useCallback((dirty: boolean, saving: boolean) => {
     setSrcDirty(dirty);
@@ -146,6 +147,20 @@ export default function PageDetailClient({
   }, []);
 
   const isDeck = shell === "deck";
+
+  const presentationConfig = (pageJson as Record<string, unknown> | undefined)?.presentation as
+    | { breaks?: number[]; labels?: string[] }
+    | undefined;
+  const presentationSlides = useMemo(() => {
+    if (!presentationConfig?.breaks?.length || !pageJson?.components?.length) return null;
+    const comps = pageJson.components as Array<Record<string, unknown>>;
+    const breaks = [0, ...presentationConfig.breaks].filter((b) => b < comps.length);
+    const labels = presentationConfig.labels ?? [];
+    return breaks.map((start, i) => {
+      const end = i + 1 < breaks.length ? breaks[i + 1] : comps.length;
+      return { components: comps.slice(start, end), label: labels[i] ?? "" };
+    });
+  }, [presentationConfig, pageJson?.components]);
   const [slideIndex, setSlideIndex] = useState(() => {
     if (typeof window === "undefined" || !isDeck) return 0;
     const p = new URLSearchParams(window.location.search);
@@ -532,32 +547,13 @@ export default function PageDetailClient({
           }
         },
       }]),
-      ...(readOnly ? [] : [{ id: "edit-source", label: "Edit source YAML", run: () => setViewTab("source") }]),
-      ...(readOnly ? [] : [{ id: "page-settings", label: "Page settings", run: () => router.push(`/pages/${slug}/settings`) }]),
+      ...(presentationSlides ? [{ id: "present", label: "Present", run: () => setPresenting(true) }] : []),
       { id: "export-png", label: "Export PNG", run: () => handleExport("png") },
       { id: "export-pdf", label: "Export PDF", run: () => handleExport("pdf") },
-      {
-        id: "annotate",
-        label: "Add annotation",
-        run: () => setFormState({ mode: "note", section: "", target: "", componentId: "", y: 0 }),
-      },
-      ...(resolvedCount > 0
-        ? [{
-            id: "resolved",
-            label: showResolved ? `Hide ${resolvedCount} resolved annotations` : `Show ${resolvedCount} resolved annotations`,
-            run: () => setShowResolved((v) => !v),
-          }]
-        : []),
-      ...(activeAnns.length > 0
-        ? [{
-            id: "expand",
-            label: expandAll ? "Collapse all annotations" : "Expand all annotations",
-            run: () => { setExpandAll((v) => !v); setExpandedId(null); },
-          }]
-        : []),
+      ...(readOnly ? [] : [{ id: "page-settings", label: "Page settings", run: () => router.push(`/pages/${slug}/settings`) }]),
     ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewTab, showResolved, expandAll, resolvedCount, activeAnns.length, slug, editMode, editDirty, readOnly]);
+  }, [viewTab, slug, editMode, editDirty, readOnly, presentationSlides]);
 
   return (
     <div className="page-detail-layout">
@@ -968,6 +964,91 @@ export default function PageDetailClient({
         </div>
       </div>
       )}
+      {presenting && presentationSlides && createPortal(
+        <PresentationOverlay
+          slides={presentationSlides}
+          pageTitle={pageTitle ?? slug}
+          pageJson={pageJson!}
+          onClose={() => setPresenting(false)}
+        />,
+        document.body,
+      )}
+    </div>
+  );
+}
+
+function PresentationOverlay({
+  slides,
+  pageTitle,
+  pageJson,
+  onClose,
+}: {
+  slides: Array<{ components: Array<Record<string, unknown>>; label: string }>;
+  pageTitle: string;
+  pageJson: PageData;
+  onClose: () => void;
+}) {
+  const [current, setCurrent] = useState(0);
+  const total = slides.length;
+
+  const go = useCallback(
+    (dir: 1 | -1) => setCurrent((c) => Math.max(0, Math.min(total - 1, c + dir))),
+    [total],
+  );
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); go(1); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+      else if (e.key === "Home") { e.preventDefault(); setCurrent(0); }
+      else if (e.key === "End") { e.preventDefault(); setCurrent(total - 1); }
+    };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [go, onClose, total]);
+
+  const slide = slides[current];
+
+  return (
+    <div className="pres-overlay" onClick={onClose}>
+      <div className="pres-viewport" onClick={(e) => e.stopPropagation()}>
+        <div className="pres-header">
+          <span className="pres-title">{pageTitle}</span>
+          {slide.label && <span className="pres-slide-label">{slide.label}</span>}
+          <span className="pres-counter">{current + 1} / {total}</span>
+          <button className="pres-close" onClick={onClose} aria-label="Exit presentation">&times;</button>
+        </div>
+        <div className="pres-body">
+          <PageRenderer
+            page={{
+              ...pageJson,
+              shell: "standard",
+              components: slide.components as PageData["components"],
+              slides: undefined,
+              hub: undefined,
+            }}
+          />
+        </div>
+        <div className="pres-nav">
+          <button className="pres-nav-btn" disabled={current === 0} onClick={() => go(-1)} aria-label="Previous slide">&larr;</button>
+          <div className="pres-dots">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                className={`pres-dot${i === current ? " pres-dot--active" : ""}`}
+                onClick={() => setCurrent(i)}
+                aria-label={`Slide ${i + 1}`}
+              />
+            ))}
+          </div>
+          <button className="pres-nav-btn" disabled={current === total - 1} onClick={() => go(1)} aria-label="Next slide">&rarr;</button>
+        </div>
+      </div>
     </div>
   );
 }
