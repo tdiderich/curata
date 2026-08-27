@@ -46,3 +46,7 @@ components:
           - label: "Our Product"
             color: teal
             values: [7, 9, 5, 8, 6]
+
+presentation:
+  breaks: [3]
+  labels: [Account Health Comparison, CRM Product Maturity]

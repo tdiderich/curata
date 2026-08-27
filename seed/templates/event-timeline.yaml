@@ -83,3 +83,7 @@ components:
         detail: "Inventory every cert, its expiry, and which service depends on it."
       - title: Automate cert rotation in CI
         detail: "Certs older than 10 months should trigger a renewal PR automatically."
+
+presentation:
+  breaks: [3]
+  labels: [Incident Overview, Follow-up Actions]

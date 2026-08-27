@@ -636,7 +636,9 @@ export async function dispatch(
       // into that generated file.
       const sharedComponentsNote =
         "\n\n## ref (shared components)\n\nNot a rendered component — expanded server-side before the page renders. Embeds another page's `components` array by slug:\n\n```yaml\n- type: ref\n  component: <slug-of-a-pageType-component-page>\n```\n\nThe target page must declare `pageType: component`. Edits to the target fan out to every page that embeds it once the target's new version is trusted; a page that only holds a ref has nothing else to patch.";
-      return { content: fs.readFileSync(refPath, "utf-8") + sharedComponentsNote };
+      const presentationNote =
+        "\n\n## Page-level: presentation\n\nAdd a `presentation` field to any page's YAML to enable slide-style presenting from the command palette. Slices the existing `components` array into slides using breakpoints. No content duplication.\n\n| Field | Type | Required |\n|-------|------|----------|\n| breaks | number[] | yes |\n| labels | string[] | no |\n\n- `breaks` - array of integers. Each number is the 0-indexed component position where a new slide begins. Slide 1 always starts at component 0 (implicit, don't include 0 in breaks).\n- `labels` - array of strings. One label per slide, in order. First label names the slide starting at component 0. Length must equal `breaks.length + 1`.\n- `type: divider` components are hidden in presentation mode but still count for break indexing.\n\n```yaml\ncomponents:\n  - type: section        # index 0\n    id: outcomes\n  - type: divider        # index 1\n  - type: section        # index 2\n    id: accomplished\n  - type: divider        # index 3\n  - type: section        # index 4\n    id: up-next\n\npresentation:\n  breaks: [2, 4]\n  labels: [Outcomes, Accomplished, Up Next]\n```\n\nThis produces 3 slides: components 0-1, components 2-3, components 4+. Dividers are hidden when presenting.";
+      return { content: fs.readFileSync(refPath, "utf-8") + sharedComponentsNote + presentationNote };
     }
 
     case "list_folders": {

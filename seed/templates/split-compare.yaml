@@ -52,3 +52,7 @@ components:
     variant: success
     title: The difference
     body: "Curata captures knowledge from where it already happens, validates it through human review, and serves it back to every agent and every teammate. Nothing resets when someone leaves."
+
+presentation:
+  breaks: [3]
+  labels: [The Knowledge Gap, The Comparison]

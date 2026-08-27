@@ -158,7 +158,10 @@ export default function PageDetailClient({
     const labels = presentationConfig.labels ?? [];
     return breaks.map((start, i) => {
       const end = i + 1 < breaks.length ? breaks[i + 1] : comps.length;
-      return { components: comps.slice(start, end), label: labels[i] ?? "" };
+      return {
+        components: comps.slice(start, end).filter((c) => c.type !== "divider"),
+        label: labels[i] ?? "",
+      };
     });
   }, [presentationConfig, pageJson?.components]);
   const [slideIndex, setSlideIndex] = useState(() => {
