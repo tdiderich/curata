@@ -113,6 +113,9 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
   const [query, setQuery] = useState("");
   const [semantic, setSemantic] = useState<SemanticResult | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  // While searching, folders auto-expand to show matches; this records the
+  // user's manual toggles on top of that (name -> open). Reset per query.
+  const [searchOverrides, setSearchOverrides] = useState<Map<string, boolean>>(new Map());
   const [ctxMenu, setCtxMenu] = useState<{ type: "folder" | "page" | "action"; name: string; anchorEl: HTMLElement | null }>({ type: "folder", name: "", anchorEl: null });
   const [reportOpen, setReportOpen] = useState(false);
   const [folderModal, setFolderModal] = useState(false);
@@ -145,6 +148,20 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
     return readPinsSeeded(orgPinnedSlugs);
   }, [orgPinnedSlugs]);
 
+  const isSearching = !!query.trim();
+
+  // Nearest-first ancestor chain for a folder id (the folder itself included).
+  const ancestorsOf = useCallback((folderId: string | null | undefined): ActionBarFolder[] => {
+    const out: ActionBarFolder[] = [];
+    let cur = folderId ? folderMap.get(folderId) : undefined;
+    let guard = 0;
+    while (cur && guard++ < 32) {
+      out.push(cur);
+      cur = cur.parentId ? folderMap.get(cur.parentId) : undefined;
+    }
+    return out;
+  }, [folderMap]);
+
   const matchedConcept = useMemo(() => {
     if (!query.trim()) return null;
     const q = query.toLowerCase().trim().replace(/\s+/g, "-");
@@ -153,22 +170,39 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
 
   const filteredPages = useMemo(() => {
     if (!query.trim()) return pages;
-    const q = query.toLowerCase();
+    const q = query.toLowerCase().trim();
+    // A page matches on its own title, or because it lives under a folder
+    // whose name matches (searching "dtcc" surfaces everything in DTCC/).
+    const hit = (p: ActionBarPage) =>
+      p.title.toLowerCase().includes(q) || ancestorsOf(p.folderId).some((f) => f.name.toLowerCase().includes(q));
     if (semantic && semantic.pages.length > 0) {
       const semanticSlugs = new Set(semantic.pages.map((p) => p.slug));
       const conceptMap = new Map(semantic.pages.map((p) => [p.slug, p.sharedConcepts]));
       const semanticOnly = pages
-        .filter((p) => semanticSlugs.has(p.slug) && !p.title.toLowerCase().includes(q))
+        .filter((p) => semanticSlugs.has(p.slug) && !hit(p))
         .map((p) => ({ ...p, _concepts: conceptMap.get(p.slug) }));
       const titleMatchSemantic = pages
-        .filter((p) => semanticSlugs.has(p.slug) && p.title.toLowerCase().includes(q))
+        .filter((p) => semanticSlugs.has(p.slug) && hit(p))
         .map((p) => ({ ...p, _concepts: conceptMap.get(p.slug) }));
       const titleMatchOther = pages
-        .filter((p) => !semanticSlugs.has(p.slug) && p.title.toLowerCase().includes(q));
+        .filter((p) => !semanticSlugs.has(p.slug) && hit(p));
       return [...titleMatchSemantic, ...titleMatchOther, ...semanticOnly];
     }
-    return pages.filter((p) => p.title.toLowerCase().includes(q));
-  }, [query, pages, semantic]);
+    return pages.filter(hit);
+  }, [query, pages, semantic, ancestorsOf]);
+
+  // While searching, only folders that match by name, or hold a matching page
+  // somewhere below them (plus their ancestors so the path stays walkable),
+  // are shown. null = not searching, show everything.
+  const visibleFolderIds = useMemo(() => {
+    if (!query.trim()) return null;
+    const q = query.toLowerCase().trim();
+    const ids = new Set<string>();
+    const addChain = (id: string) => { for (const f of ancestorsOf(id)) ids.add(f.id); };
+    for (const f of folders) if (f.name.toLowerCase().includes(q)) addChain(f.id);
+    for (const p of filteredPages) if (p.folderId) addChain(p.folderId);
+    return ids;
+  }, [query, folders, filteredPages, ancestorsOf]);
 
   const searchSemantic = useCallback(async (term: string) => {
     if (!term.trim()) { setSemantic(null); return; }
@@ -186,6 +220,7 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
   function onQueryChange(value: string) {
     setQuery(value);
     setSemantic(null);
+    setSearchOverrides(new Map());
     clearTimeout(debounceRef.current);
     if (value.trim()) {
       debounceRef.current = setTimeout(() => searchSemantic(value), 300);
@@ -196,21 +231,31 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
     return () => clearTimeout(debounceRef.current);
   }, []);
 
-  // Auto-expand when < 10 filtered results
+  // While searching, auto-expand every visible folder (the full path down to
+  // each match) so results are actually on screen. Past a broad-query cap the
+  // tree stays collapsed and "expand all" / per-folder toggles take over.
+  const AUTO_EXPAND_CAP = 40;
   const autoExpanded = useMemo(() => {
-    if (!query.trim() || filteredPages.length >= 10 || filteredPages.length === 0) return null;
-    const names = new Set<string>();
-    names.add("Pinned");
-    for (const p of filteredPages) {
-      if (p.folderId) {
-        const f = folderMap.get(p.folderId);
+    if (!visibleFolderIds || filteredPages.length === 0) return null;
+    const names = new Set<string>(["Pinned"]);
+    if (filteredPages.length < AUTO_EXPAND_CAP) {
+      for (const id of visibleFolderIds) {
+        const f = folderMap.get(id);
         if (f) names.add(f.name);
       }
     }
     return names;
-  }, [query, filteredPages, folderMap]);
+  }, [visibleFolderIds, filteredPages, folderMap]);
 
-  const effectiveExpanded = autoExpanded ?? expandedFolders;
+  const effectiveExpanded = useMemo(() => {
+    if (!isSearching) return expandedFolders;
+    const base = new Set(autoExpanded ?? []);
+    for (const [name, open] of searchOverrides) {
+      if (open) base.add(name);
+      else base.delete(name);
+    }
+    return base;
+  }, [isSearching, expandedFolders, autoExpanded, searchOverrides]);
 
   // Group pages by folder
   const { folderGroups, unfiled, pinnedPages } = useMemo(() => {
@@ -266,12 +311,38 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
     for (const f of rootFolders) {
       if (!seen.has(f.name)) { ordered.push(f.name); seen.add(f.name); }
     }
-    return ordered;
-  }, [folderGroups, pinnedPages, folders]);
+    if (!visibleFolderIds) return ordered;
+    // Searching: drop Quick Actions and any root folder with nothing to show.
+    return ordered.filter((name) => {
+      if (name === "Pinned") return true;
+      if (name === "Quick Actions") return false;
+      const f = rootFolders.find((fo) => fo.name === name);
+      return !!f && visibleFolderIds.has(f.id);
+    });
+  }, [folderGroups, pinnedPages, folders, visibleFolderIds]);
+
+  // Every folder name currently rendered (roots + visible descendants), so
+  // expand/collapse-all reaches nested folders instead of just the top level.
+  const renderedFolderNames = useMemo(() => {
+    const names: string[] = [...orderedFolderNames];
+    const walk = (parentId: string) => {
+      for (const c of childFoldersByParent.get(parentId) ?? []) {
+        if (visibleFolderIds && !visibleFolderIds.has(c.id)) continue;
+        names.push(c.name);
+        walk(c.id);
+      }
+    };
+    for (const name of orderedFolderNames) {
+      const f = folders.find((fo) => fo.name === name && !fo.parentId);
+      if (f) walk(f.id);
+    }
+    return names;
+  }, [orderedFolderNames, childFoldersByParent, folders, visibleFolderIds]);
 
   function renderSubfolders(parentId: string): React.ReactNode {
-    const children = childFoldersByParent.get(parentId);
-    if (!children || children.length === 0) return null;
+    const children = (childFoldersByParent.get(parentId) ?? [])
+      .filter((c) => !visibleFolderIds || visibleFolderIds.has(c.id));
+    if (children.length === 0) return null;
     return children.map((child) => {
       const childGroup = folderGroups.get(child.name);
       const childPages = childGroup?.pages ?? [];
@@ -307,6 +378,11 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
   }
 
   function toggleFolder(name: string) {
+    if (isSearching) {
+      const open = effectiveExpanded.has(name);
+      setSearchOverrides((prev) => new Map(prev).set(name, !open));
+      return;
+    }
     setExpandedFolders((prev) => {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name);
@@ -316,12 +392,12 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
   }
 
   function toggleAll() {
-    const allExpanded = orderedFolderNames.every((n) => effectiveExpanded.has(n));
-    if (allExpanded) {
-      setExpandedFolders(new Set());
-    } else {
-      setExpandedFolders(new Set(orderedFolderNames));
+    const open = !allExpanded;
+    if (isSearching) {
+      setSearchOverrides(new Map(renderedFolderNames.map((n) => [n, open] as [string, boolean])));
+      return;
     }
+    setExpandedFolders(open ? new Set(renderedFolderNames) : new Set());
   }
 
   async function copyFolder(folderName: string) {
@@ -471,9 +547,8 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
     ];
   }
 
-  const isSearching = !!query.trim();
   const contentCount = filteredPages.length;
-  const allExpanded = orderedFolderNames.length > 0 && orderedFolderNames.every((n) => effectiveExpanded.has(n));
+  const allExpanded = renderedFolderNames.length > 0 && renderedFolderNames.every((n) => effectiveExpanded.has(n));
 
   async function createFolder() {
     if (!folderName.trim()) return;
