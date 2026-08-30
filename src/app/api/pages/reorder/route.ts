@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { slug, componentId, targetId, position, op, component, components: replaceAll, autoTrust } = body as {
+  const { slug, componentId, targetId, position, op, component, components: replaceAll, autoTrust, title, subtitle } = body as {
     slug: string;
     componentId?: string;
     targetId?: string;
@@ -22,6 +22,8 @@ export async function POST(request: NextRequest) {
     op?: "remove" | "append" | "replace-all";
     component?: Comp;
     components?: Comp[];
+    title?: string;
+    subtitle?: string | null;
     autoTrust?: boolean;
   };
 
@@ -97,7 +99,12 @@ export async function POST(request: NextRequest) {
   }
 
   if (op === "replace-all") {
-    const newJson = { ...page.json, components: replaceAll };
+    const newJson: Record<string, unknown> = { ...page.json, components: replaceAll };
+    if (typeof title === "string" && title.trim()) newJson.title = title.trim();
+    if (subtitle !== undefined) {
+      if (typeof subtitle === "string" && subtitle.trim()) newJson.subtitle = subtitle.trim();
+      else delete newJson.subtitle;
+    }
     const result = await writePageJson(ctx.orgId, ctx.orgSlug, slug, newJson, "web", page.contentHash);
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 409 });

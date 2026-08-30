@@ -66,7 +66,7 @@ export default async function DashboardPage() {
     db.page.findMany({
       where: pageVisFilter,
       orderBy: { title: "asc" },
-      select: { slug: true, title: true, folderId: true, pinned: true, visibility: true },
+      select: { slug: true, title: true, folderId: true, pinned: true, visibility: true, updatedAt: true },
     }),
     db.organization.findUnique({
       where: { id: ctx.orgId },
@@ -100,7 +100,7 @@ export default async function DashboardPage() {
     <ActionBarHome
       vocabulary={vocab}
       folders={rawFolders as ActionBarFolder[]}
-      pages={rawPages as ActionBarPage[]}
+      pages={rawPages.map((p) => ({ ...p, updatedAt: p.updatedAt.toISOString() })) as ActionBarPage[]}
       orgName={orgName}
       logoUrl={logoUrl}
       quickRefs={quickRefs}

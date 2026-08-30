@@ -12,7 +12,8 @@ interface EditableComponentProps {
   onDragStart?: (id: string) => void;
   onDragEnd?: () => void;
   editingId?: string | null;
-  isDragging?: boolean;
+  /** id of the component currently being dragged, if any; all components collapse to summary rows while set */
+  draggingId?: string | null;
 }
 
 function compLabel(comp: ComponentData): string {
@@ -28,14 +29,15 @@ export function EditableComponent({
   onDragStart,
   onDragEnd,
   editingId,
-  isDragging,
+  draggingId,
 }: EditableComponentProps) {
   const id = (comp.id as string) || `c-${index}`;
   const compType = comp.type;
   const mirrorSlug = compType === "section" && typeof comp.slug === "string" ? (comp.slug as string) : null;
   const isEditing = editingId === id;
   const elRef = useRef<HTMLDivElement>(null);
-  const collapsed = isDragging === true;
+  const collapsed = draggingId !== null && draggingId !== undefined;
+  const dragging = draggingId === id;
 
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
@@ -53,7 +55,7 @@ export function EditableComponent({
   return (
     <div
       ref={elRef}
-      className={`editable-component${isEditing ? " component-editing" : ""}${collapsed ? " drag-collapsed" : ""}`}
+      className={`editable-component${isEditing ? " component-editing" : ""}${collapsed ? " drag-collapsed" : ""}${dragging ? " component-dragging" : ""}`}
       data-component-type={compType}
       data-component-id={id}
     >
@@ -73,10 +75,11 @@ export function EditableComponent({
           {onEdit && (
             <button
               className="component-edit"
-              aria-label="Edit component"
+              aria-label="Component details"
+              title="Fields, YAML, and focused editing"
               onClick={() => onEdit(id, compType)}
             >
-              Edit
+              Details
             </button>
           )}
           {onDelete && (

@@ -12,4 +12,6 @@ export interface ActionBarPage {
   folderId: string | null;
   pinned: boolean;
   visibility: string;
+  /** ISO timestamp of the last write, for "what happened recently" */
+  updatedAt?: string;
 }

@@ -6,7 +6,9 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { PageContent, type ReorderEvent } from "./page-viewer";
 import { VisibilityPicker } from "./visibility-picker";
-import { registerPageActions } from "@/lib/page-actions";
+import { registerPageActions, type PageAction } from "@/lib/page-actions";
+import { PageActionDock } from "./page-action-dock";
+import { InPlaceEditLayer } from "./in-place-edit-layer";
 import { VersionHistoryPanel } from "./version-history";
 import AgentConnectModal from "./agent-connect-modal";
 import SourceEditor, { type SourceEditorControls } from "./source-editor";
@@ -15,13 +17,12 @@ import { TrustBanner, type TrustBannerProps } from "./trust-banner";
 import { basePath } from "@/lib/api-fetch";
 import { copyPagesForAgent } from "@/lib/copy-for-agent";
 import { useHighlights } from "@/hooks/use-highlights";
-import yaml from "js-yaml";
 import { DeckControlContext, PageRenderer, type PageData, type ComponentData } from "@/generated/kazam-renderer";
 import { EditableComponent } from "./editable-component";
 import { AddComponentButton } from "./add-component-button";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
 import { ApprovalRuleEditor, type ApprovalApproverInput } from "@/components/approval-rule-editor";
-import InlineComponentEditor from "./inline-component-editor";
+import VisualComponentEditor from "./visual-component-editor";
 
 interface Annotation {
   id: string;
@@ -38,7 +39,6 @@ interface Annotation {
 }
 
 interface FormState {
-  mode: "note" | "edit";
   section: string;
   target: string;
   componentId: string;
@@ -122,7 +122,6 @@ export default function PageDetailClient({
   const [expandAll, setExpandAll] = useState(false);
   const [formState, setFormState] = useState<FormState | null>(null);
   const [formText, setFormText] = useState("");
-  const [formReplacement, setFormReplacement] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [agentOpen, setAgentOpen] = useState(false);
@@ -136,7 +135,14 @@ export default function PageDetailClient({
     pageJson?.components ? JSON.parse(JSON.stringify(pageJson.components)) : [],
   );
   const [editDirty, setEditDirty] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  const initialMeta = useCallback(() => ({
+    title: (pageTitle ?? (pageJson?.title as string | undefined) ?? "") as string,
+    subtitle: ((pageJson?.subtitle as string | undefined) ?? "") as string,
+  }), [pageTitle, pageJson]);
+  const [localMeta, setLocalMeta] = useState<{ title: string; subtitle: string }>(initialMeta);
+  const [requestEdit, setRequestEdit] = useState<{ path: Array<string | number>; seq: number } | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const isDragging = draggingId !== null;
   const [srcDirty, setSrcDirty] = useState(false);
   const [srcSaving, setSrcSaving] = useState(false);
   const [presenting, setPresenting] = useState(false);
@@ -310,7 +316,7 @@ export default function PageDetailClient({
   );
 
   const openForm = useCallback(
-    (mode: "note" | "edit", section: string, target: string, componentId: string = "") => {
+    (section: string, target: string, componentId: string = "") => {
       const root = contentRef.current;
       if (!root) return;
       const sel = window.getSelection();
@@ -321,9 +327,8 @@ export default function PageDetailClient({
         const rootRect = root.getBoundingClientRect();
         y = rect.top - rootRect.top;
       }
-      setFormState({ mode, section, target, componentId, y });
+      setFormState({ section, target, componentId, y });
       setFormText("");
-      setFormReplacement(mode === "edit" ? target : "");
       setExpandedId(null);
       window.getSelection()?.removeAllRanges();
     },
@@ -332,36 +337,23 @@ export default function PageDetailClient({
 
   async function submitForm() {
     if (!formState) return;
-    const isEdit = formState.mode === "edit";
-    if (isEdit && !formReplacement.trim()) return;
-    if (!isEdit && !formText.trim()) return;
+    if (!formText.trim()) return;
 
     setSubmitting(true);
     setEditError(null);
 
     try {
-      const res = isEdit
-        ? await fetch(`${basePath}/api/edit`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              slug,
-              target: formState.target,
-              replacement: formReplacement.trim(),
-              componentId: formState.componentId || undefined,
-            }),
-          })
-        : await fetch(`${basePath}/api/annotations`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              slug,
-              text: formText.trim(),
-              section: formState.section || undefined,
-              target: formState.target || undefined,
-              slide: isDeck ? currentSlideLabel || undefined : undefined,
-            }),
-          });
+      const res = await fetch(`${basePath}/api/annotations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug,
+          text: formText.trim(),
+          section: formState.section || undefined,
+          target: formState.target || undefined,
+          slide: isDeck ? currentSlideLabel || undefined : undefined,
+        }),
+      });
 
       if (!res.ok) {
         const json = (await res.json().catch(() => ({}))) as { error?: string };
@@ -377,7 +369,6 @@ export default function PageDetailClient({
 
     setFormState(null);
     setFormText("");
-    setFormReplacement("");
     setSubmitting(false);
     router.refresh();
   }
@@ -388,12 +379,15 @@ export default function PageDetailClient({
 
   const handleReorder = useCallback((event: ReorderEvent) => {
     setLocalComponents((prev) => {
+      // Resolve both ids against the pre-move order: id-less components are
+      // addressed as c-<index>, and indices shift once the source is removed.
+      const find = (id: string) => prev.findIndex((c, i) => (c.id as string) === id || `c-${i}` === id);
+      const srcIdx = find(event.componentId);
+      const targetIdx = find(event.targetId);
+      if (srcIdx === -1 || targetIdx === -1 || srcIdx === targetIdx) return prev;
       const arr = [...prev];
-      const srcIdx = arr.findIndex((c) => (c.id as string) === event.componentId || `c-${arr.indexOf(c)}` === event.componentId);
-      if (srcIdx === -1) return prev;
       const [moved] = arr.splice(srcIdx, 1);
-      const destIdx = arr.findIndex((c) => (c.id as string) === event.targetId || `c-${arr.indexOf(c)}` === event.targetId);
-      if (destIdx === -1) return prev;
+      const destIdx = targetIdx > srcIdx ? targetIdx - 1 : targetIdx;
       const insertAt = event.position === "before" ? destIdx : destIdx + 1;
       arr.splice(insertAt, 0, moved);
       return arr;
@@ -435,7 +429,14 @@ export default function PageDetailClient({
       const res = await fetch(`${basePath}/api/pages/reorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, op: "replace-all", components: localComponents, autoTrust }),
+        body: JSON.stringify({
+          slug,
+          op: "replace-all",
+          components: localComponents,
+          title: localMeta.title.trim() || undefined,
+          subtitle: localMeta.subtitle.trim() || null,
+          autoTrust,
+        }),
       });
       if (res.ok) {
         setEditDirty(false);
@@ -450,10 +451,81 @@ export default function PageDetailClient({
       toast.error("Save failed");
     }
     setEditSaving(false);
-  }, [slug, localComponents, autoTrust, router]);
+  }, [slug, localComponents, localMeta, autoTrust, router]);
 
-  const handleDragStart = useCallback(() => { setIsDragging(true); }, []);
-  const handleDragEnd = useCallback(() => { setIsDragging(false); }, []);
+  // Undo / redo for edit mode. Every localComponents change (in-place edit,
+  // reorder, delete, add, sheet save) lands in history; Cmd+Z walks it back.
+  type EditSnapshot = { c: Record<string, unknown>[]; m: { title: string; subtitle: string } };
+  const historyRef = useRef<{ past: EditSnapshot[]; future: EditSnapshot[]; last: EditSnapshot; skip: boolean }>({
+    past: [], future: [], last: { c: localComponents, m: localMeta }, skip: false,
+  });
+  useEffect(() => {
+    const h = historyRef.current;
+    const snap = { c: localComponents, m: localMeta };
+    if (!editMode) { h.past = []; h.future = []; h.last = snap; h.skip = false; return; }
+    if (h.skip) { h.skip = false; h.last = snap; return; }
+    if (h.last.c !== localComponents || h.last.m !== localMeta) {
+      h.past.push(h.last);
+      if (h.past.length > 100) h.past.shift();
+      h.future = [];
+      h.last = snap;
+    }
+  }, [localComponents, localMeta, editMode]);
+  useEffect(() => {
+    if (!editMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable || t.closest(".cm-editor"))) return;
+      const h = historyRef.current;
+      const from = e.shiftKey ? h.future : h.past;
+      if (from.length === 0) return;
+      e.preventDefault();
+      const next = from.pop()!;
+      (e.shiftKey ? h.past : h.future).push(h.last);
+      h.skip = true;
+      setLocalComponents(next.c);
+      setLocalMeta(next.m);
+      setEditDirty(true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editMode]);
+
+  const discardEdits = useCallback(() => {
+    if (editDirty && !confirm("Discard all unsaved edits?")) return;
+    setLocalComponents(pageJson?.components ? JSON.parse(JSON.stringify(pageJson.components)) : []);
+    setLocalMeta(initialMeta());
+    setEditDirty(false);
+    setEditingComponent(null);
+    setEditMode(false);
+  }, [editDirty, pageJson, initialMeta]);
+
+  const pageEditData = useMemo(
+    () => ({ title: localMeta.title, subtitle: localMeta.subtitle, components: localComponents }),
+    [localComponents, localMeta],
+  );
+  const handleInPlaceChange = useCallback((next: Record<string, unknown>) => {
+    setLocalComponents(next.components as Record<string, unknown>[]);
+    setLocalMeta({ title: String(next.title ?? ""), subtitle: String(next.subtitle ?? "") });
+    setEditDirty(true);
+  }, []);
+  const inPlaceBindingGroup = useCallback((path: Array<string | number>, data: Record<string, unknown>) => {
+    if (path[0] === "title" || path[0] === "subtitle") return "meta";
+    if (path[0] !== "components" || typeof path[1] !== "number") return null;
+    const comps = data.components as Record<string, unknown>[];
+    return (comps[path[1]]?.id as string) || `c-${path[1]}`;
+  }, []);
+  const inPlaceHoverGroup = useCallback((el: Element) => {
+    if (el.closest(".page-hero")) return "meta";
+    const wrapper = el.closest<HTMLElement>("[data-component-id]");
+    return wrapper?.dataset.componentId ?? null;
+  }, []);
+  const contentWrapRef = useRef<HTMLDivElement>(null);
+  const editRootRef = useRef<HTMLDivElement>(null);
+
+  const handleDragStart = useCallback((id: string) => { setDraggingId(id); }, []);
+  const handleDragEnd = useCallback(() => { setDraggingId(null); }, []);
 
   const ComponentWrapper = useMemo(() => {
     return function Wrapper({ comp, index, children: cv }: { comp: ComponentData; index: number; children: React.ReactNode }) {
@@ -466,13 +538,13 @@ export default function PageDetailClient({
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           editingId={editingComponent?.id ?? null}
-          isDragging={isDragging}
+          draggingId={draggingId}
         >
           {cv}
         </EditableComponent>
       );
     };
-  }, [handleEditComponent, handleDeleteComponent, handleDragStart, handleDragEnd, editingComponent?.id, isDragging]);
+  }, [handleEditComponent, handleDeleteComponent, handleDragStart, handleDragEnd, editingComponent?.id, draggingId]);
 
   async function restorePage() {
     try {
@@ -520,23 +592,27 @@ export default function PageDetailClient({
     }
   }
 
+  // Track native fullscreen (deck "Present" button) so the dock gets out of the way.
+  const [isFullscreen, setIsFullscreen] = useState(false);
   useEffect(() => {
-    if (viewTab !== "preview") return;
-    return registerPageActions([
-      {
-        id: "copy-agent",
-        label: "Copy for agent",
-        hint: "with MCP info",
-        run: () => {
-          copyPagesForAgent(pageTitle ?? slug, [{ slug, title: pageTitle ?? slug }]).then((result) => {
-            if (result === "ok") toast.success(`Copied "${pageTitle ?? slug}" for an agent`);
-            else toast.error("Couldn't copy — check your connection and try again");
-          });
-        },
-      },
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onChange);
+    document.addEventListener("webkitfullscreenchange", onChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      document.removeEventListener("webkitfullscreenchange", onChange);
+    };
+  }, []);
+
+  // One list drives both the ⌘K palette and the floating dock.
+  const pageActions = useMemo<PageAction[]>(() => {
+    if (viewTab !== "preview") return [];
+    return [
       ...(readOnly ? [] : [{
         id: "edit-inline",
-        label: editMode ? (editDirty ? "Save edits" : "Exit edit mode") : "Edit page",
+        label: editMode ? (editDirty ? "Save edits" : "Done editing") : "Edit page",
+        icon: (editMode ? (editDirty ? "save" : "check") : "edit") as PageAction["icon"],
+        primary: editMode,
         run: () => {
           if (editMode) {
             if (editDirty) saveAllEdits();
@@ -545,18 +621,36 @@ export default function PageDetailClient({
             setLocalComponents(
               pageJson?.components ? JSON.parse(JSON.stringify(pageJson.components)) : [],
             );
+            setLocalMeta(initialMeta());
             setEditDirty(false);
             setEditMode(true);
           }
         },
       }]),
-      ...(presentationSlides ? [{ id: "present", label: "Present", run: () => setPresenting(true) }] : []),
-      { id: "export-png", label: "Export PNG", run: () => handleExport("png") },
-      { id: "export-pdf", label: "Export PDF", run: () => handleExport("pdf") },
-      ...(readOnly ? [] : [{ id: "page-settings", label: "Page settings", run: () => router.push(`/pages/${slug}/settings`) }]),
-    ]);
+      {
+        id: "copy-agent",
+        label: "Copy for agent",
+        hint: "with MCP info",
+        icon: "copy" as const,
+        run: () => {
+          copyPagesForAgent(pageTitle ?? slug, [{ slug, title: pageTitle ?? slug }]).then((result) => {
+            if (result === "ok") toast.success(`Copied "${pageTitle ?? slug}" for an agent`);
+            else toast.error("Couldn't copy — check your connection and try again");
+          });
+        },
+      },
+      ...(editMode ? [{ id: "discard-edits", label: editDirty ? "Discard edits" : "Exit without changes", icon: "discard" as const, run: discardEdits }] : []),
+      ...(presentationSlides ? [{ id: "present", label: "Present", icon: "present" as const, run: () => setPresenting(true) }] : []),
+      { id: "export-pdf", label: "Export PDF", icon: "pdf" as const, run: () => handleExport("pdf") },
+      ...(readOnly ? [] : [{ id: "page-settings", label: "Page settings", icon: "settings" as const, run: () => router.push(`/pages/${slug}/settings`) }]),
+    ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewTab, slug, editMode, editDirty, readOnly, presentationSlides]);
+  }, [viewTab, slug, editMode, editDirty, readOnly, presentationSlides, saveAllEdits, discardEdits]);
+
+  useEffect(() => {
+    if (viewTab !== "preview") return;
+    return registerPageActions(pageActions);
+  }, [viewTab, pageActions]);
 
   return (
     <div className="page-detail-layout">
@@ -704,35 +798,32 @@ export default function PageDetailClient({
           controlsRef={srcControls}
         />
       ) : (
-      <div className="page-content-wrap">
+      <div className="page-content-wrap" ref={contentWrapRef}>
+       <div ref={editRootRef} className="page-edit-root">
         {viewTab === "preview" && (
-          <div className="page-hero">
+          <div className="page-hero" data-kz-path="">
             <div className="page-hero-identity">
-              {shell !== "hub" && pageTitle && <h1 className="page-hero-title">{pageTitle}</h1>}
-              {shell !== "hub" && pageJson?.subtitle && (
-                <p className="page-hero-subtitle">{pageJson.subtitle}</p>
+              {shell !== "hub" && (editMode ? localMeta.title : pageTitle) && (
+                <h1 className="page-hero-title" data-kz-field="title">{editMode ? localMeta.title : pageTitle}</h1>
+              )}
+              {shell !== "hub" && (editMode ? localMeta.subtitle : pageJson?.subtitle) && (
+                <p className="page-hero-subtitle" data-kz-field="subtitle">{editMode ? localMeta.subtitle : pageJson?.subtitle}</p>
+              )}
+              {shell !== "hub" && editMode && !localMeta.subtitle && (
+                <p
+                  className="page-hero-subtitle page-hero-subtitle--placeholder"
+                  onClick={() => {
+                    setLocalMeta((m) => ({ ...m, subtitle: "Subtitle" }));
+                    setEditDirty(true);
+                    setRequestEdit((r) => ({ path: ["subtitle"], seq: (r?.seq ?? 0) + 1 }));
+                  }}
+                >
+                  Add a subtitle
+                </p>
               )}
               {shell !== "hub" && <div className="page-hero-tags">{tagsRow}</div>}
             </div>
             <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} hideTrigger />
-            {editMode && (
-              <div className="page-edit-floating-bar">
-                <button
-                  className="btn btn--primary"
-                  disabled={editSaving}
-                  onClick={() => {
-                    if (editDirty) {
-                      saveAllEdits();
-                    } else {
-                      setEditingComponent(null);
-                      setEditMode(false);
-                    }
-                  }}
-                >
-                  {editSaving ? "Saving..." : "Done editing"}
-                </button>
-              </div>
-            )}
             {shell === "deck" && (
               <button
                 className="btn btn--ghost"
@@ -754,17 +845,8 @@ export default function PageDetailClient({
           ref={contentRef}
           editMode={editMode}
           onReorder={editMode ? handleReorder : undefined}
-          selectionActions={[
-            { label: "Annotate", onSelect: (section, target, componentId) => openForm("note", section, target, componentId) },
-            ...(editMode ? [{
-              label: "Edit",
-              onSelect: (_section: string, _target: string, componentId: string) => {
-                if (!componentId) return;
-                const wrapper = document.querySelector<HTMLElement>(`[data-component-id="${componentId}"]`);
-                const compType = wrapper?.dataset.componentType || "component";
-                handleEditComponent(componentId, compType);
-              },
-            }] : []),
+          selectionActions={editMode ? [] : [
+            { label: "Comment", onSelect: (section, target, componentId) => openForm(section, target, componentId) },
           ]}
         >
           {editMode && pageJson ? (
@@ -781,22 +863,36 @@ export default function PageDetailClient({
             </DeckControlContext.Provider>
           ) : children}
         </PageContent>
+       </div>
+        {editMode && pageJson && (
+          <InPlaceEditLayer
+            rootRef={editRootRef}
+            containerRef={contentWrapRef}
+            data={pageEditData}
+            onChange={handleInPlaceChange}
+            enabled={editMode && !editingComponent && !isDragging}
+            bindingGroup={inPlaceBindingGroup}
+            hoverGroup={inPlaceHoverGroup}
+            requestEdit={requestEdit}
+          />
+        )}
         {editingComponent && (
-          <InlineComponentEditor
+          <VisualComponentEditor
             slug={slug}
             componentId={editingComponent.id}
             componentType={editingComponent.type}
+            pageJson={pageJson}
             autoTrust={autoTrust}
             onClose={() => setEditingComponent(null)}
             onSaved={() => setEditingComponent(null)}
-            initialYaml={(() => {
+            initialComponent={(() => {
               const idx = localComponents.findIndex((c, i) =>
                 (c.id as string) === editingComponent.id || `c-${i}` === editingComponent.id,
               );
               if (idx === -1) return undefined;
               const comp = { ...localComponents[idx] };
               delete comp.id;
-              return yaml.dump(comp, { lineWidth: -1, noRefs: true, quotingType: '"', forceQuotes: false }).trimEnd();
+              return comp;
             })()}
             onLocalSave={handleLocalComponentSave}
           />
@@ -894,9 +990,7 @@ export default function PageDetailClient({
               <div className="ann-form-card">
                 {formState.target && (
                   <div className="ann-form-target">
-                    <span className="ann-form-target-label">
-                      {formState.mode === "edit" ? "Original:" : "Re:"}
-                    </span>
+                    <span className="ann-form-target-label">Re:</span>
                     <span className="ann-form-target-text">
                       {formState.target.length > 80
                         ? formState.target.slice(0, 80) + "…"
@@ -907,19 +1001,9 @@ export default function PageDetailClient({
                 <textarea
                   className="ann-form-input"
                   autoFocus
-                  placeholder={
-                    formState.mode === "edit"
-                      ? "Type the corrected text…"
-                      : "Add your note…"
-                  }
-                  value={
-                    formState.mode === "edit" ? formReplacement : formText
-                  }
-                  onChange={(e) =>
-                    formState.mode === "edit"
-                      ? setFormReplacement(e.target.value)
-                      : setFormText(e.target.value)
-                  }
+                  placeholder="Add your comment…"
+                  value={formText}
+                  onChange={(e) => setFormText(e.target.value)}
                   rows={3}
                   onKeyDown={(e) => {
                     if (e.key === "Escape") setFormState(null);
@@ -932,9 +1016,7 @@ export default function PageDetailClient({
                   </div>
                 )}
                 <div className="ann-form-footer">
-                  <span className="ann-form-mode">
-                    {formState.mode}
-                  </span>
+                  <span className="ann-form-mode">comment</span>
                   <div className="ann-form-btns">
                     <button
                       className="ann-form-cancel"
@@ -944,20 +1026,10 @@ export default function PageDetailClient({
                     </button>
                     <button
                       className="ann-form-submit"
-                      disabled={
-                        submitting ||
-                        (formState.mode === "edit"
-                          ? !formReplacement.trim() ||
-                            formReplacement.trim() === formState.target
-                          : !formText.trim())
-                      }
+                      disabled={submitting || !formText.trim()}
                       onClick={submitForm}
                     >
-                      {submitting
-                        ? "…"
-                        : formState.mode === "edit"
-                          ? "Save edit"
-                          : "Add"}
+                      {submitting ? "…" : "Add"}
                     </button>
                   </div>
                 </div>
@@ -966,6 +1038,9 @@ export default function PageDetailClient({
           )}
         </div>
       </div>
+      )}
+      {viewTab === "preview" && (
+        <PageActionDock actions={pageActions} hidden={presenting || isFullscreen || editingComponent !== null} />
       )}
       {presenting && presentationSlides && createPortal(
         <PresentationOverlay

@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ActionBarFolder, ActionBarPage } from "@/components/action-bar-types";
+import { PageActionDock } from "@/components/page-action-dock";
+import type { PageAction } from "@/lib/page-actions";
 import { ContextMenu, type ContextMenuItem } from "@/components/context-menu";
 import { readPinsSeeded } from "@/lib/pins";
-import { copyPagesForAgent } from "@/lib/copy-for-agent";
+import { copyPagesForAgent, copyReferenceForAgent as copyRefsForAgent } from "@/lib/copy-for-agent";
 import { toast } from "@/components/toast";
 import { basePath } from "@/lib/api-fetch";
 import ReportBuilder from "@/components/report-builder";
@@ -40,7 +42,6 @@ const STOCK_ACTIONS = [
   { id: "create-folder", title: "Create Folder", summary: "Organize pages into a named folder", route: null },
   { id: "create-report", title: "Create Report", summary: "Generate a report from brain content", route: null },
   { id: "cleanup", title: "Cleanup", summary: "Review stale pages, resolve flags, fix drift", route: "/cleanup" },
-  { id: "recent", title: "What happened recently", summary: "Briefs you on 15 recently updated pages", route: null },
   { id: "settings", title: "Settings", summary: "Org, theme, API keys, content rules", route: "/settings" },
 ];
 
@@ -126,6 +127,7 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
   const [addPageFolderId, setAddPageFolderId] = useState<string | null>(null);
   const [addPagePreset, setAddPagePreset] = useState<string | null>(null);
   const [skillPickerOpen, setSkillPickerOpen] = useState(false);
+  const [newPageOpen, setNewPageOpen] = useState(false);
   const [deletePageSlug, setDeletePageSlug] = useState<string | null>(null);
   const [deleteFolderId, setDeleteFolderId] = useState<string | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -595,6 +597,72 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
     return quickRefs.map((slug) => bySlug.get(slug)).filter((p): p is ActionBarPage => !!p);
   }, [quickRefs, pages]);
 
+  // Same actions as the Quick Actions section, as a floating dock (matches
+  // the page view). Stock actions are individual buttons; custom skill
+  // actions live behind one "Skills" button that opens a list.
+  // Built-in skill: an auto-generated brief listing pages updated in the last
+  // few days (title, URL, when), with the MCP pointer so an agent can read them.
+  const RECENT_DAYS = 3;
+  const RECENT_ACTION = { title: "What happened recently", summary: `Pages updated in the last ${RECENT_DAYS} days, as an agent brief` };
+  const copyRecent = useCallback(() => {
+    const cutoff = Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000;
+    const sorted = [...pages]
+      .filter((p) => p.updatedAt)
+      .sort((a, b) => (b.updatedAt! > a.updatedAt! ? 1 : b.updatedAt! < a.updatedAt! ? -1 : 0));
+    let recent = sorted.filter((p) => new Date(p.updatedAt!).getTime() >= cutoff);
+    let label = `${RECENT_ACTION.title} (last ${RECENT_DAYS} days)`;
+    if (recent.length === 0) { recent = sorted.slice(0, 10); label = `${RECENT_ACTION.title} (nothing in ${RECENT_DAYS} days, 10 most recent)`; }
+    if (recent.length === 0) { toast.error("No pages yet"); return; }
+    const refs = recent.map((p) => ({ slug: p.slug, title: p.title, meta: `updated ${p.updatedAt!.slice(0, 10)}` }));
+    copyRefsForAgent(label, refs).then((result) => {
+      if (result === "ok") toast.success(`Copied brief: ${recent.length} page${recent.length === 1 ? "" : "s"} updated recently`);
+      else toast.error("Couldn't copy — check your connection and try again");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pages]);
+
+  const homeActions = useMemo<PageAction[]>(() => {
+    const icons: Record<string, PageAction["icon"]> = {
+      "create-folder": "folder",
+      "create-report": "report",
+      cleanup: "broom",
+      settings: "settings",
+    };
+    return [
+      { id: "new-page", label: "New page", hint: "Start from a template or scratch", icon: "plus" as const, run: () => setNewPageOpen(true) },
+      ...STOCK_ACTIONS.map((a) => ({
+        id: a.id,
+        label: a.title,
+        hint: a.summary,
+        icon: icons[a.id],
+        run: () => handleStockAction(a),
+      })),
+      {
+        id: "skills",
+        label: "Skills",
+        icon: "zap" as const,
+        run: () => {},
+        children: [
+          { id: "skill-recent", label: RECENT_ACTION.title, hint: "copy for agent", icon: "clock" as const, run: copyRecent },
+          ...refPages.map((p) => ({
+            id: `skill-${p.slug}`,
+            label: p.title,
+            hint: "copy for agent",
+            icon: "zap" as const,
+            run: () => {
+              copyPagesForAgent(p.title, [{ slug: p.slug, title: p.title }]).then((result) => {
+                if (result === "ok") toast.success(`Copied "${p.title}" for an agent`);
+                else toast.error("Couldn't copy — check your connection and try again");
+              });
+            },
+          })),
+          { id: "add-action", label: "Add action", icon: "plus" as const, run: () => setSkillPickerOpen(true) },
+        ],
+      },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refPages, copyRecent]);
+
   async function addQuickAction(slug: string) {
     const res = await fetch(`${basePath}/api/quick-actions`, {
       method: "POST",
@@ -688,6 +756,8 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
 
   return (
     <div className="abh-root">
+      <PageActionDock actions={homeActions} hidden={folderModal || reportOpen || skillPickerOpen || newPageOpen} />
+      {newPageOpen && <NewPageButton key="dock-new-page" defaultOpen onClose={() => setNewPageOpen(false)} />}
       <div className="abh-brand">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -795,7 +865,7 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
                     e.stopPropagation();
                     if (isQA) {
                       const stock = STOCK_ACTIONS.map((a) => `- ${a.title}: ${a.summary}`);
-                      const refs = refPages.map((p) => `- ${p.title} (skill page: ${p.slug})`);
+                      const refs = [`- ${RECENT_ACTION.title}: ${RECENT_ACTION.summary}`, ...refPages.map((p) => `- ${p.title} (skill page: ${p.slug})`)];
                       navigator.clipboard.writeText(`Quick Actions:\n${[...stock, ...refs].join("\n")}`).catch(() => {});
                       toast.success("Copied quick actions for agent");
                     } else {
@@ -820,6 +890,11 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
                           <span className="abh-qa-summary">{a.summary}</span>
                         </div>
                       ))}
+                      <div className="abh-page-row abh-qa-row" onClick={copyRecent}>
+                        <ZapIcon />
+                        <span className="abh-page-title">{RECENT_ACTION.title}</span>
+                        <span className="abh-qa-summary">{RECENT_ACTION.summary}</span>
+                      </div>
                       {refPages.map((p) => (
                         <PageRow
                           key={p.slug}

@@ -11,6 +11,8 @@ import { basePath } from "@/lib/api-fetch";
 export interface CopyPageRef {
   slug: string;
   title: string;
+  /** Optional trailing note for reference lists, like "updated 2026-08-29". */
+  meta?: string;
 }
 
 async function fetchPageMarkdown(slug: string): Promise<{ title: string; markdown: string } | null> {
@@ -47,7 +49,7 @@ export type CopyResult = "ok" | "empty" | "error";
 export async function copyReferenceForAgent(label: string, pages: CopyPageRef[]): Promise<CopyResult> {
   if (pages.length === 0) return "empty";
   const baseUrl = `${window.location.origin}${basePath}`;
-  const lines = pages.map((p) => `- ${p.title} | ${baseUrl}/pages/${p.slug}`);
+  const lines = pages.map((p) => `- ${p.title} | ${baseUrl}/pages/${p.slug}${p.meta ? ` | ${p.meta}` : ""}`);
   const body = [
     `# Curata page reference: ${label}`,
     `Source: ${baseUrl}`,

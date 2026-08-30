@@ -197,7 +197,7 @@ export default function PublicAnnotationClient({
         <PageContent
           ref={contentRef}
           selectionActions={isSignedIn ? [
-            { label: "Annotate", onSelect: (section, target) => openForm(section, target) },
+            { label: "Comment", onSelect: (section, target) => openForm(section, target) },
           ] : undefined}
         >
           {isDeck ? (
@@ -229,12 +229,12 @@ export default function PublicAnnotationClient({
 
           {!isSignedIn && activeAnns.length === 0 && (
             <div className="ann-marker" style={{ top: 0 }}>
-              <Link href="/sign-up" className="ann-bubble ann-bubble--add" title="Sign up to annotate">
+              <Link href="/sign-up" className="ann-bubble ann-bubble--add" title="Sign up to comment">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <line x1="7" y1="2" x2="7" y2="12" />
                   <line x1="2" y1="7" x2="12" y2="7" />
                 </svg>
-                <span className="ann-bubble-tooltip">Sign up to annotate</span>
+                <span className="ann-bubble-tooltip">Sign up to comment</span>
               </Link>
             </div>
           )}

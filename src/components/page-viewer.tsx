@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "./toast";
 
 export interface SelectionAction {
   label: string;
@@ -32,8 +33,6 @@ export const PageContent = forwardRef<
     section: string;
     componentId: string;
   } | null>(null);
-  const [showCopied, setShowCopied] = useState(false);
-  const copiedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const dragIdRef = useRef<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; position: "before" | "after" } | null>(null);
   const dropTargetRef = useRef(dropTarget);
@@ -59,13 +58,9 @@ export const PageContent = forwardRef<
     const text = sel.toString().trim();
     if (!text) return;
 
-    navigator.clipboard.writeText(text).catch(() => {});
+    navigator.clipboard.writeText(text).then(() => toast.success("Copied to clipboard")).catch(() => {});
 
     if (!hasActions) return;
-
-    clearTimeout(copiedTimer.current);
-    setShowCopied(true);
-    copiedTimer.current = setTimeout(() => setShowCopied(false), 600);
 
     const range = sel.getRangeAt(0);
     let node: Node | null = range.startContainer;
@@ -229,16 +224,8 @@ export const PageContent = forwardRef<
       if (!srcId || !dropTargetRef.current) return;
       const { id: targetId, position } = dropTargetRef.current;
 
-      const srcEl = container!.querySelector(`[data-component-id="${srcId}"]`);
-      const targetEl = container!.querySelector(`[data-component-id="${targetId}"]`);
-      if (srcEl && targetEl) {
-        if (position === "before") {
-          targetEl.parentNode!.insertBefore(srcEl, targetEl);
-        } else {
-          targetEl.parentNode!.insertBefore(srcEl, targetEl.nextSibling);
-        }
-      }
-
+      // React re-renders the new order from state; moving DOM nodes by hand
+      // here fought that reconciliation and left components out of place.
       onReorder!({ componentId: srcId, targetId, position });
       dragIdRef.current = null;
       setDropTarget(null);
@@ -306,24 +293,20 @@ export const PageContent = forwardRef<
           }}
         >
           <span className="selection-popup-inner">
-            {showCopied ? (
-              <span className="selection-popup-copied">Copied!</span>
-            ) : (
-              actions.map((action) => (
-                <button
-                  key={action.label}
-                  className="selection-popup-btn"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    action.onSelect(selectionPopup.section, selectedTextRef.current, selectionPopup.componentId);
-                    setSelectionPopup(null);
-                  }}
-                >
-                  {action.label}
-                </button>
-              ))
-            )}
+            {actions.map((action) => (
+              <button
+                key={action.label}
+                className="selection-popup-btn"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  action.onSelect(selectionPopup.section, selectedTextRef.current, selectionPopup.componentId);
+                  setSelectionPopup(null);
+                }}
+              >
+                {action.label}
+              </button>
+            ))}
           </span>
         </div>
       )}
