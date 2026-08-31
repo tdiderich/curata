@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ThemeScript } from "@/components/theme-script";
@@ -26,6 +26,14 @@ export const metadata: Metadata = {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
   },
+};
+
+// viewport-fit=cover so env(safe-area-inset-bottom) is non-zero on iOS — the
+// mobile action dock and bottom sheet pad by it to clear the home indicator.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 async function ClerkWrapper({ children }: { children: React.ReactNode }) {

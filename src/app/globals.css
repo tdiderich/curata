@@ -9796,3 +9796,135 @@ body:has(.nav-reveal) .page-toolbar {
   background: rgba(var(--accent-rgb), 0.25);
   border-color: rgba(var(--accent-rgb), 0.6);
 }
+
+/* ── In-place per-item remove (edit mode) ── */
+.ve-del {
+  position: absolute;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--text-rgb), 0.25);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  color: var(--light-muted);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s, transform 0.12s, border-color 0.12s, color 0.12s;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+}
+.ve-del--visible { opacity: 1; pointer-events: auto; }
+.ve-del:hover {
+  color: var(--snow);
+  border-color: rgba(224, 82, 82, 0.7);
+  background: color-mix(in srgb, var(--bg) 65%, rgba(224, 82, 82, 0.5));
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* ── Dock: mobile FAB + bottom sheet (≤640px) ── */
+@keyframes dockFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.page-dock-mobile {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.dock-fab {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--text-rgb), 0.14);
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+  color: var(--snow);
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28), 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.dock-fab:active { background: rgba(var(--text-rgb), 0.1); }
+.dock-fab-primary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  background: color-mix(in srgb, var(--bg) 55%, rgba(var(--accent-rgb), 0.4));
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+  color: var(--snow);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  white-space: nowrap;
+}
+.dock-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.45);
+  animation: dockFadeIn 0.15s ease;
+}
+.dock-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px 10px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-radius: 16px 16px 0 0;
+  background: var(--surface);
+  border-top: 1px solid rgba(var(--text-rgb), 0.12);
+  max-height: 70vh;
+  overflow-y: auto;
+  animation: fadeInUp 0.18s ease;
+}
+.dock-sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(var(--text-rgb), 0.2);
+  margin: 2px auto 10px;
+}
+.dock-sheet-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  color: var(--snow);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.dock-sheet-row:active { background: rgba(var(--text-rgb), 0.08); }
+.dock-sheet-row--primary {
+  background: rgba(var(--accent-rgb), 0.18);
+  border-color: rgba(var(--accent-rgb), 0.45);
+}
+.dock-sheet-group {
+  border-top: 1px solid rgba(var(--text-rgb), 0.08);
+  margin-top: 6px;
+  padding-top: 6px;
+}

@@ -16,6 +16,7 @@ import { bindRoot, getAt, setAt, pathLabel, type Binding, type ListTarget, type 
 interface Rect { left: number; top: number; width: number; height: number }
 interface OverlayRect extends Rect { i: number; group: string | null; block: boolean; text: Rect }
 interface ListRect extends Rect { i: number; group: string | null; label: string }
+interface ItemRect extends Rect { list: number; index: number; group: string | null; label: string }
 
 interface EditingState {
   index: number;
@@ -58,6 +59,7 @@ export function InPlaceEditLayer({
   const listsRef = useRef<ListTarget[]>([]);
   const [overlays, setOverlays] = useState<OverlayRect[]>([]);
   const [listRects, setListRects] = useState<ListRect[]>([]);
+  const [itemRects, setItemRects] = useState<ItemRect[]>([]);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const editingRef = useRef<EditingState | null>(null);
   useEffect(() => { editingRef.current = editing; }, [editing]);
@@ -76,6 +78,7 @@ export function InPlaceEditLayer({
       listsRef.current = [];
       setOverlays([]);
       setListRects([]);
+      setItemRects([]);
       return;
     }
     const { bindings, lists, missing } = bindRoot(root, data);
@@ -111,6 +114,21 @@ export function InPlaceEditLayer({
       group: bindingGroup ? bindingGroup(l.path, data) : ALL,
       label: l.itemLabel,
     })));
+    // One remove target per list item. Items are the direct children of the
+    // tagged container; if the child count doesn't match the array we can't
+    // map indexes safely, so that list gets no remove affordance.
+    const items: ItemRect[] = [];
+    lists.forEach((l, li) => {
+      const arr = getAt(data, l.path);
+      if (!Array.isArray(arr) || arr.length === 0) return;
+      const kids = Array.from(l.el.children) as HTMLElement[];
+      if (kids.length !== arr.length) return;
+      const group = bindingGroup ? bindingGroup(l.path, data) : ALL;
+      kids.forEach((k, idx) => {
+        items.push({ list: li, index: idx, ...rel(k.getBoundingClientRect()), group, label: l.itemLabel });
+      });
+    });
+    setItemRects(items);
     onMissing?.(missing);
   }, [rootRef, containerRef, data, enabled, bindingGroup, onMissing]);
 
@@ -148,7 +166,7 @@ export function InPlaceEditLayer({
     const onMove = (e: MouseEvent) => {
       const target = e.target as Element | null;
       if (!target) return;
-      const own = target.closest<HTMLElement>(".ve-hit, .ve-add");
+      const own = target.closest<HTMLElement>(".ve-hit, .ve-add, .ve-del");
       const key = own ? (own.dataset.group ?? ALL) : hoverGroup ? hoverGroup(target) : ALL;
       setHoverKey((k) => (k === key ? k : key));
     };
@@ -240,6 +258,14 @@ export function InPlaceEditLayer({
     onChange(setAt(current, l.path, [...arr, item]));
   }, [onChange]);
 
+  const removeItem = useCallback((listIndex: number, itemIndex: number) => {
+    const l = listsRef.current[listIndex];
+    if (!l) return;
+    const current = dataRef.current;
+    const arr = (getAt(current, l.path) as unknown[] | undefined) || [];
+    onChange(setAt(current, l.path, arr.filter((_, i) => i !== itemIndex)));
+  }, [onChange]);
+
   useEffect(() => {
     if (!editing) return;
     const ta = inputRef.current;
@@ -286,6 +312,21 @@ export function InPlaceEditLayer({
           onClick={(e) => { e.stopPropagation(); if (editingRef.current) commitEdit(); addItem(l.i); }}
         >
           + {l.label}
+        </button>
+      ))}
+      {itemRects.map((r) => (
+        <button
+          key={`del-${r.list}-${r.index}`}
+          type="button"
+          className={`ve-del${visible(r.group) ? " ve-del--visible" : ""}`}
+          style={{ left: r.left + r.width, top: r.top }}
+          data-group={r.group ?? undefined}
+          aria-label={`Remove ${r.label.toLowerCase()}`}
+          title={`Remove ${r.label.toLowerCase()}`}
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onClick={(e) => { e.stopPropagation(); if (editingRef.current) commitEdit(); removeItem(r.list, r.index); }}
+        >
+          ×
         </button>
       ))}
       {editing && (

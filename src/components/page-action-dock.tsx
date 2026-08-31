@@ -9,6 +9,11 @@ import type { PageAction, PageActionIcon } from "@/lib/page-actions";
  * presentation mode, fullscreen decks, and while the component editor is open.
  * Labels appear as tooltips on hover/focus; the emphasized action (e.g. "Save
  * edits" in edit mode) is filled with the accent color.
+ *
+ * On narrow screens (max-width 640px) the stack collapses to a single FAB that
+ * opens a bottom sheet with labeled rows — touch has no hover, so tooltips
+ * can't carry the labels there. The primary action stays one tap away as its
+ * own labeled pill above the FAB.
  */
 
 function Icon({ name }: { name: PageActionIcon }) {
@@ -45,9 +50,31 @@ function Icon({ name }: { name: PageActionIcon }) {
   }
 }
 
+function MoreIcon() {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />
+    </svg>
+  );
+}
+
+function useIsNarrow(query = "(max-width: 640px)") {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const update = () => setNarrow(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, [query]);
+  return narrow;
+}
+
 export function PageActionDock({ actions, hidden }: { actions: PageAction[]; hidden?: boolean }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const narrow = useIsNarrow();
 
   useEffect(() => {
     if (!openMenu) return;
@@ -58,10 +85,81 @@ export function PageActionDock({ actions, hidden }: { actions: PageAction[]; hid
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
   }, [openMenu]);
 
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setSheetOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [sheetOpen]);
+
+  // Adjust-during-render: drop a stale open sheet when the dock hides or the
+  // viewport leaves mobile (https://react.dev/learn/you-might-not-need-an-effect).
+  if ((hidden || !narrow) && sheetOpen) setSheetOpen(false);
+
   if (hidden || actions.length === 0) return null;
 
   const primary = actions.find((a) => a.primary);
   const rest = actions.filter((a) => !a.primary);
+
+  if (narrow) {
+    const runAndClose = (a: PageAction) => { setSheetOpen(false); a.run(); };
+    return (
+      <>
+        <div className="page-dock-mobile">
+          {primary && !primary.children && (
+            <button type="button" className="dock-fab-primary" onClick={() => runAndClose(primary)}>
+              {primary.icon && <span className="dock-btn-icon"><Icon name={primary.icon} /></span>}
+              <span>{primary.label}</span>
+            </button>
+          )}
+          <button
+            type="button"
+            className="dock-fab"
+            aria-label="Page actions"
+            aria-haspopup="menu"
+            aria-expanded={sheetOpen}
+            onClick={() => setSheetOpen((o) => !o)}
+          >
+            <MoreIcon />
+          </button>
+        </div>
+        {sheetOpen && (
+          <div className="dock-sheet-backdrop" onClick={() => setSheetOpen(false)}>
+            <div className="dock-sheet" role="menu" aria-label="Page actions" onClick={(e) => e.stopPropagation()}>
+              <div className="dock-sheet-handle" aria-hidden />
+              {actions.map((a) =>
+                a.children ? (
+                  <div key={a.id} className="dock-sheet-group">
+                    <div className="dock-menu-title">{a.label}</div>
+                    {a.children.length === 0 && <div className="dock-menu-empty">Nothing here yet</div>}
+                    {a.children.map((c) => (
+                      <button key={c.id} type="button" role="menuitem" className="dock-sheet-row" onClick={() => runAndClose(c)}>
+                        {c.icon && <span className="dock-btn-icon"><Icon name={c.icon} /></span>}
+                        <span className="dock-menu-label">{c.label}</span>
+                        {c.hint && <span className="dock-menu-hint">{c.hint}</span>}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    key={a.id}
+                    type="button"
+                    role="menuitem"
+                    className={`dock-sheet-row${a.primary ? " dock-sheet-row--primary" : ""}`}
+                    onClick={() => runAndClose(a)}
+                  >
+                    {a.icon && <span className="dock-btn-icon"><Icon name={a.icon} /></span>}
+                    <span className="dock-menu-label">{a.label}</span>
+                    {a.hint && <span className="dock-menu-hint">{a.hint}</span>}
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
 
   const renderBtn = (a: PageAction) => {
     if (a.children) {
