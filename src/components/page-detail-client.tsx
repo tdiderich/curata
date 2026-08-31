@@ -158,17 +158,34 @@ export default function PageDetailClient({
     | { breaks?: number[]; labels?: string[] }
     | undefined;
   const presentationSlides = useMemo(() => {
-    if (!presentationConfig?.breaks?.length || !pageJson?.components?.length) return null;
-    const comps = pageJson.components as Array<Record<string, unknown>>;
-    const breaks = [0, ...presentationConfig.breaks].filter((b) => b < comps.length);
-    const labels = presentationConfig.labels ?? [];
-    return breaks.map((start, i) => {
-      const end = i + 1 < breaks.length ? breaks[i + 1] : comps.length;
-      return {
-        components: comps.slice(start, end).filter((c) => c.type !== "divider"),
-        label: labels[i] ?? "",
-      };
-    });
+    const comps = pageJson?.components as Array<Record<string, unknown>> | undefined;
+    if (!comps?.length) return null;
+    // Explicit presentation.breaks/labels is the manual override.
+    if (presentationConfig?.breaks?.length) {
+      const breaks = [0, ...presentationConfig.breaks].filter((b) => b < comps.length);
+      const labels = presentationConfig.labels ?? [];
+      return breaks.map((start, i) => {
+        const end = i + 1 < breaks.length ? breaks[i + 1] : comps.length;
+        return {
+          components: comps.slice(start, end).filter((c) => c.type !== "divider"),
+          label: labels[i] ?? "",
+        };
+      });
+    }
+    // Default: every page presents. Each top-level section starts a slide
+    // (labeled by its heading); components before the first section form the
+    // title slide; anything between sections stays on the current slide.
+    const slides: Array<{ components: Array<Record<string, unknown>>; label: string }> = [];
+    let cur: { components: Array<Record<string, unknown>>; label: string } | null = null;
+    for (const c of comps) {
+      if (c.type === "divider") continue;
+      if (c.type === "section" || !cur) {
+        cur = { components: [], label: c.type === "section" ? String(c.heading ?? "") : "" };
+        slides.push(cur);
+      }
+      cur.components.push(c);
+    }
+    return slides.length > 0 ? slides : null;
   }, [presentationConfig, pageJson?.components]);
   const [slideIndex, setSlideIndex] = useState(() => {
     if (typeof window === "undefined" || !isDeck) return 0;
