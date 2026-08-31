@@ -539,37 +539,34 @@ components:
       expect(entry!.neverTrusted).toBe(false);
     });
 
-    it("excludes a locked-folder page from the queue unconditionally, even under a global approval rule", async () => {
+    it("excludes a seeded page from the queue unconditionally, even under a global approval rule", async () => {
       await testDb.organization.update({
         where: { id: orgId },
         data: { rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] }] },
       });
-      const lockedFolder = await testDb.folder.create({
-        data: { orgId, name: "Templates", createdBy: "system", locked: true },
+
+      // Never-trusted seeded page: would otherwise qualify under the
+      // global rule, but seeded exclusion wins.
+      await writePage(orgId, orgSlug, "seeded-never-trusted", DEFAULT_YAML, "user1");
+      await testDb.page.update({
+        where: { orgId_slug: { orgId, slug: "seeded-never-trusted" } },
+        data: { seeded: true },
       });
 
-      // Never-trusted page in the locked folder: would otherwise qualify
-      // under the global rule, but locked-folder exclusion wins.
-      await writePage(orgId, orgSlug, "locked-never-trusted", DEFAULT_YAML, "user1");
+      // trustedBehind seeded page: would otherwise always queue, but
+      // seeded exclusion still wins.
+      await writePage(orgId, orgSlug, "seeded-behind", "title: V1\nshell: document\ncomponents: []\n", "user1");
       await testDb.page.update({
-        where: { orgId_slug: { orgId, slug: "locked-never-trusted" } },
-        data: { folderId: lockedFolder.id },
+        where: { orgId_slug: { orgId, slug: "seeded-behind" } },
+        data: { seeded: true },
       });
-
-      // trustedBehind page in the locked folder: would otherwise always
-      // queue, but locked-folder exclusion still wins.
-      await writePage(orgId, orgSlug, "locked-behind", "title: V1\nshell: document\ncomponents: []\n", "user1");
-      await testDb.page.update({
-        where: { orgId_slug: { orgId, slug: "locked-behind" } },
-        data: { folderId: lockedFolder.id },
-      });
-      const [lockedV1Id] = await versionIdsDesc("locked-behind");
-      await markTrusted(orgId, "locked-behind", lockedV1Id, "reviewer1");
-      await writePage(orgId, orgSlug, "locked-behind", "title: V2\nshell: document\ncomponents: []\n", "user1");
+      const [seededV1Id] = await versionIdsDesc("seeded-behind");
+      await markTrusted(orgId, "seeded-behind", seededV1Id, "reviewer1");
+      await writePage(orgId, orgSlug, "seeded-behind", "title: V2\nshell: document\ncomponents: []\n", "user1");
 
       const queue = await getReviewQueue(orgId);
-      expect(queue.find((r) => r.slug === "locked-never-trusted")).toBeUndefined();
-      expect(queue.find((r) => r.slug === "locked-behind")).toBeUndefined();
+      expect(queue.find((r) => r.slug === "seeded-never-trusted")).toBeUndefined();
+      expect(queue.find((r) => r.slug === "seeded-behind")).toBeUndefined();
     });
 
     it("excludes pages whose trusted pointer already matches latest", async () => {
@@ -650,13 +647,13 @@ components:
   });
 
   describe("shouldShowTrustBanner", () => {
-    it("shows the banner when trust mode is locked and folder is unlocked", () => {
+    it("shows the banner when trust mode is locked and page is not seeded", () => {
       expect(shouldShowTrustBanner(false, "locked")).toBe(true);
       expect(shouldShowTrustBanner(null, "locked")).toBe(true);
       expect(shouldShowTrustBanner(undefined, "locked")).toBe(true);
     });
 
-    it("suppresses the banner for auto trust mode or locked folders", () => {
+    it("suppresses the banner for auto trust mode or seeded pages", () => {
       expect(shouldShowTrustBanner(false)).toBe(false);
       expect(shouldShowTrustBanner(true, "locked")).toBe(false);
     });

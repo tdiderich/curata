@@ -578,7 +578,7 @@ export async function dispatch(
     }
 
     case "get_review_queue": {
-      // Rules-scoped queue: getReviewQueue already excludes locked folders
+      // Rules-scoped queue: getReviewQueue already excludes seeded pages
       // unconditionally, and only lets a never-trusted page in when an
       // approval rule governs its scope (trustedBehind pages always
       // qualify). Reused as-is, never reimplemented here.
@@ -866,7 +866,7 @@ export async function dispatch(
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       const movePage = await db.page.findUnique({
         where: { orgId_slug: { orgId, slug: args.slug } },
-        include: { folder: { select: { name: true, locked: true } } },
+        include: { folder: { select: { name: true } } },
       });
       if (!movePage) throw new Error(`page not found: ${args.slug}`);
       if (movePage.seeded) {

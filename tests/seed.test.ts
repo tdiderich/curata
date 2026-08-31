@@ -92,7 +92,7 @@ describe("ensureSeedPages backfill", () => {
   });
 });
 
-describe("locked-folder seed refresh", () => {
+describe("managed-folder seed refresh", () => {
   let orgId: string;
 
   beforeEach(async () => {
@@ -101,7 +101,7 @@ describe("locked-folder seed refresh", () => {
     await seedOrgContent(orgId);
   });
 
-  it("refreshes a locked-folder page whose latest version drifted from the shipped seed", async () => {
+  it("refreshes a managed-folder page whose latest version drifted from the shipped seed", async () => {
     const page = await testDb.page.findUnique({
       where: { orgId_slug: { orgId, slug: "architecture" } },
       include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
@@ -141,7 +141,7 @@ describe("locked-folder seed refresh", () => {
   });
 
   it("archives a seeded page whose seed file no longer ships", async () => {
-    const folder = await testDb.folder.findFirst({ where: { orgId, name: "Getting Started" } });
+    const folder = await testDb.folder.findFirst({ where: { orgId, name: "Curata Managed Pages" } });
     await testDb.page.create({
       data: {
         orgId,
@@ -160,8 +160,8 @@ describe("locked-folder seed refresh", () => {
     expect(after?.status).toBe("archived");
   });
 
-  it("leaves non-seeded org-custom pages in a locked folder untouched", async () => {
-    const folder = await testDb.folder.findFirst({ where: { orgId, name: "Getting Started" } });
+  it("leaves non-seeded org-custom pages in the managed folder untouched", async () => {
+    const folder = await testDb.folder.findFirst({ where: { orgId, name: "Curata Managed Pages" } });
     await testDb.page.create({
       data: {
         orgId,
@@ -180,7 +180,7 @@ describe("locked-folder seed refresh", () => {
   });
 
   it("archives a seeded page whose seed file was removed", async () => {
-    const folder = await testDb.folder.findFirst({ where: { orgId, name: "Getting Started" } });
+    const folder = await testDb.folder.findFirst({ where: { orgId, name: "Curata Managed Pages" } });
     await testDb.page.create({
       data: {
         orgId,

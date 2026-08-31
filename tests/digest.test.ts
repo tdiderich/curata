@@ -265,12 +265,9 @@ describe("digest — gatherDigestData", () => {
     expect(data.uncategorizedNewPages.map((p) => p.slug).sort()).toEqual(["early-page", "late-page"]);
   });
 
-  it("excludes locked-folder pages from new pages and hot spots", async () => {
+  it("excludes seeded pages from new pages and hot spots", async () => {
     const inWindow = new Date(windowStart.getTime() + 60_000);
-    const locked = await testDb.folder.create({
-      data: { orgId, name: "Templates", locked: true, createdBy: "test-user" },
-    });
-    const template = await makePage(orgId, "seeded-template", inWindow, { folderId: locked.id });
+    const template = await makePage(orgId, "seeded-template", inWindow, { seeded: true });
     await addVersion(template.id, new Date(inWindow.getTime() + 1000), "hash-template-v2");
     await addVersion(template.id, new Date(inWindow.getTime() + 2000), "hash-template-v3");
     await makePage(orgId, "real-page", inWindow);

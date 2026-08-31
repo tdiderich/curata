@@ -40,23 +40,15 @@ async function findOrCreateFolder(
 }
 
 /**
- * Seeds one locked (curata-managed) folder from a seed directory, and keeps
- * it tracking the shipped seed content afterwards:
+ * Seeds pages from a seed directory into the managed folder, keeping them
+ * tracking shipped content:
  *
- * - Missing page: created.
- * - Existing page still in this folder whose latest version differs from the
- *   seed file: a new system version is written (and the page reactivated if
- *   it was archived). Safe by definition — locked folders are view + copy
- *   only, so there is no human customization to clobber.
- * - Existing page that was moved OUT of this folder: never touched. A page
- *   living elsewhere is user territory, same guarantee as before.
- * - Any active page still in this folder whose seed file no longer ships
- *   (and isn't in preserveSlugs): archived, regardless of createdBy —
- *   locked folders are curata-managed wholesale. Retired seed content
- *   should retire from deployments too, not linger forever.
- * - A trusted pointer on a refreshed page follows the new version (silently,
- *   no audit entry), because trusted-channel reads would otherwise stay
- *   pinned to the stale version. Never-trusted pages stay never-trusted.
+ * - Missing page: created with seeded=true.
+ * - Existing page still in this folder whose content drifted: refreshed.
+ * - Existing page moved OUT of this folder: never touched.
+ * - Active seeded page whose seed file no longer ships (and isn't in
+ *   preserveSlugs): archived.
+ * - Trusted pointer follows refreshed content silently.
  */
 async function seedPagesFromDir(
   orgId: string,
@@ -228,31 +220,90 @@ export async function seedOrg(name: string, slug?: string): Promise<{ id: string
   return { id: org.id, slug: org.slug };
 }
 
+const MANAGED_FOLDER = "Curata Managed Pages";
+const SEED_DIRS = ["getting-started", "workflows", "templates"];
+const OLD_SEED_FOLDERS = ["Getting Started", "Skills", "Templates", "Workflows"];
+
+function collectSeedSlugs(): string[] {
+  const slugs: string[] = [];
+  for (const dir of SEED_DIRS) {
+    const full = path.join(process.cwd(), "seed", dir);
+    if (!fs.existsSync(full)) continue;
+    try {
+      for (const f of fs.readdirSync(full)) {
+        if (f.endsWith(".yaml") || f.endsWith(".yml")) {
+          slugs.push(path.basename(f, path.extname(f)));
+        }
+      }
+    } catch {}
+  }
+  return slugs;
+}
+
+async function findOrCreateManagedFolder(orgId: string): Promise<string> {
+  const existing = await db.folder.findFirst({ where: { orgId, name: MANAGED_FOLDER } });
+  if (existing) {
+    if (!existing.locked) {
+      await db.folder.update({ where: { id: existing.id }, data: { locked: true } });
+    }
+    return existing.id;
+  }
+  const created = await db.folder.create({
+    data: { orgId, name: MANAGED_FOLDER, visibility: "org", createdBy: "system", locked: true },
+  });
+  return created.id;
+}
+
+async function migrateOldSeedFolders(orgId: string, managedFolderId: string): Promise<void> {
+  const oldFolders = await db.folder.findMany({
+    where: { orgId, name: { in: OLD_SEED_FOLDERS }, locked: true },
+  });
+  for (const folder of oldFolders) {
+    if (folder.id === managedFolderId) continue;
+    try {
+      await db.page.updateMany({
+        where: { orgId, folderId: folder.id, seeded: true },
+        data: { folderId: managedFolderId },
+      });
+      await db.folder.update({ where: { id: folder.id }, data: { locked: false } });
+      const remaining = await db.page.count({
+        where: { folderId: folder.id, status: { not: "archived" } },
+      });
+      if (remaining === 0) {
+        await db.folder.delete({ where: { id: folder.id } });
+        console.log(`[seed] deleted empty old seed folder: ${folder.name}`);
+      } else {
+        console.log(`[seed] unlocked old seed folder (has user content): ${folder.name}`);
+      }
+    } catch (err) {
+      console.error(`[seed] migration failed for folder ${folder.name}:`, err);
+    }
+  }
+}
+
 export async function seedOrgContent(orgId: string): Promise<void> {
+  const managedFolderId = await findOrCreateManagedFolder(orgId);
+  // All seed dirs share one folder — pass every slug as preserveSlugs so
+  // per-dir retire sweeps don't archive pages from sibling dirs.
+  const allSlugs = ["getting-started", ...collectSeedSlugs()];
+
   try {
-    const gettingStartedFolderId = await findOrCreateFolder(orgId, "Getting Started", true);
-    await seedGettingStartedPage(orgId, "system", gettingStartedFolderId);
-    // "getting-started" itself is seeded by seedGettingStartedPage above, not
-    // from the directory — preserve it from the retired-page sweep.
-    await seedPagesFromDir(orgId, gettingStartedFolderId, path.join(process.cwd(), "seed", "getting-started"), [
-      "getting-started",
-    ]);
+    await seedGettingStartedPage(orgId, "system", managedFolderId);
+    await seedPagesFromDir(orgId, managedFolderId, path.join(process.cwd(), "seed", "getting-started"), allSlugs);
   } catch (err) {
-    console.error("[seed] getting-started folder/pages failed:", err);
+    console.error("[seed] getting-started pages failed:", err);
   }
 
   try {
-    const skillsFolderId = await findOrCreateFolder(orgId, "Skills", true);
-    await seedPagesFromDir(orgId, skillsFolderId, path.join(process.cwd(), "seed", "workflows"));
+    await seedPagesFromDir(orgId, managedFolderId, path.join(process.cwd(), "seed", "workflows"), allSlugs);
   } catch (err) {
-    console.error("[seed] skills folder/pages failed:", err);
+    console.error("[seed] skill pages failed:", err);
   }
 
   try {
-    const templatesFolderId = await findOrCreateFolder(orgId, "Templates", true);
-    await seedPagesFromDir(orgId, templatesFolderId, path.join(process.cwd(), "seed", "templates"));
+    await seedPagesFromDir(orgId, managedFolderId, path.join(process.cwd(), "seed", "templates"), allSlugs);
   } catch (err) {
-    console.error("[seed] templates folder/pages failed:", err);
+    console.error("[seed] template pages failed:", err);
   }
 
   try {
@@ -260,15 +311,15 @@ export async function seedOrgContent(orgId: string): Promise<void> {
   } catch (err) {
     console.error("[seed] quick-actions folder failed:", err);
   }
+
+  await migrateOldSeedFolders(orgId, managedFolderId);
 }
 
 // seedOrgContent runs at org creation only (seedOrg above). An org created
-// before a seed page existed — every batch-2 skill page, every FDE skill
-// page — never gets it, because nothing re-runs the sweep for existing orgs.
-// Re-running the sweep against an existing org is safe: locked-folder pages
-// are refreshed to track shipped seed content (view + copy only, nothing
-// human-authored to clobber), pages relocated out of the seed folders are
-// never touched, and user-created pages are never touched.
+// before a seed page existed never gets it without a backfill. Re-running
+// against an existing org is safe: seeded pages are refreshed, relocated
+// pages are never touched, user-created pages are never touched, and old
+// seed folders are migrated into the unified "Curata Managed Pages" folder.
 //
 // ensureSeedPages is the lazy backfill entry point for existing orgs, called
 // from a cheap high-traffic read path (mcp-dispatch's read_page — the exact

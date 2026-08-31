@@ -104,7 +104,7 @@ export default async function PageDetailView({
       select: { name: true, locked: true },
     });
     folderTag = normalizeTerm(folder?.name ?? "") || undefined;
-    showTrustBanner = shouldShowTrustBanner(folder?.locked, trustMode);
+    showTrustBanner = shouldShowTrustBanner(seededReadOnly, trustMode);
   }
   if (pageRow) {
     const [concepts, orgConcepts] = await Promise.all([

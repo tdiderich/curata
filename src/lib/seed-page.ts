@@ -134,8 +134,8 @@ const GETTING_STARTED_PAGE = {
           type: "card_grid",
           cards: [
             {
-              title: "Getting Started",
-              description: "Product docs: connecting agents, the MCP tools reference, page structure, and architecture. Self-hosting lives in the OSS README on GitHub.",
+              title: "Docs",
+              description: "Connecting agents, the MCP tools reference, page structure, and architecture. Self-hosting lives in the OSS README on GitHub.",
             },
             {
               title: "Skills",

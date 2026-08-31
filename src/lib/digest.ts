@@ -126,24 +126,17 @@ export async function gatherDigestData(
   const where = listPagesWhere(orgId, userId ?? null);
   const visiblePages = await db.page.findMany({
     where,
-    select: { id: true, slug: true, title: true, createdAt: true, folderId: true },
+    select: { id: true, slug: true, title: true, createdAt: true, folderId: true, seeded: true },
   });
   const titleBySlug = new Map(visiblePages.map((p) => [p.slug, p.title]));
   const visibleSlugs = new Set(visiblePages.map((p) => p.slug));
   const pageById = new Map(visiblePages.map((p) => [p.id, p]));
 
-  // Locked (curata-managed) folders hold seeded scaffolding — Templates,
-  // Skills — not knowledge anyone wrote this week. Reporting those as "new
-  // pages" (unresolved {{placeholder}} titles and all) or "hot spots" is
-  // noise, so they're excluded from both scans. Digest pages themselves are
-  // excluded too: a report that lists itself as news is never right.
-  const lockedFolders = await db.folder.findMany({
-    where: { orgId, locked: true },
-    select: { id: true },
-  });
-  const lockedFolderIds = new Set(lockedFolders.map((f) => f.id));
+  // Seeded pages are system scaffolding, not knowledge anyone wrote this
+  // week. Reporting them as "new pages" or "hot spots" is noise. Digest
+  // pages themselves are excluded too.
   const scanPages = visiblePages.filter(
-    (p) => !(p.folderId && lockedFolderIds.has(p.folderId)) && !p.slug.startsWith("digest-")
+    (p) => !p.seeded && !p.slug.startsWith("digest-")
   );
 
   // New pages, grouped by concept tag. Lower bound is exclusive so the

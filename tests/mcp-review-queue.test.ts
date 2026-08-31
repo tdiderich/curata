@@ -98,18 +98,15 @@ describe("MCP dispatch — get_review_queue", () => {
     expect(entry!.approvalRule).toBeNull();
   });
 
-  it("excludes a locked-folder page unconditionally, even under a global approval rule", async () => {
+  it("excludes a seeded page unconditionally, even under a global approval rule", async () => {
     await testDb.organization.update({
       where: { id: orgId },
       data: { rules: [{ id: "approval", kind: "approval", approvers: [{ type: "group", id: "g1" }] }] },
     });
-    const lockedFolder = await testDb.folder.create({
-      data: { orgId, name: "Templates", createdBy: "system", locked: true },
-    });
-    await createTestPage(orgId, { slug: "locked-never-trusted", folderId: lockedFolder.id });
+    await createTestPage(orgId, { slug: "seeded-never-trusted", seeded: true });
 
     const rows = (await dispatch("get_review_queue", {}, orgId, orgSlug, "apikey-1")) as ReviewQueueToolRow[];
-    expect(rows.find((r) => r.slug === "locked-never-trusted")).toBeUndefined();
+    expect(rows.find((r) => r.slug === "seeded-never-trusted")).toBeUndefined();
   });
 
   it("returns an empty array when nothing needs review", async () => {

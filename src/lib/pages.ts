@@ -54,15 +54,11 @@ function resolveChannel(
   return { versionId: latestVersionId, label: { trusted: trustedIsLatest, trustedBehind } };
 }
 
-/// Whether the read-path trust banner (trust-banner.tsx, including its
-/// "Not yet trusted" state) should render at all for a page in the given
-/// folder. Locked (curata-managed) folders hold seeded system content, not a
-/// knowledge claim a human made, so the banner is suppressed entirely there
-/// — mirroring getReviewQueue's unconditional exclusion of locked-folder
-/// pages. Exported as a pure function so the page-view server component and
-/// tests share one source of truth instead of duplicating the check.
-export function shouldShowTrustBanner(folderLocked: boolean | null | undefined, trustMode: TrustMode = "auto"): boolean {
-  if (folderLocked) return false;
+/// Whether the read-path trust banner should render for this page. Seeded
+/// pages are system content, not a knowledge claim a human made, so the
+/// banner is suppressed entirely — matching getReviewCandidates' exclusion.
+export function shouldShowTrustBanner(seeded: boolean | null | undefined, trustMode: TrustMode = "auto"): boolean {
+  if (seeded) return false;
   if (trustMode === "auto") return false;
   return true;
 }
@@ -641,14 +637,13 @@ function salientTermFallback(
  * correct the moment anyone asks for it.
  */
 export async function getBrainUsage(orgId: string): Promise<number> {
-  // Curata-managed content (pages in locked folders: docs, seeded skills,
-  // templates) ships with the product and is excluded, only content the
-  // org itself created counts against its brain cap.
+  // Seeded pages ship with the product and are excluded — only content
+  // the org itself created counts against its brain cap.
   const pages = await db.page.findMany({
     where: {
       orgId,
       status: { not: "archived" },
-      NOT: { folder: { locked: true } },
+      seeded: false,
     },
     select: { id: true, tokenCount: true },
   });
@@ -984,21 +979,21 @@ async function getReviewCandidates(
         folderId: true,
         createdBy: true,
         trustedVersionId: true,
+        seeded: true,
         rules: true,
         versions: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true } },
       },
     }),
-    db.folder.findMany({ where: { orgId }, select: { id: true, parentId: true, name: true, rules: true, locked: true } }),
+    db.folder.findMany({ where: { orgId }, select: { id: true, parentId: true, name: true, rules: true } }),
     db.organization.findUnique({ where: { id: orgId }, select: { rules: true } }),
   ]);
 
-  const lockedFolderIds = new Set(folders.filter((f) => f.locked).map((f) => f.id));
   const resolveApprovalRule = makeApprovalRuleResolver(folders, org?.rules);
   const resolveTrust = makeTrustModeResolver(folders, org?.rules);
 
   const candidates: ReviewCandidate[] = [];
   for (const p of pages) {
-    if (p.folderId && lockedFolderIds.has(p.folderId)) continue;
+    if (p.seeded) continue;
 
     if (resolveTrust(p.folderId, p.rules) === "auto") continue;
 
