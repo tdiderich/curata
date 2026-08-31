@@ -4900,7 +4900,12 @@ body .c-section.align-right > * { max-width: none !important; }
   z-index: 6;
 }
 
-.editable-component:hover > .component-chrome {
+[data-edit-mode] .component-chrome {
+  opacity: 0.35;
+}
+
+.editable-component:hover > .component-chrome,
+.component-chrome:hover {
   opacity: 1;
 }
 
@@ -4973,7 +4978,12 @@ body .c-section.align-right > * { max-width: none !important; }
   padding: 0;
 }
 
-.editable-component:hover > .drag-handle {
+[data-edit-mode] .drag-handle {
+  opacity: 0.35;
+}
+
+.editable-component:hover > .drag-handle,
+.drag-handle:hover {
   opacity: 1;
 }
 
