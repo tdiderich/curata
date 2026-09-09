@@ -41,7 +41,7 @@ export default async function OrgPublicIndex({ params }: Props) {
 
   const org = await db.organization.findUnique({
     where: { slug: orgSlug },
-    select: { id: true, name: true, theme: true, mode: true, texture: true, glow: true },
+    select: { id: true, name: true, theme: true, mode: true, texture: true, glow: true, depth: true },
   });
   if (!org) notFound();
 
@@ -53,7 +53,7 @@ export default async function OrgPublicIndex({ params }: Props) {
 
   return (
     <>
-      <ThemeScript theme={org.theme} mode={org.mode} texture={org.texture} glow={org.glow} />
+      <ThemeScript theme={org.theme} mode={org.mode} texture={org.texture} glow={org.glow} depth={org.depth} />
       <div className="dash-root">
         <div className="dash-workspace-header dash-workspace-header--top">
           <span className="dash-workspace-label">{org.name}</span>

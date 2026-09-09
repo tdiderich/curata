@@ -101,7 +101,7 @@ export default async function ExportPreview({
 
   return (
     <div className="main-content">
-      <ThemeScript theme={theme.theme} mode={theme.mode} texture={theme.texture} glow={theme.glow} />
+      <ThemeScript theme={theme.theme} mode={theme.mode} texture={theme.texture} glow={theme.glow} depth={theme.depth} />
       <style>{`
         .export-tab-section { margin-bottom: 24px; }
         .export-tab-heading {

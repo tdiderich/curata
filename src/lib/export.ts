@@ -12,10 +12,10 @@ function getKazamCss(): string {
   return _kazamCss;
 }
 
-type Theme = { theme: string; mode: string; texture: string; glow: string };
+type Theme = { theme: string; mode: string; texture: string; glow: string; depth?: string };
 
 function themeAttrs(theme: Theme): string {
-  return `data-theme="${theme.theme}" data-mode="${theme.mode}" data-texture="${theme.texture}" data-glow="${theme.glow}"`;
+  return `data-theme="${theme.theme}" data-mode="${theme.mode}" data-texture="${theme.texture}" data-glow="${theme.glow}" data-depth="${theme.depth ?? "soft"}"`;
 }
 
 function esc(s: string): string {

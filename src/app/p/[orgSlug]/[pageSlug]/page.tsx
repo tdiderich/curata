@@ -58,7 +58,7 @@ export default async function PublicPageView({ params, searchParams }: Props & {
 
   const org = await db.organization.findUnique({
     where: { slug: orgSlug },
-    select: { id: true, name: true, theme: true, mode: true, texture: true, glow: true },
+    select: { id: true, name: true, theme: true, mode: true, texture: true, glow: true, depth: true },
   });
   if (!org) notFound();
 
@@ -161,7 +161,7 @@ export default async function PublicPageView({ params, searchParams }: Props & {
 
   return (
     <>
-      <ThemeScript theme={org.theme} mode={org.mode} texture={org.texture} glow={org.glow} />
+      <ThemeScript theme={org.theme} mode={org.mode} texture={org.texture} glow={org.glow} depth={org.depth} />
       <div className="public-page">
         <PublicAnnotationClient
           orgSlug={orgSlug}

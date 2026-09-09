@@ -69,19 +69,21 @@ export default async function RootLayout({
   let mode = "dark";
   let texture = "none";
   let glow = "none";
+  let depth = "soft";
 
   try {
     const ctx = await resolveOrg();
     if (ctx) {
       const org = await db.organization.findUnique({
         where: { id: ctx.orgId },
-        select: { theme: true, mode: true, texture: true, glow: true },
+        select: { theme: true, mode: true, texture: true, glow: true, depth: true },
       });
       if (org) {
         theme = org.theme;
         mode = org.mode;
         texture = org.texture;
         glow = org.glow;
+        depth = org.depth;
       }
     }
   } catch {
@@ -90,7 +92,7 @@ export default async function RootLayout({
 
   const body = (
     <>
-      <ThemeScript theme={theme} mode={mode} texture={texture} glow={glow} />
+      <ThemeScript theme={theme} mode={mode} texture={texture} glow={glow} depth={depth} />
       {children}
       <Toaster />
     </>

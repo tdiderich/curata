@@ -1120,6 +1120,7 @@ function PresentationOverlay({
         </div>
         <div className="pres-body">
           <PageRenderer
+            motion
             page={{
               ...pageJson,
               shell: "standard",

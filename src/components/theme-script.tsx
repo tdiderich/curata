@@ -5,11 +5,13 @@ export function ThemeScript({
   mode,
   texture = "none",
   glow = "none",
+  depth = "soft",
 }: {
   theme: string;
   mode: string;
   texture?: string;
   glow?: string;
+  depth?: string;
 }) {
   const normalized = normalizeLegacyTheme(theme, mode);
   const effectiveTheme = normalized.theme ?? "violet";
@@ -18,7 +20,7 @@ export function ThemeScript({
   return (
     <script
       dangerouslySetInnerHTML={{
-        __html: `(function(){var d=document.documentElement;d.setAttribute("data-theme",${JSON.stringify(effectiveTheme)});d.setAttribute("data-mode",${JSON.stringify(effectiveMode)});d.setAttribute("data-texture",${JSON.stringify(texture)});d.setAttribute("data-glow",${JSON.stringify(glow)});})();`,
+        __html: `(function(){var d=document.documentElement;d.setAttribute("data-theme",${JSON.stringify(effectiveTheme)});d.setAttribute("data-mode",${JSON.stringify(effectiveMode)});d.setAttribute("data-texture",${JSON.stringify(texture)});d.setAttribute("data-glow",${JSON.stringify(glow)});d.setAttribute("data-depth",${JSON.stringify(depth)});})();`,
       }}
     />
   );

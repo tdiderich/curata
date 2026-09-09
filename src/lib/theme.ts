@@ -5,16 +5,17 @@ export interface OrgTheme {
   mode: string;
   texture: string;
   glow: string;
+  depth: string;
 }
 
 export async function getOrgTheme(orgId: string): Promise<OrgTheme> {
-  const defaults: OrgTheme = { theme: "dark", mode: "dark", texture: "none", glow: "none" };
+  const defaults: OrgTheme = { theme: "dark", mode: "dark", texture: "none", glow: "none", depth: "soft" };
   const org = await db.organization.findUnique({
     where: { id: orgId },
-    select: { theme: true, mode: true, texture: true, glow: true },
+    select: { theme: true, mode: true, texture: true, glow: true, depth: true },
   });
   if (!org) return defaults;
-  return { theme: org.theme, mode: org.mode, texture: org.texture, glow: org.glow };
+  return { theme: org.theme, mode: org.mode, texture: org.texture, glow: org.glow, depth: org.depth };
 }
 
 export function normalizeLegacyTheme(

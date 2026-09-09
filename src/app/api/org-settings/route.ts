@@ -20,6 +20,7 @@ const VALID_THEMES = [
 const VALID_MODES = ["dark", "light"];
 const VALID_TEXTURES = ["none", "dots", "grid", "grain", "topography", "diagonal"];
 const VALID_GLOWS = ["none", "accent", "corner"];
+const VALID_DEPTHS = ["flat", "soft", "lifted"];
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$|^[a-z0-9]{3,40}$/;
 
@@ -31,7 +32,7 @@ export async function GET() {
 
   const org = await db.organization.findUnique({
     where: { id: ctx.orgId },
-    select: { name: true, slug: true, domain: true, logoUrl: true, theme: true, mode: true, texture: true, glow: true },
+    select: { name: true, slug: true, domain: true, logoUrl: true, theme: true, mode: true, texture: true, glow: true, depth: true },
   });
 
   return NextResponse.json(org);
@@ -127,6 +128,13 @@ export async function PATCH(request: NextRequest) {
       }
       data.glow = glow;
     }
+    if (body.depth !== undefined) {
+      const depth = body.depth as string;
+      if (!VALID_DEPTHS.includes(depth)) {
+        return NextResponse.json({ error: "invalid depth" }, { status: 400 });
+      }
+      data.depth = depth;
+    }
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: "no valid fields" }, { status: 400 });
@@ -135,7 +143,7 @@ export async function PATCH(request: NextRequest) {
     const updated = await db.organization.update({
       where: { id: ctx.orgId },
       data,
-      select: { name: true, slug: true, domain: true, logoUrl: true, theme: true, mode: true, texture: true, glow: true },
+      select: { name: true, slug: true, domain: true, logoUrl: true, theme: true, mode: true, texture: true, glow: true, depth: true },
     });
 
     revalidatePath("/", "layout");

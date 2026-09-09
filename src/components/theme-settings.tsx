@@ -39,6 +39,12 @@ const GLOWS = [
   { value: "corner", label: "Corner" },
 ];
 
+const DEPTHS = [
+  { value: "flat", label: "Flat" },
+  { value: "soft", label: "Soft" },
+  { value: "lifted", label: "Lifted" },
+];
+
 interface ThemeSettingsProps {
   canManage: boolean;
   initial: {
@@ -46,6 +52,7 @@ interface ThemeSettingsProps {
     mode: string;
     texture: string;
     glow: string;
+    depth: string;
   };
 }
 
@@ -58,6 +65,7 @@ export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
   const [mode, setMode] = useState(initMode);
   const [texture, setTexture] = useState(initial.texture);
   const [glow, setGlow] = useState(initial.glow);
+  const [depth, setDepth] = useState(initial.depth);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,13 +76,15 @@ export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
     d.setAttribute("data-mode", mode);
     d.setAttribute("data-texture", texture);
     d.setAttribute("data-glow", glow);
-  }, [color, mode, texture, glow]);
+    d.setAttribute("data-depth", depth);
+  }, [color, mode, texture, glow, depth]);
 
   const hasChanges =
     color !== initColor ||
     mode !== initMode ||
     texture !== initial.texture ||
-    glow !== initial.glow;
+    glow !== initial.glow ||
+    depth !== initial.depth;
 
   async function save() {
     setSaving(true);
@@ -84,7 +94,7 @@ export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
       const res = await fetch(`${basePath}/api/org-settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ theme: color, mode, texture, glow }),
+        body: JSON.stringify({ theme: color, mode, texture, glow, depth }),
       });
       if (res.ok) {
         setSaved(true);
@@ -150,6 +160,16 @@ export function ThemeSettings({ canManage, initial }: ThemeSettingsProps) {
           onChange={setGlow}
           disabledOptions={canManage ? [] : GLOWS.map((g) => g.value)}
           options={GLOWS}
+        />
+      </div>
+
+      <div className="theme-section">
+        <span className="theme-section-label">Panel depth</span>
+        <SegmentedControl<string>
+          value={depth}
+          onChange={setDepth}
+          disabledOptions={canManage ? [] : DEPTHS.map((d) => d.value)}
+          options={DEPTHS}
         />
       </div>
 

@@ -1218,6 +1218,7 @@ export async function getSiteConfig(orgId: string): Promise<Record<string, unkno
   if (org.mode && org.mode !== "dark") config.mode = org.mode;
   if (org.texture && org.texture !== "none") config.texture = org.texture;
   if (org.glow && org.glow !== "none") config.glow = org.glow;
+  if (org.depth && org.depth !== "soft") config.depth = org.depth;
   if (org.rules) config.rules = org.rules;
   return config;
 }

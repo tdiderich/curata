@@ -47,7 +47,7 @@ export default async function SettingsPage() {
 
   const org = await db.organization.findUnique({
     where: { id: ctx.orgId },
-    select: { name: true, slug: true, domain: true, logoUrl: true, logoMime: true, theme: true, mode: true, texture: true, glow: true, rules: true },
+    select: { name: true, slug: true, domain: true, logoUrl: true, logoMime: true, theme: true, mode: true, texture: true, glow: true, depth: true, rules: true },
   });
 
   const globalRules = (() => {
@@ -90,6 +90,7 @@ export default async function SettingsPage() {
             mode: org?.mode ?? "dark",
             texture: org?.texture ?? "none",
             glow: org?.glow ?? "none",
+            depth: org?.depth ?? "soft",
           }}
         />
       ),

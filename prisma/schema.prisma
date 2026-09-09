@@ -20,6 +20,7 @@ model Organization {
   mode      String   @default("dark")
   texture   String   @default("none")
   glow      String   @default("none")
+  depth     String   @default("soft")
   rules     Json?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
