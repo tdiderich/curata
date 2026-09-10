@@ -16,6 +16,7 @@ vi.mock("@/lib/kazam", async () => {
   return {
     ...actual,
     validateContent: (...args: unknown[]) => validateContentMock(...args),
+    validateContentSplit: async (...args: unknown[]) => ({ errors: await validateContentMock(...args), warnings: [] }),
     checkUnsupportedComponents: vi.fn().mockReturnValue([]),
   };
 });

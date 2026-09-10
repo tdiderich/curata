@@ -46,6 +46,7 @@ next-env.d.ts
 /src/generated/kazam.ts
 /src/generated/kazam-renderer.tsx
 /src/generated/kazam-renderer-server.tsx
+/src/generated/kazam-mcp.json
 /src/app/kazam.css
 /docs/agents-reference.md
 

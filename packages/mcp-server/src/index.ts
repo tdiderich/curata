@@ -66,7 +66,7 @@ server.tool(
 
 server.tool(
   "write_page",
-  "Create or update a page in your team's knowledge base. If a page with the derived slug already exists, it will be updated. Content should be valid kazam YAML. Call get_component_reference first to learn the YAML syntax for charts, stat grids, and other components. Optionally tag concepts and cross-page links — call get_vocabulary first to reuse existing terms.",
+  "Shape rules run on every write and come back as WARNINGS without blocking; treat them as required follow-up edits. Before using graph, pipeline, grid, box, sequence, or chart, call get_component_reference with component=<type>. Create or update a page in your team's knowledge base. If a page with the derived slug already exists, it will be updated. Content should be valid kazam YAML. Call get_component_reference first to learn the YAML syntax for charts, stat grids, and other components. Optionally tag concepts and cross-page links — call get_vocabulary first to reuse existing terms.",
   {
     title: z.string().describe("Page title (e.g., 'Q2 Revenue Analysis')"),
     content: z.string().describe("Full page content in kazam YAML format"),
@@ -92,13 +92,17 @@ server.tool(
       }
       return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
     }
-    return { content: [{ type: "text" as const, text: `Updated page "${title}" (slug: ${slug})` }] };
+    const warned = result.result as { shapeWarnings?: Array<{ path: string; component: string; message: string }> } | undefined;
+    const warnText = warned?.shapeWarnings?.length
+      ? `WARNINGS (${warned.shapeWarnings.length}) - written, fix these next:\n${warned.shapeWarnings.map((w) => `- ${w.path} (${w.component}): ${w.message}`).join("\n")}\n\n`
+      : "";
+    return { content: [{ type: "text" as const, text: `${warnText}Updated page "${title}" (slug: ${slug})` }] };
   }
 );
 
 server.tool(
   "create_page",
-  "Create a new page in your team's knowledge base. Fails if a page with the same slug already exists. Content should be valid kazam YAML. Call get_component_reference first to learn the YAML syntax. Tag concepts at creation so the page appears in the brain map.",
+  "Shape rules run on every write and come back as WARNINGS without blocking; treat them as required follow-up edits. Before using graph, pipeline, grid, box, sequence, or chart, call get_component_reference with component=<type>. Create a new page in your team's knowledge base. Fails if a page with the same slug already exists. Content should be valid kazam YAML. Call get_component_reference first to learn the YAML syntax. Tag concepts at creation so the page appears in the brain map.",
   {
     title: z.string().describe("Page title"),
     content: z.string().describe("Full page content in kazam YAML format"),
@@ -226,10 +230,10 @@ server.tool(
 
 server.tool(
   "get_component_reference",
-  "Get the full YAML authoring guide for kazam components — charts, stat grids, tables, callouts, and all other component types with syntax and examples. Call this before writing page content.",
-  {},
-  async () => {
-    const result = await callApi(CURATA_URL, CURATA_API_KEY, "get_component_reference", {});
+  "Component authoring reference. Pass component=<type> (graph, pipeline, grid, box, sequence, chart, and every other type) for a short slice: when to use it, a curated example to copy, and the shape rules the write tools warn about. Omit component for the full guide. Call this before the first write that uses a component you have not used in this conversation.",
+  { component: z.string().optional().describe("Component type, e.g. graph. Omit for the full reference.") },
+  async ({ component }) => {
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "get_component_reference", component ? { component } : {});
     if (result.error) {
       return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
     }

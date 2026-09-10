@@ -3,11 +3,19 @@ import { promisify } from "util";
 import path from "path";
 import os from "os";
 import fs from "fs/promises";
+import { existsSync } from "fs";
 import yaml from "js-yaml";
 
 const exec = promisify(execFile);
 
-const KAZAM_BIN = process.env.KAZAM_BIN || "kazam";
+// Prefer the binary pnpm generate used, so the renderer, the reference,
+// and validation all come from the same kazam build. PATH is the fallback.
+function resolveKazamBin(): string {
+  if (process.env.KAZAM_BIN) return process.env.KAZAM_BIN;
+  const local = path.join(process.cwd(), ".bin", "kazam");
+  return existsSync(local) ? local : "kazam";
+}
+const KAZAM_BIN = resolveKazamBin();
 const SITES_ROOT = process.env.SITES_ROOT || "/data/sites";
 
 const UNSUPPORTED_COMPONENTS = new Set<string>([]);
@@ -36,6 +44,50 @@ export interface ValidationError {
   error_type: string;
   message: string;
   suggestion?: string;
+  /** "error" fails the write; "warning" (shape rules) is returned with it. Older binaries omit it. */
+  severity?: "error" | "warning";
+}
+
+export interface ShapeWarning {
+  path: string;
+  component: string;
+  message: string;
+  rule?: string;
+  scope: string;
+}
+
+export interface SplitValidation {
+  errors: ValidationError[];
+  warnings: ShapeWarning[];
+}
+
+export function isValidationWarning(e: ValidationError): boolean {
+  return e.severity === "warning";
+}
+
+/** Shape warnings as agents should read them: path, component, what to fix. */
+export function toShapeWarnings(errors: ValidationError[]): ShapeWarning[] {
+  return errors.filter(isValidationWarning).map((e) => {
+    const [component, ...rest] = e.message.split(": ");
+    const rule = e.suggestion?.startsWith("rule: ") ? e.suggestion.slice("rule: ".length) : undefined;
+    return {
+      path: e.path,
+      component: rest.length > 0 ? component : "page",
+      message: rest.length > 0 ? rest.join(": ") : e.message,
+      ...(rule ? { rule } : {}),
+      scope: e.error_type === "shape" ? "schema" : e.error_type,
+    };
+  });
+}
+
+/**
+ * Leading block for write responses so a warning cannot be missed. Empty
+ * string when there is nothing to say.
+ */
+export function formatWarningsBlock(warnings: ShapeWarning[]): string {
+  if (warnings.length === 0) return "";
+  const lines = warnings.map((w) => `- ${w.path} (${w.component}): ${w.message}${w.rule ? ` [rule: ${w.rule}]` : ""}`);
+  return `WARNINGS (${warnings.length}) - the page was written; fix these in a follow-up edit:\n${lines.join("\n")}\n\n`;
 }
 
 export async function validatePage(orgSlug: string, slug: string): Promise<ValidationError[]> {
@@ -43,16 +95,40 @@ export async function validatePage(orgSlug: string, slug: string): Promise<Valid
   return validateFile(filePath);
 }
 
-export async function validateContent(orgSlug: string, slug: string, content: string): Promise<ValidationError[]> {
-  const tmpDir = path.join(os.tmpdir(), `curata-validate-${Date.now()}`);
+/**
+ * Validate page YAML with kazam. `siteRules` (org shape rules) are written
+ * as a kazam.yaml next to the page so the Rust engine evaluates them with
+ * the built-in set. Returns blocking errors and non-blocking shape warnings
+ * separately.
+ */
+export async function validateContentSplit(
+  orgSlug: string,
+  slug: string,
+  content: string,
+  siteRules: Array<Record<string, string>> = []
+): Promise<SplitValidation> {
+  const tmpDir = path.join(os.tmpdir(), `curata-validate-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
   const tmpPath = path.join(tmpDir, `${path.basename(slug)}.yaml`);
   try {
     await fs.mkdir(tmpDir, { recursive: true });
     await fs.writeFile(tmpPath, content);
-    return await validateFile(tmpPath);
+    await fs.writeFile(
+      path.join(tmpDir, "kazam.yaml"),
+      yaml.dump({ name: orgSlug || "curata", shape_rules: siteRules }, { lineWidth: -1 })
+    );
+    const all = await validateFile(tmpPath);
+    return {
+      errors: all.filter((e) => !isValidationWarning(e)),
+      warnings: toShapeWarnings(all),
+    };
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
+}
+
+/** Blocking errors only. Prefer validateContentSplit on write paths so warnings reach the caller. */
+export async function validateContent(orgSlug: string, slug: string, content: string): Promise<ValidationError[]> {
+  return (await validateContentSplit(orgSlug, slug, content)).errors;
 }
 
 export function checkUnsupportedComponents(content: string): ValidationError[] {

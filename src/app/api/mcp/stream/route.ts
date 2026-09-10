@@ -17,28 +17,21 @@ import {
   bumpViewCount,
   restorePageVersion,
 } from "@/lib/pages";
-import { validateContent, checkUnsupportedComponents, invalidContentMessage } from "@/lib/kazam";
-import { checkFolderBoundary, mcpDefaultVisibility } from "@/lib/access";
-import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
-import { resolveRequiredComponentsRules } from "@/lib/required-components";
-import { enforceCaptureGate } from "@/lib/capture-gate";
+import { checkFolderBoundary } from "@/lib/access";
+import { resolveRules, detectFolderCycle } from "@/lib/content-rules";
 import {
-  upsertConcepts,
-  upsertLinks,
   getPageConcepts,
   getPageLinks,
   getVocabulary,
   getRelated,
   getSemanticMap,
 } from "@/lib/concepts";
-import type { ConceptInput, LinkInput } from "@/lib/concepts";
-import { ensureComponentIds, applyPatchOperations } from "@/lib/component-ids";
-import type { PatchOperation } from "@/lib/component-ids";
+import { ensureComponentIds } from "@/lib/component-ids";
 import { dispatch } from "@/lib/mcp-dispatch";
+import { toolDescription } from "@/lib/mcp-guidance";
+import { formatWarningsBlock, type ShapeWarning } from "@/lib/kazam";
 import { ensureSeedPages } from "@/lib/seed";
 import yaml from "js-yaml";
-import fs from "fs";
-import path from "path";
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 
@@ -132,8 +125,13 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     }
     try {
       const result = await dispatch(tool, args, orgId, orgSlug, actorId, userId);
-      const text = typeof result === "string" ? result : JSON.stringify(result, null, 2);
-      return { content: [{ type: "text" as const, text }] };
+      const body = typeof result === "string" ? result : JSON.stringify(result, null, 2);
+      const warnings = result && typeof result === "object" && Array.isArray((result as { shapeWarnings?: unknown }).shapeWarnings)
+        ? (result as { shapeWarnings: ShapeWarning[] }).shapeWarnings
+        : [];
+      // JSON-RPC over HTTP is always 200, so the "not plain success" signal
+      // for a written-with-warnings result is the block that leads the text.
+      return { content: [{ type: "text" as const, text: formatWarningsBlock(warnings) + body }] };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return { content: [{ type: "text" as const, text: `Error: ${msg}` }], isError: true };
@@ -212,81 +210,11 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
   });
 
-  server.tool("write_page", "Create or update a page",
+  server.tool("write_page", toolDescription("write_page", "Create or update a page"),
     { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?, remove?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework — call get_vocabulary to see kinds in use. remove: true detaches the tag from this page. Supplying kind on an existing term re-kinds the concept everywhere it is used.'), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]"), capture_token: z.string().optional().describe("Required when creating a page whose pageType has captureRequired: true — the token capture_thread returned"), dedup_ack: z.string().optional().describe('Required alongside capture_token: "new", or the candidate slug capture_thread should redirect you to patch_page instead') },
-    async ({ slug, content, folder_id, visibility, sort_order, concepts: conceptsJson, links: linksJson, capture_token, dedup_ack }) => {
-      validateSlug(slug);
-      const unsupported = checkUnsupportedComponents(content);
-      if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
-      const validationErrors = await validateContent(orgSlug, slug, content);
-      if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: ${invalidContentMessage(validationErrors.map((e) => e.message).join("; "))}` }], isError: true };
-      const wpVis = visibility ?? mcpDefaultVisibility();
-      const wpExisting = await db.page.findUnique({
-        where: { orgId_slug: { orgId, slug } },
-        select: { folderId: true, rules: true, folder: { select: { visibility: true } } },
-      });
-      try {
-        if (folder_id) {
-          const folder = await db.folder.findFirst({ where: { id: folder_id, orgId } });
-          if (folder) checkFolderBoundary(wpVis, folder.visibility);
-        } else if (wpExisting?.folder && visibility) {
-          checkFolderBoundary(visibility, wpExisting.folder.visibility);
-        }
-      } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
-      }
-      const wpFolderId = folder_id ?? wpExisting?.folderId ?? null;
-      const wpRules = await resolveRules(orgId, wpFolderId, wpExisting?.rules);
-      const wpAllRules = [...wpRules.inherited, ...wpRules.page];
-      const wpRuleCheck = validateContentRules(content, wpAllRules);
-      if (wpRuleCheck.violations.length > 0) {
-        return { content: [{ type: "text", text: `Error: content rule violation: ${wpRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}` }], isError: true };
-      }
-      if (!wpExisting) {
-        try {
-          // wpExisting is always falsy in this branch — there are no page-level rules yet.
-          const wpRcRules = await resolveRequiredComponentsRules(orgId, wpFolderId, null);
-          enforceCaptureGate({
-            orgId,
-            content,
-            resolvedRules: [...wpRcRules.inherited, ...wpRcRules.page],
-            captureToken: capture_token,
-            dedupAck: dedup_ack,
-          });
-        } catch (e) {
-          return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
-        }
-      }
-      const result = await writePage(orgId, orgSlug, slug, content, userId || "agent", undefined, sort_order, wpVis);
-      if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
-      if (visibility) {
-        await db.page.update({ where: { orgId_slug: { orgId, slug } }, data: { visibility } });
-      }
-      if (folder_id) {
-        await db.page.update({ where: { orgId_slug: { orgId, slug } }, data: { folderId: folder_id } });
-      }
-      if (conceptsJson || linksJson) {
-        const wpPage = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
-        if (wpPage) {
-          if (conceptsJson) {
-            const conceptInputs: ConceptInput[] = JSON.parse(conceptsJson);
-            await upsertConcepts(wpPage.id, conceptInputs, actorId);
-          }
-          if (linksJson) {
-            const linkInputs: LinkInput[] = JSON.parse(linksJson);
-            await upsertLinks(orgId, wpPage.id, linkInputs, actorId);
-          }
-        }
-      }
-      logAudit({ orgId, action: "page.write", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug } });
-      const wpResponse: Record<string, unknown> = { message: wpExisting ? `Updated page "${slug}"` : `Created page "${slug}"` };
-      if (wpRuleCheck.warnings.length > 0) {
-        wpResponse.contentWarnings = wpRuleCheck.warnings.map((w) => ({ scope: w.scope, message: w.message, matches: w.matches }));
-      }
-      return { content: [{ type: "text", text: JSON.stringify(wpResponse) }] };
-    });
+    viaDispatch("write_page"));
 
-  server.tool("patch_page", "Apply targeted operations to a page without rewriting full YAML. Requires component IDs from read_page. Can also tag/untag concepts via the concepts param — concepts alone (no operations) is valid for tag-only changes.",
+  server.tool("patch_page", toolDescription("patch_page", "Apply targeted operations to a page without rewriting full YAML"),
     {
       slug: z.string().describe("Page slug"),
       expected_hash: z.string().optional().describe("Content hash from last read_page — rejects if page was modified. Required when operations are given."),
@@ -294,169 +222,11 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?, remove?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework. remove: true detaches the tag from this page. Supplying kind on an existing term re-kinds the concept everywhere it is used.'),
       links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]"),
     },
-    async ({ slug, expected_hash, operations: opsJson, concepts: conceptsJson, links: linksJson }) => {
-      validateSlug(slug);
+    viaDispatch("patch_page"));
 
-      if (!opsJson && !conceptsJson && !linksJson) {
-        return { content: [{ type: "text", text: "Error: nothing to do — provide operations, concepts, or links" }], isError: true };
-      }
-
-      const ppTagPage = await db.page.findUnique({
-        where: { orgId_slug: { orgId, slug } },
-        select: { id: true },
-      });
-      if (!ppTagPage) return { content: [{ type: "text", text: `Error: page not found: ${slug}` }], isError: true };
-
-      const applyTagsAndLinks = async () => {
-        if (conceptsJson) {
-          const conceptInputs: ConceptInput[] = JSON.parse(conceptsJson);
-          await upsertConcepts(ppTagPage.id, conceptInputs, actorId);
-        }
-        if (linksJson) {
-          const linkInputs: LinkInput[] = JSON.parse(linksJson);
-          await upsertLinks(orgId, ppTagPage.id, linkInputs, actorId);
-        }
-      };
-
-      if (!opsJson) {
-        // Tag/link-only patch: no content rewrite, no hash check needed.
-        try {
-          await applyTagsAndLinks();
-        } catch (err) {
-          return { content: [{ type: "text", text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
-        }
-        logAudit({ orgId, action: "page.patch", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug, operationCount: 0, tagsOnly: true } });
-        return { content: [{ type: "text", text: JSON.stringify({ message: `Patched "${slug}" (concepts/links only)` }) }] };
-      }
-
-      if (!expected_hash) {
-        return { content: [{ type: "text", text: "Error: expected_hash is required when operations are given" }], isError: true };
-      }
-
-      let operations: PatchOperation[];
-      try {
-        operations = JSON.parse(opsJson);
-      } catch {
-        return { content: [{ type: "text", text: "Error: operations must be valid JSON" }], isError: true };
-      }
-      if (!Array.isArray(operations)) {
-        return { content: [{ type: "text", text: "Error: operations must be an array" }], isError: true };
-      }
-
-      const current = await readPageYaml(orgId, slug);
-      if (!current) return { content: [{ type: "text", text: `Error: page not found: ${slug}` }], isError: true };
-
-      if (current.contentHash !== expected_hash) {
-        return { content: [{ type: "text", text: `Error: conflict — page modified since last read (current hash: ${current.contentHash})` }], isError: true };
-      }
-
-      const parsed = yaml.load(current.yaml) as Record<string, unknown>;
-      if (!Array.isArray(parsed.components)) {
-        return { content: [{ type: "text", text: "Error: page has no components array — use write_page instead" }], isError: true };
-      }
-
-      try {
-        parsed.components = ensureComponentIds(parsed.components as Record<string, unknown>[]);
-        const patched = applyPatchOperations(parsed as { components: Record<string, unknown>[]; [k: string]: unknown }, operations);
-        patched.components = ensureComponentIds(patched.components);
-
-        const newYaml = yaml.dump(patched, { lineWidth: -1, noRefs: true });
-
-        const unsupported = checkUnsupportedComponents(newYaml);
-        if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
-        const validationErrors = await validateContent(orgSlug, slug, newYaml);
-        if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: invalid after patch: ${validationErrors.map((e) => e.message).join("; ")}` }], isError: true };
-
-        const ppPage = await db.page.findUnique({
-          where: { orgId_slug: { orgId, slug } },
-          select: { folderId: true, rules: true },
-        });
-        const ppRules = await resolveRules(orgId, ppPage?.folderId ?? null, ppPage?.rules);
-        const ppAllRules = [...ppRules.inherited, ...ppRules.page];
-        const ppRuleCheck = validateContentRules(newYaml, ppAllRules);
-        if (ppRuleCheck.violations.length > 0) {
-          return { content: [{ type: "text", text: `Error: content rule violation: ${ppRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}` }], isError: true };
-        }
-
-        const result = await writePage(orgId, orgSlug, slug, newYaml, userId || "agent", current.contentHash);
-        if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
-
-        await applyTagsAndLinks();
-
-        logAudit({ orgId, action: "page.patch", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug, operationCount: operations.length } });
-        const ppResponse: Record<string, unknown> = { message: `Patched "${slug}" (${operations.length} operations applied)` };
-        if (ppRuleCheck.warnings.length > 0) {
-          ppResponse.contentWarnings = ppRuleCheck.warnings.map((w) => ({ scope: w.scope, message: w.message, matches: w.matches }));
-        }
-        return { content: [{ type: "text", text: JSON.stringify(ppResponse) }] };
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return { content: [{ type: "text", text: `Error: ${msg}` }], isError: true };
-      }
-    });
-
-  server.tool("create_page", "Create a new knowledge page in the brain. Search for duplicates FIRST (search_pages + get_related) — if an existing page covers the topic, patch_page it instead of creating a near-duplicate. Tag the page with concepts so it appears in the brain map",
+  server.tool("create_page", toolDescription("create_page", "Create a new knowledge page in the brain"),
     { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework.'), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]"), capture_token: z.string().optional().describe("Required when creating a page whose pageType has captureRequired: true — the token capture_thread returned"), dedup_ack: z.string().optional().describe('Required alongside capture_token: "new", or the candidate slug capture_thread should redirect you to patch_page instead') },
-    async ({ slug, content, folder_id, visibility, sort_order, concepts: conceptsJson, links: linksJson, capture_token, dedup_ack }) => {
-      validateSlug(slug);
-      const existing = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } } });
-      if (existing) return { content: [{ type: "text", text: `Error: page already exists: ${slug}` }], isError: true };
-      const unsupported = checkUnsupportedComponents(content);
-      if (unsupported.length > 0) return { content: [{ type: "text", text: `Error: ${unsupported.map((e) => e.message).join("; ")}` }], isError: true };
-      const validationErrors = await validateContent(orgSlug, slug, content);
-      if (validationErrors.length > 0) return { content: [{ type: "text", text: `Error: ${invalidContentMessage(validationErrors.map((e) => e.message).join("; "))}` }], isError: true };
-      const cpVis = visibility ?? mcpDefaultVisibility();
-      if (folder_id) {
-        const folder = await db.folder.findFirst({ where: { id: folder_id, orgId } });
-        if (folder) {
-          try { checkFolderBoundary(cpVis, folder.visibility); } catch (e) {
-            return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
-          }
-        }
-      }
-      const cpRules = await resolveRules(orgId, folder_id ?? null, null);
-      const cpAllRules = [...cpRules.inherited, ...cpRules.page];
-      const cpRuleCheck = validateContentRules(content, cpAllRules);
-      if (cpRuleCheck.violations.length > 0) {
-        return { content: [{ type: "text", text: `Error: content rule violation: ${cpRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}` }], isError: true };
-      }
-      try {
-        const cpRcRules = await resolveRequiredComponentsRules(orgId, folder_id ?? null, null);
-        enforceCaptureGate({
-          orgId,
-          content,
-          resolvedRules: [...cpRcRules.inherited, ...cpRcRules.page],
-          captureToken: capture_token,
-          dedupAck: dedup_ack,
-        });
-      } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
-      }
-      const result = await writePage(orgId, orgSlug, slug, content, userId || "agent", undefined, sort_order, cpVis);
-      if (!result.ok) return { content: [{ type: "text", text: `Error: ${result.error}` }], isError: true };
-      if (folder_id) {
-        await db.page.update({ where: { orgId_slug: { orgId, slug } }, data: { folderId: folder_id } });
-      }
-      if (conceptsJson || linksJson) {
-        const cpPage = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } }, select: { id: true } });
-        if (cpPage) {
-          if (conceptsJson) {
-            const conceptInputs: ConceptInput[] = JSON.parse(conceptsJson);
-            await upsertConcepts(cpPage.id, conceptInputs, actorId);
-          }
-          if (linksJson) {
-            const linkInputs: LinkInput[] = JSON.parse(linksJson);
-            await upsertLinks(orgId, cpPage.id, linkInputs, actorId);
-          }
-        }
-      }
-      logAudit({ orgId, action: "page.create", resourceType: "page", resourceId: slug, actorType: "apikey", actorId, metadata: { slug, folderId: folder_id } });
-      const cpResponse: Record<string, unknown> = { message: `Created page "${slug}"` };
-      if (cpRuleCheck.warnings.length > 0) {
-        cpResponse.contentWarnings = cpRuleCheck.warnings.map((w) => ({ scope: w.scope, message: w.message, matches: w.matches }));
-      }
-      return { content: [{ type: "text", text: JSON.stringify(cpResponse) }] };
-    });
+    viaDispatch("create_page"));
 
   server.tool("list_folders", "List all folders", {}, async () => {
     const folders = await db.folder.findMany({
@@ -617,11 +387,9 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       return { content: [{ type: "text", text: `Annotation ${id} marked as ${status}` }] };
     });
 
-  server.tool("get_component_reference", "Get YAML component authoring guide", {}, async () => {
-    const refPath = path.join(process.cwd(), "docs", "agents-reference.md");
-    if (!fs.existsSync(refPath)) return { content: [{ type: "text", text: "Component reference not found" }], isError: true };
-    return { content: [{ type: "text", text: fs.readFileSync(refPath, "utf-8") }] };
-  });
+  server.tool("get_component_reference", toolDescription("get_component_reference", "Get YAML component authoring guide"),
+    { component: z.string().optional().describe("Component type (graph, pipeline, grid, box, sequence, chart, ...). Returns a short slice: when to use it, a curated example to copy, and the shape rules. Omit for the full reference.") },
+    viaDispatch("get_component_reference"));
 
   server.tool("get_vocabulary", "Get all concept terms in the knowledge graph, optionally filtered by kind or search query",
     { kind: z.string().optional(), query: z.string().optional() },
@@ -698,7 +466,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     {},
     viaDispatch("list_templates"));
 
-  server.tool("create_from_template", "Create a page from a template, interpolating {{variables}}",
+  server.tool("create_from_template", toolDescription("create_from_template", "Create a page from a template, interpolating {{variables}}"),
     {
       template_slug: z.string(),
       target_slug: z.string(),

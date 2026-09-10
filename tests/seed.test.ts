@@ -20,6 +20,7 @@ vi.mock("@/lib/kazam", async () => {
     sitePath: () => tmpDir,
     buildSite: vi.fn().mockResolvedValue(""),
     validateContent: vi.fn().mockResolvedValue([]),
+    validateContentSplit: vi.fn().mockResolvedValue({ errors: [], warnings: [] }),
     checkUnsupportedComponents: vi.fn().mockReturnValue([]),
     invalidContentMessage: (d: string) => d,
   };

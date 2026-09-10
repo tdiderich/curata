@@ -85,7 +85,11 @@ export async function POST(request: NextRequest) {
   try {
     const actorId = ("keyPrefix" in ctx && ctx.keyPrefix) ? ctx.keyPrefix : "dev";
     const result = await dispatch(tool, args || {}, ctx.orgId, ctx.orgSlug ?? "", actorId, ctx.userId);
-    return NextResponse.json({ result });
+    // A write that succeeded but tripped shape rules is not plain success:
+    // 202 tells a client to look at result.shapeWarnings before moving on.
+    const hasWarnings = result && typeof result === "object" && Array.isArray((result as { shapeWarnings?: unknown }).shapeWarnings)
+      && (result as { shapeWarnings: unknown[] }).shapeWarnings.length > 0;
+    return NextResponse.json({ result, ...(hasWarnings ? { status: "written_with_warnings" } : {}) }, { status: hasWarnings ? 202 : 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("POST /api/mcp failed:", message);

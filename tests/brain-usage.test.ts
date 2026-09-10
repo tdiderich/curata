@@ -17,6 +17,7 @@ vi.mock("@/lib/kazam", async () => {
     sitePath: () => tmpDir,
     buildSite: vi.fn().mockResolvedValue(""),
     validateContent: vi.fn().mockResolvedValue([]),
+    validateContentSplit: vi.fn().mockResolvedValue({ errors: [], warnings: [] }),
   };
 });
 vi.mock("@/lib/sync", () => ({

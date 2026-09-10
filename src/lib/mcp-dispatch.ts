@@ -25,7 +25,9 @@ import type { Channel } from "@/lib/pages";
 import { getOrgTheme } from "@/lib/theme";
 import { buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
 import { getChromium, previewUrl, screenshotPage, renderHtmlToPng } from "@/lib/export-render";
-import { validateContent, checkUnsupportedComponents, invalidContentMessage } from "@/lib/kazam";
+import { validateContent, validateContentSplit, checkUnsupportedComponents, invalidContentMessage, type ShapeWarning } from "@/lib/kazam";
+import { resolveShapeRules, toKazamShapeRules, validateShapeRule } from "@/lib/shape-rules";
+import { renderComponentSlice, guidedComponents } from "@/lib/mcp-guidance";
 import { checkFolderBoundary, mcpDefaultVisibility, listPagesWhere } from "@/lib/access";
 import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
 import { validateApprovalRule, canApprove, getApprovers, describeApprovalRule, makeApprovalRuleResolver, resolveEffectiveTrustMode } from "@/lib/approval";
@@ -97,6 +99,20 @@ export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 
+
+/** Attach non-blocking shape warnings to a successful write result. */
+function withShapeWarnings<T extends Record<string, unknown>>(result: T, warnings: ShapeWarning[]): T & { shapeWarnings?: ShapeWarning[]; status?: string } {
+  if (warnings.length === 0) return result;
+  return { ...result, status: "written_with_warnings", shapeWarnings: warnings };
+}
+
+function parseSortOrder(v: string | undefined): number | undefined {
+  if (v === undefined || v === "" || v === "null") return undefined;
+  const n = Number(v);
+  if (!Number.isInteger(n)) throw new Error("sort_order must be an integer");
+  return n;
+}
+
 // capture_thread's content arg is a raw pasted thread/transcript, not a
 // bounded YAML page body — without a cap a single call can push an
 // arbitrarily large payload through the dedup phrase/term extraction and
@@ -113,16 +129,16 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   flag_page: { known: new Set(["slug", "action", "reason", "evidence", "superseded_by", "confidence"]), aliases: { supersededBy: "superseded_by" } },
   list_flags: { known: new Set(["status"]) },
   get_review_queue: { known: new Set() },
-  get_component_reference: { known: new Set() },
+  get_component_reference: { known: new Set(["component"]) },
   list_folders: { known: new Set() },
   get_folder_structure: { known: new Set() },
   create_folder: { known: new Set(["name", "parent_id", "visibility", "rules"]), aliases: { parentId: "parent_id" } },
   update_folder: { known: new Set(["id", "name", "parent_id", "visibility", "rules"]), aliases: { parentId: "parent_id" } },
   get_versions: { known: new Set(["slug", "limit"]) },
   validate_page: { known: new Set(["slug", "content"]) },
-  create_page: { known: new Set(["slug", "content", "folder_id", "visibility", "rules", "concepts", "links", "capture_token", "dedup_ack"]), aliases: { folderId: "folder_id" } },
+  create_page: { known: new Set(["slug", "content", "folder_id", "visibility", "sort_order", "rules", "concepts", "links", "capture_token", "dedup_ack"]), aliases: { folderId: "folder_id", sortOrder: "sort_order" } },
   move_page: { known: new Set(["slug", "folder_id"]), aliases: { folderId: "folder_id" } },
-  write_page: { known: new Set(["slug", "content", "expected_hash", "visibility", "folder_id", "concepts", "links", "rules", "capture_token", "dedup_ack"]), aliases: { folderId: "folder_id" } },
+  write_page: { known: new Set(["slug", "content", "expected_hash", "visibility", "folder_id", "sort_order", "concepts", "links", "rules", "capture_token", "dedup_ack"]), aliases: { folderId: "folder_id", sortOrder: "sort_order" } },
   annotate_page: { known: new Set(["slug", "text", "section", "kind", "replacement", "source"]) },
   update_annotation: { known: new Set(["slug", "annotation_id", "status"]), aliases: { annotationId: "annotation_id" } },
   patch_page: { known: new Set(["slug", "expected_hash", "operations", "concepts", "links"]) },
@@ -624,6 +640,13 @@ export async function dispatch(
     }
 
     case "get_component_reference": {
+      if (args.component) {
+        const slice = renderComponentSlice(args.component.trim());
+        if (!slice) {
+          throw new Error(`no guidance for component "${args.component}". Guided components: ${guidedComponents().join(", ")}. Call without component for the full reference.`);
+        }
+        return { component: args.component.trim(), content: slice };
+      }
       const refPath = path.join(process.cwd(), "docs", "agents-reference.md");
       if (!fs.existsSync(refPath)) {
         return {
@@ -755,8 +778,11 @@ export async function dispatch(
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       if (!args.content) throw new Error("content (YAML) is required");
       const validateUnsupported = checkUnsupportedComponents(args.content);
-      const errors = [...validateUnsupported, ...await validateContent(orgSlug, args.slug, args.content)];
-      return { valid: errors.length === 0, errors: errors.map((e) => e.message) };
+      const vpPage = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: args.slug } }, select: { folderId: true, rules: true } });
+      const vpShape = await resolveShapeRules(orgId, vpPage?.folderId ?? null, vpPage?.rules);
+      const vpSplit = await validateContentSplit(orgSlug, args.slug, args.content, toKazamShapeRules(vpShape));
+      const errors = [...validateUnsupported, ...vpSplit.errors];
+      return { valid: errors.length === 0, errors: errors.map((e) => e.message), warnings: vpSplit.warnings };
     }
 
     case "create_page": {
@@ -771,9 +797,14 @@ export async function dispatch(
         where: { orgId_slug: { orgId, slug: args.slug } },
       });
       if (existing) throw new Error(`page already exists: ${args.slug}`);
-      const createValidation = await validateContent(orgSlug, args.slug, args.content);
-      if (createValidation.length > 0) {
-        const messages = createValidation.map((e) => e.message).join("; ");
+      let cpPageRulesEarly: unknown;
+      if (args.rules) {
+        try { cpPageRulesEarly = JSON.parse(args.rules); } catch { throw new Error("rules must be valid JSON"); }
+      }
+      const cpShapeRules = await resolveShapeRules(orgId, args.folder_id ?? null, cpPageRulesEarly);
+      const createValidation = await validateContentSplit(orgSlug, args.slug, args.content, toKazamShapeRules(cpShapeRules));
+      if (createValidation.errors.length > 0) {
+        const messages = createValidation.errors.map((e) => e.message).join("; ");
         throw new Error(invalidContentMessage(messages));
       }
       const cpVis = args.visibility ?? mcpDefaultVisibility();
@@ -815,7 +846,7 @@ export async function dispatch(
         captureToken: args.capture_token,
         dedupAck: args.dedup_ack,
       });
-      const createResult = await writePage(orgId, orgSlug, args.slug, args.content, userId || "agent", undefined, undefined, cpVis);
+      const createResult = await writePage(orgId, orgSlug, args.slug, args.content, userId || "agent", undefined, parseSortOrder(args.sort_order), cpVis);
       if (!createResult.ok) throw new Error(createResult.error);
       if (cpConceptInputs || args.links) {
         const cpPage = await db.page.findUnique({
@@ -841,7 +872,7 @@ export async function dispatch(
           data: cpUpdate,
         });
       }
-      const cpResult: Record<string, unknown> = { ...createResult };
+      const cpResult: Record<string, unknown> = withShapeWarnings({ ...createResult }, createValidation.warnings);
       if (cpRuleCheck.warnings.length > 0) {
         cpResult.contentWarnings = cpRuleCheck.warnings.map((w) => ({
           scope: w.scope,
@@ -909,9 +940,15 @@ export async function dispatch(
       if (writeUnsupported.length > 0) {
         throw new Error(writeUnsupported.map((e) => e.message).join("; "));
       }
-      const validationErrors = await validateContent(orgSlug, args.slug, args.content);
-      if (validationErrors.length > 0) {
-        const messages = validationErrors.map((e) => e.message).join("; ");
+      const wpPre = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: args.slug } }, select: { folderId: true, rules: true } });
+      let wpPageRulesEarly: unknown = wpPre?.rules;
+      if (args.rules !== undefined) {
+        try { wpPageRulesEarly = JSON.parse(args.rules); } catch { throw new Error("rules must be valid JSON"); }
+      }
+      const wpShapeRules = await resolveShapeRules(orgId, args.folder_id ?? wpPre?.folderId ?? null, wpPageRulesEarly);
+      const wpValidation = await validateContentSplit(orgSlug, args.slug, args.content, toKazamShapeRules(wpShapeRules));
+      if (wpValidation.errors.length > 0) {
+        const messages = wpValidation.errors.map((e) => e.message).join("; ");
         throw new Error(invalidContentMessage(messages));
       }
       const wpVis = args.visibility ?? mcpDefaultVisibility();
@@ -974,7 +1011,7 @@ export async function dispatch(
         args.content,
         userId || "agent",
         args.expected_hash,
-        undefined,
+        parseSortOrder(args.sort_order),
         wpVis
       );
       if (!writeResult.ok) {
@@ -1032,7 +1069,7 @@ export async function dispatch(
           }
         }
       }
-      const wpResult: Record<string, unknown> = { ...writeResult };
+      const wpResult: Record<string, unknown> = withShapeWarnings({ ...writeResult }, wpValidation.warnings);
       if (wpRuleCheck.warnings.length > 0) {
         wpResult.contentWarnings = wpRuleCheck.warnings.map((w) => ({
           scope: w.scope,
@@ -1195,15 +1232,16 @@ export async function dispatch(
       if (patchUnsupported.length > 0) {
         throw new Error(patchUnsupported.map((e) => e.message).join("; "));
       }
-      const patchValidation = await validateContent(orgSlug, args.slug, newYaml);
-      if (patchValidation.length > 0) {
-        throw new Error(`invalid after patch: ${patchValidation.map((e) => e.message).join("; ")}`);
-      }
-
       const ppExisting = await db.page.findUnique({
         where: { orgId_slug: { orgId, slug: args.slug } },
         select: { id: true, folderId: true, rules: true },
       });
+      const ppShapeRules = await resolveShapeRules(orgId, ppExisting?.folderId ?? null, ppExisting?.rules);
+      const patchValidation = await validateContentSplit(orgSlug, args.slug, newYaml, toKazamShapeRules(ppShapeRules));
+      if (patchValidation.errors.length > 0) {
+        throw new Error(`invalid after patch: ${patchValidation.errors.map((e) => e.message).join("; ")}`);
+      }
+
       const ppRules = await resolveRules(orgId, ppExisting?.folderId ?? null, ppExisting?.rules);
       const ppAllRules = [...ppRules.inherited, ...ppRules.page];
       const ppRuleCheck = validateContentRules(newYaml, ppAllRules);
@@ -1251,7 +1289,7 @@ export async function dispatch(
         actorId,
         metadata: { slug: args.slug, operationCount: operations.length },
       });
-      const ppResult: Record<string, unknown> = { ...patchResult };
+      const ppResult: Record<string, unknown> = withShapeWarnings({ ...patchResult }, patchValidation.warnings);
       if (ppRuleCheck.warnings.length > 0) {
         ppResult.contentWarnings = ppRuleCheck.warnings.map((w) => ({
           scope: w.scope,
@@ -1306,7 +1344,11 @@ export async function dispatch(
 
     case "list_templates": {
       const ltFolders = await db.folder.findMany({ where: { orgId }, select: { id: true, name: true } });
-      const ltFolder = ltFolders.find((f) => f.name.toLowerCase() === "templates");
+      // Seeded orgs keep their starter pages in one managed folder; a folder
+      // literally named "templates" is the org-authored override.
+      const ltFolder =
+        ltFolders.find((f) => f.name.toLowerCase() === "templates") ??
+        ltFolders.find((f) => f.name === "Curata Managed Pages");
       if (!ltFolder) return [];
       const ltPages = await db.page.findMany({
         where: { orgId, folderId: ltFolder.id, status: { not: "archived" } },
@@ -1350,9 +1392,21 @@ export async function dispatch(
       if (cftUnsupported.length > 0) {
         throw new Error(cftUnsupported.map((e) => e.message).join("; "));
       }
-      const cftValidation = await validateContent(orgSlug, args.target_slug, interpolated);
-      if (cftValidation.length > 0) {
-        throw new Error(`invalid after interpolation: ${cftValidation.map((e) => e.message).join("; ")}`);
+      const cftShapeRules = await resolveShapeRules(orgId, args.folder_id ?? null, undefined);
+      const cftValidation = await validateContentSplit(orgSlug, args.target_slug, interpolated, toKazamShapeRules(cftShapeRules));
+      if (cftValidation.errors.length > 0) {
+        throw new Error(`invalid after interpolation: ${cftValidation.errors.map((e) => e.message).join("; ")}`);
+      }
+      // Same gates as create_page: a template is a starting point, not a bypass.
+      const cftRules = await resolveRules(orgId, args.folder_id ?? null, undefined);
+      const cftRuleCheck = validateContentRules(interpolated, [...cftRules.inherited, ...cftRules.page]);
+      if (cftRuleCheck.violations.length > 0) {
+        throw new Error(`content rule violation: ${cftRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}`);
+      }
+      const cftRcRules = await resolveRequiredComponentsRules(orgId, args.folder_id ?? null, undefined);
+      const cftRcViolations = validateRequiredComponents(interpolated, 0, [...cftRcRules.inherited, ...cftRcRules.page]);
+      if (cftRcViolations.length > 0) {
+        throw new Error(`required-components rule violation: ${cftRcViolations.map((v) => `[${v.scope}] ${v.message}`).join("; ")}`);
       }
 
       const existing = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: args.target_slug } } });
@@ -1379,7 +1433,11 @@ export async function dispatch(
         actorId,
         metadata: { slug: args.target_slug, templateSlug: args.template_slug, folderId: args.folder_id },
       });
-      return { ...cftResult, slug: args.target_slug };
+      const cftOut: Record<string, unknown> = withShapeWarnings({ ...cftResult, slug: args.target_slug }, cftValidation.warnings);
+      if (cftRuleCheck.warnings.length > 0) {
+        cftOut.contentWarnings = cftRuleCheck.warnings.map((w) => ({ scope: w.scope, message: w.message, matches: w.matches }));
+      }
+      return cftOut;
     }
 
     case "capture_thread": {
@@ -1597,6 +1655,7 @@ export async function dispatch(
         }
         const lrRules = await resolveRules(orgId, lrPage.folderId, lrPage.rules);
         const lrRcRules = await resolveRequiredComponentsRules(orgId, lrPage.folderId, lrPage.rules);
+        const lrShape = await resolveShapeRules(orgId, lrPage.folderId, lrPage.rules);
         return {
           slug: args.slug,
           inherited: lrRules.inherited,
@@ -1605,6 +1664,7 @@ export async function dispatch(
             inherited: lrRcRules.inherited,
             page: lrRcRules.page,
           },
+          shape: lrShape,
         };
       }
       const lrOrg = await db.organization.findUnique({
@@ -1634,6 +1694,10 @@ export async function dispatch(
         if (candidate && typeof candidate === "object" && (candidate as Record<string, unknown>).kind === "required-components") {
           const validated = validateRequiredComponentsRule(candidate);
           if (!validated.ok) throw new Error(`invalid required-components rule: ${validated.error}`);
+        }
+        if (candidate && typeof candidate === "object" && (candidate as Record<string, unknown>).kind === "shape") {
+          const validated = validateShapeRule(candidate);
+          if (!validated.ok) throw new Error(`invalid shape rule: ${validated.error}`);
         }
       }
 
