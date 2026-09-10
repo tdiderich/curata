@@ -52,7 +52,8 @@ import {
   projectConceptTerms,
 } from "@/lib/concepts";
 import type { ConceptInput, LinkInput } from "@/lib/concepts";
-import { ensureComponentIds, applyPatchOperations } from "@/lib/component-ids";
+import { ensureComponentIds, applyPatchOperations, buildOutline, formatOutline, locateComponent } from "@/lib/component-ids";
+import { createHash } from "crypto";
 import type { PatchOperation } from "@/lib/component-ids";
 import { expandComponentRefs, agentRefWrap } from "@/lib/component-refs";
 import {
@@ -93,8 +94,9 @@ export const READ_TOOLS = [
   "list_rules",
   "list_groups",
   "capture_thread",
+  "read_component",
 ];
-export const WRITE_TOOLS = ["write_page", "create_page", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted", "generate_digest"];
+export const WRITE_TOOLS = ["write_page", "create_page", "write_component", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted", "generate_digest"];
 export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -122,6 +124,8 @@ const CAPTURE_CONTENT_MAX_BYTES = 200 * 1024;
 const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string, string> }> = {
   list_pages: { known: new Set(["channel"]) },
   read_page: { known: new Set(["slug", "channel"]) },
+  read_component: { known: new Set(["slug", "id", "channel"]) },
+  write_component: { known: new Set(["slug", "id", "yaml", "expected_hash", "component_hash"]), aliases: { content: "yaml", expectedHash: "expected_hash", componentHash: "component_hash" } },
   search: { known: new Set(["query", "channel"]) },
   get_config: { known: new Set() },
   list_annotations: { known: new Set(["slug"]) },
@@ -410,10 +414,13 @@ export async function dispatch(
         ? await resolveEffectiveTrustMode(orgId, page.folderId, page.rules)
         : { mode: "auto" as const, scope: "default" };
 
+      const rpOutline = Array.isArray(parsed.components) ? buildOutline(parsed.components as Record<string, unknown>[]) : [];
       const response: Record<string, unknown> = {
         slug: args.slug,
         yaml: result.yaml,
         contentHash: result.contentHash,
+        outline: rpOutline.map((e) => ({ id: e.id, type: e.type, path: e.path, depth: e.depth, parentId: e.parentId, label: e.label })),
+        outlineText: formatOutline(rpOutline),
         sections,
         annotations,
         concepts,
@@ -436,6 +443,114 @@ export async function dispatch(
       }
 
       return response;
+    }
+
+    case "read_component": {
+      if (!args.slug) throw new Error("slug is required");
+      if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
+      if (!args.id) throw new Error("id is required (see read_page outline)");
+      const rcChannel = resolveChannelArg(args);
+      const rcPage = await readPageYaml(orgId, args.slug, rcChannel);
+      if (!rcPage) throw new Error(`page not found: ${args.slug}`);
+      const rcParsed = yaml.load(rcPage.yaml) as Record<string, unknown>;
+      const rcComponents = ensureComponentIds((Array.isArray(rcParsed.components) ? rcParsed.components : []) as Record<string, unknown>[]);
+      const rcLoc = locateComponent(rcComponents, args.id.trim());
+      if (!rcLoc) {
+        throw new Error(`component "${args.id}" not found on ${args.slug}. Outline (id  type  label):\n${formatOutline(buildOutline(rcComponents))}`);
+      }
+      const rcYaml = yaml.dump(rcLoc.component, { lineWidth: -1, noRefs: true });
+      return {
+        slug: args.slug,
+        id: rcLoc.component.id,
+        type: rcLoc.component.type,
+        path: rcLoc.path,
+        parentId: rcLoc.parentId,
+        siblings: rcLoc.siblings,
+        yaml: rcYaml,
+        componentHash: createHash("sha256").update(rcYaml).digest("hex"),
+        contentHash: rcPage.contentHash,
+      };
+    }
+
+    case "write_component": {
+      if (!args.slug) throw new Error("slug is required");
+      if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
+      if (!args.id) throw new Error("id is required (see read_page outline)");
+      if (!args.yaml) throw new Error("yaml (the replacement component) is required");
+      let wcNew: Record<string, unknown>;
+      try {
+        const loaded = yaml.load(args.yaml);
+        const single = Array.isArray(loaded) && loaded.length === 1 ? loaded[0] : loaded;
+        if (!single || typeof single !== "object" || Array.isArray(single)) throw new Error("expected one component object");
+        wcNew = single as Record<string, unknown>;
+      } catch (e) {
+        throw new Error(`yaml must be a single component object (type: ...): ${e instanceof Error ? e.message : String(e)}`);
+      }
+      if (typeof wcNew.type !== "string" || !wcNew.type) throw new Error("component yaml needs a type:");
+      const wcCurrent = await readPageYaml(orgId, args.slug);
+      if (!wcCurrent) throw new Error(`page not found: ${args.slug}`);
+      if (args.expected_hash && wcCurrent.contentHash !== args.expected_hash) {
+        throw new Error(`conflict: page was modified since last read (current hash: ${wcCurrent.contentHash})`);
+      }
+      const wcParsed = yaml.load(wcCurrent.yaml) as Record<string, unknown>;
+      const wcComponents = ensureComponentIds((Array.isArray(wcParsed.components) ? wcParsed.components : []) as Record<string, unknown>[]);
+      const wcLoc = locateComponent(wcComponents, args.id.trim());
+      if (!wcLoc) {
+        throw new Error(`component "${args.id}" not found on ${args.slug}. Outline (id  type  label):\n${formatOutline(buildOutline(wcComponents))}`);
+      }
+      const wcCurrentYaml = yaml.dump(wcLoc.component, { lineWidth: -1, noRefs: true });
+      const wcCurrentHash = createHash("sha256").update(wcCurrentYaml).digest("hex");
+      if (args.component_hash && args.component_hash !== wcCurrentHash) {
+        throw new Error(`conflict: component "${args.id}" changed since you read it (current component_hash: ${wcCurrentHash}). Current YAML:\n${wcCurrentYaml}`);
+      }
+      const wcKeepId = typeof wcLoc.component.id === "string" ? wcLoc.component.id : args.id.trim();
+      wcLoc.replace([{ ...wcNew, id: wcKeepId }]);
+      const wcPage = { ...wcParsed, components: wcComponents };
+      const wcYaml = yaml.dump(wcPage, { lineWidth: -1, noRefs: true });
+
+      const wcUnsupported = checkUnsupportedComponents(wcYaml);
+      if (wcUnsupported.length > 0) throw new Error(wcUnsupported.map((e) => e.message).join("; "));
+      const wcMeta = await db.page.findUnique({
+        where: { orgId_slug: { orgId, slug: args.slug } },
+        select: { id: true, folderId: true, rules: true },
+      });
+      const wcShapeRules = await resolveShapeRules(orgId, wcMeta?.folderId ?? null, wcMeta?.rules);
+      const wcValidation = await validateContentSplit(orgSlug, args.slug, wcYaml, toKazamShapeRules(wcShapeRules));
+      if (wcValidation.errors.length > 0) {
+        throw new Error(`invalid after replacing "${args.id}": ${wcValidation.errors.map((e) => e.message).join("; ")}`);
+      }
+      const wcRules = await resolveRules(orgId, wcMeta?.folderId ?? null, wcMeta?.rules);
+      const wcRuleCheck = validateContentRules(wcYaml, [...wcRules.inherited, ...wcRules.page]);
+      if (wcRuleCheck.violations.length > 0) {
+        throw new Error(`content rule violation: ${wcRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}`);
+      }
+      const wcRcRules = await resolveRequiredComponentsRules(orgId, wcMeta?.folderId ?? null, wcMeta?.rules);
+      const wcConceptCount = wcMeta ? (await getPageConcepts(wcMeta.id)).length : 0;
+      const wcRcViolations = validateRequiredComponents(wcYaml, wcConceptCount, [...wcRcRules.inherited, ...wcRcRules.page]);
+      if (wcRcViolations.length > 0) {
+        throw new Error(`required-components rule violation: ${wcRcViolations.map((v) => `[${v.scope}] ${v.message}`).join("; ")}`);
+      }
+      const wcResult = await writePage(orgId, orgSlug, args.slug, wcYaml, userId || "agent", wcCurrent.contentHash);
+      if (!wcResult.ok) throw new Error(wcResult.error);
+      logAudit({
+        orgId,
+        action: "page.write",
+        resourceType: "page",
+        resourceId: args.slug,
+        actorType: "apikey",
+        actorId,
+        metadata: { slug: args.slug, componentId: wcKeepId, path: wcLoc.path },
+      });
+      // Only warnings on the component just written are the caller's to act on
+      // right now; page-wide ones are still reported, under a separate key.
+      const wcMine = wcValidation.warnings.filter((w) => w.path === wcLoc.path || w.path.startsWith(`${wcLoc.path}.`));
+      const wcOthers = wcValidation.warnings.filter((w) => !wcMine.includes(w));
+      const wcOut: Record<string, unknown> = withShapeWarnings({ ...wcResult, id: wcKeepId, path: wcLoc.path }, wcMine);
+      if (wcOthers.length > 0) wcOut.otherShapeWarnings = wcOthers;
+      if (wcRuleCheck.warnings.length > 0) {
+        wcOut.contentWarnings = wcRuleCheck.warnings.map((w) => ({ scope: w.scope, message: w.message, matches: w.matches }));
+      }
+      return wcOut;
     }
 
     case "search": {

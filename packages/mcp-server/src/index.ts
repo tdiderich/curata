@@ -51,6 +51,44 @@ server.tool(
 );
 
 server.tool(
+  "read_component",
+  "Read one component from a page by id (nested ids work: sections, grids, boxes, tabs, columns). read_page's outline lists the ids. Returns the component YAML, its keypath, parent, siblings, and a componentHash for write_component.",
+  { slug: z.string().describe("Page slug"), id: z.string().describe("Component id from the read_page outline") },
+  async ({ slug, id }) => {
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "read_component", { slug, id });
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    const r = result.result as { id: string; type: string; path: string; yaml: string; componentHash: string; siblings: string[] };
+    return { content: [{ type: "text" as const, text: `# ${r.id} (${r.type}) at ${r.path}\ncomponentHash: ${r.componentHash}\nsiblings: ${r.siblings.join(", ")}\n\n${r.yaml}` }] };
+  }
+);
+
+server.tool(
+  "write_component",
+  "Replace one component on a page by id with YAML for just that component. Keeps the id, validates the whole page, runs shape rules and content rules; warnings come back without blocking. Pass component_hash from read_component to catch concurrent edits. Prefer this over write_page for a one-component change.",
+  {
+    slug: z.string().describe("Page slug"),
+    id: z.string().describe("Component id to replace"),
+    yaml: z.string().describe("YAML for the single replacement component, starting with type:"),
+    component_hash: z.string().optional().describe("componentHash from read_component"),
+  },
+  async ({ slug, id, yaml: componentYaml, component_hash }) => {
+    const args: Record<string, string> = { slug, id, yaml: componentYaml };
+    if (component_hash) args.component_hash = component_hash;
+    const result = await callApi(CURATA_URL, CURATA_API_KEY, "write_component", args);
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }], isError: true };
+    }
+    const r = result.result as { path?: string; shapeWarnings?: Array<{ path: string; component: string; message: string }> };
+    const warnText = r.shapeWarnings?.length
+      ? `WARNINGS (${r.shapeWarnings.length}) - written, fix these next:\n${r.shapeWarnings.map((w) => `- ${w.path} (${w.component}): ${w.message}`).join("\n")}\n\n`
+      : "";
+    return { content: [{ type: "text" as const, text: `${warnText}Replaced ${id} on ${slug} (${r.path ?? ""})` }] };
+  }
+);
+
+server.tool(
   "list_pages",
   "List all pages in your team's knowledge base. Returns titles, slugs, last updated dates, and view counts.",
   {},

@@ -157,7 +157,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   });
 
-  server.tool("read_page", "Read a knowledge page's full content by slug. Use after search_pages or get_related surfaces a promising page — the full page carries caveats and provenance the search snippet omits", { slug: z.string(), channel: CHANNEL_SCHEMA }, async ({ slug, channel }) => {
+  server.tool("read_page", "Read a knowledge page's full content by slug. Use after search_pages or get_related surfaces a promising page — the full page carries caveats and provenance the search snippet omits. The response includes an outline (id, type, path, label per component, nested ids included): pick an id there and use read_component / write_component to change one part of the page instead of rewriting it.", { slug: z.string(), channel: CHANNEL_SCHEMA }, async ({ slug, channel }) => {
     validateSlug(slug);
     // Orgs created before a seed page existed (batch-2 skills, FDE skills)
     // never got it — backfill missing seed pages here so a thin-pointer
@@ -213,6 +213,20 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   server.tool("write_page", toolDescription("write_page", "Create or update a page"),
     { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?, remove?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework — call get_vocabulary to see kinds in use. remove: true detaches the tag from this page. Supplying kind on an existing term re-kinds the concept everywhere it is used.'), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]"), capture_token: z.string().optional().describe("Required when creating a page whose pageType has captureRequired: true — the token capture_thread returned"), dedup_ack: z.string().optional().describe('Required alongside capture_token: "new", or the candidate slug capture_thread should redirect you to patch_page instead') },
     viaDispatch("write_page"));
+
+  server.tool("read_component", toolDescription("read_component", "Read one component from a page by id"),
+    { slug: z.string().describe("Page slug"), id: z.string().describe("Component id from read_page's outline (nested ids work)"), channel: CHANNEL_SCHEMA },
+    viaDispatch("read_component"));
+
+  server.tool("write_component", toolDescription("write_component", "Replace one component on a page by id"),
+    {
+      slug: z.string().describe("Page slug"),
+      id: z.string().describe("Component id to replace (from read_page outline or read_component)"),
+      yaml: z.string().describe("YAML for the single replacement component, starting with type:. The id is kept."),
+      component_hash: z.string().optional().describe("componentHash from read_component; the write is refused if that component changed since"),
+      expected_hash: z.string().optional().describe("Page contentHash from read_page; refused if the page changed since"),
+    },
+    viaDispatch("write_component"));
 
   server.tool("patch_page", toolDescription("patch_page", "Apply targeted operations to a page without rewriting full YAML"),
     {
