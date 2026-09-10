@@ -17,6 +17,7 @@ interface ComponentSlice {
   avoid_when: string | null;
   example_name: string | null;
   example_yaml: string | null;
+  page_skeleton?: string;
   rules: GuidanceRule[];
 }
 
@@ -54,8 +55,11 @@ export function renderComponentSlice(type: string): string | null {
   if (s.use_when) out.push(`**Use when:** ${s.use_when}`);
   if (s.avoid_when) out.push(`**Avoid when:** ${s.avoid_when}`);
   if (s.use_when || s.avoid_when) out.push("");
+  if (s.page_skeleton) {
+    out.push("Every page needs `title`, `shell`, and `components` at the top level:", "", "```yaml", s.page_skeleton.trimEnd(), "```", "");
+  }
   if (s.example_yaml) {
-    out.push("Copy this structure:", "", "```yaml", s.example_yaml.trimEnd(), "```", "");
+    out.push("Copy this structure for the component (quote inline values that contain commas):", "", "```yaml", s.example_yaml.trimEnd(), "```", "");
   }
   if (s.rules.length > 0) {
     out.push("**Shape rules (warn on write):**");
