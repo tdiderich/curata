@@ -26,7 +26,7 @@ import {
   getRelated,
   getSemanticMap,
 } from "@/lib/concepts";
-import { ensureComponentIds } from "@/lib/component-ids";
+import { ensureComponentIds, buildOutline, formatOutline } from "@/lib/component-ids";
 import { dispatch } from "@/lib/mcp-dispatch";
 import { toolDescription } from "@/lib/mcp-guidance";
 import { formatWarningsBlock, type ShapeWarning } from "@/lib/kazam";
@@ -167,8 +167,10 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     if (!result) return { content: [{ type: "text", text: `Error: page not found: ${slug}` }], isError: true };
 
     const parsed = yaml.load(result.yaml) as Record<string, unknown>;
+    let outline: ReturnType<typeof buildOutline> = [];
     if (Array.isArray(parsed.components)) {
       parsed.components = ensureComponentIds(parsed.components as Record<string, unknown>[]);
+      outline = buildOutline(parsed.components as Record<string, unknown>[]);
       result.yaml = yaml.dump(parsed, { lineWidth: -1, noRefs: true });
     }
 
@@ -196,6 +198,8 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       slug,
       yaml: result.yaml,
       contentHash: result.contentHash,
+      outline: outline.map((e) => ({ id: e.id, type: e.type, path: e.path, depth: e.depth, parentId: e.parentId, label: e.label })),
+      outlineText: formatOutline(outline),
       sections,
       annotations,
       concepts,
