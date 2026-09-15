@@ -1086,10 +1086,36 @@ function PresentationOverlay({
   const [current, setCurrent] = useState(0);
   const total = slides.length;
 
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const slideRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
   const go = useCallback(
     (dir: 1 | -1) => setCurrent((c) => Math.max(0, Math.min(total - 1, c + dir))),
     [total],
   );
+
+  useEffect(() => {
+    const body = bodyRef.current;
+    const slideEl = slideRef.current;
+    if (!body || !slideEl) return;
+
+    const fit = () => {
+      const availW = body.clientWidth;
+      const availH = body.clientHeight;
+      const contentW = slideEl.scrollWidth;
+      const contentH = slideEl.scrollHeight;
+      if (!contentW || !contentH) return;
+      const next = Math.min(3, (availW / contentW) * 0.96, (availH / contentH) * 0.96);
+      setScale(Number.isFinite(next) && next > 0 ? next : 1);
+    };
+
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(body);
+    ro.observe(slideEl);
+    return () => ro.disconnect();
+  }, [current]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1118,17 +1144,19 @@ function PresentationOverlay({
           <span className="pres-counter">{current + 1} / {total}</span>
           <button className="pres-close" onClick={onClose} aria-label="Exit presentation">&times;</button>
         </div>
-        <div className="pres-body">
-          <PageRenderer
-            motion
-            page={{
-              ...pageJson,
-              shell: "standard",
-              components: slide.components as PageData["components"],
-              slides: undefined,
-              hub: undefined,
-            }}
-          />
+        <div className="pres-body" ref={bodyRef}>
+          <div className="pres-slide" ref={slideRef} style={{ transform: `scale(${scale})` }}>
+            <PageRenderer
+              motion
+              page={{
+                ...pageJson,
+                shell: "standard",
+                components: slide.components as PageData["components"],
+                slides: undefined,
+                hub: undefined,
+              }}
+            />
+          </div>
         </div>
         <div className="pres-nav">
           <button className="pres-nav-btn" disabled={current === 0} onClick={() => go(-1)} aria-label="Previous slide">&larr;</button>

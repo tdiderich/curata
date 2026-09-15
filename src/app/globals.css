@@ -9302,12 +9302,17 @@ body:has(.nav-reveal) .page-toolbar {
 
 .pres-body {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 32px 0;
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
-  zoom: 1.25;
+}
+
+.pres-slide {
+  transform-origin: center center;
+  transition: transform 0.15s ease-out;
 }
 
 .pres-nav {
