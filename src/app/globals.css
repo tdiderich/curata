@@ -7853,6 +7853,7 @@ body:has(.nav-reveal) .page-toolbar {
 .stg-dep-favicon { width: 13px; height: 13px; border-radius: 3px; flex: none; }
 .stg-dep-arrow { font-size: 0.75em; opacity: 0.55; }
 .stg-dep-owner { margin-left: 10px; color: var(--muted); font-size: 12px; }
+.stg-dep-note { color: var(--muted); font-size: 12px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stg-dep-owners { display: inline-flex; gap: 10px; flex-wrap: wrap; }
 /* Concept relation badges (Dependencies + Tags tabs). */
 .pill--depends { background: rgba(var(--accent-rgb), 0.14); color: var(--snow); }

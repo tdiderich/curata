@@ -16,11 +16,12 @@ function page(slug: string, via: string, rel: string, state: "fresh" | "stale" |
     trustedBehind: state === "stale",
     updatedAt: ago(2),
     verifiedAt: state === "never" ? null : state === "stale" ? ago(30 * 24) : ago(3),
+    verifiedNote: state === "fresh" && slug.includes("battle") ? "does not quote the price" : null,
     staleAgainstSource: state !== "fresh",
   };
 }
 
-function external(url: string, label: string, via: string, state: "fresh" | "stale", owner?: string): ExternalDependentRow {
+function external(url: string, label: string, via: string, state: "fresh" | "stale" | "never", owner?: string): ExternalDependentRow {
   return {
     id: url,
     url,
@@ -29,8 +30,9 @@ function external(url: string, label: string, via: string, state: "fresh" | "sta
     owner: owner ?? null,
     rel: "depends",
     via,
-    verifiedAt: state === "fresh" ? ago(5) : ago(40 * 24),
-    staleAgainstSource: state === "stale",
+    verifiedAt: state === "never" ? null : state === "fresh" ? ago(5) : ago(40 * 24),
+    verifiedNote: state === "fresh" ? "checked the README, still current" : null,
+    staleAgainstSource: state !== "fresh",
   };
 }
 
@@ -42,6 +44,7 @@ const EMPTY: DependentsResult = {
   instances: [],
   asserterGaps: [],
   external: [],
+  summary: { pages: { total: 0, ok: 0, stale: 0, neverVerified: 0 }, external: { total: 0, ok: 0, stale: 0, neverChecked: 0 }, text: "" },
 };
 
 const DEPENDS_ONLY: DependentsResult = {
@@ -56,6 +59,7 @@ const DEPENDS_ONLY: DependentsResult = {
   instances: [],
   asserterGaps: ["feature/gcp-support"],
   external: [],
+  summary: { pages: { total: 0, ok: 0, stale: 0, neverVerified: 0 }, external: { total: 0, ok: 0, stale: 0, neverChecked: 0 }, text: "" },
 };
 
 const BOTH: DependentsResult = {
@@ -75,7 +79,9 @@ const BOTH: DependentsResult = {
   external: [
     external("https://docs.google.com/presentation/d/1QzX/", "Sales deck Q3", "pricing/tier-2", "stale", "Sales enablement"),
     external("https://github.com/mazehq/atlas_universe/blob/main/README.md", "atlas_universe README", "pricing/tier-2", "fresh"),
+    external("https://dashboard.stripe.com/prices/price_1Tier2Seat", "Stripe price object", "pricing/tier-2", "never", "Finance"),
   ],
+  summary: { pages: { total: 0, ok: 0, stale: 0, neverVerified: 0 }, external: { total: 0, ok: 0, stale: 0, neverChecked: 0 }, text: "" },
 };
 
 const meta = {

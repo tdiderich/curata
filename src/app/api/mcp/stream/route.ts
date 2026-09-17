@@ -456,10 +456,11 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       slug: z.string().optional().describe("Page slug to verify"),
       url: z.string().optional().describe("External asset URL to verify (all concepts it is attached to, unless term is given)"),
       term: z.string().optional().describe("With url: only the edge to this concept"),
+      note: z.string().optional().describe("Why it still holds, like 'does not quote the price'. Shown next to the verified badge"),
     },
     viaDispatch("mark_verified"));
 
-  server.tool("get_dependents", "Directional dependency view for a concept or page: which pages depend on it (go stale if it changes), which page asserts it (source of truth), which pages were built from it as a template, and which external assets (Drive, GitHub, ...) hang off it. Every row carries verifiedAt and staleAgainstSource (true when the source of truth changed after that row was last verified). Call before changing something to see what else has to move, and after to see what still has not been looked at.",
+  server.tool("get_dependents", "Directional dependency view for a concept or page: which pages depend on it (go stale if it changes), which page asserts it (source of truth), which pages were built from it as a template, and which external assets (Drive, GitHub, ...) hang off it. Every row carries verifiedAt and staleAgainstSource (true when the source of truth changed after that row was last verified). Call before changing something to see what else has to move, and after to see what still has not been looked at. `summary.text` is a one-line count ready to hand to a human. Unknown terms error with near matches instead of returning an empty graph.",
     { slug: z.string().optional().describe("Page slug. Returns what this page depends on (asserters), what depends on it, and its template instances"), term: z.string().optional().describe("Concept term, like pricing/tier-2. Returns asserters, dependents, and instances of the concept"), rel: z.enum(CONCEPT_RELS).optional().describe("Term mode only: restrict to one relation") },
     async ({ slug, term, rel }) => {
       if (!slug && !term) throw new Error("slug or term is required");

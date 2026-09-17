@@ -134,6 +134,9 @@ model Page {
   // bumps it (writing is verifying), markTrusted bumps it, and verify_page
   // bumps it without a new version for "looked, still correct". Null = never.
   verifiedAt DateTime? @map("verified_at")
+  // Why the last verification happened ("does not quote the price"). Set by
+  // mark_verified, cleared by writes (the new content speaks for itself).
+  verifiedNote String? @map("verified_note")
   seeded     Boolean   @default(false)
   pageType   String?   @map("page_type")
   createdAt  DateTime  @default(now()) @map("created_at")
@@ -309,7 +312,9 @@ model ExternalDependent {
   label      String
   owner      String?
   rel        String    @default("depends")
+  // Null until someone actually checks the asset. Attaching is not checking.
   verifiedAt DateTime? @map("verified_at")
+  verifiedNote String? @map("verified_note")
   createdBy  String    @map("created_by")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")

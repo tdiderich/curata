@@ -4,7 +4,7 @@ shell: standard
 components:
   - type: markdown
     body: |
-      The curata MCP server exposes 43 tools. Your agent discovers the exact schemas live from the server itself (`tools/list`), and the server's own instructions teach connected agents when to reach for what, so this page stays a map, never a contract. The groups below cover the loop end to end: find knowledge, write it, capture it from real work, validate it, and report on it.
+      The curata MCP server exposes about fifty tools. Your agent discovers the exact schemas live from the server (`tools/list` over MCP, or `GET /api/mcp` for names plus accepted params over plain HTTP, where `search_pages` and `search` are the same tool), and the server's own instructions teach connected agents when to reach for what, so this page stays a map, never a contract. The groups below cover the loop end to end: find knowledge, write it, capture it from real work, validate it, and report on it.
 
   - type: section
     heading: Search and read
@@ -19,7 +19,7 @@ components:
           - **get_related** - pages linked or conceptually near a given page
           - **get_dependents** - what depends on a concept or page, what asserts it, what was built from it, external assets attached to it, and which of those are stale against the source
           - **map_dependencies** - build a dependency graph around one concept in one call (asserts, depends, references, external urls)
-          - **mark_verified** - record that a page or external asset was checked and still holds, without a new version
+          - **mark_verified** - record that a page or external asset was checked and still holds, without a new version; takes a `note` for why
           - **get_semantic_map** / **get_vocabulary** - the org's concept graph and tag vocabulary
           - **get_versions** - a page's version history
           - **get_config** / **get_component_reference** - org settings and the component catalog

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrgFromApiKey } from "@/lib/auth";
 import { requestOrigin } from "@/lib/request-origin";
 import { db } from "@/lib/db";
-import { dispatch, READ_TOOLS, WRITE_TOOLS, ALL_TOOLS } from "@/lib/mcp-dispatch";
+import { dispatch, WRITE_TOOLS, ALL_TOOLS, TOOL_ALIASES, resolveToolName, describeToolParams } from "@/lib/mcp-dispatch";
 
 async function resolveAuth(request: NextRequest) {
   if (process.env.CURATA_DEV === "1" && process.env.NODE_ENV === "development") {
@@ -65,7 +65,8 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
   }
-  const { tool, args } = body;
+  const { args } = body;
+  const tool = typeof body.tool === "string" ? resolveToolName(body.tool) : body.tool;
 
   if (!tool || typeof tool !== "string") {
     return NextResponse.json({ error: "missing tool" }, { status: 400 });
@@ -93,10 +94,14 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("POST /api/mcp failed:", message);
-    return NextResponse.json({
-      error: message,
-      hint: "Call get_component_reference (no args) for the full YAML authoring guide with component syntax and examples.",
-    }, { status: 400 });
+    // The YAML guide only helps when the failure was about page content.
+    // Param and lookup errors already say what is valid; pointing them at
+    // the component reference sends the caller to the wrong document.
+    const aboutContent = /yaml|component|shell|content must/i.test(message);
+    const hint = aboutContent
+      ? "Call get_component_reference (no args) for the full YAML authoring guide with component syntax and examples."
+      : `GET /api/mcp lists every tool with its accepted params; the error above names what this call accepted.`;
+    return NextResponse.json({ error: message, hint }, { status: 400 });
   }
 }
 
@@ -137,6 +142,10 @@ export async function GET(request: NextRequest) {
     tools: ALL_TOOLS.map((t) => ({
       name: t,
       type: WRITE_TOOLS.includes(t) ? "write" : "read",
+      params: describeToolParams(t) ?? [],
+      ...(Object.entries(TOOL_ALIASES).some(([, v]) => v === t)
+        ? { aliases: Object.entries(TOOL_ALIASES).filter(([, v]) => v === t).map(([k]) => k) }
+        : {}),
     })),
     preflight: {
       org: { name: orgName, slug: ctx.orgSlug },
@@ -145,6 +154,6 @@ export async function GET(request: NextRequest) {
       instructions:
         "Read a workflow page before executing a multi-step task. Use list_workflows to discover available workflows and match user intent to trigger patterns. Use templates when creating new pages — call list_templates to see what's available, then create_from_template to instantiate. Use list_open_annotations to fetch the org-wide queue of human feedback awaiting processing.",
     },
-    usage: "POST { tool, args } to invoke a tool",
+    usage: "POST { tool, args } to invoke a tool. All arg values are strings; arrays and objects go in JSON-encoded. Array-shaped params: concepts, links, asserts, depends, references, external, operations, rules.",
   });
 }

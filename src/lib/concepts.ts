@@ -503,8 +503,10 @@ export interface DependentPage {
   trusted: boolean;
   trustedBehind: boolean;
   updatedAt: string;
-  /** Last time someone confirmed the page is right (any write, a trust pin, or verify_page). Null = never. */
+  /** Last time someone confirmed the page is right (any write, a trust pin, or mark_verified). Null = never. */
   verifiedAt: string | null;
+  /** Why, when mark_verified said so ("does not quote the price"). */
+  verifiedNote: string | null;
   /** True when the concept's source of truth changed after this page was last verified. */
   staleAgainstSource: boolean;
 }
@@ -518,7 +520,15 @@ export interface ExternalDependentRow {
   rel: string;
   via: string;
   verifiedAt: string | null;
+  verifiedNote: string | null;
   staleAgainstSource: boolean;
+}
+
+export interface DependentsSummary {
+  pages: { total: number; ok: number; stale: number; neverVerified: number };
+  external: { total: number; ok: number; stale: number; neverChecked: number };
+  /** One line an agent can hand a human as-is. */
+  text: string;
 }
 
 export interface DependentsResult {
@@ -538,6 +548,8 @@ export interface DependentsResult {
   asserterGaps: string[];
   /** Assets outside curata (Drive, GitHub, ...) that depend on the concept(s). Edges, not pages. */
   external: ExternalDependentRow[];
+  /** Counts over dependents + instances + external, so a caller can answer "what still needs a look" without walking rows. */
+  summary: DependentsSummary;
 }
 
 type PageConceptWithPage = {
@@ -550,6 +562,7 @@ type PageConceptWithPage = {
     rules: unknown;
     trustedVersionId: string | null;
     verifiedAt: Date | null;
+    verifiedNote: string | null;
     updatedAt: Date;
     versions: Array<{ id: string }>;
   };
@@ -565,6 +578,7 @@ const DEPENDENT_PAGE_INCLUDE = {
       rules: true,
       trustedVersionId: true,
       verifiedAt: true,
+      verifiedNote: true,
       updatedAt: true,
       versions: { orderBy: { createdAt: "desc" as const }, take: 1, select: { id: true } },
     },
@@ -593,6 +607,7 @@ function toDependentPage(row: PageConceptWithPage, trustMode: TrustMode, sourceU
     trustedBehind: trustMode === "locked" && trusted && latestId !== null && row.page.trustedVersionId !== latestId,
     updatedAt: row.page.updatedAt.toISOString(),
     verifiedAt: row.page.verifiedAt?.toISOString() ?? null,
+    verifiedNote: row.page.verifiedNote,
     // A page that asserts the concept is its own source; never stale.
     staleAgainstSource: row.rel === "asserts" ? false : isStale(row.page.verifiedAt, sourceUpdatedAt),
   };
@@ -623,7 +638,7 @@ export function normalizeExternalUrl(raw: string): string {
   return out;
 }
 
-function toExternalRow(row: { id: string; url: string; label: string; owner: string | null; rel: string; verifiedAt: Date | null; concept: { displayName: string } }, sourceUpdatedAt: Date | undefined): ExternalDependentRow {
+function toExternalRow(row: { id: string; url: string; label: string; owner: string | null; rel: string; verifiedAt: Date | null; verifiedNote: string | null; concept: { displayName: string } }, sourceUpdatedAt: Date | undefined): ExternalDependentRow {
   return {
     id: row.id,
     url: row.url,
@@ -633,8 +648,27 @@ function toExternalRow(row: { id: string; url: string; label: string; owner: str
     rel: row.rel,
     via: row.concept.displayName,
     verifiedAt: row.verifiedAt?.toISOString() ?? null,
-    staleAgainstSource: isStale(row.verifiedAt, sourceUpdatedAt),
+    verifiedNote: row.verifiedNote,
+    // An asset nobody has checked is stale on its face, source or not.
+    staleAgainstSource: row.verifiedAt === null ? true : isStale(row.verifiedAt, sourceUpdatedAt),
   };
+}
+
+function summarize(pages: DependentPage[], external: ExternalDependentRow[]): DependentsSummary {
+  const p = { total: pages.length, ok: 0, stale: 0, neverVerified: 0 };
+  for (const d of pages) {
+    if (d.verifiedAt === null) p.neverVerified++;
+    if (d.staleAgainstSource) p.stale++; else p.ok++;
+  }
+  const e = { total: external.length, ok: 0, stale: 0, neverChecked: 0 };
+  for (const x of external) {
+    if (x.verifiedAt === null) e.neverChecked++;
+    if (x.staleAgainstSource) e.stale++; else e.ok++;
+  }
+  const parts: string[] = [];
+  parts.push(`${p.total} page${p.total === 1 ? "" : "s"}: ${p.ok} ok, ${p.stale} stale${p.neverVerified ? ` (${p.neverVerified} never verified)` : ""}`);
+  if (e.total > 0) parts.push(`${e.total} external asset${e.total === 1 ? "" : "s"}: ${e.ok} checked, ${e.neverChecked} never checked${e.stale - e.neverChecked > 0 ? `, ${e.stale - e.neverChecked} stale` : ""}`);
+  return { pages: p, external: e, text: parts.join("; ") };
 }
 
 /** Latest updatedAt across the pages that assert each concept: "when did the truth last move". */
@@ -662,8 +696,10 @@ export interface ExternalDependentInput {
 
 /**
  * Attach assets outside curata to a concept. One row per (org, concept, url);
- * re-tagging updates label/owner/rel and leaves verifiedAt alone. A newly
- * created row is verified now: whoever tagged it just looked at it.
+ * re-tagging updates label/owner/rel and leaves verifiedAt alone. A new row
+ * starts unverified: attaching a deck to a concept is not the same as opening
+ * the deck and checking it, and a graph that reads "all checked" the second
+ * it is built hides exactly the rows most likely to be wrong.
  */
 export async function upsertExternalDependents(
   orgId: string,
@@ -687,7 +723,7 @@ export async function upsertExternalDependents(
     const label = item.label?.trim() || hostOf(url) + new URL(url).pathname;
     const row = await db.externalDependent.upsert({
       where: { orgId_conceptId_url: { orgId, conceptId: concept.id, url } },
-      create: { orgId, conceptId: concept.id, url, label, owner: item.owner ?? null, rel: item.rel ?? "depends", verifiedAt: new Date(), createdBy },
+      create: { orgId, conceptId: concept.id, url, label, owner: item.owner ?? null, rel: item.rel ?? "depends", createdBy },
       update: { label, owner: item.owner ?? undefined, rel: item.rel ?? undefined },
       include: { concept: { select: { displayName: true } } },
     });
@@ -703,14 +739,15 @@ export async function upsertExternalDependents(
  */
 export async function verifyDependent(
   orgId: string,
-  target: { slug?: string; url?: string; term?: string }
-): Promise<{ kind: "page" | "external"; id: string; verifiedAt: string; count?: number }> {
+  target: { slug?: string; url?: string; term?: string; note?: string }
+): Promise<{ kind: "page" | "external"; id: string; verifiedAt: string; note: string | null; count?: number }> {
   const now = new Date();
+  const note = target.note?.trim() || null;
   if (target.slug) {
     const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: target.slug } }, select: { id: true } });
     if (!page) throw new Error(`page not found: ${target.slug}`);
-    await db.page.update({ where: { id: page.id }, data: { verifiedAt: now } });
-    return { kind: "page", id: target.slug, verifiedAt: now.toISOString() };
+    await db.page.update({ where: { id: page.id }, data: { verifiedAt: now, verifiedNote: note } });
+    return { kind: "page", id: target.slug, verifiedAt: now.toISOString(), note };
   }
   if (target.url) {
     const url = normalizeExternalUrl(target.url);
@@ -721,9 +758,9 @@ export async function verifyDependent(
       if (!concept) throw new Error(`concept not found: ${target.term}`);
       where.conceptId = concept.id;
     }
-    const res = await db.externalDependent.updateMany({ where, data: { verifiedAt: now } });
+    const res = await db.externalDependent.updateMany({ where, data: { verifiedAt: now, verifiedNote: note } });
     if (res.count === 0) throw new Error(`no external dependent found for ${url}`);
-    return { kind: "external", id: url, verifiedAt: now.toISOString(), count: res.count };
+    return { kind: "external", id: url, verifiedAt: now.toISOString(), note, count: res.count };
   }
   throw new Error("slug or url is required");
 }
@@ -787,7 +824,7 @@ export async function getDependents(
   orgId: string,
   opts: { slug?: string; term?: string; rel?: ConceptRel }
 ): Promise<DependentsResult> {
-  const empty: DependentsResult = { concepts: [], asserters: [], dependents: [], instances: [], asserterGaps: [], external: [] };
+  const empty: DependentsResult = { concepts: [], asserters: [], dependents: [], instances: [], asserterGaps: [], external: [], summary: summarize([], []) };
   const pageScope = { orgId, status: { not: "archived" } };
 
   const [trustFolders, trustOrg] = await Promise.all([
@@ -828,7 +865,30 @@ export async function getDependents(
   if (opts.term) {
     const normalized = normalizeTerm(opts.term);
     const concept = await findConceptForTerm(opts.term, normalized);
-    if (!concept) return empty;
+    if (!concept) {
+      // An invented term used to come back as an empty graph, indistinguishable
+      // from "nothing depends on this". Fail loudly and point at what exists.
+      // Match on any token of 3+ chars so "tier-2-pricing" finds "pricing/tier-2".
+      const tokens = [...new Set(normalized.split(/[\/-]/).filter((t) => t.length >= 3))];
+      const near = tokens.length === 0 ? [] : await db.concept.findMany({
+        where: {
+          OR: tokens.map((t) => ({ normalizedName: { contains: t } })),
+          pages: { some: { page: { orgId } } },
+        },
+        select: { normalizedName: true },
+        orderBy: { usageCount: "desc" },
+        take: 25,
+      });
+      // Rank by how many tokens overlap, keep the top five.
+      near.sort((a, b) =>
+        tokens.filter((t) => b.normalizedName.includes(t)).length - tokens.filter((t) => a.normalizedName.includes(t)).length
+      );
+      near.splice(5);
+      const hint = near.length > 0
+        ? ` Did you mean: ${near.map((n) => n.normalizedName).join(", ")}? get_vocabulary lists every concept in use.`
+        : " get_vocabulary lists every concept in use; map_dependencies creates one.";
+      throw new Error(`concept not found: ${normalized}.${hint}`);
+    }
     const filter = (r: ConceptRel) => !opts.rel || opts.rel === r;
     const [asserters, dependents, instances, external] = await Promise.all([
       filter("asserts") ? edges([concept.id], ["asserts"]) : [],
@@ -844,6 +904,7 @@ export async function getDependents(
       instances,
       asserterGaps: (dependents.length > 0 || external.length > 0) && asserters.length === 0 ? [concept.displayName] : [],
       external,
+      summary: summarize([...dependents, ...instances], external),
     };
   }
 
@@ -888,6 +949,7 @@ export async function getDependents(
       instances,
       asserterGaps,
       external,
+      summary: summarize([...dependents, ...instances], external),
     };
   }
 

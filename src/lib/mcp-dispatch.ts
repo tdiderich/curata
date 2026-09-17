@@ -106,6 +106,15 @@ export const READ_TOOLS = [
 export const WRITE_TOOLS = ["map_dependencies", "mark_verified", "write_page", "create_page", "write_component", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted", "generate_digest"];
 export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
+/**
+ * Names the stream transport and the docs use that the REST dispatch spells
+ * differently. Resolved before validation so both surfaces accept both.
+ */
+export const TOOL_ALIASES: Record<string, string> = { search_pages: "search" };
+export function resolveToolName(tool: string): string {
+  return TOOL_ALIASES[tool] ?? tool;
+}
+
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 
 
@@ -151,6 +160,11 @@ function parseLinkInputs(raw: string): LinkInput[] {
   return parsed as LinkInput[];
 }
 
+export function describeToolParams(tool: string): string[] | null {
+  const spec = TOOL_PARAMS[resolveToolName(tool)];
+  return spec ? [...spec.known] : null;
+}
+
 const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string, string> }> = {
   list_pages: { known: new Set(["channel"]) },
   read_page: { known: new Set(["slug", "channel"]) },
@@ -169,10 +183,10 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   create_folder: { known: new Set(["name", "parent_id", "visibility", "rules"]), aliases: { parentId: "parent_id" } },
   update_folder: { known: new Set(["id", "name", "parent_id", "visibility", "rules"]), aliases: { parentId: "parent_id" } },
   get_versions: { known: new Set(["slug", "limit"]) },
-  validate_page: { known: new Set(["slug", "content"]) },
-  create_page: { known: new Set(["slug", "content", "folder_id", "visibility", "sort_order", "rules", "concepts", "links", "capture_token", "dedup_ack"]), aliases: { folderId: "folder_id", sortOrder: "sort_order" } },
+  validate_page: { known: new Set(["slug", "content"]), aliases: { yaml: "content" } },
+  create_page: { known: new Set(["slug", "content", "folder_id", "visibility", "sort_order", "rules", "concepts", "links", "capture_token", "dedup_ack"]), aliases: { folderId: "folder_id", sortOrder: "sort_order", yaml: "content" } },
   move_page: { known: new Set(["slug", "folder_id"]), aliases: { folderId: "folder_id" } },
-  write_page: { known: new Set(["slug", "content", "expected_hash", "visibility", "folder_id", "sort_order", "concepts", "links", "rules", "capture_token", "dedup_ack"]), aliases: { folderId: "folder_id", sortOrder: "sort_order" } },
+  write_page: { known: new Set(["slug", "content", "expected_hash", "visibility", "folder_id", "sort_order", "concepts", "links", "rules", "capture_token", "dedup_ack"]), aliases: { folderId: "folder_id", sortOrder: "sort_order", yaml: "content" } },
   annotate_page: { known: new Set(["slug", "text", "section", "kind", "replacement", "source"]) },
   update_annotation: { known: new Set(["slug", "annotation_id", "status"]), aliases: { annotationId: "annotation_id" } },
   patch_page: { known: new Set(["slug", "expected_hash", "operations", "concepts", "links"]) },
@@ -189,7 +203,7 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_related: { known: new Set(["slug", "term"]) },
   get_dependents: { known: new Set(["slug", "term", "rel"]) },
   map_dependencies: { known: new Set(["term", "kind", "asserts", "depends", "references", "external"]) },
-  mark_verified: { known: new Set(["slug", "url", "term"]) },
+  mark_verified: { known: new Set(["slug", "url", "term", "note"]) },
   get_semantic_map: { known: new Set(["kind"]) },
   export_page: { known: new Set(["slug", "format"]) },
   export_report: { known: new Set(["slugs", "title", "subtitle"]) },
@@ -385,6 +399,7 @@ export async function dispatch(
   actorId: string,
   userId?: string
 ): Promise<unknown> {
+  tool = resolveToolName(tool);
   args = validateParams(tool, args);
   switch (tool) {
     case "list_pages": {
@@ -1700,7 +1715,7 @@ export async function dispatch(
     case "mark_verified": {
       if (!args.slug && !args.url) throw new Error("slug or url is required");
       if (args.slug && !SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
-      const verified = await verifyDependent(orgId, { slug: args.slug || undefined, url: args.url || undefined, term: args.term || undefined });
+      const verified = await verifyDependent(orgId, { slug: args.slug || undefined, url: args.url || undefined, term: args.term || undefined, note: args.note || undefined });
       logAudit({ orgId, action: "page.verify", resourceType: verified.kind, resourceId: verified.id, actorType: "apikey", actorId });
       return { ok: true, ...verified };
     }

@@ -32,7 +32,7 @@ import {
   verifyDependent,
   mapDependencies,
 } from "@/lib/concepts";
-import { dispatch } from "@/lib/mcp-dispatch";
+import { dispatch, describeToolParams } from "@/lib/mcp-dispatch";
 import { testDb } from "./setup";
 
 // Concept rows are global and never truncated between tests, so every test
@@ -208,7 +208,10 @@ describe("getDependents", () => {
   });
 
   it("returns empty for unknown term or slug", async () => {
-    expect((await getDependents(orgId, { term: T("never-seen") })).dependents).toEqual([]);
+    const src = await createTestPage(orgId, { slug: "near-src" });
+    await upsertConcepts(src.id, [{ term: T("pricing/tier-2"), rel: "asserts" }], "agent");
+    await expect(getDependents(orgId, { term: T("tier-2-pricing") })).rejects.toThrow(/concept not found: dep-tier-2-pricing\. Did you mean: .*dep-pricing\/tier-2/);
+    await expect(getDependents(orgId, { term: "zzz-nothing-like-this" })).rejects.toThrow(/get_vocabulary lists every concept/);
     expect((await getDependents(orgId, { slug: "no-such-page" })).concepts).toEqual([]);
   });
 });
@@ -290,10 +293,17 @@ describe("verifiedAt and staleAgainstSource", () => {
     expect(r.dependents[0].staleAgainstSource).toBe(true);
     expect(r.asserters[0].staleAgainstSource).toBe(false);
 
-    const v = await verifyDependent(orgId, { slug: "deck-notes" });
+    const v = await verifyDependent(orgId, { slug: "deck-notes", note: "does not mention grouping" });
     expect(v.kind).toBe("page");
     r = await getDependents(orgId, { term: T("feat/grouping") });
     expect(r.dependents[0].staleAgainstSource).toBe(false);
+    expect(r.dependents[0].verifiedNote).toBe("does not mention grouping");
+    expect(r.summary.pages).toEqual({ total: 1, ok: 1, stale: 0, neverVerified: 0 });
+
+    // A rewrite speaks for itself: the note from the last verification goes.
+    await dispatch("write_page", { slug: "deck-notes", content: "title: Deck notes\nshell: document\ncomponents: []\n" }, orgId, "verify-org", "key", "u1");
+    r = await getDependents(orgId, { term: T("feat/grouping") });
+    expect(r.dependents[0].verifiedNote).toBeNull();
   });
 
   it("never-verified dependent with a source is stale; with no source it is not", async () => {
@@ -356,7 +366,11 @@ describe("external dependents", () => {
     const r = await getDependents(orgId, { term: T("ext/tier-2") });
     expect(r.external.map((e) => e.host).sort()).toEqual(["docs.google.com", "github.com"]);
     expect(r.external[0].via).toBe(T("ext/tier-2"));
-    expect(r.external[0].staleAgainstSource).toBe(false);
+    // Attaching is not checking: a fresh asset reads never checked, and stale.
+    expect(r.external[0].verifiedAt).toBeNull();
+    expect(r.external[0].staleAgainstSource).toBe(true);
+    expect(r.summary.external).toEqual({ total: 2, ok: 0, stale: 2, neverChecked: 2 });
+    expect(r.summary.text).toBe("0 pages: 0 ok, 0 stale; 2 external assets: 0 checked, 2 never checked");
 
     const bySlug = await getDependents(orgId, { slug: "pricing" });
     expect(bySlug.external).toHaveLength(2);
@@ -370,12 +384,15 @@ describe("external dependents", () => {
     await testDb.page.update({ where: { id: src.id }, data: { updatedAt: new Date() } });
     let r = await getDependents(orgId, { term: T("ext/stale") });
     expect(r.external[0].staleAgainstSource).toBe(true);
+    expect(r.summary.text).toBe("0 pages: 0 ok, 0 stale; 1 external asset: 0 checked, 0 never checked, 1 stale");
 
-    const v = await dispatch("mark_verified", { url: "https://example.com/deck/" }, orgId, "ext-org", "key", "u1") as { kind: string; count: number };
+    const v = await dispatch("mark_verified", { url: "https://example.com/deck/", note: "deck still says $59, ticket filed" }, orgId, "ext-org", "key", "u1") as { kind: string; count: number; note: string };
     expect(v.kind).toBe("external");
     expect(v.count).toBe(1);
+    expect(v.note).toBe("deck still says $59, ticket filed");
     r = await getDependents(orgId, { term: T("ext/stale") });
     expect(r.external[0].staleAgainstSource).toBe(false);
+    expect(r.external[0].verifiedNote).toBe("deck still says $59, ticket filed");
   });
 
   it("remove detaches, and a concept with only external dependents still reports the asserter gap", async () => {
@@ -430,5 +447,17 @@ describe("map_dependencies", () => {
     expect(out.external).toHaveLength(1);
     await expect(dispatch("map_dependencies", { term: T("map/empty") }, org.id, "map-org-2", "key", "u1")).rejects.toThrow(/nothing to map/);
     await expect(dispatch("map_dependencies", { term: T("map/bad"), external: JSON.stringify([{ nope: 1 }]) }, org.id, "map-org-2", "key", "u1")).rejects.toThrow(/url is required/);
+  });
+});
+
+describe("REST ergonomics the cold agent tripped on", () => {
+  it("search_pages resolves to search, and yaml is accepted for content", async () => {
+    const org = await createTestOrg({ name: "Alias Org", slug: "alias-org" });
+    await expect(dispatch("search_pages", { query: "anything" }, org.id, "alias-org", "key", "u1")).resolves.toBeDefined();
+    const r = await dispatch("create_page", { slug: "alias-page", yaml: "title: Alias\nshell: document\ncomponents: []\n" }, org.id, "alias-org", "key", "u1") as { ok: boolean };
+    expect(r.ok).toBe(true);
+    const params = describeToolParams("search_pages");
+    expect(params).toContain("query");
+    expect(describeToolParams("map_dependencies")).toEqual(expect.arrayContaining(["term", "asserts", "depends", "external"]));
   });
 });

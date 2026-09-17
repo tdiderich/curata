@@ -36,20 +36,24 @@ function relativeTime(iso: string, now = Date.now()): string {
  * verification is the thing a human actually does when they look at a page
  * after the source of truth moved. Stale = source changed since then.
  */
-function verifiedCell(p: Pick<DependentPage, "verifiedAt" | "staleAgainstSource">) {
+function verifiedCell(p: Pick<DependentPage, "verifiedAt" | "staleAgainstSource" | "verifiedNote">, kind: "page" | "external" = "page") {
+  if (!p.verifiedAt) {
+    return <StatusBadge tone="untrusted" label={kind === "external" ? "never checked" : "never verified"} />;
+  }
+  const note = p.verifiedNote ? <span className="stg-dep-note" title={p.verifiedNote}>{p.verifiedNote}</span> : null;
   if (p.staleAgainstSource) {
     return (
       <span className="stg-dep-verified">
         <StatusBadge tone="behind" label="source changed" />
-        <span className="stg-dep-when">{p.verifiedAt ? relativeTime(p.verifiedAt) : "never verified"}</span>
+        <span className="stg-dep-when">{relativeTime(p.verifiedAt)}</span>
       </span>
     );
   }
-  if (!p.verifiedAt) return <StatusBadge tone="untrusted" label="never verified" />;
   return (
     <span className="stg-dep-verified">
       <StatusBadge tone="trusted" label="verified" />
       <span className="stg-dep-when">{relativeTime(p.verifiedAt)}</span>
+      {note}
     </span>
   );
 }
@@ -191,7 +195,7 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
               </td>
               <td className="dash-td">{e.via}</td>
               <td className="dash-td">{relBadge(e.rel)}</td>
-              <td className="dash-td">{verifiedCell(e)}</td>
+              <td className="dash-td">{verifiedCell(e, "external")}</td>
             </tr>
           ))}
         </SettingsTable>

@@ -734,7 +734,7 @@ async function _writePageInternal(
   if (existing) {
     const pageType = extractDeclaredPageType(yamlContent) ?? null;
     // Writing is verifying: whoever just rewrote the page looked at it.
-    const pageUpdateData: Record<string, unknown> = { title, updatedAt: new Date(), verifiedAt: new Date(), dashboardEnabled, tokenCount: newTokens, pageType };
+    const pageUpdateData: Record<string, unknown> = { title, updatedAt: new Date(), verifiedAt: new Date(), verifiedNote: null, dashboardEnabled, tokenCount: newTokens, pageType };
     if (sortOrder !== undefined) pageUpdateData.sortOrder = sortOrder;
 
     await db.$transaction([

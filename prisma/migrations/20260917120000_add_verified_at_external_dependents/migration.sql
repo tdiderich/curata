@@ -1,4 +1,5 @@
 ALTER TABLE "pages" ADD COLUMN "verified_at" TIMESTAMP(3);
+ALTER TABLE "pages" ADD COLUMN "verified_note" TEXT;
 
 CREATE TABLE "external_dependents" (
     "id" TEXT NOT NULL,
@@ -9,6 +10,7 @@ CREATE TABLE "external_dependents" (
     "owner" TEXT,
     "rel" TEXT NOT NULL DEFAULT 'depends',
     "verified_at" TIMESTAMP(3),
+    "verified_note" TEXT,
     "created_by" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,

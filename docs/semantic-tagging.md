@@ -68,11 +68,11 @@ Omitting `rel` on a tag the page already has leaves the existing rel alone. Term
 
 - `get_dependents` — given a `term` or `slug`, the directional view: pages that depend on it, the page that asserts it, pages built from it, and external assets attached to it. Every row carries `verifiedAt` and `staleAgainstSource` (the source of truth moved after that row was last verified). Call before changing something, and after, to see what still has not been looked at.
 - `map_dependencies` — build the graph around one concept in one call: `term`, `asserts` (slugs that own the truth), `depends` (slugs that go stale), `references`, and `external` (`[{url, label?, owner?, rel?}]` for assets outside curata). Additive; unknown slugs come back in `missing`.
-- `mark_verified` — "looked at it, still right." Bumps `verifiedAt` on a page (`slug`) or an external asset (`url`, optionally scoped by `term`) without writing a version. Any write to a page verifies it too, and so does `mark_trusted`.
+- `mark_verified` — "looked at it, still right." Bumps `verifiedAt` on a page (`slug`) or an external asset (`url`, optionally scoped by `term`) without writing a version, with an optional `note` saying why ("does not quote the price"). Any write to a page verifies it too (and clears the note), and so does `mark_trusted`.
 
 ### External dependents
 
-Assets that live outside curata are edges, not pages. `map_dependencies` (or `external` on its own) attaches a URL directly to the concept, keyed on a normalized form of the URL so `/edit`, `/view`, and share-link query strings all collapse to one row. They show up inline in `get_dependents.external` and in the page settings Dependencies tab with the site favicon, and they age the same way pages do: verified when tagged, stale once the source of truth moves, cleared by `mark_verified`.
+Assets that live outside curata are edges, not pages. `map_dependencies` (or `external` on its own) attaches a URL directly to the concept, keyed on a normalized form of the URL so `/edit`, `/view`, and share-link query strings all collapse to one row. They show up inline in `get_dependents.external` and in the page settings Dependencies tab with the site favicon. A freshly attached asset is `never checked` until someone runs `mark_verified` on its url: attaching a deck is not the same as opening it. `get_dependents.summary.text` rolls the whole graph up to one line ("3 pages: 1 ok, 2 stale; 3 external assets: 0 checked, 3 never checked").
 
 - `get_vocabulary` — see all terms, sorted by usage. Filter by `kind` or `query` prefix.
 - `get_related` — given a `term` or `slug`, find connected pages and shared concepts.
