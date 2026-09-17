@@ -54,8 +54,10 @@ import {
   CONCEPT_RELS,
   templateConceptTerm,
   getDependents,
+  mapDependencies,
+  verifyDependent,
 } from "@/lib/concepts";
-import type { ConceptInput, ConceptRel, LinkInput } from "@/lib/concepts";
+import type { ConceptInput, ConceptRel, ExternalDependentInput, LinkInput } from "@/lib/concepts";
 import { ensureComponentIds, applyPatchOperations, buildOutline, formatOutline, locateComponent } from "@/lib/component-ids";
 import { createHash } from "crypto";
 import type { PatchOperation } from "@/lib/component-ids";
@@ -101,7 +103,7 @@ export const READ_TOOLS = [
   "capture_thread",
   "read_component",
 ];
-export const WRITE_TOOLS = ["write_page", "create_page", "write_component", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted", "generate_digest"];
+export const WRITE_TOOLS = ["map_dependencies", "mark_verified", "write_page", "create_page", "write_component", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted", "generate_digest"];
 export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -186,6 +188,8 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_vocabulary: { known: new Set(["kind", "query"]) },
   get_related: { known: new Set(["slug", "term"]) },
   get_dependents: { known: new Set(["slug", "term", "rel"]) },
+  map_dependencies: { known: new Set(["term", "kind", "asserts", "depends", "references", "external"]) },
+  mark_verified: { known: new Set(["slug", "url", "term"]) },
   get_semantic_map: { known: new Set(["kind"]) },
   export_page: { known: new Set(["slug", "format"]) },
   export_report: { known: new Set(["slugs", "title", "subtitle"]) },
@@ -1660,6 +1664,45 @@ export async function dispatch(
         term: args.term || undefined,
         slug: args.slug || undefined,
       });
+    }
+
+    case "map_dependencies": {
+      if (!args.term) throw new Error("term is required");
+      const slugList = (key: string): string[] | undefined => {
+        if (!args[key]) return undefined;
+        let parsed: unknown;
+        try { parsed = JSON.parse(args[key]); } catch { parsed = args[key].split(",").map((x) => x.trim()).filter(Boolean); }
+        if (!Array.isArray(parsed) || !parsed.every((x) => typeof x === "string")) throw new Error(`${key} must be a JSON array of page slugs`);
+        return parsed as string[];
+      };
+      let external: ExternalDependentInput[] | undefined;
+      if (args.external) {
+        let parsed: unknown;
+        try { parsed = JSON.parse(args.external); } catch { throw new Error("external must be valid JSON"); }
+        if (!Array.isArray(parsed)) throw new Error("external must be a JSON array of {url, label?, owner?, rel?, remove?}");
+        for (const e of parsed as Array<Record<string, unknown>>) {
+          if (typeof e.url !== "string") throw new Error("external[].url is required");
+        }
+        external = parsed as ExternalDependentInput[];
+      }
+      const mapped = await mapDependencies(orgId, {
+        term: args.term,
+        kind: args.kind || undefined,
+        asserts: slugList("asserts"),
+        depends: slugList("depends"),
+        references: slugList("references"),
+        external,
+      }, userId || "agent");
+      logAudit({ orgId, action: "dependencies.map", resourceType: "concept", resourceId: mapped.term, actorType: "apikey", actorId, metadata: { tagged: mapped.tagged.length, external: mapped.external.length, missing: mapped.missing } });
+      return mapped;
+    }
+
+    case "mark_verified": {
+      if (!args.slug && !args.url) throw new Error("slug or url is required");
+      if (args.slug && !SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
+      const verified = await verifyDependent(orgId, { slug: args.slug || undefined, url: args.url || undefined, term: args.term || undefined });
+      logAudit({ orgId, action: "page.verify", resourceType: verified.kind, resourceId: verified.id, actorType: "apikey", actorId });
+      return { ok: true, ...verified };
     }
 
     case "get_dependents": {

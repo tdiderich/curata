@@ -7846,6 +7846,13 @@ body:has(.nav-reveal) .page-toolbar {
 .pill--template .pill-dot { background: rgba(var(--kind-template-rgb), 0.95); }
 .stg-dep-link { color: var(--snow); text-decoration: none; border-bottom: 1px solid rgba(var(--text-rgb), 0.2); }
 .stg-dep-link:hover { color: var(--teal); border-bottom-color: rgba(var(--accent-rgb), 0.5); }
+.stg-dep-more { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+.stg-dep-verified { display: inline-flex; align-items: center; gap: 8px; }
+.stg-dep-when { color: var(--muted); font-size: 12px; font-family: var(--mono); white-space: nowrap; }
+.stg-dep-ext { display: inline-flex; align-items: center; gap: 6px; }
+.stg-dep-favicon { width: 13px; height: 13px; border-radius: 3px; flex: none; }
+.stg-dep-arrow { font-size: 0.75em; opacity: 0.55; }
+.stg-dep-owner { margin-left: 10px; color: var(--muted); font-size: 12px; }
 .stg-dep-owners { display: inline-flex; gap: 10px; flex-wrap: wrap; }
 /* Concept relation badges (Dependencies + Tags tabs). */
 .pill--depends { background: rgba(var(--accent-rgb), 0.14); color: var(--snow); }

@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { CONCEPT_KINDS } from "./concept-kinds";
 import { Prisma } from "@/generated/prisma/client";
+import { makeTrustModeResolver, type TrustMode } from "./approval";
 
 /**
  * How a page relates to a concept. `references` is the untyped default and
@@ -125,6 +126,32 @@ export function projectConceptTerms(existingTerms: string[], incoming?: ConceptI
   return terms;
 }
 
+type ConceptRow = NonNullable<Awaited<ReturnType<typeof findConceptForTerm>>>;
+
+/** Find-or-create a concept row for a normalized term, racing safely. */
+async function ensureConcept(rawTerm: string, normalized: string, existing: ConceptRow | null, kind?: string): Promise<ConceptRow> {
+  if (existing) {
+    // Also migrates a legacy multi-word row to the slug form the first
+    // time it's touched, so it stops needing this fallback afterward.
+    return db.concept.update({
+      where: { id: existing.id },
+      data: { normalizedName: normalized, displayName: normalized, kind: kind || undefined, updatedAt: new Date() },
+    });
+  }
+  try {
+    return await db.concept.create({
+      data: { normalizedName: normalized, displayName: normalized, kind: kind || "", usageCount: 1 },
+    });
+  } catch (err) {
+    // Two concurrent writers can both miss the lookup and race to create the
+    // same slug; the loser falls back to the row the winner just created.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return db.concept.update({ where: { normalizedName: normalized }, data: { kind: kind || undefined, updatedAt: new Date() } });
+    }
+    throw err;
+  }
+}
+
 export async function upsertConcepts(
   pageId: string,
   concepts: ConceptInput[],
@@ -149,38 +176,7 @@ export async function upsertConcepts(
       continue;
     }
 
-    let concept;
-    if (existing) {
-      // Also migrates a legacy multi-word row to the slug form the first
-      // time it's touched, so it stops needing this fallback afterward.
-      concept = await db.concept.update({
-        where: { id: existing.id },
-        data: {
-          normalizedName: normalized,
-          displayName: normalized,
-          kind: c.kind || undefined,
-          updatedAt: new Date(),
-        },
-      });
-    } else {
-      try {
-        concept = await db.concept.create({
-          data: { normalizedName: normalized, displayName: normalized, kind: c.kind || "", usageCount: 1 },
-        });
-      } catch (err) {
-        // Two concurrent writers can both miss the lookup above and race to
-        // create the same slug; the loser falls back to the row the winner
-        // just created instead of surfacing a constraint error.
-        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-          concept = await db.concept.update({
-            where: { normalizedName: normalized },
-            data: { kind: c.kind || undefined, updatedAt: new Date() },
-          });
-        } else {
-          throw err;
-        }
-      }
-    }
+    const concept = await ensureConcept(c.term, normalized, existing, c.kind);
 
     await db.pageConcept.upsert({
       where: {
@@ -507,6 +503,22 @@ export interface DependentPage {
   trusted: boolean;
   trustedBehind: boolean;
   updatedAt: string;
+  /** Last time someone confirmed the page is right (any write, a trust pin, or verify_page). Null = never. */
+  verifiedAt: string | null;
+  /** True when the concept's source of truth changed after this page was last verified. */
+  staleAgainstSource: boolean;
+}
+
+export interface ExternalDependentRow {
+  id: string;
+  url: string;
+  host: string;
+  label: string;
+  owner: string | null;
+  rel: string;
+  via: string;
+  verifiedAt: string | null;
+  staleAgainstSource: boolean;
 }
 
 export interface DependentsResult {
@@ -524,16 +536,20 @@ export interface DependentsResult {
   instances: DependentPage[];
   /** Concepts this page depends on that have no asserter anywhere in the org. */
   asserterGaps: string[];
+  /** Assets outside curata (Drive, GitHub, ...) that depend on the concept(s). Edges, not pages. */
+  external: ExternalDependentRow[];
 }
 
 type PageConceptWithPage = {
   rel: string;
-  concept: { displayName: string; kind: string; usageCount: number };
+  concept: { id: string; displayName: string; kind: string; usageCount: number };
   page: {
     slug: string;
     title: string;
     folderId: string | null;
+    rules: unknown;
     trustedVersionId: string | null;
+    verifiedAt: Date | null;
     updatedAt: Date;
     versions: Array<{ id: string }>;
   };
@@ -546,16 +562,27 @@ const DEPENDENT_PAGE_INCLUDE = {
       slug: true,
       title: true,
       folderId: true,
+      rules: true,
       trustedVersionId: true,
+      verifiedAt: true,
       updatedAt: true,
       versions: { orderBy: { createdAt: "desc" as const }, take: 1, select: { id: true } },
     },
   },
 };
 
-function toDependentPage(row: PageConceptWithPage): DependentPage {
+// Trust follows the same page > folder > org > "auto" resolution as every
+// read path: in auto mode latest is trusted by definition, so a page with
+// no pinned version is not "untrusted", it is simply not locked.
+function isStale(verifiedAt: Date | null, sourceUpdatedAt: Date | undefined): boolean {
+  if (!sourceUpdatedAt) return false;
+  if (!verifiedAt) return true;
+  return verifiedAt < sourceUpdatedAt;
+}
+
+function toDependentPage(row: PageConceptWithPage, trustMode: TrustMode, sourceUpdatedAt: Date | undefined): DependentPage {
   const latestId = row.page.versions[0]?.id ?? null;
-  const trusted = !!row.page.trustedVersionId;
+  const trusted = trustMode === "auto" || !!row.page.trustedVersionId;
   return {
     slug: row.page.slug,
     title: row.page.title,
@@ -563,9 +590,192 @@ function toDependentPage(row: PageConceptWithPage): DependentPage {
     rel: row.rel,
     via: row.concept.displayName,
     trusted,
-    trustedBehind: trusted && latestId !== null && row.page.trustedVersionId !== latestId,
+    trustedBehind: trustMode === "locked" && trusted && latestId !== null && row.page.trustedVersionId !== latestId,
     updatedAt: row.page.updatedAt.toISOString(),
+    verifiedAt: row.page.verifiedAt?.toISOString() ?? null,
+    // A page that asserts the concept is its own source; never stale.
+    staleAgainstSource: row.rel === "asserts" ? false : isStale(row.page.verifiedAt, sourceUpdatedAt),
   };
+}
+
+function hostOf(url: string): string {
+  try { return new URL(url).host.replace(/^www\./, ""); } catch { return url; }
+}
+
+/**
+ * Canonical form for an external URL so the same Drive deck tagged from two
+ * places is one row. Drops the fragment and trailing slash; on Google Docs
+ * hosts also drops the action segment (/edit, /view) and query, which vary
+ * per share link but point at the same file.
+ */
+export function normalizeExternalUrl(raw: string): string {
+  let u: URL;
+  try { u = new URL(raw.trim()); } catch { throw new Error(`external url must be absolute http(s): ${JSON.stringify(raw)}`); }
+  if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error(`external url must be http(s): ${JSON.stringify(raw)}`);
+  u.hash = "";
+  u.host = u.host.toLowerCase();
+  if (/(^|\.)docs\.google\.com$/.test(u.host) || /(^|\.)drive\.google\.com$/.test(u.host)) {
+    u.search = "";
+    u.pathname = u.pathname.replace(/\/(edit|view|preview|copy)$/, "");
+  }
+  let out = u.toString();
+  if (out.endsWith("/") && u.pathname !== "/") out = out.slice(0, -1);
+  return out;
+}
+
+function toExternalRow(row: { id: string; url: string; label: string; owner: string | null; rel: string; verifiedAt: Date | null; concept: { displayName: string } }, sourceUpdatedAt: Date | undefined): ExternalDependentRow {
+  return {
+    id: row.id,
+    url: row.url,
+    host: hostOf(row.url),
+    label: row.label,
+    owner: row.owner,
+    rel: row.rel,
+    via: row.concept.displayName,
+    verifiedAt: row.verifiedAt?.toISOString() ?? null,
+    staleAgainstSource: isStale(row.verifiedAt, sourceUpdatedAt),
+  };
+}
+
+/** Latest updatedAt across the pages that assert each concept: "when did the truth last move". */
+async function sourceUpdatedAtByConcept(orgId: string, conceptIds: string[]): Promise<Map<string, Date>> {
+  const out = new Map<string, Date>();
+  if (conceptIds.length === 0) return out;
+  const rows = await db.pageConcept.findMany({
+    where: { conceptId: { in: conceptIds }, rel: "asserts", page: { orgId, status: { not: "archived" } } },
+    select: { conceptId: true, page: { select: { updatedAt: true } } },
+  });
+  for (const r of rows) {
+    const cur = out.get(r.conceptId);
+    if (!cur || r.page.updatedAt > cur) out.set(r.conceptId, r.page.updatedAt);
+  }
+  return out;
+}
+
+export interface ExternalDependentInput {
+  url: string;
+  label?: string;
+  owner?: string;
+  rel?: ConceptRel;
+  remove?: boolean;
+}
+
+/**
+ * Attach assets outside curata to a concept. One row per (org, concept, url);
+ * re-tagging updates label/owner/rel and leaves verifiedAt alone. A newly
+ * created row is verified now: whoever tagged it just looked at it.
+ */
+export async function upsertExternalDependents(
+  orgId: string,
+  term: string,
+  items: ExternalDependentInput[],
+  createdBy: string
+): Promise<ExternalDependentRow[]> {
+  const normalized = normalizeTerm(term);
+  if (!normalized) throw new Error("term is required");
+  const concept = await ensureConcept(term, normalized, await findConceptForTerm(term, normalized));
+  const out: ExternalDependentRow[] = [];
+  for (const item of items) {
+    if (item.rel !== undefined && !isConceptRel(item.rel)) {
+      throw new Error(`external[].rel must be one of ${CONCEPT_RELS.join("|")}, got ${JSON.stringify(item.rel)}`);
+    }
+    const url = normalizeExternalUrl(item.url);
+    if (item.remove) {
+      await db.externalDependent.deleteMany({ where: { orgId, conceptId: concept.id, url } });
+      continue;
+    }
+    const label = item.label?.trim() || hostOf(url) + new URL(url).pathname;
+    const row = await db.externalDependent.upsert({
+      where: { orgId_conceptId_url: { orgId, conceptId: concept.id, url } },
+      create: { orgId, conceptId: concept.id, url, label, owner: item.owner ?? null, rel: item.rel ?? "depends", verifiedAt: new Date(), createdBy },
+      update: { label, owner: item.owner ?? undefined, rel: item.rel ?? undefined },
+      include: { concept: { select: { displayName: true } } },
+    });
+    out.push(toExternalRow(row, undefined));
+  }
+  return out;
+}
+
+/**
+ * "Looked at it, still right." Bumps verifiedAt on a page (by slug) or an
+ * external asset (by url, optionally scoped to one concept) without writing
+ * a version or moving the trust pointer. Returns what was touched.
+ */
+export async function verifyDependent(
+  orgId: string,
+  target: { slug?: string; url?: string; term?: string }
+): Promise<{ kind: "page" | "external"; id: string; verifiedAt: string; count?: number }> {
+  const now = new Date();
+  if (target.slug) {
+    const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: target.slug } }, select: { id: true } });
+    if (!page) throw new Error(`page not found: ${target.slug}`);
+    await db.page.update({ where: { id: page.id }, data: { verifiedAt: now } });
+    return { kind: "page", id: target.slug, verifiedAt: now.toISOString() };
+  }
+  if (target.url) {
+    const url = normalizeExternalUrl(target.url);
+    const where: Prisma.ExternalDependentWhereInput = { orgId, url };
+    if (target.term) {
+      const normalized = normalizeTerm(target.term);
+      const concept = await findConceptForTerm(target.term, normalized);
+      if (!concept) throw new Error(`concept not found: ${target.term}`);
+      where.conceptId = concept.id;
+    }
+    const res = await db.externalDependent.updateMany({ where, data: { verifiedAt: now } });
+    if (res.count === 0) throw new Error(`no external dependent found for ${url}`);
+    return { kind: "external", id: url, verifiedAt: now.toISOString(), count: res.count };
+  }
+  throw new Error("slug or url is required");
+}
+
+export interface MapDependenciesInput {
+  term: string;
+  kind?: string;
+  /** Pages that own the truth for this concept. */
+  asserts?: string[];
+  /** Pages that go stale when it changes. */
+  depends?: string[];
+  /** Pages that merely mention it. */
+  references?: string[];
+  /** Assets outside curata that go stale when it changes. */
+  external?: ExternalDependentInput[];
+}
+
+/**
+ * Build a whole dependency graph around one concept in one call: tag every
+ * listed page with the matching rel and attach the external assets. Additive,
+ * never removes edges. Unknown slugs are reported back, not thrown, so one
+ * typo does not lose the other ten edges.
+ */
+export async function mapDependencies(
+  orgId: string,
+  input: MapDependenciesInput,
+  createdBy: string
+): Promise<{ term: string; tagged: Array<{ slug: string; rel: ConceptRel }>; external: ExternalDependentRow[]; missing: string[] }> {
+  const normalized = normalizeTerm(input.term);
+  if (!normalized) throw new Error("term is required");
+  const tagged: Array<{ slug: string; rel: ConceptRel }> = [];
+  const missing: string[] = [];
+  const groups: Array<[ConceptRel, string[] | undefined]> = [
+    ["asserts", input.asserts],
+    ["depends", input.depends],
+    ["references", input.references],
+  ];
+  for (const [rel, slugs] of groups) {
+    for (const slug of slugs ?? []) {
+      const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } }, select: { id: true } });
+      if (!page) { missing.push(slug); continue; }
+      await upsertConcepts(page.id, [{ term: input.term, kind: input.kind, rel }], createdBy);
+      tagged.push({ slug, rel });
+    }
+  }
+  const external = input.external?.length
+    ? await upsertExternalDependents(orgId, input.term, input.external, createdBy)
+    : [];
+  if (tagged.length === 0 && external.length === 0 && missing.length === 0) {
+    throw new Error("nothing to map: pass asserts, depends, references, or external");
+  }
+  return { term: normalized, tagged, external, missing };
 }
 
 /**
@@ -577,11 +787,18 @@ export async function getDependents(
   orgId: string,
   opts: { slug?: string; term?: string; rel?: ConceptRel }
 ): Promise<DependentsResult> {
-  const empty: DependentsResult = { concepts: [], asserters: [], dependents: [], instances: [], asserterGaps: [] };
+  const empty: DependentsResult = { concepts: [], asserters: [], dependents: [], instances: [], asserterGaps: [], external: [] };
   const pageScope = { orgId, status: { not: "archived" } };
+
+  const [trustFolders, trustOrg] = await Promise.all([
+    db.folder.findMany({ where: { orgId }, select: { id: true, parentId: true, name: true, rules: true } }),
+    db.organization.findUnique({ where: { id: orgId }, select: { rules: true } }),
+  ]);
+  const resolveTrust = makeTrustModeResolver(trustFolders, trustOrg?.rules);
 
   async function edges(conceptIds: string[], rels: ConceptRel[], excludePageId?: string): Promise<DependentPage[]> {
     if (conceptIds.length === 0) return [];
+    const sources = await sourceUpdatedAtByConcept(orgId, conceptIds);
     const rows = await db.pageConcept.findMany({
       where: {
         conceptId: { in: conceptIds },
@@ -592,7 +809,20 @@ export async function getDependents(
       include: DEPENDENT_PAGE_INCLUDE,
       orderBy: { page: { updatedAt: "desc" } },
     });
-    return rows.map(toDependentPage);
+    return rows.map((row) => toDependentPage(row, resolveTrust(row.page.folderId, row.page.rules), sources.get(row.concept.id)));
+  }
+
+  async function externals(conceptIds: string[], rel?: ConceptRel): Promise<ExternalDependentRow[]> {
+    if (conceptIds.length === 0) return [];
+    const [rows, sources] = await Promise.all([
+      db.externalDependent.findMany({
+        where: { orgId, conceptId: { in: conceptIds }, ...(rel ? { rel } : {}) },
+        include: { concept: { select: { displayName: true } } },
+        orderBy: { updatedAt: "desc" },
+      }),
+      sourceUpdatedAtByConcept(orgId, conceptIds),
+    ]);
+    return rows.map((r) => toExternalRow(r, sources.get(r.conceptId)));
   }
 
   if (opts.term) {
@@ -600,10 +830,11 @@ export async function getDependents(
     const concept = await findConceptForTerm(opts.term, normalized);
     if (!concept) return empty;
     const filter = (r: ConceptRel) => !opts.rel || opts.rel === r;
-    const [asserters, dependents, instances] = await Promise.all([
+    const [asserters, dependents, instances, external] = await Promise.all([
       filter("asserts") ? edges([concept.id], ["asserts"]) : [],
       filter("depends") ? edges([concept.id], ["depends"]) : [],
       filter("instantiates") ? edges([concept.id], ["instantiates"]) : [],
+      externals([concept.id], opts.rel),
     ]);
     return {
       concept: { term: concept.displayName, kind: concept.kind, usageCount: concept.usageCount },
@@ -611,7 +842,8 @@ export async function getDependents(
       asserters,
       dependents,
       instances,
-      asserterGaps: dependents.length > 0 && asserters.length === 0 ? [concept.displayName] : [],
+      asserterGaps: (dependents.length > 0 || external.length > 0) && asserters.length === 0 ? [concept.displayName] : [],
+      external,
     };
   }
 
@@ -636,10 +868,11 @@ export async function getDependents(
       select: { id: true },
     });
 
-    const [asserters, dependents, instances] = await Promise.all([
+    const [asserters, dependents, instances, external] = await Promise.all([
       edges(dependsIds, ["asserts"], page.id),
       edges(assertsIds, ["depends"], page.id),
       templateConcept ? edges([templateConcept.id], ["instantiates"], page.id) : Promise.resolve([] as DependentPage[]),
+      externals(assertsIds),
     ]);
 
     const assertedTerms = new Set(asserters.map((a) => a.via));
@@ -654,6 +887,7 @@ export async function getDependents(
       dependents,
       instances,
       asserterGaps,
+      external,
     };
   }
 

@@ -17,7 +17,9 @@ components:
           - **read_page** - full page content by slug, with caveats and provenance the snippet omits
           - **list_pages** / **list_folders** / **get_folder_structure** - browse the brain's shape
           - **get_related** - pages linked or conceptually near a given page
-          - **get_dependents** - what depends on a concept or page, what asserts it, what was built from it
+          - **get_dependents** - what depends on a concept or page, what asserts it, what was built from it, external assets attached to it, and which of those are stale against the source
+          - **map_dependencies** - build a dependency graph around one concept in one call (asserts, depends, references, external urls)
+          - **mark_verified** - record that a page or external asset was checked and still holds, without a new version
           - **get_semantic_map** / **get_vocabulary** - the org's concept graph and tag vocabulary
           - **get_versions** - a page's version history
           - **get_config** / **get_component_reference** - org settings and the component catalog

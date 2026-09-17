@@ -27,6 +27,10 @@ import {
   getPageLinks,
   getDependents,
   templateConceptTerm,
+  normalizeExternalUrl,
+  upsertExternalDependents,
+  verifyDependent,
+  mapDependencies,
 } from "@/lib/concepts";
 import { dispatch } from "@/lib/mcp-dispatch";
 import { testDb } from "./setup";
@@ -137,6 +141,9 @@ describe("getDependents", () => {
     await upsertConcepts(faq.id, [{ term: T("pricing/tier-2"), rel: "depends" }], "agent");
     await upsertConcepts(other.id, [{ term: T("pricing/tier-2"), rel: "references" }], "agent");
     await testDb.page.update({ where: { id: pricing.id }, data: { trustedVersionId: pricing.versions[0].id } });
+    // Trust flags only mean something in locked mode; in the default auto
+    // mode every page reads as trusted, same as read_page.
+    await testDb.organization.update({ where: { id: orgId }, data: { rules: [{ kind: "trust", mode: "locked" }] } });
 
     const r = await getDependents(orgId, { term: T("pricing/tier-2") });
     expect(r.concept?.term).toBe(T("pricing/tier-2"));
@@ -247,5 +254,181 @@ describe("create_from_template lineage", () => {
     // A later write with its own links keeps the lineage.
     await upsertLinks(org.id, created!.id, [], "agent");
     expect(await getPageLinks(org.id, created!.id)).toHaveLength(1);
+  });
+});
+
+describe("trust follows the org trust mode", () => {
+  it("auto mode: every dependent reads trusted, none behind", async () => {
+    const org = await createTestOrg({ name: "Auto Org", slug: "auto-org" });
+    const src = await createTestPage(org.id, { slug: "src" });
+    const dep = await createTestPage(org.id, { slug: "dep" });
+    await upsertConcepts(src.id, [{ term: T("auto-term"), rel: "asserts" }], "agent");
+    await upsertConcepts(dep.id, [{ term: T("auto-term"), rel: "depends" }], "agent");
+    const r = await getDependents(org.id, { term: T("auto-term") });
+    expect(r.dependents[0].trusted).toBe(true);
+    expect(r.dependents[0].trustedBehind).toBe(false);
+  });
+});
+
+describe("verifiedAt and staleAgainstSource", () => {
+  let orgId: string;
+  beforeEach(async () => {
+    orgId = (await createTestOrg({ name: "Verify Org", slug: "verify-org" })).id;
+  });
+
+  it("a dependent verified before the source moved is stale; mark_verified clears it", async () => {
+    const src = await createTestPage(orgId, { slug: "spec" });
+    const dep = await createTestPage(orgId, { slug: "deck-notes" });
+    await upsertConcepts(src.id, [{ term: T("feat/grouping"), rel: "asserts" }], "agent");
+    await upsertConcepts(dep.id, [{ term: T("feat/grouping"), rel: "depends" }], "agent");
+    const old = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+    await testDb.page.update({ where: { id: dep.id }, data: { verifiedAt: old } });
+    await testDb.page.update({ where: { id: src.id }, data: { updatedAt: new Date() } });
+
+    let r = await getDependents(orgId, { term: T("feat/grouping") });
+    expect(r.dependents[0].verifiedAt).toBe(old.toISOString());
+    expect(r.dependents[0].staleAgainstSource).toBe(true);
+    expect(r.asserters[0].staleAgainstSource).toBe(false);
+
+    const v = await verifyDependent(orgId, { slug: "deck-notes" });
+    expect(v.kind).toBe("page");
+    r = await getDependents(orgId, { term: T("feat/grouping") });
+    expect(r.dependents[0].staleAgainstSource).toBe(false);
+  });
+
+  it("never-verified dependent with a source is stale; with no source it is not", async () => {
+    const dep = await createTestPage(orgId, { slug: "lonely" });
+    await testDb.page.update({ where: { id: dep.id }, data: { verifiedAt: null } });
+    await upsertConcepts(dep.id, [{ term: T("no-source"), rel: "depends" }], "agent");
+    const r = await getDependents(orgId, { term: T("no-source") });
+    expect(r.dependents[0].verifiedAt).toBeNull();
+    expect(r.dependents[0].staleAgainstSource).toBe(false);
+  });
+
+  it("write_page and mark_trusted both bump verifiedAt", async () => {
+    const page = await createTestPage(orgId, { slug: "bump-me" });
+    await testDb.page.update({ where: { id: page.id }, data: { verifiedAt: null } });
+    await dispatch("write_page", { slug: "bump-me", content: "title: Bump\nshell: document\ncomponents: []\n" }, orgId, "verify-org", "key", "u1");
+    const after = await testDb.page.findUnique({ where: { id: page.id }, select: { verifiedAt: true } });
+    expect(after?.verifiedAt).not.toBeNull();
+
+    await testDb.page.update({ where: { id: page.id }, data: { verifiedAt: null } });
+    await testDb.organization.update({ where: { id: orgId }, data: { rules: [{ kind: "trust", mode: "locked" }] } });
+    await dispatch("mark_trusted", { slug: "bump-me" }, orgId, "verify-org", "key", "u1");
+    const pinned = await testDb.page.findUnique({ where: { id: page.id }, select: { verifiedAt: true, trustedVersionId: true } });
+    expect(pinned?.trustedVersionId).not.toBeNull();
+    expect(pinned?.verifiedAt).not.toBeNull();
+  });
+});
+
+describe("external dependents", () => {
+  let orgId: string;
+  beforeEach(async () => {
+    orgId = (await createTestOrg({ name: "Ext Org", slug: "ext-org" })).id;
+  });
+
+  it("normalizes urls so share-link variants collapse", () => {
+    expect(normalizeExternalUrl("https://docs.google.com/presentation/d/ABC/edit?usp=sharing#slide=9"))
+      .toBe("https://docs.google.com/presentation/d/ABC");
+    expect(normalizeExternalUrl("https://docs.google.com/presentation/d/ABC/view"))
+      .toBe("https://docs.google.com/presentation/d/ABC");
+    expect(normalizeExternalUrl("https://GitHub.com/mazehq/atlas/blob/main/README.md#quickstart"))
+      .toBe("https://github.com/mazehq/atlas/blob/main/README.md");
+    expect(() => normalizeExternalUrl("not a url")).toThrow(/absolute http/);
+    expect(() => normalizeExternalUrl("ftp://x/y")).toThrow(/http/);
+  });
+
+  it("attaches to the concept, dedupes by url, shows up inline in get_dependents", async () => {
+    const src = await createTestPage(orgId, { slug: "pricing" });
+    await upsertConcepts(src.id, [{ term: T("ext/tier-2"), rel: "asserts" }], "agent");
+    const rows = await upsertExternalDependents(orgId, T("ext/tier-2"), [
+      { url: "https://docs.google.com/presentation/d/DECK/edit", label: "Sales deck", owner: "Sales" },
+      { url: "https://docs.google.com/presentation/d/DECK/view", label: "Sales deck (dup)" },
+      { url: "https://github.com/mazehq/atlas/blob/main/README.md" },
+    ], "agent");
+    expect(rows).toHaveLength(3);
+    const stored = await testDb.externalDependent.findMany({ where: { orgId } });
+    expect(stored).toHaveLength(2);
+    const deck = stored.find((r) => r.url.includes("DECK"))!;
+    expect(deck.label).toBe("Sales deck (dup)");
+    expect(deck.owner).toBe("Sales");
+
+    const r = await getDependents(orgId, { term: T("ext/tier-2") });
+    expect(r.external.map((e) => e.host).sort()).toEqual(["docs.google.com", "github.com"]);
+    expect(r.external[0].via).toBe(T("ext/tier-2"));
+    expect(r.external[0].staleAgainstSource).toBe(false);
+
+    const bySlug = await getDependents(orgId, { slug: "pricing" });
+    expect(bySlug.external).toHaveLength(2);
+  });
+
+  it("goes stale when the source moves and mark_verified by url clears it", async () => {
+    const src = await createTestPage(orgId, { slug: "spec-2" });
+    await upsertConcepts(src.id, [{ term: T("ext/stale"), rel: "asserts" }], "agent");
+    await upsertExternalDependents(orgId, T("ext/stale"), [{ url: "https://example.com/deck" }], "agent");
+    await testDb.externalDependent.updateMany({ where: { orgId }, data: { verifiedAt: new Date(Date.now() - 86400_000) } });
+    await testDb.page.update({ where: { id: src.id }, data: { updatedAt: new Date() } });
+    let r = await getDependents(orgId, { term: T("ext/stale") });
+    expect(r.external[0].staleAgainstSource).toBe(true);
+
+    const v = await dispatch("mark_verified", { url: "https://example.com/deck/" }, orgId, "ext-org", "key", "u1") as { kind: string; count: number };
+    expect(v.kind).toBe("external");
+    expect(v.count).toBe(1);
+    r = await getDependents(orgId, { term: T("ext/stale") });
+    expect(r.external[0].staleAgainstSource).toBe(false);
+  });
+
+  it("remove detaches, and a concept with only external dependents still reports the asserter gap", async () => {
+    await upsertExternalDependents(orgId, T("ext/orphan"), [{ url: "https://example.com/a" }, { url: "https://example.com/b" }], "agent");
+    let r = await getDependents(orgId, { term: T("ext/orphan") });
+    expect(r.external).toHaveLength(2);
+    expect(r.asserterGaps).toEqual([T("ext/orphan")]);
+    await upsertExternalDependents(orgId, T("ext/orphan"), [{ url: "https://example.com/a", remove: true }], "agent");
+    r = await getDependents(orgId, { term: T("ext/orphan") });
+    expect(r.external.map((e) => e.url)).toEqual(["https://example.com/b"]);
+  });
+});
+
+describe("map_dependencies", () => {
+  it("builds a graph in one call and reports unknown slugs instead of failing", async () => {
+    const org = await createTestOrg({ name: "Map Org", slug: "map-org" });
+    await createTestPage(org.id, { slug: "launch-brief" });
+    await createTestPage(org.id, { slug: "release-notes" });
+    await createTestPage(org.id, { slug: "one-pager" });
+    const out = await mapDependencies(org.id, {
+      term: T("map/launch"),
+      kind: "feature",
+      asserts: ["launch-brief"],
+      depends: ["release-notes", "one-pager", "does-not-exist"],
+      external: [{ url: "https://docs.google.com/document/d/X/edit", label: "PR draft" }],
+    }, "agent");
+    expect(out.term).toBe(T("map/launch"));
+    expect(out.tagged).toEqual([
+      { slug: "launch-brief", rel: "asserts" },
+      { slug: "release-notes", rel: "depends" },
+      { slug: "one-pager", rel: "depends" },
+    ]);
+    expect(out.missing).toEqual(["does-not-exist"]);
+    expect(out.external).toHaveLength(1);
+
+    const r = await getDependents(org.id, { term: T("map/launch") });
+    expect(r.concept?.kind).toBe("feature");
+    expect(r.asserters.map((a) => a.slug)).toEqual(["launch-brief"]);
+    expect(r.dependents.map((d) => d.slug).sort()).toEqual(["one-pager", "release-notes"]);
+    expect(r.external[0].label).toBe("PR draft");
+  });
+
+  it("dispatch accepts JSON arrays for the slug lists and external", async () => {
+    const org = await createTestOrg({ name: "Map Org 2", slug: "map-org-2" });
+    await createTestPage(org.id, { slug: "src-page" });
+    const out = await dispatch("map_dependencies", {
+      term: T("map/dispatch"),
+      asserts: JSON.stringify(["src-page"]),
+      external: JSON.stringify([{ url: "https://example.com/x" }]),
+    }, org.id, "map-org-2", "key", "u1") as { tagged: unknown[]; external: unknown[] };
+    expect(out.tagged).toHaveLength(1);
+    expect(out.external).toHaveLength(1);
+    await expect(dispatch("map_dependencies", { term: T("map/empty") }, org.id, "map-org-2", "key", "u1")).rejects.toThrow(/nothing to map/);
+    await expect(dispatch("map_dependencies", { term: T("map/bad"), external: JSON.stringify([{ nope: 1 }]) }, org.id, "map-org-2", "key", "u1")).rejects.toThrow(/url is required/);
   });
 });

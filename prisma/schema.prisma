@@ -130,6 +130,10 @@ model Page {
   // "trusted" read for agents. Null = no trusted version yet (no backfill).
   // Writes never touch this column — only markTrusted/clearTrusted do.
   trustedVersionId String? @map("trusted_version_id")
+  // Last time a human or agent confirmed this page is right. Every write
+  // bumps it (writing is verifying), markTrusted bumps it, and verify_page
+  // bumps it without a new version for "looked, still correct". Null = never.
+  verifiedAt DateTime? @map("verified_at")
   seeded     Boolean   @default(false)
   pageType   String?   @map("page_type")
   createdAt  DateTime  @default(now()) @map("created_at")
@@ -267,6 +271,7 @@ model Concept {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   pages PageConcept[]
+  externalDependents ExternalDependent[]
 
   @@index([orgId, isRecommended])
   @@map("concepts")
@@ -290,6 +295,30 @@ model PageConcept {
   @@index([pageId])
   @@index([conceptId])
   @@map("page_concepts")
+}
+
+// An asset that lives outside curata (a deck in Drive, a README in GitHub)
+// and depends on a concept. Edge, not node: there is no page behind it, it
+// hangs directly off the concept and shows up inline in get_dependents and
+// the Dependencies tab next to the curata pages.
+model ExternalDependent {
+  id         String    @id @default(cuid())
+  orgId      String    @map("org_id")
+  conceptId  String    @map("concept_id")
+  url        String
+  label      String
+  owner      String?
+  rel        String    @default("depends")
+  verifiedAt DateTime? @map("verified_at")
+  createdBy  String    @map("created_by")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  concept Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, conceptId, url])
+  @@index([orgId, url])
+  @@map("external_dependents")
 }
 
 model PageLink {

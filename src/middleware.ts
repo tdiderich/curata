@@ -188,7 +188,7 @@ function applySecurityHeaders(request: NextRequest, response: NextResponse): voi
       "default-src 'self'",
       `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}${clerkDomains} https://challenges.cloudflare.com https://static.cloudflareinsights.com`,
       "style-src 'self' 'unsafe-inline'",
-      `img-src 'self' data: blob:${clerkImg}`,
+      `img-src 'self' data: blob: https://www.google.com${clerkImg}`,
       "font-src 'self' data:",
       `connect-src 'self'${clerkDomains}${AUTH_MODE === "clerk" ? " https://*.clerk.com" : ""} https://cloudflareinsights.com`,
       `frame-src 'self'${clerkFrame} https://challenges.cloudflare.com`,

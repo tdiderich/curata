@@ -425,7 +425,41 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
-  server.tool("get_dependents", "Directional dependency view for a concept or page: which pages depend on it (go stale if it changes), which page asserts it (source of truth), and which pages were built from it as a template. Call before changing something to see what else has to move.",
+  server.tool("map_dependencies", "Build a dependency graph around one concept in a single call: tag the page(s) that own the truth (asserts), the pages that go stale when it changes (depends), pages that merely mention it (references), and assets outside curata like a Drive deck or a GitHub README (external). Additive, never removes edges. Unknown slugs come back in `missing` instead of failing the call.",
+    {
+      term: z.string().describe("Concept term, namespaced with one slash: feature/investigations-grouping, pricing/tier-2, messaging/tagline"),
+      kind: z.string().optional().describe("Concept kind for a new term: feature, pricing, api, process, ..."),
+      asserts: z.array(z.string()).optional().describe("Slugs of the page(s) that are the source of truth for this concept"),
+      depends: z.array(z.string()).optional().describe("Slugs of pages that must be re-checked when this concept changes"),
+      references: z.array(z.string()).optional().describe("Slugs of pages that mention it without depending on it"),
+      external: z.array(z.object({
+        url: z.string().describe("Absolute http(s) URL of the asset"),
+        label: z.string().optional().describe("Human name, like 'Sales deck Q3'. Defaults to host + path"),
+        owner: z.string().optional().describe("Team or person who updates it"),
+        rel: z.enum(CONCEPT_RELS).optional().describe("Defaults to depends"),
+        remove: z.boolean().optional().describe("Detach this url from the concept"),
+      })).optional().describe("Assets outside curata that go stale when the concept changes"),
+    },
+    async (a) => {
+      // Arrays go through dispatch as JSON strings, same as concepts/links on
+      // the write tools, so both transports share one code path.
+      const flat: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(a)) {
+        if (v === undefined) continue;
+        flat[k] = typeof v === "string" ? v : JSON.stringify(v);
+      }
+      return viaDispatch("map_dependencies")(flat);
+    });
+
+  server.tool("mark_verified", "Record that a page or external asset was checked and is still correct, without writing a new version. Clears staleAgainstSource in get_dependents. Use after reviewing a dependent that needed no change.",
+    {
+      slug: z.string().optional().describe("Page slug to verify"),
+      url: z.string().optional().describe("External asset URL to verify (all concepts it is attached to, unless term is given)"),
+      term: z.string().optional().describe("With url: only the edge to this concept"),
+    },
+    viaDispatch("mark_verified"));
+
+  server.tool("get_dependents", "Directional dependency view for a concept or page: which pages depend on it (go stale if it changes), which page asserts it (source of truth), which pages were built from it as a template, and which external assets (Drive, GitHub, ...) hang off it. Every row carries verifiedAt and staleAgainstSource (true when the source of truth changed after that row was last verified). Call before changing something to see what else has to move, and after to see what still has not been looked at.",
     { slug: z.string().optional().describe("Page slug. Returns what this page depends on (asserters), what depends on it, and its template instances"), term: z.string().optional().describe("Concept term, like pricing/tier-2. Returns asserters, dependents, and instances of the concept"), rel: z.enum(CONCEPT_RELS).optional().describe("Term mode only: restrict to one relation") },
     async ({ slug, term, rel }) => {
       if (!slug && !term) throw new Error("slug or term is required");

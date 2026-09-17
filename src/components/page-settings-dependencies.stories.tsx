@@ -1,17 +1,36 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { PageSettingsDependencies } from "./page-settings-dependencies";
-import type { DependentsResult, DependentPage } from "@/lib/concepts";
+import type { DependentsResult, DependentPage, ExternalDependentRow } from "@/lib/concepts";
 
-function page(slug: string, via: string, rel: string, trust: "trusted" | "behind" | "never"): DependentPage {
+const HOUR = 3600 * 1000;
+const ago = (hours: number) => new Date(Date.now() - hours * HOUR).toISOString();
+
+function page(slug: string, via: string, rel: string, state: "fresh" | "stale" | "never"): DependentPage {
   return {
     slug,
     title: slug.replace(/-/g, " "),
     folderId: null,
     rel,
     via,
-    trusted: trust !== "never",
-    trustedBehind: trust === "behind",
-    updatedAt: "2026-09-17T12:00:00.000Z",
+    trusted: state !== "never",
+    trustedBehind: state === "stale",
+    updatedAt: ago(2),
+    verifiedAt: state === "never" ? null : state === "stale" ? ago(30 * 24) : ago(3),
+    staleAgainstSource: state !== "fresh",
+  };
+}
+
+function external(url: string, label: string, via: string, state: "fresh" | "stale", owner?: string): ExternalDependentRow {
+  return {
+    id: url,
+    url,
+    host: new URL(url).host.replace(/^www\./, ""),
+    label,
+    owner: owner ?? null,
+    rel: "depends",
+    via,
+    verifiedAt: state === "fresh" ? ago(5) : ago(40 * 24),
+    staleAgainstSource: state === "stale",
   };
 }
 
@@ -22,6 +41,7 @@ const EMPTY: DependentsResult = {
   dependents: [],
   instances: [],
   asserterGaps: [],
+  external: [],
 };
 
 const DEPENDS_ONLY: DependentsResult = {
@@ -31,10 +51,11 @@ const DEPENDS_ONLY: DependentsResult = {
     { term: "pricing/tier-2", kind: "topic", rel: "depends" },
     { term: "cloud-providers", kind: "topic", rel: "references" },
   ],
-  asserters: [page("pricing-page", "pricing/tier-2", "asserts", "trusted")],
+  asserters: [page("pricing-page", "pricing/tier-2", "asserts", "fresh")],
   dependents: [],
   instances: [],
   asserterGaps: ["feature/gcp-support"],
+  external: [],
 };
 
 const BOTH: DependentsResult = {
@@ -43,14 +64,18 @@ const BOTH: DependentsResult = {
     { term: "pricing/tier-2", kind: "topic", rel: "asserts" },
     { term: "billing/stripe", kind: "vendor", rel: "depends" },
   ],
-  asserters: [page("stripe-integration", "billing/stripe", "asserts", "behind")],
+  asserters: [page("stripe-integration", "billing/stripe", "asserts", "stale")],
   dependents: [
-    page("sales-cloud-battle-card", "pricing/tier-2", "depends", "trusted"),
-    page("customer-faq", "pricing/tier-2", "depends", "behind"),
+    page("sales-cloud-battle-card", "pricing/tier-2", "depends", "fresh"),
+    page("customer-faq", "pricing/tier-2", "depends", "stale"),
     page("acme-pov-plan", "pricing/tier-2", "depends", "never"),
   ],
-  instances: [page("acme-pov-roi", "template/pricing-page", "instantiates", "trusted")],
+  instances: [page("acme-pov-roi", "template/pricing-page", "instantiates", "fresh")],
   asserterGaps: [],
+  external: [
+    external("https://docs.google.com/presentation/d/1QzX/", "Sales deck Q3", "pricing/tier-2", "stale", "Sales enablement"),
+    external("https://github.com/mazehq/atlas_universe/blob/main/README.md", "atlas_universe README", "pricing/tier-2", "fresh"),
+  ],
 };
 
 const meta = {
