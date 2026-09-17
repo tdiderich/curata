@@ -3,6 +3,7 @@ import { SettingsSection } from "@/components/settings/settings-section";
 import { SettingsTable } from "@/components/settings/settings-table";
 import { StatusBadge, type StatusBadgeTone } from "@/components/settings/status-badge";
 import type { DependentsResult, DependentPage, ExternalDependentRow } from "@/lib/concepts";
+import { DependencyVerifyButton } from "@/components/dependency-verify-button";
 
 interface PageSettingsDependenciesProps {
   data: DependentsResult;
@@ -77,8 +78,8 @@ function externalLink(e: ExternalDependentRow) {
 /**
  * Dependencies tab on page settings. Pure presentation: the server component
  * fetches getDependents() and hands the result down, so this renders the
- * same in Storybook as in the app. Depth 1, read-only. Agents set rel on
- * tags; humans read the consequences here.
+ * same in Storybook as in the app. Depth 1. Agents set rel on tags; humans
+ * read the consequences here and click Verify when a row still holds.
  */
 export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps) {
   const dependsOn = data.concepts.filter((c) => c.rel === "depends");
@@ -184,7 +185,12 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
                 {vias.length > 1 && <span className="stg-dep-more"> +{vias.length - 1}</span>}
               </td>
               <td className="dash-td">{relBadge(d.rel)}</td>
-              <td className="dash-td">{verifiedCell(d)}</td>
+              <td className="dash-td">
+                <span className="stg-dep-verify-cell">
+                  {verifiedCell(d)}
+                  <DependencyVerifyButton slug={d.slug} label={d.staleAgainstSource || !d.verifiedAt ? "Verify" : "Re-verify"} />
+                </span>
+              </td>
             </tr>
           ))}
           {data.external.map((e) => (
@@ -195,7 +201,12 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
               </td>
               <td className="dash-td">{e.via}</td>
               <td className="dash-td">{relBadge(e.rel)}</td>
-              <td className="dash-td">{verifiedCell(e, "external")}</td>
+              <td className="dash-td">
+                <span className="stg-dep-verify-cell">
+                  {verifiedCell(e, "external")}
+                  <DependencyVerifyButton url={e.url} term={e.via} label={e.verifiedAt ? "Re-verify" : "Verify"} />
+                </span>
+              </td>
             </tr>
           ))}
         </SettingsTable>
