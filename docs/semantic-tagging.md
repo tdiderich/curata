@@ -53,7 +53,20 @@ Pass a `links` param (JSON array) to `write_page` or `patch_page`:
 - Links are replaced, not merged. Whatever you pass in `links` becomes the page's full set, and any edge you leave out is deleted. Pass `[]` to clear every link. Concepts behave the other way round: they are additive.
 - Read the page first and keep the links you still want. A write that tags one new link and omits the others drops the others.
 
+## Relations on a tag
+
+Each concept tag carries a `rel`:
+
+- `depends`: the page is wrong if the concept changes. A battle card that lists supported clouds depends on `feature/gcp-support`.
+- `asserts`: the page is the source of truth for the concept. The pricing page asserts `pricing/tier-2`. Aim for one asserter per concept.
+- `references`: a plain mention. The default when you omit `rel`.
+- `instantiates`: system-written. `create_from_template` tags the new page `template/<template-slug>` with this rel, and adds a `PageLink` to the template carrying the template hash and the variables used. That link survives `links` replacement.
+
+Omitting `rel` on a tag the page already has leaves the existing rel alone. Terms may carry one `/` namespace: `feature/gcp-support`, `pricing/tier-2`, `template/pov-roi`.
+
 ## Querying the graph
+
+- `get_dependents` — given a `term` or `slug`, the directional view: pages that depend on it, the page that asserts it, pages built from it. Call before changing something.
 
 - `get_vocabulary` — see all terms, sorted by usage. Filter by `kind` or `query` prefix.
 - `get_related` — given a `term` or `slug`, find connected pages and shared concepts.

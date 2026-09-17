@@ -5,7 +5,7 @@
  * (topic) treatment in the UI and graph. Surfaced in the tag picker, the
  * knowledge graph legend, and get_vocabulary so usage converges.
  */
-export const CONCEPT_KINDS = ["topic", "vendor", "finding", "framework"] as const;
+export const CONCEPT_KINDS = ["topic", "vendor", "finding", "framework", "template"] as const;
 
 export type ConceptKind = (typeof CONCEPT_KINDS)[number];
 

@@ -50,8 +50,12 @@ import {
   getRelated,
   getSemanticMap,
   projectConceptTerms,
+  isConceptRel,
+  CONCEPT_RELS,
+  templateConceptTerm,
+  getDependents,
 } from "@/lib/concepts";
-import type { ConceptInput, LinkInput } from "@/lib/concepts";
+import type { ConceptInput, ConceptRel, LinkInput } from "@/lib/concepts";
 import { ensureComponentIds, applyPatchOperations, buildOutline, formatOutline, locateComponent } from "@/lib/component-ids";
 import { createHash } from "crypto";
 import type { PatchOperation } from "@/lib/component-ids";
@@ -88,6 +92,7 @@ export const READ_TOOLS = [
   "list_templates",
   "get_vocabulary",
   "get_related",
+  "get_dependents",
   "get_semantic_map",
   "export_page",
   "export_report",
@@ -120,6 +125,29 @@ function parseSortOrder(v: string | undefined): number | undefined {
 // arbitrarily large payload through the dedup phrase/term extraction and
 // into the capture_token's signed fingerprint.
 const CAPTURE_CONTENT_MAX_BYTES = 200 * 1024;
+
+
+/** Parses a JSON `concepts` arg and rejects unknown rel values before any write happens. */
+function parseConceptInputs(raw: string | undefined): ConceptInput[] | undefined {
+  if (!raw) return undefined;
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); } catch { throw new Error("concepts must be valid JSON"); }
+  if (!Array.isArray(parsed)) throw new Error("concepts must be a JSON array of {term, kind?, section?, rel?, remove?}");
+  for (const c of parsed as Array<Record<string, unknown>>) {
+    if (c.rel !== undefined && !isConceptRel(c.rel)) {
+      throw new Error(`concepts[].rel must be one of ${CONCEPT_RELS.join("|")}, got ${JSON.stringify(c.rel)}`);
+    }
+  }
+  return parsed as ConceptInput[];
+}
+
+/** Parses a JSON `links` arg with the same error shape as concepts. */
+function parseLinkInputs(raw: string): LinkInput[] {
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); } catch { throw new Error("links must be valid JSON"); }
+  if (!Array.isArray(parsed)) throw new Error("links must be a JSON array of {target, rel, description?}");
+  return parsed as LinkInput[];
+}
 
 const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string, string> }> = {
   list_pages: { known: new Set(["channel"]) },
@@ -157,6 +185,7 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   list_templates: { known: new Set() },
   get_vocabulary: { known: new Set(["kind", "query"]) },
   get_related: { known: new Set(["slug", "term"]) },
+  get_dependents: { known: new Set(["slug", "term", "rel"]) },
   get_semantic_map: { known: new Set(["kind"]) },
   export_page: { known: new Set(["slug", "format"]) },
   export_report: { known: new Set(["slugs", "title", "subtitle"]) },
@@ -933,10 +962,7 @@ export async function dispatch(
       if (args.rules) {
         try { cpPageRules = JSON.parse(args.rules); } catch { throw new Error("rules must be valid JSON"); }
       }
-      let cpConceptInputs: ConceptInput[] | undefined;
-      if (args.concepts) {
-        try { cpConceptInputs = JSON.parse(args.concepts); } catch { throw new Error("concepts must be valid JSON"); }
-      }
+      const cpConceptInputs = parseConceptInputs(args.concepts);
       const cpRules = await resolveRules(orgId, args.folder_id ?? null, cpPageRules);
       const cpAllRules = [...cpRules.inherited, ...cpRules.page];
       const cpRuleCheck = validateContentRules(args.content, cpAllRules);
@@ -973,7 +999,7 @@ export async function dispatch(
             await upsertConcepts(cpPage.id, cpConceptInputs, actorId);
           }
           if (args.links) {
-            const linkInputs: LinkInput[] = JSON.parse(args.links);
+            const linkInputs = parseLinkInputs(args.links);
             await upsertLinks(orgId, cpPage.id, linkInputs, actorId);
           }
         }
@@ -1091,10 +1117,7 @@ export async function dispatch(
       if (wpRuleCheck.violations.length > 0) {
         throw new Error(`content rule violation: ${wpRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}`);
       }
-      let wpConceptInputs: ConceptInput[] | undefined;
-      if (args.concepts) {
-        try { wpConceptInputs = JSON.parse(args.concepts); } catch { throw new Error("concepts must be valid JSON"); }
-      }
+      const wpConceptInputs = parseConceptInputs(args.concepts);
       // Required-components: validate the RESULT of this write (existing
       // concepts merged with whatever this call's `concepts` arg changes),
       // not just the incoming diff — matches "validate the result, not the
@@ -1152,7 +1175,7 @@ export async function dispatch(
             await upsertConcepts(wpPage.id, wpConceptInputs, actorId);
           }
           if (args.links) {
-            const linkInputs: LinkInput[] = JSON.parse(args.links);
+            const linkInputs = parseLinkInputs(args.links);
             await upsertLinks(orgId, wpPage.id, linkInputs, actorId);
           }
         }
@@ -1279,10 +1302,7 @@ export async function dispatch(
           select: { id: true, folderId: true, rules: true },
         });
         if (!tagPage) throw new Error(`page not found: ${args.slug}`);
-        let tagConceptInputs: ConceptInput[] | undefined;
-        if (args.concepts) {
-          try { tagConceptInputs = JSON.parse(args.concepts); } catch { throw new Error("concepts must be valid JSON"); }
-        }
+        const tagConceptInputs = parseConceptInputs(args.concepts);
         if (tagConceptInputs) {
           // A concepts-only patch can still trip a requireConcepts rule
           // (e.g. removing the last tag) even though content is unchanged.
@@ -1300,7 +1320,7 @@ export async function dispatch(
           await upsertConcepts(tagPage.id, tagConceptInputs, actorId);
         }
         if (args.links) {
-          const linkInputs: LinkInput[] = JSON.parse(args.links);
+          const linkInputs = parseLinkInputs(args.links);
           await upsertLinks(orgId, tagPage.id, linkInputs, actorId);
         }
         logAudit({
@@ -1364,10 +1384,7 @@ export async function dispatch(
         throw new Error(`content rule violation: ${ppRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}`);
       }
 
-      let ppConceptInputs: ConceptInput[] | undefined;
-      if (args.concepts) {
-        try { ppConceptInputs = JSON.parse(args.concepts); } catch { throw new Error("concepts must be valid JSON"); }
-      }
+      const ppConceptInputs = parseConceptInputs(args.concepts);
       // Required-components validates newYaml — the RESULT of applying the
       // patch operations — never the ops themselves, so a patch that removes
       // a required section (or an op sequence that nets out to one missing)
@@ -1390,7 +1407,7 @@ export async function dispatch(
             await upsertConcepts(ppExisting.id, ppConceptInputs, actorId);
           }
           if (args.links) {
-            const linkInputs: LinkInput[] = JSON.parse(args.links);
+            const linkInputs = parseLinkInputs(args.links);
             await upsertLinks(orgId, ppExisting.id, linkInputs, actorId);
           }
         }
@@ -1519,7 +1536,8 @@ export async function dispatch(
         throw new Error(`content rule violation: ${cftRuleCheck.violations.map((v) => `[${v.scope}] ${v.message} (matched: ${v.matches?.join(", ")})`).join("; ")}`);
       }
       const cftRcRules = await resolveRequiredComponentsRules(orgId, args.folder_id ?? null, undefined);
-      const cftRcViolations = validateRequiredComponents(interpolated, 0, [...cftRcRules.inherited, ...cftRcRules.page]);
+      // The instance always carries its template/<slug> concept, so it counts as one tag.
+      const cftRcViolations = validateRequiredComponents(interpolated, 1, [...cftRcRules.inherited, ...cftRcRules.page]);
       if (cftRcViolations.length > 0) {
         throw new Error(`required-components rule violation: ${cftRcViolations.map((v) => `[${v.scope}] ${v.message}`).join("; ")}`);
       }
@@ -1529,6 +1547,29 @@ export async function dispatch(
 
       const cftResult = await writePage(orgId, orgSlug, args.target_slug, interpolated, "agent");
       if (!cftResult.ok) throw new Error(cftResult.error);
+
+      // Lineage, written by the system so nobody has to tag it. The concept
+      // makes instances searchable (search_pages "template/<slug>"); the link
+      // carries the payload (which template version, which vars) and is exempt
+      // from upsertLinks' prune.
+      const [cftCreated, cftTemplate] = await Promise.all([
+        db.page.findUnique({ where: { orgId_slug: { orgId, slug: args.target_slug } }, select: { id: true } }),
+        db.page.findUnique({ where: { orgId_slug: { orgId, slug: args.template_slug } }, select: { id: true } }),
+      ]);
+      if (cftCreated && cftTemplate) {
+        await upsertConcepts(cftCreated.id, [{ term: templateConceptTerm(args.template_slug), kind: "template", rel: "instantiates" }], actorId);
+        await db.pageLink.upsert({
+          where: { fromPageId_toPageId_rel: { fromPageId: cftCreated.id, toPageId: cftTemplate.id, rel: "instantiates" } },
+          create: {
+            fromPageId: cftCreated.id,
+            toPageId: cftTemplate.id,
+            rel: "instantiates",
+            description: JSON.stringify({ templateHash: tmplResult.contentHash, variables }),
+            createdBy: actorId,
+          },
+          update: { description: JSON.stringify({ templateHash: tmplResult.contentHash, variables }) },
+        });
+      }
 
       if (args.folder_id) {
         const folder = await db.folder.findFirst({ where: { id: args.folder_id, orgId } });
@@ -1548,7 +1589,7 @@ export async function dispatch(
         actorId,
         metadata: { slug: args.target_slug, templateSlug: args.template_slug, folderId: args.folder_id },
       });
-      const cftOut: Record<string, unknown> = withShapeWarnings({ ...cftResult, slug: args.target_slug }, cftValidation.warnings);
+      const cftOut: Record<string, unknown> = withShapeWarnings({ ...cftResult, slug: args.target_slug, templateSlug: args.template_slug, templateHash: tmplResult.contentHash }, cftValidation.warnings);
       if (cftRuleCheck.warnings.length > 0) {
         cftOut.contentWarnings = cftRuleCheck.warnings.map((w) => ({ scope: w.scope, message: w.message, matches: w.matches }));
       }
@@ -1618,6 +1659,16 @@ export async function dispatch(
       return getRelated(orgId, {
         term: args.term || undefined,
         slug: args.slug || undefined,
+      });
+    }
+
+    case "get_dependents": {
+      if (!args.slug && !args.term) throw new Error("slug or term is required");
+      if (args.rel && !isConceptRel(args.rel)) throw new Error(`rel must be one of ${CONCEPT_RELS.join("|")}`);
+      return getDependents(orgId, {
+        slug: args.slug || undefined,
+        term: args.term || undefined,
+        rel: args.rel ? (args.rel as ConceptRel) : undefined,
       });
     }
 

@@ -17,6 +17,7 @@ components:
           - **read_page** - full page content by slug, with caveats and provenance the snippet omits
           - **list_pages** / **list_folders** / **get_folder_structure** - browse the brain's shape
           - **get_related** - pages linked or conceptually near a given page
+          - **get_dependents** - what depends on a concept or page, what asserts it, what was built from it
           - **get_semantic_map** / **get_vocabulary** - the org's concept graph and tag vocabulary
           - **get_versions** - a page's version history
           - **get_config** / **get_component_reference** - org settings and the component catalog

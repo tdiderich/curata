@@ -10,11 +10,12 @@ import {
   resolveEffectiveTrustMode,
   parseTrustRule,
 } from "@/lib/approval";
-import { getPageConcepts, normalizeTerm } from "@/lib/concepts";
+import { getPageConcepts, getDependents, normalizeTerm } from "@/lib/concepts";
 import { DEFAULT_TAGS } from "@/lib/default-tags";
 import { SettingsTabs, SettingsSection } from "@/components/settings";
 import { PageSettingsGeneral } from "@/components/page-settings-general";
 import { PageSettingsTags } from "@/components/page-settings-tags";
+import { PageSettingsDependencies } from "@/components/page-settings-dependencies";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
 
 export async function generateMetadata({
@@ -74,9 +75,10 @@ export default async function PageSettingsView({
   const trustMode = trustResolved.mode;
   const hasTrustRuleAtScope = parseTrustRule(pageRow.rules) !== null;
 
-  const pageTags: Array<{ term: string; kind: string }> = [];
-  const [concepts, orgConcepts] = await Promise.all([
+  const pageTags: Array<{ term: string; kind: string; rel: string }> = [];
+  const [concepts, dependents, orgConcepts] = await Promise.all([
     getPageConcepts(pageRow.id),
+    getDependents(ctx.orgId, { slug }),
     db.concept.findMany({
       where: { pages: { some: { page: { orgId: ctx.orgId, status: "active" } } } },
       select: { displayName: true, kind: true },
@@ -88,7 +90,7 @@ export default async function PageSettingsView({
     const term = normalizeTerm(c.term);
     if (!term || seen.has(term)) continue;
     seen.add(term);
-    pageTags.push({ term, kind: c.kind });
+    pageTags.push({ term, kind: c.kind, rel: c.rel });
   }
   const optionMap = new Map<string, string>(DEFAULT_TAGS.map((t) => [t, ""]));
   for (const c of orgConcepts) {
@@ -130,6 +132,10 @@ export default async function PageSettingsView({
           folderTag={folderName}
         />
       ),
+    },
+    {
+      label: "Dependencies",
+      content: <PageSettingsDependencies data={dependents} />,
     },
     {
       label: "Rules",

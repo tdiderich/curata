@@ -10,12 +10,14 @@
   --kind-finding-rgb: 217, 89, 38;
   --kind-framework-rgb: 25, 158, 112;
   --kind-topic-rgb: 201, 133, 0;
+  --kind-template-rgb: 140, 120, 200;
 }
 [data-mode="light"] {
   --kind-vendor-rgb: 42, 120, 214;
   --kind-finding-rgb: 235, 104, 52;
   --kind-framework-rgb: 27, 175, 122;
   --kind-topic-rgb: 237, 161, 0;
+  --kind-template-rgb: 122, 100, 190;
 }
 
 /* ── Shared primitive: buttons ──
@@ -7493,6 +7495,10 @@ body .c-section.align-right > * { max-width: none !important; }
   background: rgba(var(--kind-framework-rgb), 0.13);
   border-color: rgba(var(--kind-framework-rgb), 0.4);
 }
+.pg-tag-k-template {
+  background: rgba(var(--kind-template-rgb), 0.13);
+  border-color: rgba(var(--kind-template-rgb), 0.4);
+}
 .pg-tag-kind-dot {
   width: 6px;
   height: 6px;
@@ -7513,9 +7519,11 @@ button.pg-tag-kind-dot:hover {
 .pg-dot-vendor { background: rgba(var(--kind-vendor-rgb), 0.95); }
 .pg-dot-finding { background: rgba(var(--kind-finding-rgb), 0.95); }
 .pg-dot-framework { background: rgba(var(--kind-framework-rgb), 0.95); }
+.pg-dot-template { background: rgba(var(--kind-template-rgb), 0.95); }
 .pg-tag-k-vendor .pg-tag-kind-dot { background: rgba(var(--kind-vendor-rgb), 0.95); }
 .pg-tag-k-finding .pg-tag-kind-dot { background: rgba(var(--kind-finding-rgb), 0.95); }
 .pg-tag-k-framework .pg-tag-kind-dot { background: rgba(var(--kind-framework-rgb), 0.95); }
+.pg-tag-k-template .pg-tag-kind-dot { background: rgba(var(--kind-template-rgb), 0.95); }
 
 /* Kind edit popover, anchored to the chip. */
 .pg-tag {
@@ -7834,6 +7842,26 @@ body:has(.nav-reveal) .page-toolbar {
 .pill--finding .pill-dot { background: rgba(var(--kind-finding-rgb), 0.95); }
 .pill--framework { background: rgba(var(--kind-framework-rgb), 0.14); color: var(--snow); }
 .pill--framework .pill-dot { background: rgba(var(--kind-framework-rgb), 0.95); }
+.pill--template { background: rgba(var(--kind-template-rgb), 0.14); color: var(--snow); }
+.pill--template .pill-dot { background: rgba(var(--kind-template-rgb), 0.95); }
+.stg-dep-link { color: var(--snow); text-decoration: none; border-bottom: 1px solid rgba(var(--text-rgb), 0.2); }
+.stg-dep-link:hover { color: var(--teal); border-bottom-color: rgba(var(--accent-rgb), 0.5); }
+.stg-dep-owners { display: inline-flex; gap: 10px; flex-wrap: wrap; }
+/* Concept relation badges (Dependencies + Tags tabs). */
+.pill--depends { background: rgba(var(--accent-rgb), 0.14); color: var(--snow); }
+.pill--depends .pill-dot { background: var(--teal); }
+.pill--asserts { background: rgba(228, 230, 195, 0.14); color: var(--snow); }
+.pill--asserts .pill-dot { background: var(--yellow); }
+.pill--references { background: rgba(var(--text-rgb), 0.08); color: var(--light-muted); }
+.pill--references .pill-dot { background: rgba(var(--text-rgb), 0.35); }
+.pill--instantiates { background: rgba(var(--kind-template-rgb), 0.14); color: var(--snow); }
+.pill--instantiates .pill-dot { background: rgba(var(--kind-template-rgb), 0.95); }
+.pill--trusted { background: rgba(var(--accent-rgb), 0.14); color: var(--snow); }
+.pill--trusted .pill-dot { background: var(--teal); }
+.pill--behind { background: rgba(228, 230, 195, 0.14); color: var(--snow); }
+.pill--behind .pill-dot { background: var(--yellow); }
+.pill--untrusted { background: rgba(var(--text-rgb), 0.08); color: var(--light-muted); }
+.pill--untrusted .pill-dot { background: rgba(var(--text-rgb), 0.35); }
 
 .stg-pcount { font-family: "SF Mono", Monaco, "Cascadia Mono", monospace; font-size: 11px; color: var(--light-muted); white-space: nowrap; }
 

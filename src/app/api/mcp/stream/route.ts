@@ -25,6 +25,8 @@ import {
   getVocabulary,
   getRelated,
   getSemanticMap,
+  getDependents,
+  CONCEPT_RELS,
 } from "@/lib/concepts";
 import { ensureComponentIds, buildOutline, formatOutline } from "@/lib/component-ids";
 import { dispatch } from "@/lib/mcp-dispatch";
@@ -215,7 +217,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   });
 
   server.tool("write_page", toolDescription("write_page", "Create or update a page"),
-    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?, remove?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework — call get_vocabulary to see kinds in use. remove: true detaches the tag from this page. Supplying kind on an existing term re-kinds the concept everywhere it is used.'), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]"), capture_token: z.string().optional().describe("Required when creating a page whose pageType has captureRequired: true — the token capture_thread returned"), dedup_ack: z.string().optional().describe('Required alongside capture_token: "new", or the candidate slug capture_thread should redirect you to patch_page instead') },
+    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?, rel?, remove?}]. Terms are slugs (lowercase letters, digits, hyphens), with one optional / namespace like feature/gcp-support. rel (optional): how the page relates to the concept. depends = page is wrong if the concept changes; asserts = page is the source of truth for the concept; references = plain mention (default). Omit rel on an existing tag to leave it unchanged. Curated kinds: topic (default), vendor, finding, framework, template — call get_vocabulary to see kinds in use. remove: true detaches the tag from this page. Supplying kind on an existing term re-kinds the concept everywhere it is used.'), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]"), capture_token: z.string().optional().describe("Required when creating a page whose pageType has captureRequired: true — the token capture_thread returned"), dedup_ack: z.string().optional().describe('Required alongside capture_token: "new", or the candidate slug capture_thread should redirect you to patch_page instead') },
     viaDispatch("write_page"));
 
   server.tool("read_component", toolDescription("read_component", "Read one component from a page by id"),
@@ -237,13 +239,13 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       slug: z.string().describe("Page slug"),
       expected_hash: z.string().optional().describe("Content hash from last read_page — rejects if page was modified. Required when operations are given."),
       operations: z.string().optional().describe('JSON array of operations. Each operation has: "op" (required), "id" (required for replace/insert_before/insert_after/remove — the component ID to target), "components" or "value" (the new component(s) — required for all ops except remove and set_field), "field" (required for set_field). Example: [{"op":"insert_after","id":"intro-section","components":[{"type":"text","body":"New content"}]}]'),
-      concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?, remove?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework. remove: true detaches the tag from this page. Supplying kind on an existing term re-kinds the concept everywhere it is used.'),
+      concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?, rel?, remove?}]. Terms are slugs (lowercase letters, digits, hyphens), with one optional / namespace like feature/gcp-support. rel (optional): how the page relates to the concept. depends = page is wrong if the concept changes; asserts = page is the source of truth for the concept; references = plain mention (default). Omit rel on an existing tag to leave it unchanged. Curated kinds: topic (default), vendor, finding, framework, template. remove: true detaches the tag from this page. Supplying kind on an existing term re-kinds the concept everywhere it is used.'),
       links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]"),
     },
     viaDispatch("patch_page"));
 
   server.tool("create_page", toolDescription("create_page", "Create a new knowledge page in the brain"),
-    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?}]. Terms are slugs (lowercase letters, digits, hyphens). Curated kinds: topic (default), vendor, finding, framework.'), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]"), capture_token: z.string().optional().describe("Required when creating a page whose pageType has captureRequired: true — the token capture_thread returned"), dedup_ack: z.string().optional().describe('Required alongside capture_token: "new", or the candidate slug capture_thread should redirect you to patch_page instead') },
+    { slug: z.string(), content: z.string(), folder_id: z.string().optional(), visibility: z.enum(["private", "org", "public"]).optional().describe("Page visibility — defaults to private for authenticated users, org for no-auth"), sort_order: z.number().int().optional().describe("Explicit sort position within folder (lower = first). Null/omitted = sort after ordered pages."), concepts: z.string().optional().describe('JSON array of concept objects: [{term, kind?, section?, rel?}]. Terms are slugs (lowercase letters, digits, hyphens), with one optional / namespace like feature/gcp-support. rel (optional): how the page relates to the concept. depends = page is wrong if the concept changes; asserts = page is the source of truth for the concept; references = plain mention (default). Omit rel on an existing tag to leave it unchanged. Curated kinds: topic (default), vendor, finding, framework, template.'), links: z.string().optional().describe("JSON array of link objects: [{target, rel, description?}]"), capture_token: z.string().optional().describe("Required when creating a page whose pageType has captureRequired: true — the token capture_thread returned"), dedup_ack: z.string().optional().describe('Required alongside capture_token: "new", or the candidate slug capture_thread should redirect you to patch_page instead') },
     viaDispatch("create_page"));
 
   server.tool("list_folders", "List all folders", {}, async () => {
@@ -420,6 +422,14 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     { term: z.string().optional(), slug: z.string().optional() },
     async ({ term, slug }) => {
       const result = await getRelated(orgId, { term, slug });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("get_dependents", "Directional dependency view for a concept or page: which pages depend on it (go stale if it changes), which page asserts it (source of truth), and which pages were built from it as a template. Call before changing something to see what else has to move.",
+    { slug: z.string().optional().describe("Page slug. Returns what this page depends on (asserters), what depends on it, and its template instances"), term: z.string().optional().describe("Concept term, like pricing/tier-2. Returns asserters, dependents, and instances of the concept"), rel: z.enum(CONCEPT_RELS).optional().describe("Term mode only: restrict to one relation") },
+    async ({ slug, term, rel }) => {
+      if (!slug && !term) throw new Error("slug or term is required");
+      const result = await getDependents(orgId, { slug, term, rel });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 

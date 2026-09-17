@@ -2,10 +2,31 @@ import { db } from "./db";
 import { CONCEPT_KINDS } from "./concept-kinds";
 import { Prisma } from "@/generated/prisma/client";
 
+/**
+ * How a page relates to a concept. `references` is the untyped default and
+ * today's behavior. `depends` means the page is wrong if the concept changes.
+ * `asserts` means the page is the source of truth for the concept.
+ * `instantiates` is system-written by create_from_template and never by hand.
+ */
+export const CONCEPT_RELS = ["depends", "asserts", "references", "instantiates"] as const;
+export type ConceptRel = (typeof CONCEPT_RELS)[number];
+export const DEFAULT_REL: ConceptRel = "references";
+
+export function isConceptRel(rel: unknown): rel is ConceptRel {
+  return typeof rel === "string" && (CONCEPT_RELS as readonly string[]).includes(rel);
+}
+
+/** Concept term a page built from a template carries, so instances are searchable. */
+export function templateConceptTerm(templateSlug: string): string {
+  return `template/${templateSlug}`;
+}
+
 export interface ConceptInput {
   term: string;
   kind?: string;
   section?: string;
+  /** Relation of the page to this concept. Omitted on an existing edge leaves it unchanged; omitted on a new edge means references. */
+  rel?: ConceptRel;
   /** Detach this concept from the page instead of adding it. Never deletes the Concept itself. */
   remove?: boolean;
 }
@@ -20,6 +41,7 @@ export interface ConceptOutput {
   term: string;
   kind: string;
   section: string | null;
+  rel: string;
 }
 
 export interface LinkOutput {
@@ -28,19 +50,33 @@ export interface LinkOutput {
   description: string | null;
 }
 
+function slugPart(part: string): string {
+  return part
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_/]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 /**
  * Terms are slugs: lowercase letters, digits, and hyphens only. Spaces and
  * underscores convert to hyphens, everything else is stripped, so
  * "Noise Reduction" and "noise-reduction" are the same concept.
+ *
+ * One interior "/" is kept as a namespace separator, so "feature/gcp-support"
+ * and "template/pov-roi" survive. Further slashes in the tail become hyphens:
+ * "a/b/c" -> "a/b-c". A slash with nothing on one side is dropped.
  */
 export function normalizeTerm(term: string): string {
-  return term
-    .toLowerCase()
-    .trim()
-    .replace(/[\s_]+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-{2,}/g, "-")
-    .replace(/^-+|-+$/g, "");
+  const trimmed = term.trim().replace(/^\/+|\/+$/g, "");
+  const idx = trimmed.indexOf("/");
+  if (idx === -1) return slugPart(trimmed);
+  const head = slugPart(trimmed.slice(0, idx));
+  const tail = slugPart(trimmed.slice(idx + 1));
+  if (head && tail) return `${head}/${tail}`;
+  return head || tail;
 }
 
 /**
@@ -95,6 +131,9 @@ export async function upsertConcepts(
   createdBy: string
 ): Promise<void> {
   for (const c of concepts) {
+    if (c.rel !== undefined && !isConceptRel(c.rel)) {
+      throw new Error(`concepts[].rel must be one of ${CONCEPT_RELS.join("|")}, got ${JSON.stringify(c.rel)}`);
+    }
     const normalized = normalizeTerm(c.term);
     if (!normalized) continue;
 
@@ -155,9 +194,12 @@ export async function upsertConcepts(
         pageId,
         conceptId: concept.id,
         section: c.section ?? "",
+        rel: c.rel ?? DEFAULT_REL,
         createdBy,
       },
-      update: {},
+      // Re-tagging with a rel changes the edge; re-tagging without one leaves
+      // whatever a human or agent already decided.
+      update: { rel: c.rel ?? undefined },
     });
 
     await db.concept.update({
@@ -210,8 +252,11 @@ export async function upsertLinks(
     });
   }
 
+  // Template lineage (rel: instantiates) is written by the system at
+  // create_from_template time and is never part of a page's declared link
+  // set, so it's exempt from the prune.
   const existing = await db.pageLink.findMany({
-    where: { fromPageId },
+    where: { fromPageId, rel: { not: "instantiates" } },
     select: { id: true, toPageId: true, rel: true },
   });
   const staleIds = existing
@@ -231,6 +276,7 @@ export async function getPageConcepts(pageId: string): Promise<ConceptOutput[]> 
     term: r.concept.displayName,
     kind: r.concept.kind,
     section: r.section || null,
+    rel: r.rel,
   }));
 }
 
@@ -287,8 +333,8 @@ export async function getRelated(
   orgId: string,
   opts: { term?: string; slug?: string }
 ): Promise<{
-  concepts: Array<{ term: string; kind: string; usageCount: number }>;
-  pages: Array<{ slug: string; title: string; sharedConcepts: string[] }>;
+  concepts: Array<{ term: string; kind: string; usageCount: number; rel?: string }>;
+  pages: Array<{ slug: string; title: string; sharedConcepts: string[]; rel?: string }>;
   links: Array<{ from: string; to: string; rel: string }>;
 }> {
   if (opts.term) {
@@ -315,6 +361,7 @@ export async function getRelated(
         slug: pc.page.slug,
         title: pc.page.title,
         sharedConcepts: [concept.displayName],
+        rel: pc.rel,
       })),
       links: [],
     };
@@ -368,6 +415,7 @@ export async function getRelated(
         term: pc.concept.displayName,
         kind: pc.concept.kind,
         usageCount: pc.concept.usageCount,
+        rel: pc.rel,
       })),
       pages: Array.from(pageMap.values())
         .map((p) => ({
@@ -392,7 +440,7 @@ export async function getSemanticMap(kind?: string): Promise<{
     term: string;
     kind: string;
     usageCount: number;
-    pages: Array<{ slug: string; title: string }>;
+    pages: Array<{ slug: string; title: string; rel: string }>;
   }>;
   links: Array<{ from: string; to: string; rel: string }>;
   stats: {
@@ -432,7 +480,7 @@ export async function getSemanticMap(kind?: string): Promise<{
       term: c.displayName,
       kind: c.kind,
       usageCount: c.usageCount,
-      pages: c.pages.map((pc) => ({ slug: pc.page.slug, title: pc.page.title })),
+      pages: c.pages.map((pc) => ({ slug: pc.page.slug, title: pc.page.title, rel: pc.rel })),
     })),
     links: allLinks.map((l) => ({
       from: l.fromPage.slug,
@@ -446,4 +494,168 @@ export async function getSemanticMap(kind?: string): Promise<{
       pagesWithoutConcepts: totalPages - pagesWithConcepts,
     },
   };
+}
+
+export interface DependentPage {
+  slug: string;
+  title: string;
+  folderId: string | null;
+  /** Relation of that page to the concept in question. */
+  rel: string;
+  /** Concept the edge runs through. */
+  via: string;
+  trusted: boolean;
+  trustedBehind: boolean;
+  updatedAt: string;
+}
+
+export interface DependentsResult {
+  /** The page this was asked about, when called by slug. */
+  page?: { slug: string; title: string };
+  /** The concept this was asked about, when called by term. */
+  concept?: { term: string; kind: string; usageCount: number };
+  /** Concepts the page carries, with rel. Slug mode only. */
+  concepts: Array<{ term: string; kind: string; rel: string }>;
+  /** Pages that assert a concept this page depends on (slug mode), or that assert the concept (term mode). */
+  asserters: DependentPage[];
+  /** Pages with a depends edge on a concept this page asserts (slug mode) or on the concept (term mode). */
+  dependents: DependentPage[];
+  /** Pages built from this template page (slug mode) or from the template concept (term mode). */
+  instances: DependentPage[];
+  /** Concepts this page depends on that have no asserter anywhere in the org. */
+  asserterGaps: string[];
+}
+
+type PageConceptWithPage = {
+  rel: string;
+  concept: { displayName: string; kind: string; usageCount: number };
+  page: {
+    slug: string;
+    title: string;
+    folderId: string | null;
+    trustedVersionId: string | null;
+    updatedAt: Date;
+    versions: Array<{ id: string }>;
+  };
+};
+
+const DEPENDENT_PAGE_INCLUDE = {
+  concept: true,
+  page: {
+    select: {
+      slug: true,
+      title: true,
+      folderId: true,
+      trustedVersionId: true,
+      updatedAt: true,
+      versions: { orderBy: { createdAt: "desc" as const }, take: 1, select: { id: true } },
+    },
+  },
+};
+
+function toDependentPage(row: PageConceptWithPage): DependentPage {
+  const latestId = row.page.versions[0]?.id ?? null;
+  const trusted = !!row.page.trustedVersionId;
+  return {
+    slug: row.page.slug,
+    title: row.page.title,
+    folderId: row.page.folderId,
+    rel: row.rel,
+    via: row.concept.displayName,
+    trusted,
+    trustedBehind: trusted && latestId !== null && row.page.trustedVersionId !== latestId,
+    updatedAt: row.page.updatedAt.toISOString(),
+  };
+}
+
+/**
+ * Directional view of the concept graph, depth 1. Answers "what breaks if
+ * this changes" (dependents), "who owns the truth" (asserters), and "what
+ * was built from this" (instances). Org-scoped, archived pages excluded.
+ */
+export async function getDependents(
+  orgId: string,
+  opts: { slug?: string; term?: string; rel?: ConceptRel }
+): Promise<DependentsResult> {
+  const empty: DependentsResult = { concepts: [], asserters: [], dependents: [], instances: [], asserterGaps: [] };
+  const pageScope = { orgId, status: { not: "archived" } };
+
+  async function edges(conceptIds: string[], rels: ConceptRel[], excludePageId?: string): Promise<DependentPage[]> {
+    if (conceptIds.length === 0) return [];
+    const rows = await db.pageConcept.findMany({
+      where: {
+        conceptId: { in: conceptIds },
+        rel: { in: rels },
+        ...(excludePageId ? { pageId: { not: excludePageId } } : {}),
+        page: pageScope,
+      },
+      include: DEPENDENT_PAGE_INCLUDE,
+      orderBy: { page: { updatedAt: "desc" } },
+    });
+    return rows.map(toDependentPage);
+  }
+
+  if (opts.term) {
+    const normalized = normalizeTerm(opts.term);
+    const concept = await findConceptForTerm(opts.term, normalized);
+    if (!concept) return empty;
+    const filter = (r: ConceptRel) => !opts.rel || opts.rel === r;
+    const [asserters, dependents, instances] = await Promise.all([
+      filter("asserts") ? edges([concept.id], ["asserts"]) : [],
+      filter("depends") ? edges([concept.id], ["depends"]) : [],
+      filter("instantiates") ? edges([concept.id], ["instantiates"]) : [],
+    ]);
+    return {
+      concept: { term: concept.displayName, kind: concept.kind, usageCount: concept.usageCount },
+      concepts: [],
+      asserters,
+      dependents,
+      instances,
+      asserterGaps: dependents.length > 0 && asserters.length === 0 ? [concept.displayName] : [],
+    };
+  }
+
+  if (opts.slug) {
+    const page = await db.page.findUnique({
+      where: { orgId_slug: { orgId, slug: opts.slug } },
+      select: { id: true, slug: true, title: true },
+    });
+    if (!page) return empty;
+
+    const own = await db.pageConcept.findMany({
+      where: { pageId: page.id },
+      include: { concept: true },
+    });
+    const dependsIds = own.filter((pc) => pc.rel === "depends").map((pc) => pc.conceptId);
+    const assertsIds = own.filter((pc) => pc.rel === "asserts").map((pc) => pc.conceptId);
+
+    // A template page is depended on through its template/<slug> concept,
+    // which lives on the instances rather than on the template itself.
+    const templateConcept = await db.concept.findUnique({
+      where: { normalizedName: templateConceptTerm(page.slug) },
+      select: { id: true },
+    });
+
+    const [asserters, dependents, instances] = await Promise.all([
+      edges(dependsIds, ["asserts"], page.id),
+      edges(assertsIds, ["depends"], page.id),
+      templateConcept ? edges([templateConcept.id], ["instantiates"], page.id) : Promise.resolve([] as DependentPage[]),
+    ]);
+
+    const assertedTerms = new Set(asserters.map((a) => a.via));
+    const asserterGaps = own
+      .filter((pc) => pc.rel === "depends" && !assertedTerms.has(pc.concept.displayName))
+      .map((pc) => pc.concept.displayName);
+
+    return {
+      page: { slug: page.slug, title: page.title },
+      concepts: own.map((pc) => ({ term: pc.concept.displayName, kind: pc.concept.kind, rel: pc.rel })),
+      asserters,
+      dependents,
+      instances,
+      asserterGaps,
+    };
+  }
+
+  return empty;
 }

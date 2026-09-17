@@ -277,6 +277,9 @@ model PageConcept {
   pageId    String   @map("page_id")
   conceptId String   @map("concept_id")
   section   String   @default("")
+  /// How the page relates to the concept: depends | asserts | references | instantiates.
+  /// references is the untyped default; instantiates is system-written by create_from_template.
+  rel       String   @default("references")
   createdBy String   @map("created_by")
   createdAt DateTime @default(now()) @map("created_at")
 

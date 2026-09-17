@@ -7,7 +7,7 @@ import { SettingsTable } from "@/components/settings/settings-table";
 import { StatusBadge, type StatusBadgeTone } from "@/components/settings/status-badge";
 import { TagPicker, type TagOption } from "@/components/tag-picker";
 
-export type PageTag = { term: string; kind: string };
+export type PageTag = { term: string; kind: string; rel?: string };
 
 interface PageSettingsTagsProps {
   pageId: string;
@@ -17,11 +17,19 @@ interface PageSettingsTagsProps {
   folderTag?: string;
 }
 
+const REL_TONE: Record<string, StatusBadgeTone> = {
+  depends: "depends",
+  asserts: "asserts",
+  references: "references",
+  instantiates: "instantiates",
+};
+
 const KIND_TONE: Record<string, StatusBadgeTone> = {
   topic: "topic",
   vendor: "vendor",
   finding: "finding",
   framework: "framework",
+  template: "template",
 };
 
 export function PageSettingsTags({ pageId, initialTags, tagOptions, canEdit, folderTag }: PageSettingsTagsProps) {
@@ -71,6 +79,7 @@ export function PageSettingsTags({ pageId, initialTags, tagOptions, canEdit, fol
           <>
             <th className="dash-th dash-th-title" style={{ width: "50%" }}>Tag</th>
             <th className="dash-th">Kind</th>
+            <th className="dash-th">Rel</th>
             {canEdit && <th className="dash-th stg-th-right">&nbsp;</th>}
           </>
         }
@@ -80,6 +89,7 @@ export function PageSettingsTags({ pageId, initialTags, tagOptions, canEdit, fol
           <tr className="dash-row" style={{ opacity: 0.65 }}>
             <td className="dash-td dash-td-title">{folderTag}</td>
             <td className="dash-td"><span className="stg-pcount">folder</span></td>
+            <td className="dash-td" />
             {canEdit && <td className="dash-td stg-td-right" />}
           </tr>
         )}
@@ -88,6 +98,9 @@ export function PageSettingsTags({ pageId, initialTags, tagOptions, canEdit, fol
             <td className="dash-td dash-td-title">{tag.term}</td>
             <td className="dash-td">
               <StatusBadge tone={KIND_TONE[tag.kind] ?? "topic"} label={tag.kind || "topic"} />
+            </td>
+            <td className="dash-td">
+              <StatusBadge tone={REL_TONE[tag.rel ?? "references"] ?? "references"} label={tag.rel ?? "references"} />
             </td>
             {canEdit && (
               <td className="dash-td stg-td-right">
