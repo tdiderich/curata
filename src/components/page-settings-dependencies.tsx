@@ -37,11 +37,15 @@ function relativeTime(iso: string, now = Date.now()): string {
  * verification is the thing a human actually does when they look at a page
  * after the source of truth moved. Stale = source changed since then.
  */
-function verifiedCell(p: Pick<DependentPage, "verifiedAt" | "staleAgainstSource" | "verifiedNote">, kind: "page" | "external" = "page") {
+function noteCell(note: string | null) {
+  if (!note) return <span className="stg-dep-note stg-dep-note--empty">–</span>;
+  return <span className="stg-dep-note" title={note}>{note}</span>;
+}
+
+function verifiedCell(p: Pick<DependentPage, "verifiedAt" | "staleAgainstSource">, kind: "page" | "external" = "page") {
   if (!p.verifiedAt) {
     return <StatusBadge tone="untrusted" label={kind === "external" ? "never checked" : "never verified"} />;
   }
-  const note = p.verifiedNote ? <span className="stg-dep-note" title={p.verifiedNote}>{p.verifiedNote}</span> : null;
   if (p.staleAgainstSource) {
     return (
       <span className="stg-dep-verified">
@@ -54,7 +58,6 @@ function verifiedCell(p: Pick<DependentPage, "verifiedAt" | "staleAgainstSource"
     <span className="stg-dep-verified">
       <StatusBadge tone="trusted" label="verified" />
       <span className="stg-dep-when">{relativeTime(p.verifiedAt)}</span>
-      {note}
     </span>
   );
 }
@@ -159,10 +162,11 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
         <SettingsTable
           head={
             <>
-              <th className="dash-th dash-th-title" style={{ width: "40%" }}>Page</th>
+              <th className="dash-th dash-th-title" style={{ width: "30%" }}>Page</th>
               <th className="dash-th">Via</th>
               <th className="dash-th">Rel</th>
               <th className="dash-th">Last verified</th>
+              <th className="dash-th">Verification note</th>
             </>
           }
           empty={
@@ -191,6 +195,7 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
                   <DependencyVerifyButton slug={d.slug} label={d.staleAgainstSource || !d.verifiedAt ? "Verify" : "Re-verify"} />
                 </span>
               </td>
+              <td className="dash-td">{noteCell(d.verifiedNote)}</td>
             </tr>
           ))}
           {data.external.map((e) => (
@@ -207,6 +212,7 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
                   <DependencyVerifyButton url={e.url} term={e.via} label={e.verifiedAt ? "Re-verify" : "Verify"} />
                 </span>
               </td>
+              <td className="dash-td">{noteCell(e.verifiedNote)}</td>
             </tr>
           ))}
         </SettingsTable>

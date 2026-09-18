@@ -7853,7 +7853,8 @@ body:has(.nav-reveal) .page-toolbar {
 .stg-dep-favicon { width: 13px; height: 13px; border-radius: 3px; flex: none; }
 .stg-dep-arrow { font-size: 0.75em; opacity: 0.55; }
 .stg-dep-owner { margin-left: 10px; color: var(--muted); font-size: 12px; }
-.stg-dep-note { color: var(--muted); font-size: 12px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stg-dep-note { color: var(--muted); font-size: 12px; display: block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stg-dep-note--empty { opacity: 0.35; }
 .stg-dep-verify-cell { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .stg-dep-verify-btn { opacity: 0; transition: opacity 120ms; }
 .dash-row:hover .stg-dep-verify-btn, .stg-dep-verify-btn:focus-visible { opacity: 1; }
