@@ -59,6 +59,14 @@ import {
   VERIFY_STATUSES,
 } from "@/lib/concepts";
 import type { ConceptInput, ConceptRel, ExternalDependentInput, LinkInput, VerifyStatus } from "@/lib/concepts";
+import {
+  createProjectFromTemplate,
+  getProject,
+  updateProjectItem,
+  addProjectItem,
+  removeProjectItem,
+  deleteProject,
+} from "@/lib/projects";
 import { ensureComponentIds, applyPatchOperations, buildOutline, formatOutline, locateComponent } from "@/lib/component-ids";
 import { createHash } from "crypto";
 import type { PatchOperation } from "@/lib/component-ids";
@@ -96,6 +104,7 @@ export const READ_TOOLS = [
   "get_vocabulary",
   "get_related",
   "get_dependents",
+  "get_project",
   "get_semantic_map",
   "export_page",
   "export_report",
@@ -104,7 +113,7 @@ export const READ_TOOLS = [
   "capture_thread",
   "read_component",
 ];
-export const WRITE_TOOLS = ["map_dependencies", "mark_verified", "write_page", "create_page", "write_component", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted", "generate_digest"];
+export const WRITE_TOOLS = ["map_dependencies", "mark_verified", "create_project", "add_project_item", "update_project_item", "remove_project_item", "delete_project", "write_page", "create_page", "write_component", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted", "generate_digest"];
 export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 /**
@@ -204,6 +213,12 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_related: { known: new Set(["slug", "term"]) },
   get_dependents: { known: new Set(["slug", "term", "rel"]) },
   map_dependencies: { known: new Set(["term", "kind", "asserts", "depends", "references", "external", "includes", "removeIncludes"]) },
+  create_project: { known: new Set(["term", "title", "template_term", "source"]) },
+  get_project: { known: new Set(["term"]) },
+  add_project_item: { known: new Set(["term", "slug", "url", "label", "owner", "due_date"]) },
+  update_project_item: { known: new Set(["term", "item_id", "done", "owner", "due_date"]) },
+  remove_project_item: { known: new Set(["term", "item_id"]) },
+  delete_project: { known: new Set(["term"]) },
   mark_verified: { known: new Set(["slug", "url", "term", "context", "note", "status"]) },
   get_semantic_map: { known: new Set(["kind"]) },
   export_page: { known: new Set(["slug", "format"]) },
@@ -1732,6 +1747,64 @@ export async function dispatch(
         term: args.term || undefined,
         rel: args.rel ? (args.rel as ConceptRel) : undefined,
       });
+    }
+
+    case "create_project": {
+      if (!args.term) throw new Error("term is required");
+      if (!args.title) throw new Error("title is required");
+      return createProjectFromTemplate(orgId, {
+        term: args.term,
+        title: args.title,
+        templateTerm: args.template_term || undefined,
+        source: args.source || undefined,
+      }, userId || "agent");
+    }
+
+    case "get_project": {
+      if (!args.term) throw new Error("term is required");
+      return getProject(orgId, args.term);
+    }
+
+    case "add_project_item": {
+      if (!args.term) throw new Error("term is required");
+      if (!args.slug && !args.url) throw new Error("slug or url is required");
+      await addProjectItem(orgId, args.term, {
+        slug: args.slug || undefined,
+        url: args.url || undefined,
+        label: args.label || undefined,
+        owner: args.owner || undefined,
+        dueDate: args.due_date || undefined,
+      }, userId || "agent");
+      logAudit({ orgId, action: "project.add_item", resourceType: "project", resourceId: args.term, actorType: "apikey", actorId, metadata: { slug: args.slug, url: args.url } });
+      return getProject(orgId, args.term);
+    }
+
+    case "update_project_item": {
+      if (!args.term) throw new Error("term is required");
+      if (!args.item_id) throw new Error("item_id is required");
+      await updateProjectItem(orgId, args.term, {
+        itemId: args.item_id,
+        done: args.done === undefined ? undefined : args.done === "true",
+        owner: args.owner,
+        dueDate: args.due_date,
+      }, userId || actorId || "agent");
+      logAudit({ orgId, action: "project.update_item", resourceType: "project", resourceId: args.term, actorType: "apikey", actorId, metadata: { itemId: args.item_id, done: args.done } });
+      return getProject(orgId, args.term);
+    }
+
+    case "remove_project_item": {
+      if (!args.term) throw new Error("term is required");
+      if (!args.item_id) throw new Error("item_id is required");
+      await removeProjectItem(orgId, args.term, args.item_id);
+      logAudit({ orgId, action: "project.remove_item", resourceType: "project", resourceId: args.term, actorType: "apikey", actorId, metadata: { itemId: args.item_id } });
+      return getProject(orgId, args.term);
+    }
+
+    case "delete_project": {
+      if (!args.term) throw new Error("term is required");
+      await deleteProject(orgId, args.term);
+      logAudit({ orgId, action: "project.delete", resourceType: "project", resourceId: args.term, actorType: "apikey", actorId });
+      return { ok: true, term: args.term };
     }
 
     case "get_semantic_map": {

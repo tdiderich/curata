@@ -329,19 +329,26 @@ export async function addProjectItem(orgId: string, term: string, input: AddProj
   throw new Error("slug or url is required");
 }
 
+type ProjectItemRow = { id: string; pageConceptId: string | null; externalEdgeId: string | null };
+
+/** Detach one item's underlying edge (never an included sub-map's - those belong to whichever context created the include, not to this project). */
+async function detachItemEdge(orgId: string, projectTerm: string, item: ProjectItemRow): Promise<void> {
+  if (item.pageConceptId) {
+    const pc = await db.pageConcept.findUnique({ where: { id: item.pageConceptId }, select: { pageId: true } });
+    if (pc) await upsertConcepts(pc.pageId, [{ term: projectTerm, remove: true }], "agent");
+  }
+  if (item.externalEdgeId) {
+    const edge = await db.externalEdge.findUnique({ where: { id: item.externalEdgeId }, select: { asset: { select: { url: true } } } });
+    if (edge) await upsertExternalDependents(orgId, projectTerm, [{ url: edge.asset.url, remove: true }], "agent");
+  }
+}
+
 /** Detach an item from a project's own tracked set (and its underlying edge). Never touches an included sub-map's items. */
 export async function removeProjectItem(orgId: string, term: string, itemId: string): Promise<void> {
   const project = await findProject(orgId, term);
   const item = await db.projectItem.findFirst({ where: { id: itemId, projectId: project.id } });
   if (!item) return;
-  if (item.pageConceptId) {
-    const pc = await db.pageConcept.findUnique({ where: { id: item.pageConceptId }, select: { pageId: true } });
-    if (pc) await upsertConcepts(pc.pageId, [{ term: project.term, remove: true }], "agent");
-  }
-  if (item.externalEdgeId) {
-    const edge = await db.externalEdge.findUnique({ where: { id: item.externalEdgeId }, select: { asset: { select: { url: true } } } });
-    if (edge) await upsertExternalDependents(orgId, project.term, [{ url: edge.asset.url, remove: true }], "agent");
-  }
+  await detachItemEdge(orgId, project.term, item);
   await db.projectItem.deleteMany({ where: { id: itemId, projectId: project.id } });
 }
 
@@ -373,8 +380,17 @@ export async function updateProjectItem(orgId: string, term: string, input: Upda
   await db.projectItem.update({ where: { id: item.id }, data });
 }
 
-/** Remove an entire project (its items go with it via cascade) - never the underlying map or its edges. */
+/**
+ * Remove an entire project: detaches every one of its own cloned edges
+ * first (otherwise a deleted project leaves dangling depends rows tagged
+ * to a term nothing points at any more), then the project row, cascading
+ * its ProjectItem rows. Never touches an included sub-map's edges - those
+ * belong to the group, not to this project.
+ */
 export async function deleteProject(orgId: string, term: string): Promise<void> {
   const project = await db.project.findUnique({ where: { orgId_term: { orgId, term: normalizeTerm(term) } } });
-  if (project) await db.project.delete({ where: { id: project.id } });
+  if (!project) return;
+  const items = await db.projectItem.findMany({ where: { projectId: project.id } });
+  for (const item of items) await detachItemEdge(orgId, project.term, item);
+  await db.project.delete({ where: { id: project.id } });
 }

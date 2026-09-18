@@ -29,6 +29,7 @@ import {
   VERIFY_STATUSES,
   CONCEPT_RELS,
 } from "@/lib/concepts";
+import { getProject } from "@/lib/projects";
 import { ensureComponentIds, buildOutline, formatOutline } from "@/lib/component-ids";
 import { dispatch } from "@/lib/mcp-dispatch";
 import { toolDescription } from "@/lib/mcp-guidance";
@@ -472,6 +473,51 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       const result = await getDependents(orgId, { slug, term, rel });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
+
+  server.tool("create_project", "Clone a map into a trackable project: a run of the work you're actually going to do, not just the drift signal. The template's own depends/external become brand-new, independent edges on this project's own term (editing the template afterward never reaches this project); any sub-map it includes (a shared checklist like sales-enablement) stays live-referenced, verified per project the same way an ordinary include works. Omit template_term to start blank.",
+    {
+      term: z.string().describe("New, unique term for this project, namespaced like a map: product-launch/sso"),
+      title: z.string().describe("Human name for the project"),
+      template_term: z.string().optional().describe("Existing map term to clone from"),
+      source: z.string().optional().describe("Page that owns the truth for this project, if different from the template's"),
+    },
+    viaDispatch("create_project"));
+
+  server.tool("get_project", "Read a project: its own tracked items (owner, due date, done, doneAt/doneBy) overlaid on the live dependency graph, plus each included sub-map's items the same way. done is a distinct claim from verified — a done item can still show doneStale if the source moved again after it was marked done, and staleAgainstSource / verifiedAt keep meaning exactly what they mean on an ordinary map.",
+    { term: z.string().describe("The project's term") },
+    async ({ term }) => {
+      const result = await getProject(orgId, term);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("add_project_item", "Add one more page or external asset to a project's own tracked items, after creation. Never touches an included sub-map.",
+    {
+      term: z.string().describe("The project's term"),
+      slug: z.string().optional().describe("Page slug to track"),
+      url: z.string().optional().describe("External asset URL to track"),
+      label: z.string().optional().describe("Label for a new external asset"),
+      owner: z.string().optional().describe("Who owns this item"),
+      due_date: z.string().optional().describe("ISO date"),
+    },
+    viaDispatch("add_project_item"));
+
+  server.tool("update_project_item", "Mark a project item done or open, or change its owner/due date. done means the update shipped; it is separate from verified, which means the source hasn't moved since someone looked. Returns the project so you can see doneStale if the source moved again after doneAt.",
+    {
+      term: z.string().describe("The project's term"),
+      item_id: z.string().describe("The item's id, from get_project"),
+      done: z.boolean().optional(),
+      owner: z.string().optional().describe("Empty string clears it"),
+      due_date: z.string().optional().describe("ISO date; empty string clears it"),
+    },
+    viaDispatch("update_project_item"));
+
+  server.tool("remove_project_item", "Detach an item from a project's own tracked set and its underlying edge. Never touches an included sub-map's items.",
+    { term: z.string().describe("The project's term"), item_id: z.string().describe("The item's id, from get_project") },
+    viaDispatch("remove_project_item"));
+
+  server.tool("delete_project", "Remove a project: detaches all of its own cloned edges, then the project itself. Never touches the template it was cloned from or an included sub-map's edges.",
+    { term: z.string().describe("The project's term") },
+    viaDispatch("delete_project"));
 
   server.tool("get_semantic_map", "Get full knowledge graph topology — all concepts with their pages and all cross-page links",
     { kind: z.string().optional() },

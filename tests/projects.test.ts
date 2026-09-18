@@ -151,4 +151,15 @@ describe("projects: clone a template into a tracked run", () => {
     const group = await getDependents(orgId, { term: T("group/del") });
     expect(group.dependents.map((d) => d.slug)).toEqual(["del-grp-shared"]);
   });
+
+  it("deleteProject also detaches its own cloned edges, not just the project row", async () => {
+    await createTestPage(orgId, { slug: "del-own-src" });
+    const p = await createProjectFromTemplate(orgId, { term: T("launch/del-own"), title: "Del own" }, "agent");
+    await addProjectItem(orgId, p.term, { slug: "del-own-src" }, "agent");
+    let graph = await getDependents(orgId, { term: T("launch/del-own") });
+    expect(graph.dependents).toHaveLength(1);
+    await deleteProject(orgId, T("launch/del-own"));
+    graph = await getDependents(orgId, { term: T("launch/del-own") });
+    expect(graph.dependents).toEqual([]);
+  });
 });
