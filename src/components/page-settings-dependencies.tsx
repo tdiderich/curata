@@ -1,89 +1,12 @@
 import Link from "next/link";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { SettingsTable } from "@/components/settings/settings-table";
-import { StatusBadge, type StatusBadgeTone } from "@/components/settings/status-badge";
-import type { DependentsResult, DependentPage, ExternalDependentRow } from "@/lib/concepts";
+import type { DependentsResult, DependentPage } from "@/lib/concepts";
 import { DependencyVerifyButton } from "@/components/dependency-verify-button";
+import { relBadge, verifiedCell, noteCell, externalLink, termLink } from "@/components/dependency-cells";
 
 interface PageSettingsDependenciesProps {
   data: DependentsResult;
-}
-
-const REL_TONE: Record<string, StatusBadgeTone> = {
-  depends: "depends",
-  asserts: "asserts",
-  references: "references",
-  instantiates: "instantiates",
-};
-
-function relBadge(rel: string) {
-  return <StatusBadge tone={REL_TONE[rel] ?? "references"} label={rel} />;
-}
-
-function relativeTime(iso: string, now = Date.now()): string {
-  const s = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
-  if (s < 60) return "just now";
-  const m = Math.round(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.round(m / 60);
-  if (h < 48) return `${h}h ago`;
-  const d = Math.round(h / 24);
-  if (d < 60) return `${d}d ago`;
-  return `${Math.round(d / 30)}mo ago`;
-}
-
-/**
- * "Last verified" cell. Trust is a governance pointer most orgs never set;
- * verification is the thing a human actually does when they look at a page
- * after the source of truth moved. Stale = source changed since then.
- */
-function noteCell(note: string | null) {
-  if (!note) return <span className="stg-dep-note stg-dep-note--empty">–</span>;
-  return <span className="stg-dep-note" title={note}>{note}</span>;
-}
-
-function verifiedCell(p: Pick<DependentPage, "verifiedAt" | "staleAgainstSource" | "needsChange">, kind: "page" | "external" = "page") {
-  if (p.needsChange && p.verifiedAt) {
-    return (
-      <span className="stg-dep-verified">
-        <StatusBadge tone="needs-change" label="needs update" />
-        <span className="stg-dep-when">{relativeTime(p.verifiedAt)}</span>
-      </span>
-    );
-  }
-  if (!p.verifiedAt) {
-    return <StatusBadge tone="untrusted" label={kind === "external" ? "never checked" : "never verified"} />;
-  }
-  if (p.staleAgainstSource) {
-    return (
-      <span className="stg-dep-verified">
-        <StatusBadge tone="behind" label="source changed" />
-        <span className="stg-dep-when">{relativeTime(p.verifiedAt)}</span>
-      </span>
-    );
-  }
-  return (
-    <span className="stg-dep-verified">
-      <StatusBadge tone="trusted" label="verified" />
-      <span className="stg-dep-when">{relativeTime(p.verifiedAt)}</span>
-    </span>
-  );
-}
-
-function externalLink(e: ExternalDependentRow) {
-  return (
-    <a href={e.url} target="_blank" rel="noopener noreferrer" className="stg-dep-link stg-dep-ext" title={`Opens ${e.host} in a new tab`}>
-      <img
-        src={`https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(e.host)}`}
-        alt=""
-        width={13}
-        height={13}
-        className="stg-dep-favicon"
-      />
-      {e.label}
-      <span aria-hidden className="stg-dep-arrow">↗</span>
-    </a>
-  );
 }
 
 /**
@@ -132,7 +55,7 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
             const owners = assertersByTerm.get(c.term) ?? [];
             return (
               <tr key={c.term} className="dash-row">
-                <td className="dash-td dash-td-title">{c.term}</td>
+                <td className="dash-td dash-td-title">{termLink(c.term)}</td>
                 <td className="dash-td">
                   {owners.length === 0 ? (
                     <span className="stg-pcount">no source of truth</span>
@@ -182,7 +105,7 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
                   {d.title || d.slug}
                 </Link>
               </td>
-              <td className="dash-td">{d.via}</td>
+              <td className="dash-td">{termLink(d.via)}</td>
               <td className="dash-td">{relBadge(d.rel)}</td>
               <td className="dash-td">
                 <span className="stg-dep-verify-cell">
@@ -200,7 +123,7 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
                 {e.owner && <span className="stg-dep-owner">{e.owner}</span>}
               </td>
               <td className="dash-td" title={e.alsoDependsOn.length ? `Also tracked against ${e.alsoDependsOn.join(", ")}` : undefined}>
-                {e.via}
+                {termLink(e.via)}
                 {e.alsoDependsOn.length > 0 && <span className="stg-dep-more"> +{e.alsoDependsOn.length}</span>}
               </td>
               <td className="dash-td">{relBadge(e.rel)}</td>

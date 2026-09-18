@@ -1064,3 +1064,55 @@ export async function getDependents(
 
   return empty;
 }
+
+export interface ConceptMapRow {
+  term: string;
+  kind: string;
+  /** Pages that assert it; first is shown as "source". */
+  sources: Array<{ slug: string; title: string; updatedAt: string }>;
+  summary: DependentsSummary;
+  /** dependents + external still needing a human: stale, needs update, or never checked. */
+  needsLook: number;
+  total: number;
+}
+
+/**
+ * Every concept in the org that something depends on, with its verification
+ * roll-up, ranked by how much still needs a human. Backs /map and the
+ * dashboard card. One getDependents per concept: fine at tens of concepts,
+ * revisit with a grouped query when an org passes a few hundred.
+ */
+export async function listConceptMaps(orgId: string): Promise<ConceptMapRow[]> {
+  const [pageEdges, extEdges] = await Promise.all([
+    db.pageConcept.findMany({
+      where: { rel: { in: ["depends", "asserts", "instantiates"] }, page: { orgId, status: { not: "archived" } } },
+      select: { conceptId: true, concept: { select: { displayName: true, kind: true } } },
+      distinct: ["conceptId"],
+    }),
+    db.externalEdge.findMany({
+      where: { asset: { orgId } },
+      select: { conceptId: true, concept: { select: { displayName: true, kind: true } } },
+      distinct: ["conceptId"],
+    }),
+  ]);
+  const concepts = new Map<string, { term: string; kind: string }>();
+  for (const e of [...pageEdges, ...extEdges]) concepts.set(e.conceptId, { term: e.concept.displayName, kind: e.concept.kind });
+
+  const rows: ConceptMapRow[] = [];
+  for (const { term, kind } of concepts.values()) {
+    const r = await getDependents(orgId, { term });
+    const total = r.summary.pages.total + r.summary.external.total;
+    if (total === 0 && r.asserters.length === 0) continue;
+    const needsLook = total - r.summary.pages.ok - r.summary.external.ok;
+    rows.push({
+      term,
+      kind,
+      sources: r.asserters.map((a) => ({ slug: a.slug, title: a.title, updatedAt: a.updatedAt })),
+      summary: r.summary,
+      needsLook,
+      total,
+    });
+  }
+  rows.sort((a, b) => b.needsLook - a.needsLook || b.total - a.total || a.term.localeCompare(b.term));
+  return rows;
+}

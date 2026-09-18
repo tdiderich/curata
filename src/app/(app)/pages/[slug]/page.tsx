@@ -12,7 +12,8 @@ import type { ApprovalApprover } from "@/lib/approval";
 import { PageRenderer } from "@/generated/kazam-renderer";
 import PageDetailClient from "@/components/page-detail-client";
 import { PageTags } from "@/components/page-tags";
-import { getPageConcepts, normalizeTerm } from "@/lib/concepts";
+import { getPageConcepts, normalizeTerm, getDependents } from "@/lib/concepts";
+import { DependencyPill } from "@/components/dependency-pill";
 import { DEFAULT_TAGS } from "@/lib/default-tags";
 import { expandComponentRefs, expandSlideRefs, renderedRefWrap } from "@/lib/component-refs";
 import type { RefExpansionContext } from "@/lib/component-refs";
@@ -225,6 +226,10 @@ export default async function PageDetailView({
     presentation: pageData.json.presentation as { breaks?: number[]; labels?: string[] } | undefined,
   };
 
+  // Only pages with depends/asserts edges render the pill; cheap for the rest.
+  const depsData = pageRow && pageRow.status !== "archived" ? await getDependents(ctx.orgId, { slug }) : null;
+  const showPill = !!depsData && depsData.concepts.some((c) => c.rel === "asserts" || c.rel === "depends");
+
   return (
     <>
       <PageDetailClient
@@ -261,15 +266,18 @@ export default async function PageDetailView({
         hasTrustRuleAtScope={hasTrustRuleAtScope}
         tagsRow={
           pageRow ? (
-            <PageTags
-              pageId={pageRow.id}
-              initialTags={pageTags}
-              tagOptions={tagOptions}
-              canEdit={canEditPage}
-              pickerViaPalette
-              maxVisible={5}
-              folderTag={folderTag}
-            />
+            <>
+              <PageTags
+                pageId={pageRow.id}
+                initialTags={pageTags}
+                tagOptions={tagOptions}
+                canEdit={canEditPage}
+                pickerViaPalette
+                maxVisible={5}
+                folderTag={folderTag}
+              />
+              {showPill && depsData && <DependencyPill data={depsData} />}
+            </>
           ) : undefined
         }
         pageJson={page}

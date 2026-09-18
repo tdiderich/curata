@@ -3,7 +3,7 @@ import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { seedOrg, seedOrgContent } from "@/lib/seed";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getVocabulary } from "@/lib/concepts";
+import { getVocabulary, listConceptMaps } from "@/lib/concepts";
 import { basePath } from "@/lib/api-fetch";
 import { ActionBarHome } from "@/components/action-bar-home";
 import type { ActionBarFolder, ActionBarPage } from "@/components/action-bar-types";
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
         ],
       };
 
-  const [vocab, rawFolders, rawPages, org, qaFolder] = await Promise.all([
+  const [vocab, rawFolders, rawPages, org, qaFolder, conceptMaps] = await Promise.all([
     getVocabulary(),
     db.folder.findMany({
       where: folderVisFilter,
@@ -76,6 +76,7 @@ export default async function DashboardPage() {
       where: { orgId: ctx.orgId, name: "Quick Actions", locked: true },
       select: { rules: true },
     }),
+    listConceptMaps(ctx.orgId).catch(() => []),
   ]);
 
   // Quick action refs live in the QA folder's rules JSON as a non-rule entry
@@ -98,6 +99,7 @@ export default async function DashboardPage() {
 
   return (
     <ActionBarHome
+      needsLook={conceptMaps}
       vocabulary={vocab}
       folders={rawFolders as ActionBarFolder[]}
       pages={rawPages.map((p) => ({ ...p, updatedAt: p.updatedAt.toISOString() })) as ActionBarPage[]}

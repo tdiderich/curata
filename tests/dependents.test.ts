@@ -31,6 +31,7 @@ import {
   upsertExternalDependents,
   verifyDependent,
   mapDependencies,
+  listConceptMaps,
 } from "@/lib/concepts";
 import { dispatch, describeToolParams } from "@/lib/mcp-dispatch";
 import { testDb } from "./setup";
@@ -535,5 +536,30 @@ describe("REST ergonomics the cold agent tripped on", () => {
     const params = describeToolParams("search_pages");
     expect(params).toContain("query");
     expect(describeToolParams("map_dependencies")).toEqual(expect.arrayContaining(["term", "asserts", "depends", "external"]));
+  });
+});
+
+describe("listConceptMaps", () => {
+  it("ranks concepts by how much still needs a look and skips concepts with nothing attached", async () => {
+    const org = await createTestOrg({ name: "Map Index Org", slug: "map-index-org" });
+    const a = await createTestPage(org.id, { slug: "src-a" });
+    const b = await createTestPage(org.id, { slug: "src-b" });
+    await createTestPage(org.id, { slug: "dep-1" });
+    await createTestPage(org.id, { slug: "dep-2" });
+    await createTestPage(org.id, { slug: "dep-3" });
+    await upsertConcepts(a.id, [{ term: T("idx/a"), rel: "asserts" }], "agent");
+    await upsertConcepts(b.id, [{ term: T("idx/b"), rel: "asserts" }], "agent");
+    await mapDependencies(org.id, { term: T("idx/a"), depends: ["dep-1"], external: [{ url: "https://example.com/x" }] }, "agent");
+    await mapDependencies(org.id, { term: T("idx/b"), depends: ["dep-2", "dep-3"] }, "agent");
+    await verifyDependent(org.id, { slug: "dep-1", term: T("idx/a") });
+    // A concept only referenced, never depended on, stays off the map.
+    const ref = await createTestPage(org.id, { slug: "ref-only" });
+    await upsertConcepts(ref.id, [{ term: T("idx/ref"), rel: "references" }], "agent");
+
+    const rows = await listConceptMaps(org.id);
+    expect(rows.map((r) => r.term)).toEqual([T("idx/b"), T("idx/a")]);
+    expect(rows[0]).toMatchObject({ needsLook: 2, total: 2, sources: [expect.objectContaining({ slug: "src-b" })] });
+    expect(rows[1]).toMatchObject({ needsLook: 1, total: 2 });
+    expect(rows[1].summary.external.neverChecked).toBe(1);
   });
 });
