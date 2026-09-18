@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
 
-export interface NewProjectPage { slug: string; title: string; folderName: string | null }
 export interface NewProjectTemplate { term: string; kind: string; total: number; needsLook: number }
 interface TemplatePreview {
   term: string;
@@ -27,13 +26,12 @@ function slugifyTerm(raw: string): string {
  * optionally pick the page this project is tracking against. One submit
  * calls create_project and lands on /projects/<term>.
  */
-export function NewProjectForm({ pages, templates }: { pages: NewProjectPage[]; templates: NewProjectTemplate[] }) {
+export function NewProjectForm({ templates }: { templates: NewProjectTemplate[] }) {
   const router = useRouter();
   const [term, setTerm] = useState("");
   const [title, setTitle] = useState("");
   const [templateQuery, setTemplateQuery] = useState("");
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [source, setSource] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previews, setPreviews] = useState<Record<string, TemplatePreview>>({});
@@ -86,7 +84,7 @@ export function NewProjectForm({ pages, templates }: { pages: NewProjectPage[]; 
       const res = await fetch(`${basePath}/api/projects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ term: normalized, title: title.trim(), templateTerms: [...picked], source: source || undefined }),
+        body: JSON.stringify({ term: normalized, title: title.trim(), templateTerms: [...picked] }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
@@ -159,15 +157,6 @@ export function NewProjectForm({ pages, templates }: { pages: NewProjectPage[]; 
             ))}
           </div>
         )}
-      </section>
-
-      <section className="nmf-step">
-        <label className="nmf-label" htmlFor="npf-source">Which page is this project tracking? <span className="nmf-opt">optional</span></label>
-        <p className="nmf-hint">If a page changes after you finish, this project&rsquo;s done items will show it. Skip this if there isn&rsquo;t one obvious page.</p>
-        <select id="npf-source" className="stg-input" value={source} onChange={(e) => setSource(e.target.value)}>
-          <option value="">No page to track</option>
-          {pages.map((p) => <option key={p.slug} value={p.slug}>{p.title || p.slug}{p.folderName ? ` · ${p.folderName}` : ""}</option>)}
-        </select>
       </section>
 
       <footer className="nmf-footer">
