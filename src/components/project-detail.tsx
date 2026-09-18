@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ProjectResult, ProjectPageItem, ProjectExternalItem } from "@/lib/projects";
-import { relBadge, verifiedCell, noteCell, externalLink, pageLink } from "@/components/dependency-cells";
+import { relBadge, verifiedCell, noteCell, externalLink, pageLink, relativeTime } from "@/components/dependency-cells";
 import { DoneToggle, OwnerDueEditor, RemoveItemButton, AddItemForm, DeleteProjectButton } from "@/components/project-item-controls";
 
 function isPageItem(x: ProjectPageItem | ProjectExternalItem): x is ProjectPageItem {
@@ -58,6 +58,13 @@ export function ProjectDetail({ project }: { project: ProjectResult }) {
           {project.completion.total === 0
             ? "No items yet."
             : `${project.completion.done} of ${project.completion.total} done${project.completion.overdue > 0 ? `, ${project.completion.overdue} overdue` : ""}.`}
+        </p>
+        <p className="cmap-source-line">
+          {project.source ? (
+            <>Tracking <Link href={`/pages/${project.source.slug}`} className="stg-dep-link">{project.source.title}</Link>, last changed <span className="stg-dep-when">{relativeTime(project.source.updatedAt)}</span>. If it changes again after you mark something done, that item flags it.</>
+          ) : (
+            "Not tracking a page: done items never get flagged if something changes."
+          )}
         </p>
       </header>
 

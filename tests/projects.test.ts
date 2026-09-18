@@ -242,3 +242,17 @@ describe("projects: bug fixes from the cold MCP review", () => {
     expect(list.map((p) => p.term)).toEqual(expect.arrayContaining([a.term, b.term]));
   });
 });
+
+describe("project source is exposed and rendered from, not just written to", () => {
+  it("getProject returns source when set, null otherwise", async () => {
+    const org = await createTestOrg({ name: "Src Org", slug: "src-org" });
+    await createTestPage(org.id, { slug: "src-page" });
+    const withSource = await createProjectFromTemplate(org.id, { term: T("src/with"), title: "With source", source: "src-page" }, "agent");
+    expect(withSource.source?.slug).toBe("src-page");
+    expect(withSource.source?.title).toBeTruthy();
+    expect(withSource.source?.updatedAt).toBeTruthy();
+
+    const blank = await createProjectFromTemplate(org.id, { term: T("src/without"), title: "Without source" }, "agent");
+    expect(blank.source).toBeNull();
+  });
+});

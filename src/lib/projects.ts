@@ -49,6 +49,8 @@ export interface ProjectResult {
   items: Array<ProjectPageItem | ProjectExternalItem>;
   /** Sub-maps this project includes (live-referenced groups), each with the project's own roll-up of it. */
   includes: Array<{ term: string; kind: string; items: Array<ProjectPageItem | ProjectExternalItem> }>;
+  /** The page that asserts this project's own term, if one was picked. Drives doneStale: a done item shows a warning once this page changes again. */
+  source: { slug: string; title: string; updatedAt: string } | null;
   completion: { total: number; done: number; open: number; overdue: number };
 }
 
@@ -114,6 +116,7 @@ export async function getProject(orgId: string, term: string): Promise<ProjectRe
     title: project.title,
     clonedFrom: project.clonedFrom,
     createdAt: project.createdAt.toISOString(),
+    source: data.asserters[0] ? { slug: data.asserters[0].slug, title: data.asserters[0].title, updatedAt: data.asserters[0].updatedAt } : null,
     items: ownResolved,
     includes: includesOut,
     completion: { total, done, open: total - done, overdue },
