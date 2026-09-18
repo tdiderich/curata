@@ -97,7 +97,7 @@ function legacyNormalizeTerm(term: string): string {
  * Finds a concept by its current slug name, falling back to the pre-slug
  * legacy form so not-yet-migrated rows still match.
  */
-async function findConceptForTerm(rawTerm: string, normalized: string) {
+export async function findConceptForTerm(rawTerm: string, normalized: string) {
   const bySlug = await db.concept.findUnique({ where: { normalizedName: normalized } });
   if (bySlug) return bySlug;
   const legacy = legacyNormalizeTerm(rawTerm);
@@ -126,10 +126,10 @@ export function projectConceptTerms(existingTerms: string[], incoming?: ConceptI
   return terms;
 }
 
-type ConceptRow = NonNullable<Awaited<ReturnType<typeof findConceptForTerm>>>;
+export type ConceptRow = NonNullable<Awaited<ReturnType<typeof findConceptForTerm>>>;
 
 /** Find-or-create a concept row for a normalized term, racing safely. */
-async function ensureConcept(rawTerm: string, normalized: string, existing: ConceptRow | null, kind?: string): Promise<ConceptRow> {
+export async function ensureConcept(rawTerm: string, normalized: string, existing: ConceptRow | null, kind?: string): Promise<ConceptRow> {
   if (existing) {
     // Also migrates a legacy multi-word row to the slug form the first
     // time it's touched, so it stops needing this fallback afterward.
@@ -612,7 +612,7 @@ const DEPENDENT_PAGE_INCLUDE = {
   },
 };
 
-function isStale(verifiedAt: Date | null, sourceUpdatedAt: Date | undefined): boolean {
+export function isStale(verifiedAt: Date | null, sourceUpdatedAt: Date | undefined): boolean {
   if (!sourceUpdatedAt) return false;
   if (!verifiedAt) return true;
   return verifiedAt < sourceUpdatedAt;
@@ -846,7 +846,7 @@ function summarize(pages: DependentPage[], external: ExternalDependentRow[]): De
 }
 
 /** Latest updatedAt across the pages that assert each concept: "when did the truth last move". */
-async function sourceUpdatedAtByConcept(orgId: string, conceptIds: string[]): Promise<Map<string, Date>> {
+export async function sourceUpdatedAtByConcept(orgId: string, conceptIds: string[]): Promise<Map<string, Date>> {
   const out = new Map<string, Date>();
   if (conceptIds.length === 0) return out;
   const rows = await db.pageConcept.findMany({

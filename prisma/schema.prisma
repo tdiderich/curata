@@ -348,6 +348,8 @@ model PageConcept {
   page    Page    @relation(fields: [pageId], references: [id], onDelete: Cascade)
   concept Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
 
+  projectItems ProjectItem[]
+
   @@unique([pageId, conceptId, section])
   @@index([pageId])
   @@index([conceptId])
@@ -391,10 +393,72 @@ model ExternalEdge {
 
   asset   ExternalAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
   concept Concept       @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  projectItems ProjectItem[]
 
   @@unique([assetId, conceptId])
   @@index([conceptId])
   @@map("external_edges")
+}
+
+// A project is a run of a map you're actually executing: cloned from a
+// template (or started blank) at a point in time, tracked to completion.
+// Cloning creates independent edges for the template's own depends/external
+// (new PageConcept/ExternalEdge rows on this project's own term, so editing
+// the template later never touches an existing project) while any sub-map
+// the template includes stays a live reference - a genuinely shared
+// checklist (docs refresh, compliance) keeps behaving like the dependency
+// graph everywhere else: one place to fix, verified per project via the
+// same ConceptVerificationContext mechanism as an ordinary include.
+model Project {
+  id         String   @id @default(cuid())
+  orgId      String   @map("org_id")
+  /// The concept term this project tracks. Its own PageConcept/ExternalEdge
+  /// rows (via mapDependencies against this term) are what get_dependents
+  /// already renders; Project/ProjectItem layer completion tracking on top.
+  term       String
+  /// The template's term, if cloned from one. Informational - editing the
+  /// template after clone does not change this project's own items.
+  clonedFrom String?  @map("cloned_from")
+  title      String
+  createdBy  String   @map("created_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  items ProjectItem[]
+
+  @@unique([orgId, term])
+  @@map("projects")
+}
+
+// One trackable item on a project: a page-edge or an external-edge, plus
+// the fields the graph edge itself has no room for - owner, a due date,
+// and done, which is a distinct claim from verified (verified means "the
+// source hasn't moved since I looked"; done means "I shipped the update").
+// A done item that goes stale afterward (the source changed after doneAt)
+// is a real signal worth surfacing, computed at read time, not stored.
+model ProjectItem {
+  id              String    @id @default(cuid())
+  projectId       String    @map("project_id")
+  kind            String // "page" | "external"
+  pageConceptId   String?   @map("page_concept_id")
+  externalEdgeId  String?   @map("external_edge_id")
+  owner           String?
+  dueDate         DateTime? @map("due_date")
+  done            Boolean   @default(false)
+  doneAt          DateTime? @map("done_at")
+  doneBy          String?   @map("done_by")
+  createdBy       String    @map("created_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pageConcept  PageConcept?  @relation(fields: [pageConceptId], references: [id], onDelete: Cascade)
+  externalEdge ExternalEdge? @relation(fields: [externalEdgeId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, pageConceptId])
+  @@unique([projectId, externalEdgeId])
+  @@index([projectId])
+  @@map("project_items")
 }
 
 model PageLink {
