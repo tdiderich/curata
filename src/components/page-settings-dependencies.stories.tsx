@@ -92,7 +92,7 @@ const BOTH: DependentsResult = {
 const meta = {
   title: "Settings/PageSettingsDependencies",
   component: PageSettingsDependencies,
-  args: { data: BOTH },
+  args: { data: BOTH, pageId: "story-page-id", canEdit: true },
 } satisfies Meta<typeof PageSettingsDependencies>;
 
 export default meta;

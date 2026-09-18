@@ -135,7 +135,7 @@ export default async function PageSettingsView({
     },
     {
       label: "Dependencies",
-      content: <PageSettingsDependencies data={dependents} />,
+      content: <PageSettingsDependencies data={dependents} pageId={pageRow.id} canEdit={canEditPage} />,
     },
     {
       label: "Rules",

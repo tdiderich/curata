@@ -3,10 +3,13 @@ import { SettingsSection } from "@/components/settings/settings-section";
 import { SettingsTable } from "@/components/settings/settings-table";
 import type { DependentsResult, DependentPage } from "@/lib/concepts";
 import { DependencyVerifyButton } from "@/components/dependency-verify-button";
+import { AddDependencyForm, RemoveDependencyButton } from "@/components/dependency-add-remove";
 import { relBadge, verifiedCell, noteCell, externalLink, termLink } from "@/components/dependency-cells";
 
 interface PageSettingsDependenciesProps {
   data: DependentsResult;
+  pageId: string;
+  canEdit: boolean;
 }
 
 /**
@@ -15,7 +18,7 @@ interface PageSettingsDependenciesProps {
  * same in Storybook as in the app. Depth 1. Agents set rel on tags; humans
  * read the consequences here and click Verify when a row still holds.
  */
-export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps) {
+export function PageSettingsDependencies({ data, pageId, canEdit }: PageSettingsDependenciesProps) {
   const dependsOn = data.concepts.filter((c) => c.rel === "depends");
   const asserts = data.concepts.filter((c) => c.rel === "asserts");
   const assertersByTerm = new Map<string, DependentPage[]>();
@@ -41,6 +44,7 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
               <th className="dash-th dash-th-title" style={{ width: "40%" }}>Concept</th>
               <th className="dash-th">Asserted by</th>
               <th className="dash-th">Rel</th>
+              {canEdit && <th className="dash-th stg-th-right">&nbsp;</th>}
             </>
           }
           empty={
@@ -70,10 +74,16 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
                   )}
                 </td>
                 <td className="dash-td">{relBadge(c.rel)}</td>
+                {canEdit && (
+                  <td className="dash-td stg-td-right">
+                    <RemoveDependencyButton pageId={pageId} term={c.term} />
+                  </td>
+                )}
               </tr>
             );
           })}
         </SettingsTable>
+        {canEdit && <div className="stg-composer"><AddDependencyForm pageId={pageId} /></div>}
       </SettingsSection>
 
       <SettingsSection
