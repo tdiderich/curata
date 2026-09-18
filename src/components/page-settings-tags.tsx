@@ -32,8 +32,37 @@ const KIND_TONE: Record<string, StatusBadgeTone> = {
   template: "template",
 };
 
+/** Rels a human picks. instantiates is system-written and stays read-only. */
+const PICKABLE_RELS = ["references", "depends", "asserts"] as const;
+const REL_HINT: Record<string, string> = {
+  references: "Mentions it. Nothing to re-check when it changes.",
+  depends: "Goes stale when it changes. Shows up on the map as something to re-check.",
+  asserts: "This page is the source of truth for it. Changing this page marks dependents stale.",
+  instantiates: "Built from this template by create_from_template.",
+};
+
 export function PageSettingsTags({ pageId, initialTags, tagOptions, canEdit, folderTag }: PageSettingsTagsProps) {
   const [tags, setTags] = useState<PageTag[]>(initialTags);
+  const [busyTerm, setBusyTerm] = useState<string | null>(null);
+
+  async function setRel(tag: PageTag, rel: string) {
+    if ((tag.rel ?? "references") === rel) return;
+    const prev = tags;
+    setBusyTerm(tag.term);
+    setTags((t) => t.map((x) => (x.term === tag.term ? { ...x, rel } : x)));
+    try {
+      const res = await fetch(`${basePath}/api/tags`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pageId, tags: [{ term: tag.term, kind: tag.kind, rel }] }),
+      });
+      if (!res.ok) setTags(prev);
+    } catch {
+      setTags(prev);
+    } finally {
+      setBusyTerm(null);
+    }
+  }
 
   async function add(newTags: TagOption[]): Promise<boolean> {
     try {
@@ -73,7 +102,7 @@ export function PageSettingsTags({ pageId, initialTags, tagOptions, canEdit, fol
   const hasRows = tags.length > 0 || !!folderTag;
 
   return (
-    <SettingsSection title="Tags" description="Tags place this page in the knowledge graph and the agents' brain map.">
+    <SettingsSection title="Tags" description="Tags place this page in the knowledge graph. Rel says how: references just mentions it, depends means this page goes stale when it changes, asserts means this page is where the truth lives. depends and asserts put it on the map.">
       <SettingsTable
         head={
           <>
@@ -100,7 +129,31 @@ export function PageSettingsTags({ pageId, initialTags, tagOptions, canEdit, fol
               <StatusBadge tone={KIND_TONE[tag.kind] ?? "topic"} label={tag.kind || "topic"} />
             </td>
             <td className="dash-td">
-              <StatusBadge tone={REL_TONE[tag.rel ?? "references"] ?? "references"} label={tag.rel ?? "references"} />
+              {canEdit && tag.rel !== "instantiates" ? (
+                <div className="stg-seg" role="radiogroup" aria-label={`Relation of ${tag.term} to this page`}>
+                  {PICKABLE_RELS.map((rel) => {
+                    const on = (tag.rel ?? "references") === rel;
+                    return (
+                      <button
+                        key={rel}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        className={`stg-seg-btn${on ? ` stg-seg-btn--on stg-seg-btn--${rel}` : ""}`}
+                        title={REL_HINT[rel]}
+                        disabled={busyTerm === tag.term}
+                        onClick={() => setRel(tag, rel)}
+                      >
+                        {rel}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <span title={REL_HINT[tag.rel ?? "references"]}>
+                  <StatusBadge tone={REL_TONE[tag.rel ?? "references"] ?? "references"} label={tag.rel ?? "references"} />
+                </span>
+              )}
             </td>
             {canEdit && (
               <td className="dash-td stg-td-right">
