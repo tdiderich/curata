@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getVocabulary } from "@/lib/concepts";
+import { getVocabulary, listConceptMaps } from "@/lib/concepts";
 import { NewMapForm } from "@/components/new-map-form";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ export default async function NewMapPage({ searchParams }: { searchParams: Promi
   const ctx = await resolveOrg();
   if (!ctx) redirect(AUTH_MODE === "clerk" ? "/onboarding" : "/sign-in");
   const sp = await searchParams;
-  const [pages, folders, vocab] = await Promise.all([
+  const [pages, folders, vocab, maps] = await Promise.all([
     db.page.findMany({
       where: { orgId: ctx.orgId, status: { not: "archived" }, seeded: false },
       orderBy: { title: "asc" },
@@ -21,6 +21,7 @@ export default async function NewMapPage({ searchParams }: { searchParams: Promi
     }),
     db.folder.findMany({ where: { orgId: ctx.orgId }, select: { id: true, name: true } }),
     getVocabulary(),
+    listConceptMaps(ctx.orgId),
   ]);
   const folderName = new Map(folders.map((f) => [f.id, f.name]));
   return (
@@ -35,6 +36,7 @@ export default async function NewMapPage({ searchParams }: { searchParams: Promi
           <NewMapForm
             pages={pages.map((p) => ({ slug: p.slug, title: p.title, folderName: p.folderId ? folderName.get(p.folderId) ?? null : null }))}
             concepts={vocab.concepts.map((c) => ({ term: c.term, kind: c.kind }))}
+            groups={maps.map((m) => ({ term: m.term, kind: m.kind, needsLook: m.needsLook, total: m.total }))}
             initialTerm={sp.term ?? ""}
           />
         </div>

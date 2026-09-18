@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   const ctx = await resolveOrg();
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  let body: { slug?: string; url?: string; term?: string; note?: string; status?: string };
+  let body: { slug?: string; url?: string; term?: string; context?: string; note?: string; status?: string };
   try {
     body = await request.json();
   } catch {
@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       slug: body.slug || undefined,
       url: body.url || undefined,
       term: body.term || undefined,
+      context: body.context || undefined,
       note: typeof body.note === "string" ? body.note.slice(0, 500) : undefined,
       status: body.status === "needs_change" ? "needs_change" : "holds",
     });

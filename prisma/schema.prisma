@@ -268,9 +268,61 @@ model Concept {
 
   pages PageConcept[]
   externalEdges ExternalEdge[]
+  includesAsParent ConceptInclude[] @relation("IncludeParent")
+  includesAsChild  ConceptInclude[] @relation("IncludeChild")
+  verificationContexts ConceptVerificationContext[]
 
   @@index([orgId, isRecommended])
   @@map("concepts")
+}
+
+// A map (root or group) including another map as a sub-map: parent's tree
+// pulls in child's dependents/external when rendered. Additive edge on the
+// concept graph, org-scoped by convention (both concepts already carry
+// their own org's pages) - not FK'd to org directly since Concept isn't
+// either. Cycles are refused at write time (see includeMap in concepts.ts),
+// never at read time, so a bad cycle can never make getDependents loop.
+model ConceptInclude {
+  id        String   @id @default(cuid())
+  parentId  String   @map("parent_id")
+  childId   String   @map("child_id")
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  parent Concept @relation("IncludeParent", fields: [parentId], references: [id], onDelete: Cascade)
+  child  Concept @relation("IncludeChild", fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, childId])
+  @@index([childId])
+  @@map("concept_includes")
+}
+
+// Per-context verification override for an edge (PageConcept or
+// ExternalEdge) reached through an include chain. The edge's own
+// verifiedAt/verifiedNote/needsChange columns are the record "for the
+// concept this edge is tagged to" (its own context). This table holds the
+// record "for a DIFFERENT root concept viewing it through an include" -
+// verifying a shared leaf for one launch must never paint it verified for
+// another launch that includes the same group. contextConceptId is that
+// other root; absent = no override yet, read path treats it as never
+// checked for that context rather than falling back to the base fields.
+model ConceptVerificationContext {
+  id               String    @id @default(cuid())
+  edgeType         String    @map("edge_type") // "page" | "external"
+  edgeId           String    @map("edge_id")   // PageConcept.id or ExternalEdge.id
+  contextConceptId String    @map("context_concept_id")
+  verifiedAt       DateTime  @map("verified_at")
+  verifiedNote     String?   @map("verified_note")
+  needsChange      Boolean   @default(false) @map("needs_change")
+  createdBy        String    @map("created_by")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  contextConcept Concept @relation(fields: [contextConceptId], references: [id], onDelete: Cascade)
+
+  @@unique([edgeType, edgeId, contextConceptId])
+  @@index([contextConceptId])
+  @@map("concept_verification_contexts")
 }
 
 model PageConcept {

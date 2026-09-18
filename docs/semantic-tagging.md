@@ -67,7 +67,11 @@ Omitting `rel` on a tag the page already has leaves the existing rel alone. Term
 ## Querying the graph
 
 - `get_dependents` — given a `term` or `slug`, the directional view: pages that depend on it, the page that asserts it, pages built from it, and external assets attached to it. Every row carries `verifiedAt` and `staleAgainstSource` (the source of truth moved after that row was last verified). Call before changing something, and after, to see what still has not been looked at.
-- `map_dependencies` — build the graph around one concept in one call: `term`, `asserts` (slugs that own the truth), `depends` (slugs that go stale), `references`, and `external` (`[{url, label?, owner?, rel?}]` for assets outside curata). Additive; unknown slugs come back in `missing`.
+- `map_dependencies` — build the graph around one concept in one call: `term`, `asserts` (slugs that own the truth), `depends` (slugs that go stale), `references`, `external` (`[{url, label?, owner?, rel?}]` for assets outside curata), and `includes` (terms of other maps to reuse as sub-maps). Additive except `removeIncludes`; unknown slugs come back in `missing`, unknown include terms in `missingIncludes`, neither fails the call.
+
+### Sub-maps
+
+A map can include another map's own `depends`/`external` as a reusable group: `includes: ["group/sales-enablement"]` pulls that group's rows into the parent's `get_dependents` response, tagged with `group`. Verification of a shared row is per (edge, viewing map): checking it while looking at one parent never marks it checked for another parent that also includes the group, or for the group's own direct view. `mark_verified` takes an optional `context` (the map you're currently looking at) alongside `term` (the edge's own concept) to scope the write; passing the same value for both, or omitting `context`, writes the ordinary un-scoped record. A cycle (an include chain that would let a map include itself) is refused at write time.
 - `mark_verified` — "looked at it." Records the outcome on one edge (`slug` or `url` plus `term`) or on every edge the page or asset carries (omit `term`), without writing a version. `status` is `holds` (default, still right) or `needs_change` (looked, it is wrong, reads as "needs update" until a write or a later holds). Optional `note` says what you found. Any write to a page verifies every edge it carries and clears notes, and so does `mark_trusted`.
 
 ### Verification is per edge

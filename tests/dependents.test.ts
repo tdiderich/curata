@@ -32,6 +32,7 @@ import {
   verifyDependent,
   mapDependencies,
   listConceptMaps,
+  includeMap,
 } from "@/lib/concepts";
 import { dispatch, describeToolParams } from "@/lib/mcp-dispatch";
 import { testDb } from "./setup";
@@ -561,5 +562,110 @@ describe("listConceptMaps", () => {
     expect(rows[0]).toMatchObject({ needsLook: 2, total: 2, sources: [expect.objectContaining({ slug: "src-b" })] });
     expect(rows[1]).toMatchObject({ needsLook: 1, total: 2 });
     expect(rows[1].summary.external.neverChecked).toBe(1);
+  });
+});
+
+describe("includeMap: sub-maps and per-context verification", () => {
+  let orgId: string;
+  beforeEach(async () => {
+    orgId = (await createTestOrg({ name: "Tree Org", slug: "tree-org" })).id;
+  });
+
+  it("refuses a cycle and self-include", async () => {
+    await upsertConcepts((await createTestPage(orgId, { slug: "tree-a-src" })).id, [{ term: T("tree/a"), rel: "asserts" }], "agent");
+    await upsertConcepts((await createTestPage(orgId, { slug: "tree-b-src" })).id, [{ term: T("tree/b"), rel: "asserts" }], "agent");
+    await expect(includeMap(orgId, T("tree/a"), T("tree/a"), "agent")).rejects.toThrow(/cannot include itself/);
+    await includeMap(orgId, T("tree/a"), T("tree/b"), "agent");
+    await expect(includeMap(orgId, T("tree/b"), T("tree/a"), "agent")).rejects.toThrow(/would create a cycle/);
+  });
+
+  it("includes a group's depends+external into the parent view, tagged with group, and dedupes a shared leaf", async () => {
+    const groupSrc = await createTestPage(orgId, { slug: "grp-src" });
+    await createTestPage(orgId, { slug: "grp-shared" });
+    await upsertConcepts(groupSrc.id, [{ term: T("group/sales"), rel: "asserts" }], "agent");
+    await mapDependencies(orgId, {
+      term: T("group/sales"),
+      depends: ["grp-shared"],
+      external: [{ url: "https://example.com/deck" }],
+    }, "agent");
+
+    const launchSrc = await createTestPage(orgId, { slug: "launch-src" });
+    await createTestPage(orgId, { slug: "launch-own" });
+    await upsertConcepts(launchSrc.id, [{ term: T("launch/sso"), rel: "asserts" }], "agent");
+    const mapped = await mapDependencies(orgId, {
+      term: T("launch/sso"),
+      depends: ["launch-own"],
+      includes: [T("group/sales")],
+    }, "agent");
+    expect(mapped.includes).toEqual([T("group/sales")]);
+    expect(mapped.missingIncludes).toEqual([]);
+
+    const r = await getDependents(orgId, { term: T("launch/sso") });
+    expect(r.truncated).toBe(false);
+    expect(r.includes.map((i) => i.term)).toEqual([T("group/sales")]);
+    const slugs = r.dependents.map((d) => d.slug).sort();
+    expect(slugs).toEqual(["grp-shared", "launch-own"]);
+    const sharedRow = r.dependents.find((d) => d.slug === "grp-shared")!;
+    expect(sharedRow.group).toBe(T("group/sales"));
+    expect(r.external.map((e) => e.url)).toEqual(["https://example.com/deck"]);
+    expect(r.external[0].group).toBe(T("group/sales"));
+    // Reached only once even though it's in the group; own edges aren't tagged.
+    const ownRow = r.dependents.find((d) => d.slug === "launch-own")!;
+    expect(ownRow.group).toBeUndefined();
+  });
+
+  it("verifying a shared group's leaf for one launch does not paint it verified for another", async () => {
+    const groupSrc = await createTestPage(orgId, { slug: "ctx-grp-src" });
+    const shared = await createTestPage(orgId, { slug: "ctx-shared" });
+    await upsertConcepts(groupSrc.id, [{ term: T("group/ctx"), rel: "asserts" }], "agent");
+    await mapDependencies(orgId, { term: T("group/ctx"), depends: ["ctx-shared"] }, "agent");
+
+    const aSrc = await createTestPage(orgId, { slug: "ctx-a-src" });
+    const bSrc = await createTestPage(orgId, { slug: "ctx-b-src" });
+    await upsertConcepts(aSrc.id, [{ term: T("launch/a"), rel: "asserts" }], "agent");
+    await upsertConcepts(bSrc.id, [{ term: T("launch/b"), rel: "asserts" }], "agent");
+    await mapDependencies(orgId, { term: T("launch/a"), includes: [T("group/ctx")] }, "agent");
+    await mapDependencies(orgId, { term: T("launch/b"), includes: [T("group/ctx")] }, "agent");
+
+    let ra = await getDependents(orgId, { term: T("launch/a") });
+    let rb = await getDependents(orgId, { term: T("launch/b") });
+    expect(ra.dependents[0].verifiedAt).toBeNull();
+    expect(rb.dependents[0].verifiedAt).toBeNull();
+
+    // Verify for launch/a specifically (context = launch/a's term).
+    const v = await verifyDependent(orgId, { slug: "ctx-shared", term: T("group/ctx"), context: T("launch/a"), note: "checked for a" });
+    expect(v.context).toBe(T("launch/a"));
+    expect(v.count).toBe(1);
+
+    ra = await getDependents(orgId, { term: T("launch/a") });
+    rb = await getDependents(orgId, { term: T("launch/b") });
+    expect(ra.dependents[0].staleAgainstSource).toBe(false);
+    expect(ra.dependents[0].verifiedNote).toBe("checked for a");
+    // launch/b sees the same leaf as still never-checked, not verified.
+    expect(rb.dependents[0].verifiedAt).toBeNull();
+    expect(rb.dependents[0].staleAgainstSource).toBe(true);
+
+    // Viewing the group directly is unaffected by either context write.
+    const rg = await getDependents(orgId, { term: T("group/ctx") });
+    expect(rg.dependents[0].verifiedAt).toBeNull();
+
+    // context without term is rejected.
+    await expect(verifyDependent(orgId, { slug: "ctx-shared", context: T("launch/a") })).rejects.toThrow(/term is required when context/);
+  });
+
+  it("removeIncludes detaches a sub-map", async () => {
+    await upsertConcepts((await createTestPage(orgId, { slug: "ri-grp-src" })).id, [{ term: T("group/ri"), rel: "asserts" }], "agent");
+    await mapDependencies(orgId, { term: T("group/ri"), depends: ["ri-grp-src"] }, "agent");
+    await upsertConcepts((await createTestPage(orgId, { slug: "ri-root-src" })).id, [{ term: T("launch/ri"), rel: "asserts" }], "agent");
+    await mapDependencies(orgId, { term: T("launch/ri"), includes: [T("group/ri")] }, "agent");
+    expect((await getDependents(orgId, { term: T("launch/ri") })).includes).toHaveLength(1);
+    await mapDependencies(orgId, { term: T("launch/ri"), removeIncludes: [T("group/ri")] }, "agent");
+    expect((await getDependents(orgId, { term: T("launch/ri") })).includes).toHaveLength(0);
+  });
+
+  it("mapDependencies reports an unresolved include term instead of failing the call", async () => {
+    await upsertConcepts((await createTestPage(orgId, { slug: "mi-src" })).id, [{ term: T("launch/mi"), rel: "asserts" }], "agent");
+    const r = await mapDependencies(orgId, { term: T("launch/mi"), includes: [T("group/does-not-exist")] }, "agent");
+    expect(r.missingIncludes).toEqual([T("group/does-not-exist")]);
   });
 });

@@ -9,8 +9,10 @@ interface DependencyVerifyButtonProps {
   slug?: string;
   /** ...external asset url. Exactly one. */
   url?: string;
-  /** Scope an external verify to one concept edge. */
+  /** Scope to one concept edge. */
   term?: string;
+  /** Set when this row was reached through an include: the root map term being viewed, so the check applies to this map only. */
+  context?: string;
   /** Button label; "Verify" for a never-checked row, "Re-verify" otherwise. */
   label: string;
 }
@@ -21,7 +23,7 @@ interface DependencyVerifyButtonProps {
  * wrong). Either posts to /api/dependents/verify and refreshes the
  * server-rendered table. Enter = Holds, Escape cancels.
  */
-export function DependencyVerifyButton({ slug, url, term, label }: DependencyVerifyButtonProps) {
+export function DependencyVerifyButton({ slug, url, term, context, label }: DependencyVerifyButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
@@ -35,7 +37,7 @@ export function DependencyVerifyButton({ slug, url, term, label }: DependencyVer
       const res = await fetch(`${basePath}/api/dependents/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, url, term, status, note: note.trim() || undefined }),
+        body: JSON.stringify({ slug, url, term, context, status, note: note.trim() || undefined }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));

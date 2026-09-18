@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getDependents, getVocabulary, normalizeTerm } from "@/lib/concepts";
+import { getDependents, getVocabulary, listConceptMaps, normalizeTerm } from "@/lib/concepts";
 import { NewMapForm } from "@/components/new-map-form";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export default async function EditMapPage({ params }: { params: Promise<Params> 
   let data;
   try { data = await getDependents(ctx.orgId, { term }); } catch { redirect(`/map/new?term=${encodeURIComponent(term)}`); }
 
-  const [pages, folders, vocab] = await Promise.all([
+  const [pages, folders, vocab, maps] = await Promise.all([
     db.page.findMany({
       where: { orgId: ctx.orgId, status: { not: "archived" }, seeded: false },
       orderBy: { title: "asc" },
@@ -32,6 +32,7 @@ export default async function EditMapPage({ params }: { params: Promise<Params> 
     }),
     db.folder.findMany({ where: { orgId: ctx.orgId }, select: { id: true, name: true } }),
     getVocabulary(),
+    listConceptMaps(ctx.orgId),
   ]);
   const folderName = new Map(folders.map((f) => [f.id, f.name]));
 
@@ -47,12 +48,16 @@ export default async function EditMapPage({ params }: { params: Promise<Params> 
           <NewMapForm
             pages={pages.map((p) => ({ slug: p.slug, title: p.title, folderName: p.folderId ? folderName.get(p.folderId) ?? null : null }))}
             concepts={vocab.concepts.map((c) => ({ term: c.term, kind: c.kind }))}
+            groups={maps.filter((m) => m.term !== term).map((m) => ({ term: m.term, kind: m.kind, needsLook: m.needsLook, total: m.total }))}
             initial={{
               term,
               kind: data.concept?.kind ?? "",
               source: data.asserters[0]?.slug ?? "",
-              depends: data.dependents.map((d) => d.slug),
-              external: data.external.map((e) => ({ url: e.url, label: e.label, owner: e.owner ?? "" })),
+              // Rows pulled in through an include are already covered by
+              // that include; only the map's OWN direct edges go here.
+              depends: data.dependents.filter((d) => !d.group).map((d) => d.slug),
+              external: data.external.filter((e) => !e.group).map((e) => ({ url: e.url, label: e.label, owner: e.owner ?? "" })),
+              includes: data.includes.map((i) => i.term),
             }}
           />
         </div>

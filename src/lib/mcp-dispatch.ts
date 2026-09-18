@@ -203,8 +203,8 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_vocabulary: { known: new Set(["kind", "query"]) },
   get_related: { known: new Set(["slug", "term"]) },
   get_dependents: { known: new Set(["slug", "term", "rel"]) },
-  map_dependencies: { known: new Set(["term", "kind", "asserts", "depends", "references", "external"]) },
-  mark_verified: { known: new Set(["slug", "url", "term", "note", "status"]) },
+  map_dependencies: { known: new Set(["term", "kind", "asserts", "depends", "references", "external", "includes", "removeIncludes"]) },
+  mark_verified: { known: new Set(["slug", "url", "term", "context", "note", "status"]) },
   get_semantic_map: { known: new Set(["kind"]) },
   export_page: { known: new Set(["slug", "format"]) },
   export_report: { known: new Set(["slugs", "title", "subtitle"]) },
@@ -1708,8 +1708,10 @@ export async function dispatch(
         depends: slugList("depends"),
         references: slugList("references"),
         external,
+        includes: slugList("includes"),
+        removeIncludes: slugList("removeIncludes"),
       }, userId || "agent");
-      logAudit({ orgId, action: "dependencies.map", resourceType: "concept", resourceId: mapped.term, actorType: "apikey", actorId, metadata: { tagged: mapped.tagged.length, external: mapped.external.length, missing: mapped.missing } });
+      logAudit({ orgId, action: "dependencies.map", resourceType: "concept", resourceId: mapped.term, actorType: "apikey", actorId, metadata: { tagged: mapped.tagged.length, external: mapped.external.length, missing: mapped.missing, includes: mapped.includes, missingIncludes: mapped.missingIncludes } });
       return mapped;
     }
 
@@ -1717,8 +1719,8 @@ export async function dispatch(
       if (!args.slug && !args.url) throw new Error("slug or url is required");
       if (args.slug && !SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       if (args.status && !VERIFY_STATUSES.includes(args.status as VerifyStatus)) throw new Error(`status must be one of ${VERIFY_STATUSES.join("|")}`);
-      const verified = await verifyDependent(orgId, { slug: args.slug || undefined, url: args.url || undefined, term: args.term || undefined, note: args.note || undefined, status: (args.status as VerifyStatus) || undefined });
-      logAudit({ orgId, action: "page.verify", resourceType: verified.kind, resourceId: verified.id, actorType: "apikey", actorId });
+      const verified = await verifyDependent(orgId, { slug: args.slug || undefined, url: args.url || undefined, term: args.term || undefined, context: args.context || undefined, note: args.note || undefined, status: (args.status as VerifyStatus) || undefined });
+      logAudit({ orgId, action: "page.verify", resourceType: verified.kind, resourceId: verified.id, actorType: "apikey", actorId, metadata: { context: verified.context } });
       return { ok: true, ...verified };
     }
 

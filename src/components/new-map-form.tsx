@@ -6,6 +6,7 @@ import { basePath } from "@/lib/api-fetch";
 
 export interface NewMapPage { slug: string; title: string; folderName: string | null }
 export interface NewMapConcept { term: string; kind: string }
+export interface NewMapGroup { term: string; kind: string; needsLook: number; total: number }
 
 interface ExternalDraft { url: string; label: string; owner: string }
 
@@ -29,9 +30,10 @@ export interface NewMapInitial {
   source: string;
   depends: string[];
   external: ExternalDraft[];
+  includes: string[];
 }
 
-export function NewMapForm({ pages, concepts, initialTerm = "", initial }: { pages: NewMapPage[]; concepts: NewMapConcept[]; initialTerm?: string; initial?: NewMapInitial }) {
+export function NewMapForm({ pages, concepts, groups = [], initialTerm = "", initial }: { pages: NewMapPage[]; concepts: NewMapConcept[]; groups?: NewMapGroup[]; initialTerm?: string; initial?: NewMapInitial }) {
   const router = useRouter();
   const editing = !!initial;
   const [term, setTerm] = useState(initial?.term ?? initialTerm);
@@ -39,6 +41,8 @@ export function NewMapForm({ pages, concepts, initialTerm = "", initial }: { pag
   const [source, setSource] = useState<string>(initial?.source ?? "");
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<Set<string>>(new Set(initial?.depends ?? []));
+  const [groupQuery, setGroupQuery] = useState("");
+  const [pickedGroups, setPickedGroups] = useState<Set<string>>(new Set(initial?.includes ?? []));
   const [externals, setExternals] = useState<ExternalDraft[]>(initial?.external?.length ? initial.external : [{ url: "", label: "", owner: "" }]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,11 +71,24 @@ export function NewMapForm({ pages, concepts, initialTerm = "", initial }: { pag
   const removeExternal = editing
     ? initial!.external.map((e) => e.url).filter((u) => !validExternals.some((v) => v.url.trim() === u))
     : [];
-  const canSubmit = !!normalized && !busy && (picked.size > 0 || validExternals.length > 0 || !!source || removePages.length > 0 || removeExternal.length > 0);
+  const removeGroups = editing ? initial!.includes.filter((g) => !pickedGroups.has(g)) : [];
+  const canSubmit = !!normalized && !busy && (
+    picked.size > 0 || validExternals.length > 0 || !!source || pickedGroups.size > 0
+    || removePages.length > 0 || removeExternal.length > 0 || removeGroups.length > 0
+  );
 
   function toggle(slug: string) {
     setPicked((s) => { const n = new Set(s); if (n.has(slug)) n.delete(slug); else n.add(slug); return n; });
   }
+  function toggleGroup(term: string) {
+    setPickedGroups((s) => { const n = new Set(s); if (n.has(term)) n.delete(term); else n.add(term); return n; });
+  }
+
+  const visibleGroups = useMemo(() => {
+    const q = groupQuery.trim().toLowerCase();
+    const list = q ? groups.filter((g) => g.term.includes(q) || g.kind.includes(q)) : groups;
+    return list.filter((g) => g.term !== normalized);
+  }, [groups, groupQuery, normalized]);
 
   async function submit() {
     setBusy(true); setError(null);
@@ -85,8 +102,10 @@ export function NewMapForm({ pages, concepts, initialTerm = "", initial }: { pag
           asserts: source ? [source] : [],
           depends: [...picked],
           external: validExternals.map((e) => ({ url: e.url.trim(), label: e.label.trim() || undefined, owner: e.owner.trim() || undefined })),
+          includes: [...pickedGroups],
           removePages,
           removeExternal,
+          removeIncludes: removeGroups,
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -149,6 +168,33 @@ export function NewMapForm({ pages, concepts, initialTerm = "", initial }: { pag
       </section>
 
       <section className="nmf-step">
+        <div className="nmf-label">Reuse an existing map? <span className="nmf-opt">optional</span></div>
+        <p className="nmf-hint">A group like sales-enablement can back more than one change. Its rows show up here too, checked once for this map only.</p>
+        {groups.length === 0 ? (
+          <div className="nmf-hint">No other maps to reuse yet.</div>
+        ) : (
+          <>
+            <input className="stg-input" placeholder="Filter maps" value={groupQuery} onChange={(e) => setGroupQuery(e.target.value)} aria-label="Filter maps" />
+            <ul className="nmf-pages nmf-groups" role="listbox" aria-multiselectable>
+              {visibleGroups.map((g) => {
+                const on = pickedGroups.has(g.term);
+                return (
+                  <li key={g.term}>
+                    <label className={`nmf-page${on ? " nmf-page--on" : ""}`}>
+                      <input type="checkbox" checked={on} onChange={() => toggleGroup(g.term)} />
+                      <span className="nmf-page-title nmf-page-title--mono">{g.term}</span>
+                      <span className="nmf-page-folder">{g.total === 0 ? "empty" : `${g.needsLook} of ${g.total} need a look`}</span>
+                    </label>
+                  </li>
+                );
+              })}
+              {visibleGroups.length === 0 && <li className="nmf-empty">No maps match.</li>}
+            </ul>
+          </>
+        )}
+      </section>
+
+      <section className="nmf-step">
         <div className="nmf-label">Anything outside curata? <span className="nmf-opt">optional</span></div>
         <p className="nmf-hint">Decks, docs, dashboards, repo files. Paste the link, name it, say who owns it.</p>
         <div className="nmf-ext-list">
@@ -168,7 +214,8 @@ export function NewMapForm({ pages, concepts, initialTerm = "", initial }: { pag
         {error && <span className="stg-dep-verify-error">{error}</span>}
         <span className="nmf-summary">
           {normalized ? <code>{normalized}</code> : "unnamed"} · {source ? "1 source" : "no source"} · {picked.size} page{picked.size === 1 ? "" : "s"} · {validExternals.length} link{validExternals.length === 1 ? "" : "s"}
-          {editing && removePages.length + removeExternal.length > 0 && <> · removing {removePages.length + removeExternal.length}</>}
+          {pickedGroups.size > 0 && <> · {pickedGroups.size} reused map{pickedGroups.size === 1 ? "" : "s"}</>}
+          {editing && removePages.length + removeExternal.length + removeGroups.length > 0 && <> · removing {removePages.length + removeExternal.length + removeGroups.length}</>}
         </span>
         <button type="button" className="btn btn--primary" disabled={!canSubmit} onClick={() => void submit()}>
           {busy ? "Saving" : editing ? "Save map" : "Create map"}

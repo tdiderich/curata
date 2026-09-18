@@ -18,8 +18,8 @@ components:
           - **list_pages** / **list_folders** / **get_folder_structure** - browse the brain's shape
           - **get_related** - pages linked or conceptually near a given page
           - **get_dependents** - what depends on a concept or page, what asserts it, what was built from it, external assets attached to it, and which of those are stale against the source
-          - **map_dependencies** - build a dependency graph around one concept in one call (asserts, depends, references, external urls)
-          - **mark_verified** - record that a page or external asset was checked against a concept: `status` holds or needs_change, `note` for what you found, no new version
+          - **map_dependencies** - build a dependency graph around one concept in one call (asserts, depends, references, external urls, includes for reusing another map as a sub-map)
+          - **mark_verified** - record that a page or external asset was checked against a concept: `status` holds or needs_change, `note` for what you found, `context` to scope a shared sub-map's row to the map you're checking it for, no new version
           - **get_semantic_map** / **get_vocabulary** - the org's concept graph and tag vocabulary
           - **get_versions** - a page's version history
           - **get_config** / **get_component_reference** - org settings and the component catalog

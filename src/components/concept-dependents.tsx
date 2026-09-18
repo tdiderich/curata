@@ -27,11 +27,21 @@ function matches(r: Row, f: ConceptFilter) {
   return r.state !== "ok";
 }
 
+// context = the map currently being viewed. verifyDependent collapses
+// context into a no-op (writes the base fields) when it equals the edge's
+// own concept, which is exactly the case for every row that was not pulled
+// in through an include - so it's always safe to pass, and it's the one
+// thing that keeps a shared sub-map's check from bleeding into another map.
 function verifyButton(r: Row, term: string) {
   const label = r.state === "ok" ? "Re-verify" : "Verify";
   return r.kind === "page"
-    ? <DependencyVerifyButton slug={r.d.slug} term={r.d.via} label={label} />
-    : <DependencyVerifyButton url={r.e.url} term={term} label={label} />;
+    ? <DependencyVerifyButton slug={r.d.slug} term={r.d.via} context={term} label={label} />
+    : <DependencyVerifyButton url={r.e.url} term={r.e.via} context={term} label={label} />;
+}
+
+function groupTag(group: string | undefined) {
+  if (!group) return null;
+  return <Link href={`/map/${group}`} className="cmap-group-tag" title={`Included from ${group}`}>{group}</Link>;
 }
 
 /**
@@ -98,6 +108,19 @@ export function ConceptDependents({ data, term, view, filter }: { data: Dependen
         ))}
       </div>
 
+      {data.includes.length > 0 && (
+        <div className="cmap-includes">
+          <span className="cmap-includes-label">Includes</span>
+          {data.includes.map((inc) => (
+            <Link key={inc.term} href={`/map/${inc.term}`} className="cmap-include-chip">
+              {inc.term}
+              <span className="stg-dep-when">{inc.summary.text}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+      {data.truncated && <div className="cmap-note-warn">This tree goes deeper than shown; some sub-maps were cut off.</div>}
+
       {rows.length === 0 ? (
         <div className="dash-empty">Nothing depends on {term} yet. Tag pages with rel depends, or call map_dependencies.</div>
       ) : view === "board" ? (
@@ -125,7 +148,7 @@ function Table({ rows, term }: { rows: Row[]; term: string }) {
       <tbody>
         {rows.map((r) => r.kind === "page" ? (
           <tr key={`p:${r.d.slug}:${r.d.via}:${r.d.rel}`} className="dash-row">
-            <td className="dash-td dash-td-title">{pageLink(r.d)}</td>
+            <td className="dash-td dash-td-title">{pageLink(r.d)}{groupTag(r.d.group)}</td>
             <td className="dash-td">{termLink(r.d.via)}</td>
             <td className="dash-td">{relBadge(r.d.rel)}</td>
             <td className="dash-td"><span className="stg-dep-verify-cell">{verifiedCell(r.d)}{verifyButton(r, term)}</span></td>
@@ -136,6 +159,7 @@ function Table({ rows, term }: { rows: Row[]; term: string }) {
             <td className="dash-td dash-td-title">
               {externalLink(r.e)}
               {r.e.owner && <span className="stg-dep-owner">{r.e.owner}</span>}
+              {groupTag(r.e.group)}
             </td>
             <td className="dash-td" title={r.e.alsoDependsOn.length ? `Also tracked against ${r.e.alsoDependsOn.join(", ")}` : undefined}>
               {termLink(r.e.via)}
@@ -169,7 +193,7 @@ function Board({ rows, term }: { rows: Row[]; term: string }) {
             {col.map((r) => (
               <article key={r.kind === "page" ? `p:${r.d.slug}:${r.d.via}` : `e:${r.e.id}`} className="cmap-card">
                 <div className="cmap-card-top">
-                  <span className="cmap-card-name">{r.kind === "page" ? pageLink(r.d) : externalLink(r.e)}</span>
+                  <span className="cmap-card-name">{r.kind === "page" ? pageLink(r.d) : externalLink(r.e)}{groupTag(r.kind === "page" ? r.d.group : r.e.group)}</span>
                   {(r.kind === "page" ? r.d.verifiedAt : r.e.verifiedAt) && (
                     <span className="stg-dep-when">{relativeTime((r.kind === "page" ? r.d.verifiedAt : r.e.verifiedAt) as string)}</span>
                   )}

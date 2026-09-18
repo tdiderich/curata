@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { mapDependencies, normalizeTerm, upsertConcepts, upsertExternalDependents } from "@/lib/concepts";
+import { mapDependencies, normalizeTerm, upsertConcepts, upsertExternalDependents, removeIncludeMap } from "@/lib/concepts";
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 
@@ -25,6 +25,10 @@ export async function POST(request: NextRequest) {
     removePages?: string[];
     /** Edit map: external urls to detach from this concept. */
     removeExternal?: string[];
+    /** Other map terms to reuse as sub-maps. */
+    includes?: string[];
+    /** Edit map: sub-maps to detach. */
+    removeIncludes?: string[];
   };
   try {
     body = await request.json();
@@ -49,9 +53,10 @@ export async function POST(request: NextRequest) {
     if (removeExternal.length > 0) {
       await upsertExternalDependents(ctx.orgId, term, removeExternal.map((url) => ({ url, remove: true })), ctx.userId);
     }
-    const hasAdds = slugs(body.asserts).length + slugs(body.depends).length + external.length > 0;
+    const hasAdds = slugs(body.asserts).length + slugs(body.depends).length + external.length + slugs(body.includes).length > 0;
     if (!hasAdds) {
-      return NextResponse.json({ term, tagged: [], external: [], missing: [], removed: { pages: slugs(body.removePages), external: removeExternal } });
+      for (const childTerm of slugs(body.removeIncludes)) await removeIncludeMap(ctx.orgId, term, childTerm);
+      return NextResponse.json({ term, tagged: [], external: [], missing: [], includes: [], missingIncludes: [], removed: { pages: slugs(body.removePages), external: removeExternal } });
     }
     const result = await mapDependencies(ctx.orgId, {
       term,
@@ -59,6 +64,8 @@ export async function POST(request: NextRequest) {
       asserts: slugs(body.asserts),
       depends: slugs(body.depends),
       external,
+      includes: slugs(body.includes),
+      removeIncludes: slugs(body.removeIncludes),
     }, ctx.userId);
     logAudit({
       orgId: ctx.orgId,
@@ -66,7 +73,7 @@ export async function POST(request: NextRequest) {
       resourceType: "concept",
       resourceId: result.term,
       actorId: ctx.userId,
-      metadata: { tagged: result.tagged.length, external: result.external.length, missing: result.missing },
+      metadata: { tagged: result.tagged.length, external: result.external.length, missing: result.missing, includes: result.includes, missingIncludes: result.missingIncludes },
     }).catch(() => {});
     return NextResponse.json(result);
   } catch (err) {
