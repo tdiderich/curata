@@ -40,7 +40,11 @@ export function ConceptMapIndex({ rows }: { rows: ConceptMapRow[] }) {
   return (
     <div className="cmap">
       <header className="cmap-head">
-        <h1 className="cmap-title">Map</h1>
+        <div className="cmap-title-row">
+          <h1 className="cmap-title">Map</h1>
+          <span className="cmap-spacer" />
+          <Link href="/map/new" className="btn btn--primary">New map</Link>
+        </div>
         <p className="cmap-summary">
           {rows.length === 0
             ? "No dependency graphs yet. Tag pages with rel depends / asserts, or call map_dependencies."
