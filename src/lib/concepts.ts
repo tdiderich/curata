@@ -707,32 +707,37 @@ function toExternalRow(row: ExternalEdgeRow, sourceUpdatedAt: Date | undefined):
 }
 
 function summarize(pages: DependentPage[], external: ExternalDependentRow[]): DependentsSummary {
+  // Buckets are exclusive: needs update > never verified > source changed > ok.
   const p = { total: pages.length, ok: 0, stale: 0, needsChange: 0, neverVerified: 0 };
   for (const d of pages) {
-    if (d.needsChange) { p.needsChange++; continue; }
-    if (d.verifiedAt === null) p.neverVerified++;
-    if (d.staleAgainstSource) p.stale++; else p.ok++;
+    if (d.needsChange) p.needsChange++;
+    else if (d.verifiedAt === null) p.neverVerified++;
+    else if (d.staleAgainstSource) p.stale++;
+    else p.ok++;
   }
   const e = { total: external.length, ok: 0, stale: 0, needsChange: 0, neverChecked: 0 };
   for (const x of external) {
-    if (x.needsChange) { e.needsChange++; continue; }
-    if (x.verifiedAt === null) { e.neverChecked++; continue; }
-    if (x.staleAgainstSource) e.stale++; else e.ok++;
+    if (x.needsChange) e.needsChange++;
+    else if (x.verifiedAt === null) e.neverChecked++;
+    else if (x.staleAgainstSource) e.stale++;
+    else e.ok++;
   }
-  const n = (c: number, one: string, many: string) => `${c} ${c === 1 ? one : many}`;
-  const parts: string[] = [];
-  const pp: string[] = [`${p.ok} ok`, `${p.stale} stale`];
-  if (p.needsChange) pp.push(`${p.needsChange} needs update`);
-  if (p.neverVerified) pp.push(`${p.neverVerified} never verified`);
-  parts.push(`${n(p.total, "page", "pages")}: ${pp.join(", ")}`);
-  if (e.total > 0) {
-    const ep: string[] = [`${e.ok} checked`];
-    if (e.stale) ep.push(`${e.stale} stale`);
-    if (e.needsChange) ep.push(`${e.needsChange} needs update`);
-    ep.push(`${e.neverChecked} never checked`);
-    parts.push(`${n(e.total, "external asset", "external assets")}: ${ep.join(", ")}`);
+  const total = p.total + e.total;
+  const ok = p.ok + e.ok;
+  const needsChange = p.needsChange + e.needsChange;
+  const never = p.neverVerified + e.neverChecked;
+  const changed = p.stale + e.stale;
+  let text: string;
+  if (total === 0) text = "Nothing depends on this yet.";
+  else if (ok === total) text = `All ${total} checked.`;
+  else {
+    const parts: string[] = [];
+    if (needsChange) parts.push(`${needsChange} need${needsChange === 1 ? "s" : ""} an update`);
+    if (never) parts.push(`${never} never checked`);
+    if (changed) parts.push(`${changed} not checked since the source changed`);
+    text = `${total - ok} of ${total} need a look: ${parts.join(", ")}.`;
   }
-  return { pages: p, external: e, text: parts.join("; ") };
+  return { pages: p, external: e, text };
 }
 
 /** Latest updatedAt across the pages that assert each concept: "when did the truth last move". */

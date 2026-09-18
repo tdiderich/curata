@@ -60,45 +60,40 @@ export function ConceptDependents({ data, term, view, filter }: { data: Dependen
             {term.includes("/") ? <><span className="cmap-title-ns">{term.split("/")[0]}/</span>{term.split("/").slice(1).join("/")}</> : term}
           </h1>
           {data.concept?.kind && <StatusBadge tone="template" label={data.concept.kind} />}
-          <span className="cmap-meta">
-            {data.summary.pages.total} page{data.summary.pages.total === 1 ? "" : "s"} · {data.summary.external.total} external asset{data.summary.external.total === 1 ? "" : "s"}
-          </span>
           <span className="cmap-spacer" />
+          <Link href={`/map/edit/${term}`} className="btn btn--ghost">Edit map</Link>
           <nav className="cmap-views" aria-label="View">
             <Link href={href("table", filter)} className={`cmap-view${view === "table" ? " cmap-view--on" : ""}`}>table</Link>
             <Link href={href("board", filter)} className={`cmap-view${view === "board" ? " cmap-view--on" : ""}`}>board</Link>
           </nav>
         </div>
         <p className="cmap-summary">{data.summary.text}</p>
+        <p className="cmap-source-line">
+          {data.asserters.length > 0 ? (
+            <>
+              When {data.asserters.map((a, i) => (
+                <span key={a.slug}>{i > 0 && (i === data.asserters.length - 1 ? " or " : ", ")}{pageLink(a)}</span>
+              ))} changes, everything below needs a look.
+              <span className="stg-dep-when"> Last changed {relativeTime(data.asserters.reduce((m, a) => (a.updatedAt > m ? a.updatedAt : m), data.asserters[0].updatedAt))}.</span>
+            </>
+          ) : (
+            <>No curata page owns {term}. Staleness only tracks what you mark by hand. <Link href={`/map/edit/${term}`} className="stg-dep-link">Pick a source</Link>.</>
+          )}
+        </p>
       </header>
-
-      {data.asserters.length > 0 ? (
-        <div className="cmap-source">
-          <span className="cmap-source-label">Source of truth</span>
-          {data.asserters.map((a) => (
-            <span key={a.slug} className="cmap-source-item">
-              {pageLink(a)}
-              <span className="stg-dep-when">updated {relativeTime(a.updatedAt)}</span>
-            </span>
-          ))}
-        </div>
-      ) : (
-        <div className="cmap-source cmap-source--gap">
-          <span className="cmap-source-label">No source of truth</span>
-          <span className="cmap-source-hint">Nothing asserts {term}. Tag the page that owns it with rel asserts, or map_dependencies with asserts.</span>
-        </div>
-      )}
 
       <div className="cmap-filters">
         <span className="cmap-filters-label">Show</span>
         {([
-          ["all", "all", "template"],
-          ["look", "needs a look", "behind"],
-          ["needs-change", "needs update", "needs-change"],
-          ["ok", "verified", "trusted"],
-        ] as const).map(([f, label, tone]) => (
-          <Link key={f} href={href(view, f)} className={`cmap-filter${filter === f ? " cmap-filter--on" : ""}`}>
-            <StatusBadge tone={tone} label={`${label} · ${counts[f]}`} />
+          ["all", "all"],
+          ["look", "needs a look"],
+          ["needs-change", "needs update"],
+          ["ok", "verified"],
+        ] as const).map(([f, label]) => (
+          <Link key={f} href={href(view, f)} className={`cmap-filter cmap-filter--${f}${filter === f ? " cmap-filter--on" : ""}`} aria-current={filter === f ? "true" : undefined}>
+            <span className="cmap-filter-dot" />
+            {label}
+            <span className="cmap-filter-n">{counts[f]}</span>
           </Link>
         ))}
       </div>

@@ -23,14 +23,23 @@ function slugifyTerm(raw: string): string {
  * moves, paste the links that live outside curata. One submit calls the same
  * map_dependencies an agent would, then lands on /map/<term>.
  */
-export function NewMapForm({ pages, concepts, initialTerm = "" }: { pages: NewMapPage[]; concepts: NewMapConcept[]; initialTerm?: string }) {
+export interface NewMapInitial {
+  term: string;
+  kind: string;
+  source: string;
+  depends: string[];
+  external: ExternalDraft[];
+}
+
+export function NewMapForm({ pages, concepts, initialTerm = "", initial }: { pages: NewMapPage[]; concepts: NewMapConcept[]; initialTerm?: string; initial?: NewMapInitial }) {
   const router = useRouter();
-  const [term, setTerm] = useState(initialTerm);
-  const [kind, setKind] = useState("");
-  const [source, setSource] = useState<string>("");
+  const editing = !!initial;
+  const [term, setTerm] = useState(initial?.term ?? initialTerm);
+  const [kind, setKind] = useState(initial?.kind ?? "");
+  const [source, setSource] = useState<string>(initial?.source ?? "");
   const [query, setQuery] = useState("");
-  const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [externals, setExternals] = useState<ExternalDraft[]>([{ url: "", label: "", owner: "" }]);
+  const [picked, setPicked] = useState<Set<string>>(new Set(initial?.depends ?? []));
+  const [externals, setExternals] = useState<ExternalDraft[]>(initial?.external?.length ? initial.external : [{ url: "", label: "", owner: "" }]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +60,14 @@ export function NewMapForm({ pages, concepts, initialTerm = "" }: { pages: NewMa
   }, [pages, query, source]);
 
   const validExternals = externals.filter((e) => /^https?:\/\//i.test(e.url.trim()));
-  const canSubmit = !!normalized && !busy && (picked.size > 0 || validExternals.length > 0 || !!source);
+  // Edit mode: anything that was on the map and is no longer selected gets detached.
+  const removePages = editing
+    ? [...(initial!.source ? [initial!.source] : []), ...initial!.depends].filter((slug) => slug !== source && !picked.has(slug))
+    : [];
+  const removeExternal = editing
+    ? initial!.external.map((e) => e.url).filter((u) => !validExternals.some((v) => v.url.trim() === u))
+    : [];
+  const canSubmit = !!normalized && !busy && (picked.size > 0 || validExternals.length > 0 || !!source || removePages.length > 0 || removeExternal.length > 0);
 
   function toggle(slug: string) {
     setPicked((s) => { const n = new Set(s); if (n.has(slug)) n.delete(slug); else n.add(slug); return n; });
@@ -69,6 +85,8 @@ export function NewMapForm({ pages, concepts, initialTerm = "" }: { pages: NewMa
           asserts: source ? [source] : [],
           depends: [...picked],
           external: validExternals.map((e) => ({ url: e.url.trim(), label: e.label.trim() || undefined, owner: e.owner.trim() || undefined })),
+          removePages,
+          removeExternal,
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -86,14 +104,14 @@ export function NewMapForm({ pages, concepts, initialTerm = "" }: { pages: NewMa
         <label className="nmf-label" htmlFor="nmf-term">What is changing?</label>
         <p className="nmf-hint">Short name for the thing, namespaced with one slash: <code>pricing/tier-2</code>, <code>messaging/tagline</code>, <code>feature/sso</code>.</p>
         <div className="nmf-row">
-          <input id="nmf-term" className="stg-input nmf-term" placeholder="pricing/tier-2" value={term} onChange={(e) => setTerm(e.target.value)} autoFocus />
+          <input id="nmf-term" className="stg-input nmf-term" placeholder="pricing/tier-2" value={term} onChange={(e) => setTerm(e.target.value)} autoFocus={!editing} disabled={editing} title={editing ? "Rename is not supported yet; make a new map" : undefined} />
           <select className="stg-input nmf-kind" value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Kind">
             <option value="">kind (optional)</option>
             {["pricing", "feature", "messaging", "api", "process", "release", "vendor", "topic"].map((k) => <option key={k} value={k}>{k}</option>)}
           </select>
         </div>
         {normalized && normalized !== term.trim() && <div className="nmf-hint">Saved as <code>{normalized}</code></div>}
-        {existing && <div className="nmf-note">A map for <code>{existing.term}</code> already exists. This adds to it, nothing gets removed.</div>}
+        {existing && !editing && <div className="nmf-note">A map for <code>{existing.term}</code> already exists. This adds to it, nothing gets removed.</div>}
         {suggestions.length > 0 && (
           <div className="nmf-hint">Similar existing: {suggestions.map((s) => (
             <button key={s.term} type="button" className="nmf-chip" onClick={() => setTerm(s.term)}>{s.term}</button>
@@ -150,9 +168,10 @@ export function NewMapForm({ pages, concepts, initialTerm = "" }: { pages: NewMa
         {error && <span className="stg-dep-verify-error">{error}</span>}
         <span className="nmf-summary">
           {normalized ? <code>{normalized}</code> : "unnamed"} · {source ? "1 source" : "no source"} · {picked.size} page{picked.size === 1 ? "" : "s"} · {validExternals.length} link{validExternals.length === 1 ? "" : "s"}
+          {editing && removePages.length + removeExternal.length > 0 && <> · removing {removePages.length + removeExternal.length}</>}
         </span>
         <button type="button" className="btn btn--primary" disabled={!canSubmit} onClick={() => void submit()}>
-          {busy ? "Creating" : "Create map"}
+          {busy ? "Saving" : editing ? "Save map" : "Create map"}
         </button>
       </footer>
     </div>

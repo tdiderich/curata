@@ -47,6 +47,16 @@ describe("POST /api/dependents/map", () => {
     expect(g.dependents.every((d) => d.verifiedAt === null)).toBe(true);
     expect(g.external[0]).toMatchObject({ label: "Questionnaire", owner: "Security", verifiedAt: null });
 
+    // Edit: untick nm-b and drop the questionnaire; nm-a keeps its edge.
+    const edit = await POST(post({ term: "feature/sso", asserts: ["nm-src"], depends: ["nm-a"], external: [], removePages: ["nm-b"], removeExternal: ["https://docs.google.com/document/d/Q/view"] }));
+    expect(edit.status).toBe(200);
+    const g2 = await getDependents(org.id, { term: "feature/sso" });
+    expect(g2.dependents.map((d) => d.slug)).toEqual(["nm-a"]);
+    expect(g2.external).toEqual([]);
+    // Removal-only submit is fine too.
+    expect((await POST(post({ term: "feature/sso", removePages: ["nm-a"] }))).status).toBe(200);
+    expect((await getDependents(org.id, { term: "feature/sso" })).dependents).toEqual([]);
+
     expect((await POST(post({ term: "" }))).status).toBe(400);
     resolveOrgMock.mockResolvedValue({ orgId: org.id, userId: "u2", role: "viewer" });
     expect((await POST(post({ term: "x", depends: ["nm-a"] }))).status).toBe(403);

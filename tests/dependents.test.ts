@@ -371,7 +371,7 @@ describe("verifiedAt and staleAgainstSource", () => {
     expect(r.dependents[0].needsChange).toBe(true);
     expect(r.dependents[0].staleAgainstSource).toBe(true);
     expect(r.summary.pages.needsChange).toBe(1);
-    expect(r.summary.text).toBe("1 page: 0 ok, 0 stale, 1 needs update");
+    expect(r.summary.text).toBe("1 of 1 need a look: 1 needs an update.");
     await verifyDependent(orgId, { slug: "nc-dep", term: T("nc/term"), status: "holds" });
     r = await getDependents(orgId, { term: T("nc/term") });
     expect(r.dependents[0].needsChange).toBe(false);
@@ -419,7 +419,7 @@ describe("external dependents", () => {
     expect(r.external[0].verifiedAt).toBeNull();
     expect(r.external[0].staleAgainstSource).toBe(true);
     expect(r.summary.external).toEqual({ total: 2, ok: 0, stale: 0, needsChange: 0, neverChecked: 2 });
-    expect(r.summary.text).toBe("0 pages: 0 ok, 0 stale; 2 external assets: 0 checked, 2 never checked");
+    expect(r.summary.text).toBe("2 of 2 need a look: 2 never checked.");
 
     const bySlug = await getDependents(orgId, { slug: "pricing" });
     expect(bySlug.external).toHaveLength(2);
@@ -433,7 +433,7 @@ describe("external dependents", () => {
     await testDb.page.update({ where: { id: src.id }, data: { updatedAt: new Date() } });
     let r = await getDependents(orgId, { term: T("ext/stale") });
     expect(r.external[0].staleAgainstSource).toBe(true);
-    expect(r.summary.text).toBe("0 pages: 0 ok, 0 stale; 1 external asset: 0 checked, 1 stale, 0 never checked");
+    expect(r.summary.text).toBe("1 of 1 need a look: 1 not checked since the source changed.");
 
     const v = await dispatch("mark_verified", { url: "https://example.com/deck/", note: "deck still says $59, ticket filed" }, orgId, "ext-org", "key", "u1") as { kind: string; count: number; note: string };
     expect(v.kind).toBe("external");
@@ -467,7 +467,7 @@ describe("external dependents", () => {
     await verifyDependent(orgId, { url: "https://example.com/shared", term: T("ext/b"), status: "needs_change", note: "old tagline" });
     const b2 = await getDependents(orgId, { term: T("ext/b") });
     expect(b2.external[0].needsChange).toBe(true);
-    expect(b2.summary.text).toBe("0 pages: 0 ok, 0 stale; 1 external asset: 0 checked, 1 needs update, 0 never checked");
+    expect(b2.summary.text).toBe("1 of 1 need a look: 1 needs an update.");
   });
 
   it("remove detaches, and a concept with only external dependents still reports the asserter gap", async () => {

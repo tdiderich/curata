@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { mapDependencies, normalizeTerm } from "@/lib/concepts";
+import { mapDependencies, normalizeTerm, upsertConcepts, upsertExternalDependents } from "@/lib/concepts";
+import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 
 /**
@@ -20,6 +21,10 @@ export async function POST(request: NextRequest) {
     asserts?: string[];
     depends?: string[];
     external?: Array<{ url?: string; label?: string; owner?: string }>;
+    /** Edit map: pages to untag from this concept entirely. */
+    removePages?: string[];
+    /** Edit map: external urls to detach from this concept. */
+    removeExternal?: string[];
   };
   try {
     body = await request.json();
@@ -34,6 +39,20 @@ export async function POST(request: NextRequest) {
     .map((e) => ({ url: (e.url as string).trim(), label: e.label?.trim() || undefined, owner: e.owner?.trim() || undefined }));
 
   try {
+    // Removals first so a page moved from depends to source in the same
+    // submit ends up with one edge, not two.
+    for (const slug of slugs(body.removePages)) {
+      const page = await db.page.findUnique({ where: { orgId_slug: { orgId: ctx.orgId, slug } }, select: { id: true } });
+      if (page) await upsertConcepts(page.id, [{ term, remove: true }], ctx.userId);
+    }
+    const removeExternal = slugs(body.removeExternal);
+    if (removeExternal.length > 0) {
+      await upsertExternalDependents(ctx.orgId, term, removeExternal.map((url) => ({ url, remove: true })), ctx.userId);
+    }
+    const hasAdds = slugs(body.asserts).length + slugs(body.depends).length + external.length > 0;
+    if (!hasAdds) {
+      return NextResponse.json({ term, tagged: [], external: [], missing: [], removed: { pages: slugs(body.removePages), external: removeExternal } });
+    }
     const result = await mapDependencies(ctx.orgId, {
       term,
       kind: typeof body.kind === "string" && body.kind.trim() ? normalizeTerm(body.kind) : undefined,
