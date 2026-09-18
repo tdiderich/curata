@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ActionBarFolder, ActionBarPage } from "@/components/action-bar-types";
-import type { ConceptMapRow } from "@/lib/concepts";
-import { NeedsLookCard } from "@/components/needs-look-card";
 import { PageActionDock } from "@/components/page-action-dock";
 import type { PageAction } from "@/lib/page-actions";
 import { ContextMenu, type ContextMenuItem } from "@/components/context-menu";
@@ -36,8 +34,6 @@ interface ActionBarHomeProps {
   orgName: string;
   logoUrl: string | null;
   quickRefs?: string[];
-  /** Concepts ranked by unverified dependents, for the "Needs a look" card. */
-  needsLook?: ConceptMapRow[];
 }
 
 const SEARCH_PLACEHOLDER = "What are you looking for?";
@@ -114,7 +110,7 @@ function PinIcon() {
   );
 }
 
-export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, quickRefs = [], needsLook = [] }: ActionBarHomeProps) {
+export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, quickRefs = [] }: ActionBarHomeProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [semantic, setSemantic] = useState<SemanticResult | null>(null);
@@ -806,8 +802,6 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
           <span className="abh-concept-kind">{matchedConcept.kind}</span>
         </div>
       )}
-
-      {!isSearching && <NeedsLookCard rows={needsLook} />}
 
       <div className="abh-dir-head">
         <span className="abh-dir-count">
