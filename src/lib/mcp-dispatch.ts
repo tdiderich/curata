@@ -63,6 +63,7 @@ import {
   createProjectFromTemplate,
   getProject,
   listProjects,
+  previewTemplate,
   updateProjectItem,
   addProjectItem,
   removeProjectItem,
@@ -107,6 +108,7 @@ export const READ_TOOLS = [
   "get_dependents",
   "get_project",
   "list_projects",
+  "preview_template",
   "get_semantic_map",
   "export_page",
   "export_report",
@@ -215,7 +217,8 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_related: { known: new Set(["slug", "term"]) },
   get_dependents: { known: new Set(["slug", "term", "rel"]) },
   map_dependencies: { known: new Set(["term", "kind", "asserts", "depends", "references", "external", "includes", "removeIncludes"]) },
-  create_project: { known: new Set(["term", "title", "template_term", "source"]) },
+  create_project: { known: new Set(["term", "title", "template_term", "template_terms", "source"]) },
+  preview_template: { known: new Set(["term"]) },
   get_project: { known: new Set(["term"]) },
   list_projects: { known: new Set([]) },
   add_project_item: { known: new Set(["term", "slug", "url", "label", "owner", "due_date"]) },
@@ -1755,12 +1758,23 @@ export async function dispatch(
     case "create_project": {
       if (!args.term) throw new Error("term is required");
       if (!args.title) throw new Error("title is required");
+      let templateTerms: string[] | undefined;
+      if (args.template_terms) {
+        try { templateTerms = JSON.parse(args.template_terms); } catch { throw new Error("template_terms must be a JSON array of terms"); }
+        if (!Array.isArray(templateTerms) || !templateTerms.every((t) => typeof t === "string")) throw new Error("template_terms must be a JSON array of terms");
+      }
       return createProjectFromTemplate(orgId, {
         term: args.term,
         title: args.title,
         templateTerm: args.template_term || undefined,
+        templateTerms,
         source: args.source || undefined,
       }, userId || "agent");
+    }
+
+    case "preview_template": {
+      if (!args.term) throw new Error("term is required");
+      return previewTemplate(orgId, args.term);
     }
 
     case "get_project": {

@@ -29,7 +29,7 @@ import {
   VERIFY_STATUSES,
   CONCEPT_RELS,
 } from "@/lib/concepts";
-import { getProject, listProjects } from "@/lib/projects";
+import { getProject, listProjects, previewTemplate } from "@/lib/projects";
 import { ensureComponentIds, buildOutline, formatOutline } from "@/lib/component-ids";
 import { dispatch } from "@/lib/mcp-dispatch";
 import { toolDescription } from "@/lib/mcp-guidance";
@@ -479,9 +479,24 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       term: z.string().describe("New, unique term for this project, namespaced like a map: product-launch/sso"),
       title: z.string().describe("Human name for the project"),
       template_term: z.string().optional().describe("Existing map term to clone from"),
+      template_terms: z.array(z.string()).optional().describe("Clone from several maps at once; merged with template_term if both given"),
       source: z.string().optional().describe("Page that owns the truth for this project, if different from the template's"),
     },
-    viaDispatch("create_project"));
+    async (a) => {
+      const flat: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(a)) {
+        if (v === undefined) continue;
+        flat[k] = typeof v === "string" ? v : JSON.stringify(v);
+      }
+      return viaDispatch("create_project")(flat);
+    });
+
+  server.tool("preview_template", "See what create_project would clone from a map before committing to it: its own depends/external, and each sub-map it would pull in as a live-referenced shared checklist.",
+    { term: z.string().describe("The map term to preview") },
+    async ({ term }) => {
+      const result = await previewTemplate(orgId, term);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
 
   server.tool("get_project", "Read a project: its own tracked items (owner, due date, done, doneAt/doneBy) overlaid on the live dependency graph, plus each included sub-map's items the same way. done is a distinct claim from verified — a done item can still show doneStale if the source moved again after it was marked done, and staleAgainstSource / verifiedAt keep meaning exactly what they mean on an ordinary map.",
     { term: z.string().describe("The project's term") },

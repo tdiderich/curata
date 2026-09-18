@@ -59,9 +59,6 @@ export function ProjectDetail({ project }: { project: ProjectResult }) {
             ? "No items yet."
             : `${project.completion.done} of ${project.completion.total} done${project.completion.overdue > 0 ? `, ${project.completion.overdue} overdue` : ""}.`}
         </p>
-        <p className="cmap-source-line">
-          {project.clonedFrom ? <>Cloned from <Link href={`/map/${project.clonedFrom}`} className="stg-dep-link">{project.clonedFrom}</Link>. Editing that map now never reaches this project.</> : "Started blank, not cloned from a map."}
-        </p>
       </header>
 
       {project.completion.total > 0 && (

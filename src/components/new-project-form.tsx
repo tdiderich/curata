@@ -1,11 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
 
 export interface NewProjectPage { slug: string; title: string; folderName: string | null }
 export interface NewProjectTemplate { term: string; kind: string; total: number; needsLook: number }
+interface TemplatePreview {
+  term: string;
+  own: Array<{ label: string; kind: "page" | "external" }>;
+  includes: Array<{ term: string; own: Array<{ label: string; kind: "page" | "external" }> }>;
+}
 
 /** Client mirror of normalizeTerm: lowercase slug, one interior slash allowed. */
 function slugifyTerm(raw: string): string {
@@ -16,26 +21,61 @@ function slugifyTerm(raw: string): string {
 }
 
 /**
- * New project: name it, optionally clone a map (its own depends/external
- * become independent items here; anything it includes stays a live,
- * shared checklist), optionally pick the page that owns the truth. One
- * submit calls create_project and lands on /projects/<term>.
+ * New project: name it, pick zero or more maps to clone (each one's own
+ * items become independent, each one's sub-maps stay a live, shared
+ * checklist), see exactly what that will bring in before committing,
+ * optionally pick the page this project is tracking against. One submit
+ * calls create_project and lands on /projects/<term>.
  */
 export function NewProjectForm({ pages, templates }: { pages: NewProjectPage[]; templates: NewProjectTemplate[] }) {
   const router = useRouter();
   const [term, setTerm] = useState("");
   const [title, setTitle] = useState("");
   const [templateQuery, setTemplateQuery] = useState("");
-  const [templateTerm, setTemplateTerm] = useState("");
+  const [picked, setPicked] = useState<Set<string>>(new Set());
   const [source, setSource] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previews, setPreviews] = useState<Record<string, TemplatePreview>>({});
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   const normalized = slugifyTerm(term);
   const visibleTemplates = useMemo(() => {
     const q = templateQuery.trim().toLowerCase();
     return q ? templates.filter((t) => t.term.includes(q) || t.kind.includes(q)) : templates;
   }, [templates, templateQuery]);
+
+  function toggle(term: string) {
+    setPicked((s) => { const n = new Set(s); if (n.has(term)) n.delete(term); else n.add(term); return n; });
+  }
+
+  // Fetch (and cache) a preview the moment a template gets checked. State
+  // updates happen after the await, inside the async IIFE, never
+  // synchronously in the effect body.
+  useEffect(() => {
+    const missing = [...picked].filter((t) => !previews[t]);
+    if (missing.length === 0) return;
+    void (async () => {
+      setLoadingPreview(true);
+      try {
+        const qs = missing.map((t) => `term=${encodeURIComponent(t)}`).join("&");
+        const res = await fetch(`${basePath}/api/projects/preview?${qs}`);
+        const rows: TemplatePreview[] = res.ok ? await res.json() : [];
+        setPreviews((prev) => {
+          const next = { ...prev };
+          for (const r of rows) next[r.term] = r;
+          return next;
+        });
+      } finally {
+        setLoadingPreview(false);
+      }
+    })();
+  }, [picked, previews]);
+
+  const activePreviews = [...picked].map((t) => previews[t]).filter((p): p is TemplatePreview => !!p);
+  const previewOwnCount = new Set(activePreviews.flatMap((p) => p.own.map((o) => o.label))).size;
+  const previewIncludes = new Map<string, { own: number }>();
+  for (const p of activePreviews) for (const inc of p.includes) previewIncludes.set(inc.term, { own: inc.own.length });
 
   const canSubmit = !!normalized && !!title.trim() && !busy;
 
@@ -46,7 +86,7 @@ export function NewProjectForm({ pages, templates }: { pages: NewProjectPage[]; 
       const res = await fetch(`${basePath}/api/projects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ term: normalized, title: title.trim(), templateTerm: templateTerm || undefined, source: source || undefined }),
+        body: JSON.stringify({ term: normalized, title: title.trim(), templateTerms: [...picked], source: source || undefined }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
@@ -70,38 +110,62 @@ export function NewProjectForm({ pages, templates }: { pages: NewProjectPage[]; 
       </section>
 
       <section className="nmf-step">
-        <div className="nmf-label">Clone from a map? <span className="nmf-opt">optional</span></div>
-        <p className="nmf-hint">Its own depends/external become independent items you can check off here. Anything it includes stays a shared checklist, verified per project.</p>
+        <div className="nmf-label">Clone from any maps? <span className="nmf-opt">optional, pick any number</span></div>
+        <p className="nmf-hint">Each one&rsquo;s own depends/external become independent items you can check off here. Anything a map includes stays a shared checklist, verified per project.</p>
         {templates.length === 0 ? (
           <div className="nmf-hint">No maps to clone from yet. This will start blank.</div>
         ) : (
           <>
             <input className="stg-input" placeholder="Filter maps" value={templateQuery} onChange={(e) => setTemplateQuery(e.target.value)} />
-            <ul className="nmf-pages nmf-groups" role="listbox">
-              <li>
-                <label className={`nmf-page${templateTerm === "" ? " nmf-page--on" : ""}`}>
-                  <input type="radio" name="template" checked={templateTerm === ""} onChange={() => setTemplateTerm("")} />
-                  <span className="nmf-page-title">Start blank</span>
-                </label>
-              </li>
-              {visibleTemplates.map((t) => (
-                <li key={t.term}>
-                  <label className={`nmf-page${templateTerm === t.term ? " nmf-page--on" : ""}`}>
-                    <input type="radio" name="template" checked={templateTerm === t.term} onChange={() => setTemplateTerm(t.term)} />
-                    <span className="nmf-page-title nmf-page-title--mono">{t.term}</span>
-                    <span className="nmf-page-folder">{t.total === 0 ? "empty" : `${t.needsLook} of ${t.total} need a look`}</span>
-                  </label>
-                </li>
-              ))}
+            <ul className="nmf-pages nmf-groups" role="listbox" aria-multiselectable>
+              {visibleTemplates.map((t) => {
+                const on = picked.has(t.term);
+                return (
+                  <li key={t.term}>
+                    <label className={`nmf-page${on ? " nmf-page--on" : ""}`}>
+                      <input type="checkbox" checked={on} onChange={() => toggle(t.term)} />
+                      <span className="nmf-page-title nmf-page-title--mono">{t.term}</span>
+                      <span className="nmf-page-folder">{t.total === 0 ? "empty" : `${t.needsLook} of ${t.total} need a look`}</span>
+                    </label>
+                  </li>
+                );
+              })}
+              {visibleTemplates.length === 0 && <li className="nmf-empty">No maps match.</li>}
             </ul>
           </>
+        )}
+
+        {picked.size > 0 && (
+          <div className="npf-preview">
+            <div className="npf-preview-head">
+              {loadingPreview && activePreviews.length < picked.size ? "Loading what this brings in…" : `This clones ${previewOwnCount} item${previewOwnCount === 1 ? "" : "s"}${previewIncludes.size > 0 ? `, plus ${previewIncludes.size} shared checklist${previewIncludes.size === 1 ? "" : "s"}` : ""}:`}
+            </div>
+            {activePreviews.map((p) => (
+              <div key={p.term} className="npf-preview-group">
+                <span className="npf-preview-source">{p.term}</span>
+                {p.own.length === 0 && p.includes.length === 0 ? (
+                  <span className="stg-dep-when">nothing to clone</span>
+                ) : (
+                  <ul className="npf-preview-list">
+                    {p.own.map((o, i) => <li key={i}>{o.label}</li>)}
+                    {p.includes.map((inc) => (
+                      <li key={inc.term} className="npf-preview-include">
+                        <span className="nmf-page-title--mono">{inc.term}</span> — shared checklist, {inc.own.length} item{inc.own.length === 1 ? "" : "s"}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </section>
 
       <section className="nmf-step">
-        <label className="nmf-label" htmlFor="npf-source">Which page owns the truth? <span className="nmf-opt">optional</span></label>
+        <label className="nmf-label" htmlFor="npf-source">Which page is this project tracking? <span className="nmf-opt">optional</span></label>
+        <p className="nmf-hint">If a page changes after you finish, this project&rsquo;s done items will show it. Skip this if there isn&rsquo;t one obvious page.</p>
         <select id="npf-source" className="stg-input" value={source} onChange={(e) => setSource(e.target.value)}>
-          <option value="">No source page</option>
+          <option value="">No page to track</option>
           {pages.map((p) => <option key={p.slug} value={p.slug}>{p.title || p.slug}{p.folderName ? ` · ${p.folderName}` : ""}</option>)}
         </select>
       </section>
@@ -109,7 +173,7 @@ export function NewProjectForm({ pages, templates }: { pages: NewProjectPage[]; 
       <footer className="nmf-footer">
         {error && <span className="stg-dep-verify-error">{error}</span>}
         <span className="nmf-summary">
-          {normalized ? <code>{normalized}</code> : "unnamed"} {templateTerm && <>· cloning <code>{templateTerm}</code></>}
+          {normalized ? <code>{normalized}</code> : "unnamed"} {picked.size > 0 && <>· cloning {picked.size} map{picked.size === 1 ? "" : "s"}</>}
         </span>
         <button type="button" className="btn btn--primary" disabled={!canSubmit} onClick={() => void submit()}>
           {busy ? "Creating" : "Create project"}

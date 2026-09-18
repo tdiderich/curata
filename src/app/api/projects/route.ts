@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (!can(ctx.role, "page:edit")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  let body: { term?: string; title?: string; templateTerm?: string; source?: string };
+  let body: { term?: string; title?: string; templateTerm?: string; templateTerms?: string[]; source?: string };
   try {
     body = await request.json();
   } catch {
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       term: body.term,
       title: body.title,
       templateTerm: body.templateTerm || undefined,
+      templateTerms: Array.isArray(body.templateTerms) ? body.templateTerms : undefined,
       source: body.source || undefined,
     }, ctx.userId);
     logAudit({

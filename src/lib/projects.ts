@@ -220,10 +220,41 @@ export interface CreateProjectFromTemplateInput {
   /** New, unique term for this project. */
   term: string;
   title: string;
-  /** Existing map term to clone. Its own depends/external snapshot into independent edges; its includes stay live-referenced. Omit to start blank. */
+  /** Existing map term to clone. Its own depends/external snapshot into independent edges; its includes stay live-referenced. Omit or leave empty to start blank. */
   templateTerm?: string;
+  /** Clone from several maps at once - each one's own edges snapshot in, each one's includes stay live-referenced. Merged with templateTerm if both are given. */
+  templateTerms?: string[];
   /** Page that owns the truth for this project, if different from the template's. */
   source?: string;
+}
+
+/** Preview of what cloning one template would add: its own items plus what it would pull in as a shared checklist. Used by the New project form before you commit to a choice. */
+export interface TemplatePreview {
+  term: string;
+  own: Array<{ label: string; kind: "page" | "external" }>;
+  includes: Array<{ term: string; own: Array<{ label: string; kind: "page" | "external" }> }>;
+}
+
+/** Read-only: what createProjectFromTemplate would clone from this map, without creating anything. */
+export async function previewTemplate(orgId: string, templateTerm: string): Promise<TemplatePreview> {
+  const normalized = normalizeTerm(templateTerm);
+  const data = await getDependents(orgId, { term: normalized });
+  const toLabel = (x: { label: string } | { title: string; slug: string }): string =>
+    "title" in x ? (x.title || x.slug) : x.label;
+  return {
+    term: normalized,
+    own: [
+      ...data.dependents.filter((d) => !d.group).map((d) => ({ label: toLabel(d), kind: "page" as const })),
+      ...data.external.filter((e) => !e.group).map((e) => ({ label: toLabel(e), kind: "external" as const })),
+    ],
+    includes: data.includes.map((inc) => ({
+      term: inc.term,
+      own: [
+        ...data.dependents.filter((d) => d.group === inc.term).map((d) => ({ label: toLabel(d), kind: "page" as const })),
+        ...data.external.filter((e) => e.group === inc.term).map((e) => ({ label: toLabel(e), kind: "external" as const })),
+      ],
+    })),
+  };
 }
 
 /**
@@ -249,12 +280,17 @@ export async function createProjectFromTemplate(
 
   const concept = await ensureConcept(term, term, await findConceptForTerm(term, term));
 
+  const templateTerms = [...new Set([
+    ...(input.templateTerm ? [normalizeTerm(input.templateTerm)] : []),
+    ...(input.templateTerms ?? []).map((t) => normalizeTerm(t)).filter(Boolean),
+  ])];
+
   const project = await db.project.create({
     data: {
       orgId,
       term,
       title: input.title.trim(),
-      clonedFrom: input.templateTerm ? normalizeTerm(input.templateTerm) : null,
+      clonedFrom: templateTerms.length > 0 ? templateTerms.join(", ") : null,
       createdBy,
     },
   });
@@ -264,13 +300,14 @@ export async function createProjectFromTemplate(
     if (page) await upsertConcepts(page.id, [{ term, rel: "asserts" }], createdBy, { verified: false });
   }
 
-  if (input.templateTerm) {
-    const templateNorm = normalizeTerm(input.templateTerm);
-    const template = await findConceptForTerm(input.templateTerm, templateNorm);
+  for (const templateNorm of templateTerms) {
+    const template = await findConceptForTerm(templateNorm, templateNorm);
     if (!template) throw new Error(`template not found: ${templateNorm}`);
     const templateData = await getDependents(orgId, { term: templateNorm });
 
     // Own edges (no group tag): clone as independent edges + tracked items.
+    // Cloning two templates that happen to share a page is a no-op the
+    // second time (upsert), not a duplicate row.
     for (const d of templateData.dependents.filter((d) => !d.group)) {
       const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: d.slug } }, select: { id: true } });
       if (!page) continue;
@@ -294,7 +331,8 @@ export async function createProjectFromTemplate(
         });
       }
     }
-    // Sub-maps: live reference, exactly like an ordinary include.
+    // Sub-maps: live reference, exactly like an ordinary include. Two
+    // templates including the same group is a no-op the second time.
     for (const inc of templateData.includes) {
       await includeMap(orgId, term, inc.term, createdBy);
     }

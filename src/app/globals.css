@@ -10073,8 +10073,9 @@ body:has(.nav-reveal) .page-toolbar {
 .nmf-hint code, .nmf-note code, .nmf-summary code { font-family: var(--mono, "SF Mono", Monaco, monospace); font-size: 12px; color: var(--light-muted); background: rgba(var(--text-rgb), 0.06); padding: 1px 6px; border-radius: 4px; }
 .nmf-note { font-size: 12.5px; color: var(--yellow); }
 .nmf-row { display: flex; gap: 10px; }
-.nmf-term { flex: 1; font-family: var(--mono, "SF Mono", Monaco, monospace); }
-.nmf-kind { width: 180px; }
+.nmf-row .stg-input { flex: 1 1 0%; width: auto; min-width: 0; }
+.nmf-term { flex: 1 1 0%; font-family: var(--mono, "SF Mono", Monaco, monospace); }
+.nmf-kind { flex: 0 0 180px; width: 180px; }
 .nmf-chip { font: inherit; font-family: var(--mono, monospace); font-size: 11.5px; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(var(--text-rgb), 0.12); background: transparent; color: var(--light-muted); cursor: pointer; }
 .nmf-chip:hover { color: var(--snow); border-color: rgba(var(--accent-rgb), 0.5); }
 .nmf-pages { list-style: none; margin: 0; padding: 4px; max-height: 320px; overflow: auto; border: 1px solid rgba(var(--text-rgb), 0.10); border-radius: 10px; display: flex; flex-direction: column; gap: 2px; background: rgba(var(--text-rgb), 0.02); scrollbar-width: thin; scrollbar-color: rgba(var(--text-rgb), 0.12) transparent; }
@@ -10135,3 +10136,11 @@ body:has(.nav-reveal) .page-toolbar {
 .proj-add-or { color: var(--muted); font-size: 12px; }
 .proj-delete-confirm { display: inline-flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--light-muted); }
 .cmap-step { display: flex; flex-direction: column; gap: 10px; }
+
+/* New project: clone preview */
+.npf-preview { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid rgba(var(--accent-rgb), 0.22); border-radius: 10px; background: rgba(var(--accent-rgb), 0.05); }
+.npf-preview-head { font-size: 12.5px; color: var(--light-muted); }
+.npf-preview-group { display: flex; flex-direction: column; gap: 4px; }
+.npf-preview-source { font-family: var(--mono, "SF Mono", Monaco, monospace); font-size: 12px; color: var(--teal); }
+.npf-preview-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; color: var(--snow); }
+.npf-preview-include { color: var(--light-muted); }
