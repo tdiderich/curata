@@ -29,7 +29,7 @@ import {
   VERIFY_STATUSES,
   CONCEPT_RELS,
 } from "@/lib/concepts";
-import { getProject } from "@/lib/projects";
+import { getProject, listProjects } from "@/lib/projects";
 import { ensureComponentIds, buildOutline, formatOutline } from "@/lib/component-ids";
 import { dispatch } from "@/lib/mcp-dispatch";
 import { toolDescription } from "@/lib/mcp-guidance";
@@ -487,6 +487,13 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     { term: z.string().describe("The project's term") },
     async ({ term }) => {
       const result = await getProject(orgId, term);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("list_projects", "Every project in the org, newest first, with its completion roll-up. Use this before create_project to check whether a shared checklist (a group term) is already in use by another project, and to check that marking something done or verified in one project never shows up as done in another that reuses the same checklist.",
+    {},
+    async () => {
+      const result = await listProjects(orgId);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { createProjectFromTemplate, getProject, deleteProject } from "@/lib/projects";
+import { createProjectFromTemplate, getProject, deleteProject, listProjects } from "@/lib/projects";
 import { logAudit } from "@/lib/audit";
 
 /**
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const ctx = await resolveOrg();
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const term = request.nextUrl.searchParams.get("term");
-  if (!term) return NextResponse.json({ error: "term is required" }, { status: 400 });
+  if (!term) return NextResponse.json(await listProjects(ctx.orgId));
   try {
     return NextResponse.json(await getProject(ctx.orgId, term));
   } catch (err) {

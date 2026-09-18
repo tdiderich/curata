@@ -22,6 +22,8 @@ import {
  */
 export type ProjectPageItem = DependentPage & {
   itemId: string;
+  /** Pages have no owner at the map layer; this is project-tracking-only. */
+  owner: string | null;
   dueDate: string | null;
   done: boolean;
   doneAt: string | null;
@@ -50,10 +52,18 @@ export interface ProjectResult {
   completion: { total: number; done: number; open: number; overdue: number };
 }
 
+/** Parses a due date string, throwing a clean error before any write happens rather than letting an invalid Date reach Prisma. Empty string / undefined both mean "no change" upstream; only called when the caller actually passed something. */
+function parseDueDate(raw: string | undefined): Date | undefined {
+  if (raw === undefined || raw === "") return undefined;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) throw new Error(`due_date is not a valid date: ${JSON.stringify(raw)}. Use an ISO date like 2026-10-01.`);
+  return d;
+}
+
 async function findProject(orgId: string, term: string) {
   const normalized = normalizeTerm(term);
   const project = await db.project.findUnique({ where: { orgId_term: { orgId, term: normalized } } });
-  if (!project) throw new Error(`no project for ${normalized}. Create one with createProjectFromTemplate.`);
+  if (!project) throw new Error(`no project for ${normalized}. Create one first with create_project.`);
   return project;
 }
 
@@ -85,7 +95,7 @@ export async function getProject(orgId: string, term: string): Promise<ProjectRe
       // Sub-map rows are never independently tracked by this project's
       // items table (they belong to whichever project/context created
       // the include); show the live graph row as-is.
-      rows.push({ ...(d as DependentPage), itemId: "", dueDate: null, done: false, doneAt: null, doneBy: null, doneStale: false });
+      rows.push({ ...(d as DependentPage), itemId: "", owner: null, dueDate: null, done: false, doneAt: null, doneBy: null, doneStale: false });
     }
     for (const e of data.external) {
       if (e.group !== inc.term) continue;
@@ -167,6 +177,7 @@ async function resolveOwnItems(
       needsChange: dependentRow?.needsChange ?? false,
       staleAgainstSource: dependentRow?.staleAgainstSource ?? false,
       itemId: item.id,
+      owner: item.owner,
       dueDate: item.dueDate?.toISOString() ?? null,
       done: item.done,
       doneAt: item.doneAt?.toISOString() ?? null,
@@ -183,7 +194,9 @@ async function resolveOwnItems(
       assetId: row.asset.id,
       url: row.asset.url,
       host: externalRow?.host ?? row.asset.url,
-      label: item.owner ? row.asset.label : row.asset.label,
+      label: row.asset.label,
+      // A project can set its own owner for an item without changing who
+      // owns the asset itself org-wide; falls back to the asset's owner.
       owner: item.owner ?? row.asset.owner,
       rel: row.rel,
       via: row.concept.displayName,
@@ -300,6 +313,11 @@ export interface AddProjectItemInput {
 
 /** Add one more page or external edge to a project's own tracked items, after creation. */
 export async function addProjectItem(orgId: string, term: string, input: AddProjectItemInput, createdBy: string): Promise<void> {
+  // Validate before touching the graph: a bad due_date must never leave a
+  // half-created edge behind (it did, before this check existed - the edge
+  // got created, then the item upsert threw a raw Prisma error and left it
+  // dangling with nothing to clean it up).
+  const dueDate = parseDueDate(input.dueDate);
   const project = await findProject(orgId, term);
   if (input.slug) {
     const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: input.slug } }, select: { id: true } });
@@ -309,8 +327,8 @@ export async function addProjectItem(orgId: string, term: string, input: AddProj
     if (edge) {
       await db.projectItem.upsert({
         where: { projectId_pageConceptId: { projectId: project.id, pageConceptId: edge.id } },
-        create: { projectId: project.id, kind: "page", pageConceptId: edge.id, owner: input.owner ?? null, dueDate: input.dueDate ? new Date(input.dueDate) : null, createdBy },
-        update: { owner: input.owner ?? undefined, dueDate: input.dueDate ? new Date(input.dueDate) : undefined },
+        create: { projectId: project.id, kind: "page", pageConceptId: edge.id, owner: input.owner ?? null, dueDate: dueDate ?? null, createdBy },
+        update: { owner: input.owner ?? undefined, dueDate },
       });
     }
     return;
@@ -320,8 +338,8 @@ export async function addProjectItem(orgId: string, term: string, input: AddProj
     if (row) {
       await db.projectItem.upsert({
         where: { projectId_externalEdgeId: { projectId: project.id, externalEdgeId: row.id } },
-        create: { projectId: project.id, kind: "external", externalEdgeId: row.id, owner: input.owner ?? null, dueDate: input.dueDate ? new Date(input.dueDate) : null, createdBy },
-        update: { owner: input.owner ?? undefined, dueDate: input.dueDate ? new Date(input.dueDate) : undefined },
+        create: { projectId: project.id, kind: "external", externalEdgeId: row.id, owner: input.owner ?? null, dueDate: dueDate ?? null, createdBy },
+        update: { owner: input.owner ?? undefined, dueDate },
       });
     }
     return;
@@ -366,6 +384,8 @@ export interface UpdateProjectItemInput {
  * project's live view keeps computing doneStale against the current source.
  */
 export async function updateProjectItem(orgId: string, term: string, input: UpdateProjectItemInput, actorId: string): Promise<void> {
+  // Same rule as addProjectItem: validate before any write.
+  const dueDate = input.dueDate === null ? null : parseDueDate(input.dueDate ?? undefined);
   const project = await findProject(orgId, term);
   const item = await db.projectItem.findFirst({ where: { id: input.itemId, projectId: project.id } });
   if (!item) throw new Error(`item not found on project ${project.term}: ${input.itemId}`);
@@ -376,7 +396,7 @@ export async function updateProjectItem(orgId: string, term: string, input: Upda
     data.doneBy = input.done ? actorId : null;
   }
   if (input.owner !== undefined) data.owner = input.owner || null;
-  if (input.dueDate !== undefined) data.dueDate = input.dueDate ? new Date(input.dueDate) : null;
+  if (input.dueDate !== undefined) data.dueDate = dueDate;
   await db.projectItem.update({ where: { id: item.id }, data });
 }
 
@@ -393,4 +413,34 @@ export async function deleteProject(orgId: string, term: string): Promise<void> 
   const items = await db.projectItem.findMany({ where: { projectId: project.id } });
   for (const item of items) await detachItemEdge(orgId, project.term, item);
   await db.project.delete({ where: { id: project.id } });
+}
+
+
+export interface ProjectSummary {
+  term: string;
+  title: string;
+  clonedFrom: string | null;
+  createdAt: string;
+  completion: { total: number; done: number; open: number; overdue: number };
+}
+
+/**
+ * Every project in the org, newest first. The one thing missing before
+ * this: no way to check whether a shared checklist is already in use by
+ * another project without knowing its term up front - answers "what else
+ * is built from this" for a human, and lets an agent verify the
+ * per-context isolation claim end to end instead of taking the map's
+ * clean read as a proxy for it.
+ */
+export async function listProjects(orgId: string): Promise<ProjectSummary[]> {
+  const projects = await db.project.findMany({ where: { orgId }, orderBy: { createdAt: "desc" } });
+  const out: ProjectSummary[] = [];
+  for (const p of projects) {
+    const items = await db.projectItem.findMany({ where: { projectId: p.id }, select: { done: true, dueDate: true } });
+    const total = items.length;
+    const done = items.filter((i) => i.done).length;
+    const overdue = items.filter((i) => !i.done && i.dueDate && i.dueDate < new Date()).length;
+    out.push({ term: p.term, title: p.title, clonedFrom: p.clonedFrom, createdAt: p.createdAt.toISOString(), completion: { total, done, open: total - done, overdue } });
+  }
+  return out;
 }

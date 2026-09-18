@@ -20,10 +20,27 @@ components:
           - **get_dependents** - what depends on a concept or page, what asserts it, what was built from it, external assets attached to it, and which of those are stale against the source
           - **map_dependencies** - build a dependency graph around one concept in one call (asserts, depends, references, external urls, includes for reusing another map as a sub-map)
           - **mark_verified** - record that a page or external asset was checked against a concept: `status` holds or needs_change, `note` for what you found, `context` to scope a shared sub-map's row to the map you're checking it for, no new version
+          - **list_projects** / **get_project** - every project and its completion roll-up; one project's own tracked items overlaid on the live graph
           - **get_semantic_map** / **get_vocabulary** - the org's concept graph and tag vocabulary
           - **get_versions** - a page's version history
           - **get_config** / **get_component_reference** - org settings and the component catalog
           - **list_templates** / **list_workflows** / **list_rules** - available templates, skill pages, and the write rules in force
+
+  - type: section
+    heading: Plan and track a project
+    components:
+      - type: markdown
+        body: |
+          A map is the org's shared drift signal: it says what breaks if a thing changes, not whether anyone has done anything about it. A project is a scoped, disposable run of that work: clone a map's checklist, add your own items, assign owners and due dates, mark things done. Deleting a project only removes the project and its own cloned edges - never the template it was cloned from, and never a sub-map it included (that stays a live, shared checklist for whoever else includes it).
+
+          **This "group" is not that group.** A reusable checklist is a concept tagged `kind: "group"` in the vocabulary (`group/sales-enablement`), found via `get_vocabulary` or by walking `get_dependents`. `list_groups`/`create_group` (below, under access) are unrelated: people-membership access-control groups. Same word, two different systems.
+
+          - **create_project** - clone a map (`template_term`) into a trackable project, or start blank. The template's own depends/external become independent edges on the project's own term; anything it includes stays a live-referenced shared checklist.
+          - **get_project** - the project's own items (owner, due_date, done, doneAt/doneBy, doneStale) overlaid on the live graph, plus each included sub-map's items the same way
+          - **list_projects** - every project, newest first, with a completion roll-up - check this before create_project to see whether a checklist is already reused elsewhere
+          - **add_project_item** / **remove_project_item** - add or drop one of the project's own tracked items, after creation
+          - **update_project_item** - mark an item done/open, or change owner/due_date. done is a separate claim from verified: a done item can still show doneStale if the source moved again after doneAt
+          - **delete_project** - removes the project and detaches its own cloned edges; never touches the template or an included sub-map
 
   - type: section
     heading: Write and edit

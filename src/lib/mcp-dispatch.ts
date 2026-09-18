@@ -62,6 +62,7 @@ import type { ConceptInput, ConceptRel, ExternalDependentInput, LinkInput, Verif
 import {
   createProjectFromTemplate,
   getProject,
+  listProjects,
   updateProjectItem,
   addProjectItem,
   removeProjectItem,
@@ -105,6 +106,7 @@ export const READ_TOOLS = [
   "get_related",
   "get_dependents",
   "get_project",
+  "list_projects",
   "get_semantic_map",
   "export_page",
   "export_report",
@@ -215,6 +217,7 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   map_dependencies: { known: new Set(["term", "kind", "asserts", "depends", "references", "external", "includes", "removeIncludes"]) },
   create_project: { known: new Set(["term", "title", "template_term", "source"]) },
   get_project: { known: new Set(["term"]) },
+  list_projects: { known: new Set([]) },
   add_project_item: { known: new Set(["term", "slug", "url", "label", "owner", "due_date"]) },
   update_project_item: { known: new Set(["term", "item_id", "done", "owner", "due_date"]) },
   remove_project_item: { known: new Set(["term", "item_id"]) },
@@ -1763,6 +1766,10 @@ export async function dispatch(
     case "get_project": {
       if (!args.term) throw new Error("term is required");
       return getProject(orgId, args.term);
+    }
+
+    case "list_projects": {
+      return listProjects(orgId);
     }
 
     case "add_project_item": {

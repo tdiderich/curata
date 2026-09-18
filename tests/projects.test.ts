@@ -16,6 +16,7 @@ import {
   addProjectItem,
   removeProjectItem,
   deleteProject,
+  listProjects,
 } from "@/lib/projects";
 
 const T = (s: string) => `proj-${s}`;
@@ -161,5 +162,83 @@ describe("projects: clone a template into a tracked run", () => {
     await deleteProject(orgId, T("launch/del-own"));
     graph = await getDependents(orgId, { term: T("launch/del-own") });
     expect(graph.dependents).toEqual([]);
+  });
+});
+
+describe("projects: bug fixes from the cold MCP review", () => {
+  let orgId: string;
+  beforeEach(async () => {
+    orgId = (await createTestOrg({ name: "Fix Org", slug: "fix-org" })).id;
+  });
+
+  it("owner is readable on a page item, not just external", async () => {
+    await createTestPage(orgId, { slug: "fx-src" });
+    await createTestPage(orgId, { slug: "fx-a" });
+    const project = await createProjectFromTemplate(orgId, { term: T("fix/owner"), title: "Owner fix" }, "agent");
+    await addProjectItem(orgId, project.term, { slug: "fx-a", owner: "PMM" }, "agent");
+    const p = await getProject(orgId, project.term);
+    expect((p.items[0] as { owner: string | null }).owner).toBe("PMM");
+    await updateProjectItem(orgId, project.term, { itemId: p.items[0].itemId, owner: "Sales" }, "u1");
+    const p2 = await getProject(orgId, project.term);
+    expect((p2.items[0] as { owner: string | null }).owner).toBe("Sales");
+  });
+
+  it("a bad due_date is rejected with a clean error before any write, no orphaned asset or edge", async () => {
+    const project = await createProjectFromTemplate(orgId, { term: T("fix/date"), title: "Date fix" }, "agent");
+    await expect(
+      addProjectItem(orgId, project.term, { url: "https://example.com/orphan-test", dueDate: "not-a-real-date" }, "agent")
+    ).rejects.toThrow(/due_date is not a valid date/);
+    const p = await getProject(orgId, project.term);
+    expect(p.items).toEqual([]);
+    const graph = await getDependents(orgId, { term: project.term });
+    expect(graph.external).toEqual([]);
+    // Same guard on update.
+    await createTestPage(orgId, { slug: "fx-date-a" });
+    await addProjectItem(orgId, project.term, { slug: "fx-date-a" }, "agent");
+    const p2 = await getProject(orgId, project.term);
+    await expect(
+      updateProjectItem(orgId, project.term, { itemId: p2.items[0].itemId, dueDate: "also-not-a-date" }, "u1")
+    ).rejects.toThrow(/due_date is not a valid date/);
+  });
+
+  it("the error hint for an unknown project points at create_project, not an internal function name", async () => {
+    await expect(getProject(orgId, T("fix/no-such"))).rejects.toThrow(/create_project/);
+    await expect(getProject(orgId, T("fix/no-such"))).rejects.not.toThrow(/createProjectFromTemplate/);
+  });
+
+  it("listProjects ranks by creation, with a completion roll-up, and lets you check a shared checklist's reuse end to end", async () => {
+    const groupSrc = await createTestPage(orgId, { slug: "fx-grp-src" });
+    await createTestPage(orgId, { slug: "fx-grp-shared" });
+    await upsertConcepts(groupSrc.id, [{ term: T("group/fixshared"), rel: "asserts" }], "agent");
+    await mapDependencies(orgId, { term: T("group/fixshared"), depends: ["fx-grp-shared"] }, "agent");
+
+    // Two root templates that each include the shared group - the group
+    // stays live-referenced (not cloned) only via an explicit include, not
+    // by naming the group itself as templateTerm (that clones its own
+    // depends as owned items instead, tested separately above).
+    const tmplSrcA = await createTestPage(orgId, { slug: "fx-tmpl-a-src" });
+    const tmplSrcB = await createTestPage(orgId, { slug: "fx-tmpl-b-src" });
+    await upsertConcepts(tmplSrcA.id, [{ term: T("template/a"), rel: "asserts" }], "agent");
+    await upsertConcepts(tmplSrcB.id, [{ term: T("template/b"), rel: "asserts" }], "agent");
+    await mapDependencies(orgId, { term: T("template/a"), includes: [T("group/fixshared")] }, "agent");
+    await mapDependencies(orgId, { term: T("template/b"), includes: [T("group/fixshared")] }, "agent");
+
+    const a = await createProjectFromTemplate(orgId, { term: T("fix/run-a"), title: "Run A", templateTerm: T("template/a") }, "agent");
+    const b = await createProjectFromTemplate(orgId, { term: T("fix/run-b"), title: "Run B", templateTerm: T("template/b") }, "agent");
+
+    let list = await listProjects(orgId);
+    const terms = list.map((p) => p.term);
+    expect(terms).toContain(a.term);
+    expect(terms).toContain(b.term);
+    expect(list.find((p) => p.term === a.term)?.completion).toEqual({ total: 0, done: 0, open: 0, overdue: 0 });
+
+    await verifyDependent(orgId, { slug: "fx-grp-shared", term: T("group/fixshared"), context: a.term, note: "checked for A" });
+    const pa = await getProject(orgId, a.term);
+    const pb = await getProject(orgId, b.term);
+    expect((pa.includes[0].items[0] as { verifiedAt: string | null }).verifiedAt).not.toBeNull();
+    expect((pb.includes[0].items[0] as { verifiedAt: string | null }).verifiedAt).toBeNull();
+
+    list = await listProjects(orgId);
+    expect(list.map((p) => p.term)).toEqual(expect.arrayContaining([a.term, b.term]));
   });
 });
