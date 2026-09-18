@@ -26,6 +26,7 @@ import {
   getRelated,
   getSemanticMap,
   getDependents,
+  VERIFY_STATUSES,
   CONCEPT_RELS,
 } from "@/lib/concepts";
 import { ensureComponentIds, buildOutline, formatOutline } from "@/lib/component-ids";
@@ -451,11 +452,12 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       return viaDispatch("map_dependencies")(flat);
     });
 
-  server.tool("mark_verified", "Record that a page or external asset was checked and is still correct, without writing a new version. Clears staleAgainstSource in get_dependents. Use after reviewing a dependent that needed no change.",
+  server.tool("mark_verified", "Record that you looked at a page or external asset with respect to a concept, without writing a new version. Default status holds: it is still right, clears staleAgainstSource. status needs_change: you looked and it is wrong, reads as 'needs update' until someone writes the page or marks it holds. Verification is per edge (page x concept): pass term to scope it, omit term to cover every concept the page or asset is tagged with.",
     {
       slug: z.string().optional().describe("Page slug to verify"),
-      url: z.string().optional().describe("External asset URL to verify (all concepts it is attached to, unless term is given)"),
-      term: z.string().optional().describe("With url: only the edge to this concept"),
+      url: z.string().optional().describe("External asset URL to verify"),
+      term: z.string().optional().describe("Scope to this page's or asset's edge to one concept. Omit to cover all its edges"),
+      status: z.enum(VERIFY_STATUSES).optional().describe("holds (default) or needs_change"),
       note: z.string().optional().describe("Why it still holds, like 'does not quote the price'. Shown next to the verified badge"),
     },
     viaDispatch("mark_verified"));

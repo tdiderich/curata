@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   const ctx = await resolveOrg();
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  let body: { slug?: string; url?: string; term?: string; note?: string };
+  let body: { slug?: string; url?: string; term?: string; note?: string; status?: string };
   try {
     body = await request.json();
   } catch {
@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       url: body.url || undefined,
       term: body.term || undefined,
       note: typeof body.note === "string" ? body.note.slice(0, 500) : undefined,
+      status: body.status === "needs_change" ? "needs_change" : "holds",
     });
     logAudit({
       orgId: ctx.orgId,
@@ -35,11 +36,11 @@ export async function POST(request: NextRequest) {
       resourceType: result.kind,
       resourceId: result.id,
       actorId: ctx.userId,
-      metadata: { note: result.note, term: body.term ?? null },
+      metadata: { note: result.note, term: result.term, status: result.status },
     }).catch(() => {});
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: /not found|no external dependent found/.test(message) ? 404 : 400 });
+    return NextResponse.json({ error: message }, { status: /not found|no external asset tracked/.test(message) ? 404 : 400 });
   }
 }

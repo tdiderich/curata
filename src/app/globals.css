@@ -7858,8 +7858,10 @@ body:has(.nav-reveal) .page-toolbar {
 .stg-dep-verify-cell { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .stg-dep-verify-btn { opacity: 0; transition: opacity 120ms; }
 .dash-row:hover .stg-dep-verify-btn, .stg-dep-verify-btn:focus-visible { opacity: 1; }
-.stg-dep-verify-form { display: inline-flex; align-items: center; gap: 6px; }
-.stg-dep-verify-note { width: 240px; padding: 4px 8px; font-size: 12px; border-radius: 6px; }
+.stg-dep-verify-form { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.stg-dep-verify-form .stg-qbtn { white-space: nowrap; }
+.stg-dep-verify-note { width: 200px; padding: 4px 8px; font-size: 12px; border-radius: 6px; }
+.stg-dep-more { white-space: nowrap; }
 .stg-dep-verify-error { color: #E0A9B5; font-size: 12px; }
 .stg-dep-owners { display: inline-flex; gap: 10px; flex-wrap: wrap; }
 /* Concept relation badges (Dependencies + Tags tabs). */
@@ -7875,6 +7877,8 @@ body:has(.nav-reveal) .page-toolbar {
 .pill--trusted .pill-dot { background: var(--teal); }
 .pill--behind { background: rgba(228, 230, 195, 0.14); color: var(--snow); }
 .pill--behind .pill-dot { background: var(--yellow); }
+.pill--needs-change { background: rgba(201, 123, 138, 0.16); color: var(--snow); }
+.pill--needs-change .pill-dot { background: #E0A9B5; }
 .pill--untrusted { background: rgba(var(--text-rgb), 0.08); color: var(--light-muted); }
 .pill--untrusted .pill-dot { background: rgba(var(--text-rgb), 0.35); }
 

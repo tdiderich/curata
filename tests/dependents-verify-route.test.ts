@@ -33,9 +33,9 @@ describe("POST /api/dependents/verify", () => {
     await upsertConcepts(src.id, [{ term: "vr-term", rel: "asserts" }], "agent");
     await upsertConcepts(dep.id, [{ term: "vr-term", rel: "depends" }], "agent");
     await upsertExternalDependents(org.id, "vr-term", [{ url: "https://example.com/deck" }], "agent");
-    await testDb.page.update({ where: { id: dep.id }, data: { verifiedAt: null } });
+    await testDb.pageConcept.updateMany({ where: { pageId: dep.id }, data: { verifiedAt: null } });
 
-    const r1 = await POST(post({ slug: "v-dep", note: "still fine" }));
+    const r1 = await POST(post({ slug: "v-dep", term: "vr-term", note: "still fine" }));
     expect(r1.status).toBe(200);
     expect((await r1.json()).note).toBe("still fine");
 
@@ -46,6 +46,11 @@ describe("POST /api/dependents/verify", () => {
     expect(g.dependents[0].verifiedNote).toBe("still fine");
     expect(g.dependents[0].staleAgainstSource).toBe(false);
     expect(g.external[0].verifiedAt).not.toBeNull();
+
+    const r3 = await POST(post({ url: "https://example.com/deck", term: "vr-term", status: "needs_change", note: "wrong" }));
+    expect(r3.status).toBe(200);
+    expect((await r3.json()).status).toBe("needs_change");
+    expect((await getDependents(org.id, { term: "vr-term" })).external[0].needsChange).toBe(true);
 
     // Another org cannot verify this org's rows.
     resolveOrgMock.mockResolvedValue({ orgId: other.id, userId: "user-2", role: "owner" });

@@ -17,8 +17,9 @@ interface DependencyVerifyButtonProps {
 
 /**
  * Inline "Verify" action on a Dependencies row. Click opens a one-line note
- * field (why it still holds); Save posts to /api/dependents/verify and
- * refreshes the server-rendered table. Enter saves, Escape cancels.
+ * field plus two outcomes: Holds (still right) or Needs change (looked, it is
+ * wrong). Either posts to /api/dependents/verify and refreshes the
+ * server-rendered table. Enter = Holds, Escape cancels.
  */
 export function DependencyVerifyButton({ slug, url, term, label }: DependencyVerifyButtonProps) {
   const router = useRouter();
@@ -27,14 +28,14 @@ export function DependencyVerifyButton({ slug, url, term, label }: DependencyVer
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function save() {
+  async function save(status: "holds" | "needs_change" = "holds") {
     setBusy(true);
     setError(null);
     try {
       const res = await fetch(`${basePath}/api/dependents/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, url, term, note: note.trim() || undefined }),
+        body: JSON.stringify({ slug, url, term, status, note: note.trim() || undefined }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -63,7 +64,7 @@ export function DependencyVerifyButton({ slug, url, term, label }: DependencyVer
       <input
         autoFocus
         className="stg-input stg-dep-verify-note"
-        placeholder="Why it still holds (optional)"
+        placeholder="What you found (optional)"
         value={note}
         maxLength={500}
         disabled={busy}
@@ -73,8 +74,11 @@ export function DependencyVerifyButton({ slug, url, term, label }: DependencyVer
           if (e.key === "Escape") { setOpen(false); setNote(""); setError(null); }
         }}
       />
-      <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void save()}>
-        {busy ? "Saving" : "Save"}
+      <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void save("holds")} title="Checked it, still right">
+        {busy ? "Saving" : "Holds"}
+      </button>
+      <button type="button" className="stg-qbtn stg-qbtn--danger" disabled={busy} onClick={() => void save("needs_change")} title="Checked it, it is wrong">
+        Needs change
       </button>
       <button type="button" className="stg-qbtn" disabled={busy} onClick={() => { setOpen(false); setNote(""); setError(null); }}>
         Cancel

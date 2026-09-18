@@ -56,8 +56,9 @@ import {
   getDependents,
   mapDependencies,
   verifyDependent,
+  VERIFY_STATUSES,
 } from "@/lib/concepts";
-import type { ConceptInput, ConceptRel, ExternalDependentInput, LinkInput } from "@/lib/concepts";
+import type { ConceptInput, ConceptRel, ExternalDependentInput, LinkInput, VerifyStatus } from "@/lib/concepts";
 import { ensureComponentIds, applyPatchOperations, buildOutline, formatOutline, locateComponent } from "@/lib/component-ids";
 import { createHash } from "crypto";
 import type { PatchOperation } from "@/lib/component-ids";
@@ -203,7 +204,7 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_related: { known: new Set(["slug", "term"]) },
   get_dependents: { known: new Set(["slug", "term", "rel"]) },
   map_dependencies: { known: new Set(["term", "kind", "asserts", "depends", "references", "external"]) },
-  mark_verified: { known: new Set(["slug", "url", "term", "note"]) },
+  mark_verified: { known: new Set(["slug", "url", "term", "note", "status"]) },
   get_semantic_map: { known: new Set(["kind"]) },
   export_page: { known: new Set(["slug", "format"]) },
   export_report: { known: new Set(["slugs", "title", "subtitle"]) },
@@ -1715,7 +1716,8 @@ export async function dispatch(
     case "mark_verified": {
       if (!args.slug && !args.url) throw new Error("slug or url is required");
       if (args.slug && !SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
-      const verified = await verifyDependent(orgId, { slug: args.slug || undefined, url: args.url || undefined, term: args.term || undefined, note: args.note || undefined });
+      if (args.status && !VERIFY_STATUSES.includes(args.status as VerifyStatus)) throw new Error(`status must be one of ${VERIFY_STATUSES.join("|")}`);
+      const verified = await verifyDependent(orgId, { slug: args.slug || undefined, url: args.url || undefined, term: args.term || undefined, note: args.note || undefined, status: (args.status as VerifyStatus) || undefined });
       logAudit({ orgId, action: "page.verify", resourceType: verified.kind, resourceId: verified.id, actorType: "apikey", actorId });
       return { ok: true, ...verified };
     }

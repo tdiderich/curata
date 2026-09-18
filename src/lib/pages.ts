@@ -13,6 +13,7 @@ import { pruneVersions } from "./version-retention";
 import { extractSalientTerms } from "./salient-terms";
 import { extractDeclaredPageType } from "./required-components";
 import { makeApprovalRuleResolver, makeTrustModeResolver, resolveEffectiveTrustMode } from "./approval";
+import { verifyAllEdgesForPage } from "./concepts";
 import type { TrustMode } from "./approval";
 
 /// npm dist-tag style read channel: "latest" is the current behavior (newest
@@ -733,8 +734,7 @@ async function _writePageInternal(
 
   if (existing) {
     const pageType = extractDeclaredPageType(yamlContent) ?? null;
-    // Writing is verifying: whoever just rewrote the page looked at it.
-    const pageUpdateData: Record<string, unknown> = { title, updatedAt: new Date(), verifiedAt: new Date(), verifiedNote: null, dashboardEnabled, tokenCount: newTokens, pageType };
+    const pageUpdateData: Record<string, unknown> = { title, updatedAt: new Date(), dashboardEnabled, tokenCount: newTokens, pageType };
     if (sortOrder !== undefined) pageUpdateData.sortOrder = sortOrder;
 
     await db.$transaction([
@@ -747,6 +747,10 @@ async function _writePageInternal(
       }),
     ]);
     pageId = existing.id;
+    // Writing is verifying: whoever just rewrote the page looked at it, for
+    // every concept it carries. Edges tagged in this same call are created
+    // afterwards by upsertConcepts and start fresh anyway.
+    await verifyAllEdgesForPage(pageId);
   } else {
     const pageType = extractDeclaredPageType(yamlContent) ?? null;
     const createData: Record<string, unknown> = {
@@ -758,7 +762,6 @@ async function _writePageInternal(
       dashboardEnabled,
       tokenCount: newTokens,
       pageType,
-      verifiedAt: new Date(),
       versions: {
         create: { yamlContent, jsonContent, contentHash, createdBy },
       },
@@ -874,8 +877,9 @@ export async function markTrusted(
   const version = await db.pageVersion.findFirst({ where: { id: versionId, pageId: page.id } });
   if (!version) return { ok: false, error: `version not found: ${versionId}` };
 
-  // A trust pin is also a verification.
-  await db.page.update({ where: { id: page.id }, data: { trustedVersionId: versionId, verifiedAt: new Date() } });
+  await db.page.update({ where: { id: page.id }, data: { trustedVersionId: versionId } });
+  // A trust pin is also a verification, of every edge the page carries.
+  await verifyAllEdgesForPage(page.id);
 
   await logAudit({
     orgId,

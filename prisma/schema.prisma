@@ -130,13 +130,6 @@ model Page {
   // "trusted" read for agents. Null = no trusted version yet (no backfill).
   // Writes never touch this column — only markTrusted/clearTrusted do.
   trustedVersionId String? @map("trusted_version_id")
-  // Last time a human or agent confirmed this page is right. Every write
-  // bumps it (writing is verifying), markTrusted bumps it, and verify_page
-  // bumps it without a new version for "looked, still correct". Null = never.
-  verifiedAt DateTime? @map("verified_at")
-  // Why the last verification happened ("does not quote the price"). Set by
-  // mark_verified, cleared by writes (the new content speaks for itself).
-  verifiedNote String? @map("verified_note")
   seeded     Boolean   @default(false)
   pageType   String?   @map("page_type")
   createdAt  DateTime  @default(now()) @map("created_at")
@@ -274,7 +267,7 @@ model Concept {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   pages PageConcept[]
-  externalDependents ExternalDependent[]
+  externalEdges ExternalEdge[]
 
   @@index([orgId, isRecommended])
   @@map("concepts")
@@ -288,6 +281,15 @@ model PageConcept {
   /// How the page relates to the concept: depends | asserts | references | instantiates.
   /// references is the untyped default; instantiates is system-written by create_from_template.
   rel       String   @default("references")
+  /// Per-edge verification: when this page was last confirmed right *with
+  /// respect to this concept*. A page that depends on pricing and on the
+  /// tagline is checked for each separately. Any write to the page bumps
+  /// every edge (writing is verifying); mark_verified bumps one. Null = never.
+  verifiedAt   DateTime? @map("verified_at")
+  verifiedNote String?   @map("verified_note")
+  /// "Looked, and it is wrong": set by mark_verified status=needs_change,
+  /// cleared by a write or a later holds.
+  needsChange  Boolean   @default(false) @map("needs_change")
   createdBy String   @map("created_by")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -300,30 +302,47 @@ model PageConcept {
   @@map("page_concepts")
 }
 
-// An asset that lives outside curata (a deck in Drive, a README in GitHub)
-// and depends on a concept. Edge, not node: there is no page behind it, it
-// hangs directly off the concept and shows up inline in get_dependents and
-// the Dependencies tab next to the curata pages.
-model ExternalDependent {
-  id         String    @id @default(cuid())
-  orgId      String    @map("org_id")
-  conceptId  String    @map("concept_id")
-  url        String
-  label      String
-  owner      String?
-  rel        String    @default("depends")
-  // Null until someone actually checks the asset. Attaching is not checking.
-  verifiedAt DateTime? @map("verified_at")
-  verifiedNote String? @map("verified_note")
-  createdBy  String    @map("created_by")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
+// An asset that lives outside curata (a deck in Drive, a README in GitHub).
+// One row per normalized URL per org, so the same deck tracked against three
+// concepts is one asset with three edges, not three assets with three states.
+model ExternalAsset {
+  id        String   @id @default(cuid())
+  orgId     String   @map("org_id")
+  url       String
+  label     String
+  owner     String?
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  concept Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  edges ExternalEdge[]
 
-  @@unique([orgId, conceptId, url])
-  @@index([orgId, url])
-  @@map("external_dependents")
+  @@unique([orgId, url])
+  @@map("external_assets")
+}
+
+// asset --rel--> concept, with the same per-edge verification as PageConcept.
+// Edge, not node: there is no page behind it, it hangs directly off the
+// concept and shows inline in get_dependents next to the curata pages.
+model ExternalEdge {
+  id           String    @id @default(cuid())
+  assetId      String    @map("asset_id")
+  conceptId    String    @map("concept_id")
+  rel          String    @default("depends")
+  /// Null until someone actually checks the asset. Attaching is not checking.
+  verifiedAt   DateTime? @map("verified_at")
+  verifiedNote String?   @map("verified_note")
+  needsChange  Boolean   @default(false) @map("needs_change")
+  createdBy    String    @map("created_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  asset   ExternalAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  concept Concept       @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, conceptId])
+  @@index([conceptId])
+  @@map("external_edges")
 }
 
 model PageLink {

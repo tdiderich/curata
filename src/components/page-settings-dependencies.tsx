@@ -42,7 +42,15 @@ function noteCell(note: string | null) {
   return <span className="stg-dep-note" title={note}>{note}</span>;
 }
 
-function verifiedCell(p: Pick<DependentPage, "verifiedAt" | "staleAgainstSource">, kind: "page" | "external" = "page") {
+function verifiedCell(p: Pick<DependentPage, "verifiedAt" | "staleAgainstSource" | "needsChange">, kind: "page" | "external" = "page") {
+  if (p.needsChange && p.verifiedAt) {
+    return (
+      <span className="stg-dep-verified">
+        <StatusBadge tone="needs-change" label="needs update" />
+        <span className="stg-dep-when">{relativeTime(p.verifiedAt)}</span>
+      </span>
+    );
+  }
   if (!p.verifiedAt) {
     return <StatusBadge tone="untrusted" label={kind === "external" ? "never checked" : "never verified"} />;
   }
@@ -93,19 +101,9 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
     list.push(a);
     assertersByTerm.set(a.via, list);
   }
-  // One row per page. A page reached through several concepts (or both a
-  // depends and an instantiates edge) shows its first edge plus a "+n" count
-  // with the remaining concepts in the title tooltip.
-  const byPage = new Map<string, { first: DependentPage; vias: string[] }>();
-  for (const d of [...data.dependents, ...data.instances]) {
-    const entry = byPage.get(d.slug);
-    if (entry) {
-      if (!entry.vias.includes(d.via)) entry.vias.push(d.via);
-    } else {
-      byPage.set(d.slug, { first: d, vias: [d.via] });
-    }
-  }
-  const downstream = [...byPage.values()];
+  // One row per edge: a page that depends on two concepts is verified for
+  // each separately, so each gets its own line and its own Verify.
+  const downstream = [...data.dependents, ...data.instances];
   const nothingTagged = dependsOn.length === 0 && asserts.length === 0 && downstream.length === 0;
 
   return (
@@ -177,22 +175,19 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
               : undefined
           }
         >
-          {downstream.map(({ first: d, vias }) => (
-            <tr key={d.slug} className="dash-row">
+          {downstream.map((d) => (
+            <tr key={`${d.slug}:${d.via}:${d.rel}`} className="dash-row">
               <td className="dash-td dash-td-title">
                 <Link href={`/pages/${d.slug}`} className="stg-dep-link">
                   {d.title || d.slug}
                 </Link>
               </td>
-              <td className="dash-td" title={vias.length > 1 ? vias.join(", ") : undefined}>
-                {vias[0]}
-                {vias.length > 1 && <span className="stg-dep-more"> +{vias.length - 1}</span>}
-              </td>
+              <td className="dash-td">{d.via}</td>
               <td className="dash-td">{relBadge(d.rel)}</td>
               <td className="dash-td">
                 <span className="stg-dep-verify-cell">
                   {verifiedCell(d)}
-                  <DependencyVerifyButton slug={d.slug} label={d.staleAgainstSource || !d.verifiedAt ? "Verify" : "Re-verify"} />
+                  <DependencyVerifyButton slug={d.slug} term={d.via} label={d.staleAgainstSource || !d.verifiedAt ? "Verify" : "Re-verify"} />
                 </span>
               </td>
               <td className="dash-td">{noteCell(d.verifiedNote)}</td>
@@ -204,7 +199,10 @@ export function PageSettingsDependencies({ data }: PageSettingsDependenciesProps
                 {externalLink(e)}
                 {e.owner && <span className="stg-dep-owner">{e.owner}</span>}
               </td>
-              <td className="dash-td">{e.via}</td>
+              <td className="dash-td" title={e.alsoDependsOn.length ? `Also tracked against ${e.alsoDependsOn.join(", ")}` : undefined}>
+                {e.via}
+                {e.alsoDependsOn.length > 0 && <span className="stg-dep-more"> +{e.alsoDependsOn.length}</span>}
+              </td>
               <td className="dash-td">{relBadge(e.rel)}</td>
               <td className="dash-td">
                 <span className="stg-dep-verify-cell">

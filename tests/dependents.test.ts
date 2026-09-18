@@ -285,7 +285,7 @@ describe("verifiedAt and staleAgainstSource", () => {
     await upsertConcepts(src.id, [{ term: T("feat/grouping"), rel: "asserts" }], "agent");
     await upsertConcepts(dep.id, [{ term: T("feat/grouping"), rel: "depends" }], "agent");
     const old = new Date(Date.now() - 7 * 24 * 3600 * 1000);
-    await testDb.page.update({ where: { id: dep.id }, data: { verifiedAt: old } });
+    await testDb.pageConcept.updateMany({ where: { pageId: dep.id }, data: { verifiedAt: old } });
     await testDb.page.update({ where: { id: src.id }, data: { updatedAt: new Date() } });
 
     let r = await getDependents(orgId, { term: T("feat/grouping") });
@@ -298,7 +298,7 @@ describe("verifiedAt and staleAgainstSource", () => {
     r = await getDependents(orgId, { term: T("feat/grouping") });
     expect(r.dependents[0].staleAgainstSource).toBe(false);
     expect(r.dependents[0].verifiedNote).toBe("does not mention grouping");
-    expect(r.summary.pages).toEqual({ total: 1, ok: 1, stale: 0, neverVerified: 0 });
+    expect(r.summary.pages).toEqual({ total: 1, ok: 1, stale: 0, needsChange: 0, neverVerified: 0 });
 
     // A rewrite speaks for itself: the note from the last verification goes.
     await dispatch("write_page", { slug: "deck-notes", content: "title: Deck notes\nshell: document\ncomponents: []\n" }, orgId, "verify-org", "key", "u1");
@@ -308,26 +308,74 @@ describe("verifiedAt and staleAgainstSource", () => {
 
   it("never-verified dependent with a source is stale; with no source it is not", async () => {
     const dep = await createTestPage(orgId, { slug: "lonely" });
-    await testDb.page.update({ where: { id: dep.id }, data: { verifiedAt: null } });
-    await upsertConcepts(dep.id, [{ term: T("no-source"), rel: "depends" }], "agent");
+    await upsertConcepts(dep.id, [{ term: T("no-source"), rel: "depends" }], "agent", { verified: false });
     const r = await getDependents(orgId, { term: T("no-source") });
     expect(r.dependents[0].verifiedAt).toBeNull();
     expect(r.dependents[0].staleAgainstSource).toBe(false);
   });
 
-  it("write_page and mark_trusted both bump verifiedAt", async () => {
+  it("write_page and mark_trusted both bump every edge on the page and clear needs_change", async () => {
     const page = await createTestPage(orgId, { slug: "bump-me" });
-    await testDb.page.update({ where: { id: page.id }, data: { verifiedAt: null } });
+    await upsertConcepts(page.id, [{ term: T("bump/a"), rel: "depends" }, { term: T("bump/b"), rel: "depends" }], "agent", { verified: false });
+    await testDb.pageConcept.updateMany({ where: { pageId: page.id }, data: { needsChange: true, verifiedNote: "wrong" } });
     await dispatch("write_page", { slug: "bump-me", content: "title: Bump\nshell: document\ncomponents: []\n" }, orgId, "verify-org", "key", "u1");
-    const after = await testDb.page.findUnique({ where: { id: page.id }, select: { verifiedAt: true } });
-    expect(after?.verifiedAt).not.toBeNull();
+    let edges = await testDb.pageConcept.findMany({ where: { pageId: page.id } });
+    expect(edges).toHaveLength(2);
+    for (const e of edges) { expect(e.verifiedAt).not.toBeNull(); expect(e.needsChange).toBe(false); expect(e.verifiedNote).toBeNull(); }
 
-    await testDb.page.update({ where: { id: page.id }, data: { verifiedAt: null } });
+    await testDb.pageConcept.updateMany({ where: { pageId: page.id }, data: { verifiedAt: null } });
     await testDb.organization.update({ where: { id: orgId }, data: { rules: [{ kind: "trust", mode: "locked" }] } });
     await dispatch("mark_trusted", { slug: "bump-me" }, orgId, "verify-org", "key", "u1");
-    const pinned = await testDb.page.findUnique({ where: { id: page.id }, select: { verifiedAt: true, trustedVersionId: true } });
-    expect(pinned?.trustedVersionId).not.toBeNull();
-    expect(pinned?.verifiedAt).not.toBeNull();
+    edges = await testDb.pageConcept.findMany({ where: { pageId: page.id } });
+    for (const e of edges) expect(e.verifiedAt).not.toBeNull();
+  });
+
+  it("verification is per edge: verifying for one concept leaves the other alone", async () => {
+    const pricing = await createTestPage(orgId, { slug: "pricing-src" });
+    const tagline = await createTestPage(orgId, { slug: "tagline-src" });
+    const onePager = await createTestPage(orgId, { slug: "one-pager-x" });
+    await upsertConcepts(pricing.id, [{ term: T("edge/pricing"), rel: "asserts" }], "agent");
+    await upsertConcepts(tagline.id, [{ term: T("edge/tagline"), rel: "asserts" }], "agent");
+    await mapDependencies(orgId, { term: T("edge/pricing"), depends: ["one-pager-x"] }, "agent");
+    await mapDependencies(orgId, { term: T("edge/tagline"), depends: ["one-pager-x"] }, "agent");
+
+    let byTagline = await getDependents(orgId, { term: T("edge/tagline") });
+    expect(byTagline.dependents[0].verifiedAt).toBeNull();
+    expect(byTagline.summary.pages.neverVerified).toBe(1);
+
+    const v = await verifyDependent(orgId, { slug: "one-pager-x", term: T("edge/pricing"), note: "does not quote the price" });
+    expect(v.count).toBe(1);
+    expect(v.term).toBe(T("edge/pricing"));
+
+    const byPricing = await getDependents(orgId, { term: T("edge/pricing") });
+    expect(byPricing.dependents[0].staleAgainstSource).toBe(false);
+    expect(byPricing.dependents[0].verifiedNote).toBe("does not quote the price");
+    byTagline = await getDependents(orgId, { term: T("edge/tagline") });
+    expect(byTagline.dependents[0].staleAgainstSource).toBe(true);
+    expect(byTagline.dependents[0].verifiedNote).toBeNull();
+
+    // slug alone covers every edge; a term the page is not tagged with errors.
+    const all = await verifyDependent(orgId, { slug: "one-pager-x" });
+    expect(all.count).toBe(2);
+    await expect(verifyDependent(orgId, { slug: "one-pager-x", term: T("edge/nope") })).rejects.toThrow(/concept not found/);
+  });
+
+  it("needs_change reads as needs update until a holds or a write", async () => {
+    const src = await createTestPage(orgId, { slug: "nc-src" });
+    const dep = await createTestPage(orgId, { slug: "nc-dep" });
+    await upsertConcepts(src.id, [{ term: T("nc/term"), rel: "asserts" }], "agent");
+    await upsertConcepts(dep.id, [{ term: T("nc/term"), rel: "depends" }], "agent");
+    await verifyDependent(orgId, { slug: "nc-dep", term: T("nc/term"), status: "needs_change", note: "still says the old thing" });
+    let r = await getDependents(orgId, { term: T("nc/term") });
+    expect(r.dependents[0].needsChange).toBe(true);
+    expect(r.dependents[0].staleAgainstSource).toBe(true);
+    expect(r.summary.pages.needsChange).toBe(1);
+    expect(r.summary.text).toBe("1 page: 0 ok, 0 stale, 1 needs update");
+    await verifyDependent(orgId, { slug: "nc-dep", term: T("nc/term"), status: "holds" });
+    r = await getDependents(orgId, { term: T("nc/term") });
+    expect(r.dependents[0].needsChange).toBe(false);
+    expect(r.dependents[0].staleAgainstSource).toBe(false);
+    await expect(dispatch("mark_verified", { slug: "nc-dep", status: "bogus" }, orgId, "verify-org", "key", "u1")).rejects.toThrow(/status must be one of/);
   });
 });
 
@@ -357,7 +405,7 @@ describe("external dependents", () => {
       { url: "https://github.com/mazehq/atlas/blob/main/README.md" },
     ], "agent");
     expect(rows).toHaveLength(3);
-    const stored = await testDb.externalDependent.findMany({ where: { orgId } });
+    const stored = await testDb.externalAsset.findMany({ where: { orgId } });
     expect(stored).toHaveLength(2);
     const deck = stored.find((r) => r.url.includes("DECK"))!;
     expect(deck.label).toBe("Sales deck (dup)");
@@ -369,7 +417,7 @@ describe("external dependents", () => {
     // Attaching is not checking: a fresh asset reads never checked, and stale.
     expect(r.external[0].verifiedAt).toBeNull();
     expect(r.external[0].staleAgainstSource).toBe(true);
-    expect(r.summary.external).toEqual({ total: 2, ok: 0, stale: 2, neverChecked: 2 });
+    expect(r.summary.external).toEqual({ total: 2, ok: 0, stale: 0, needsChange: 0, neverChecked: 2 });
     expect(r.summary.text).toBe("0 pages: 0 ok, 0 stale; 2 external assets: 0 checked, 2 never checked");
 
     const bySlug = await getDependents(orgId, { slug: "pricing" });
@@ -380,11 +428,11 @@ describe("external dependents", () => {
     const src = await createTestPage(orgId, { slug: "spec-2" });
     await upsertConcepts(src.id, [{ term: T("ext/stale"), rel: "asserts" }], "agent");
     await upsertExternalDependents(orgId, T("ext/stale"), [{ url: "https://example.com/deck" }], "agent");
-    await testDb.externalDependent.updateMany({ where: { orgId }, data: { verifiedAt: new Date(Date.now() - 86400_000) } });
+    await testDb.externalEdge.updateMany({ where: { asset: { orgId } }, data: { verifiedAt: new Date(Date.now() - 86400_000) } });
     await testDb.page.update({ where: { id: src.id }, data: { updatedAt: new Date() } });
     let r = await getDependents(orgId, { term: T("ext/stale") });
     expect(r.external[0].staleAgainstSource).toBe(true);
-    expect(r.summary.text).toBe("0 pages: 0 ok, 0 stale; 1 external asset: 0 checked, 0 never checked, 1 stale");
+    expect(r.summary.text).toBe("0 pages: 0 ok, 0 stale; 1 external asset: 0 checked, 1 stale, 0 never checked");
 
     const v = await dispatch("mark_verified", { url: "https://example.com/deck/", note: "deck still says $59, ticket filed" }, orgId, "ext-org", "key", "u1") as { kind: string; count: number; note: string };
     expect(v.kind).toBe("external");
@@ -395,6 +443,32 @@ describe("external dependents", () => {
     expect(r.external[0].verifiedNote).toBe("deck still says $59, ticket filed");
   });
 
+  it("one asset, many edges: the same url on two concepts shares label/owner and keeps separate verification", async () => {
+    await upsertExternalDependents(orgId, T("ext/a"), [{ url: "https://example.com/shared", label: "Shared deck", owner: "Sales" }], "agent");
+    await upsertExternalDependents(orgId, T("ext/b"), [{ url: "https://example.com/shared/" }], "agent");
+    expect(await testDb.externalAsset.count({ where: { orgId, url: "https://example.com/shared" } })).toBe(1);
+    expect(await testDb.externalEdge.count({ where: { asset: { orgId, url: "https://example.com/shared" } } })).toBe(2);
+
+    const v = await verifyDependent(orgId, { url: "https://example.com/shared", term: T("ext/a"), note: "a is fine" });
+    expect(v.count).toBe(1);
+    const a = await getDependents(orgId, { term: T("ext/a") });
+    const b = await getDependents(orgId, { term: T("ext/b") });
+    expect(a.external[0].label).toBe("Shared deck");
+    expect(b.external[0].label).toBe("Shared deck");
+    expect(a.external[0].verifiedNote).toBe("a is fine");
+    expect(b.external[0].verifiedAt).toBeNull();
+    expect(a.external[0].alsoDependsOn).toEqual([T("ext/b")]);
+    expect(b.external[0].alsoDependsOn).toEqual([T("ext/a")]);
+
+    // url alone covers every edge on the asset.
+    expect((await verifyDependent(orgId, { url: "https://example.com/shared" })).count).toBe(2);
+    // needs_change on an external counts separately.
+    await verifyDependent(orgId, { url: "https://example.com/shared", term: T("ext/b"), status: "needs_change", note: "old tagline" });
+    const b2 = await getDependents(orgId, { term: T("ext/b") });
+    expect(b2.external[0].needsChange).toBe(true);
+    expect(b2.summary.text).toBe("0 pages: 0 ok, 0 stale; 1 external asset: 0 checked, 1 needs update, 0 never checked");
+  });
+
   it("remove detaches, and a concept with only external dependents still reports the asserter gap", async () => {
     await upsertExternalDependents(orgId, T("ext/orphan"), [{ url: "https://example.com/a" }, { url: "https://example.com/b" }], "agent");
     let r = await getDependents(orgId, { term: T("ext/orphan") });
@@ -403,6 +477,8 @@ describe("external dependents", () => {
     await upsertExternalDependents(orgId, T("ext/orphan"), [{ url: "https://example.com/a", remove: true }], "agent");
     r = await getDependents(orgId, { term: T("ext/orphan") });
     expect(r.external.map((e) => e.url)).toEqual(["https://example.com/b"]);
+    // Asset with no edges left is gone.
+    expect(await testDb.externalAsset.count({ where: { orgId, url: "https://example.com/a" } })).toBe(0);
   });
 });
 

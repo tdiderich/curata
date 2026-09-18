@@ -14,7 +14,8 @@ export type StatusBadgeTone =
   | "instantiates"
   | "trusted"
   | "behind"
-  | "untrusted";
+  | "untrusted"
+  | "needs-change";
 
 /**
  * Dot + label chip. Enforcement tones (block/review/guidance/approval) are

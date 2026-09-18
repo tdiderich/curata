@@ -152,11 +152,19 @@ async function ensureConcept(rawTerm: string, normalized: string, existing: Conc
   }
 }
 
+/**
+ * `verified` (default true): a new edge is verified as of now, because tagging
+ * happens alongside a write or a human tagging the page they are looking at.
+ * map_dependencies passes false: wiring an existing page into a graph is not
+ * the same as checking it against the concept.
+ */
 export async function upsertConcepts(
   pageId: string,
   concepts: ConceptInput[],
-  createdBy: string
+  createdBy: string,
+  opts: { verified?: boolean } = {}
 ): Promise<void> {
+  const verifiedAt = opts.verified === false ? null : new Date();
   for (const c of concepts) {
     if (c.rel !== undefined && !isConceptRel(c.rel)) {
       throw new Error(`concepts[].rel must be one of ${CONCEPT_RELS.join("|")}, got ${JSON.stringify(c.rel)}`);
@@ -191,6 +199,7 @@ export async function upsertConcepts(
         conceptId: concept.id,
         section: c.section ?? "",
         rel: c.rel ?? DEFAULT_REL,
+        verifiedAt,
         createdBy,
       },
       // Re-tagging with a rel changes the edge; re-tagging without one leaves
@@ -503,30 +512,41 @@ export interface DependentPage {
   trusted: boolean;
   trustedBehind: boolean;
   updatedAt: string;
-  /** Last time someone confirmed the page is right (any write, a trust pin, or mark_verified). Null = never. */
+  /**
+   * When this page was last confirmed right with respect to `via`. Per edge:
+   * a page that depends on pricing and on the tagline is checked for each.
+   * Any write bumps every edge; mark_verified bumps one. Null = never.
+   */
   verifiedAt: string | null;
   /** Why, when mark_verified said so ("does not quote the price"). */
   verifiedNote: string | null;
-  /** True when the concept's source of truth changed after this page was last verified. */
+  /** Someone looked and it is wrong. Set by mark_verified status=needs_change. */
+  needsChange: boolean;
+  /** True when the concept's source of truth changed after this edge was last verified, or nobody has looked. */
   staleAgainstSource: boolean;
 }
 
 export interface ExternalDependentRow {
+  /** Edge id. */
   id: string;
+  assetId: string;
   url: string;
   host: string;
   label: string;
   owner: string | null;
   rel: string;
   via: string;
+  /** Other concepts this same asset is tracked against. */
+  alsoDependsOn: string[];
   verifiedAt: string | null;
   verifiedNote: string | null;
+  needsChange: boolean;
   staleAgainstSource: boolean;
 }
 
 export interface DependentsSummary {
-  pages: { total: number; ok: number; stale: number; neverVerified: number };
-  external: { total: number; ok: number; stale: number; neverChecked: number };
+  pages: { total: number; ok: number; stale: number; needsChange: number; neverVerified: number };
+  external: { total: number; ok: number; stale: number; needsChange: number; neverChecked: number };
   /** One line an agent can hand a human as-is. */
   text: string;
 }
@@ -554,6 +574,9 @@ export interface DependentsResult {
 
 type PageConceptWithPage = {
   rel: string;
+  verifiedAt: Date | null;
+  verifiedNote: string | null;
+  needsChange: boolean;
   concept: { id: string; displayName: string; kind: string; usageCount: number };
   page: {
     slug: string;
@@ -561,8 +584,6 @@ type PageConceptWithPage = {
     folderId: string | null;
     rules: unknown;
     trustedVersionId: string | null;
-    verifiedAt: Date | null;
-    verifiedNote: string | null;
     updatedAt: Date;
     versions: Array<{ id: string }>;
   };
@@ -577,23 +598,21 @@ const DEPENDENT_PAGE_INCLUDE = {
       folderId: true,
       rules: true,
       trustedVersionId: true,
-      verifiedAt: true,
-      verifiedNote: true,
       updatedAt: true,
       versions: { orderBy: { createdAt: "desc" as const }, take: 1, select: { id: true } },
     },
   },
 };
 
-// Trust follows the same page > folder > org > "auto" resolution as every
-// read path: in auto mode latest is trusted by definition, so a page with
-// no pinned version is not "untrusted", it is simply not locked.
 function isStale(verifiedAt: Date | null, sourceUpdatedAt: Date | undefined): boolean {
   if (!sourceUpdatedAt) return false;
   if (!verifiedAt) return true;
   return verifiedAt < sourceUpdatedAt;
 }
 
+// Trust follows the same page > folder > org > "auto" resolution as every
+// read path: in auto mode latest is trusted by definition, so a page with
+// no pinned version is not "untrusted", it is simply not locked.
 function toDependentPage(row: PageConceptWithPage, trustMode: TrustMode, sourceUpdatedAt: Date | undefined): DependentPage {
   const latestId = row.page.versions[0]?.id ?? null;
   const trusted = trustMode === "auto" || !!row.page.trustedVersionId;
@@ -606,10 +625,11 @@ function toDependentPage(row: PageConceptWithPage, trustMode: TrustMode, sourceU
     trusted,
     trustedBehind: trustMode === "locked" && trusted && latestId !== null && row.page.trustedVersionId !== latestId,
     updatedAt: row.page.updatedAt.toISOString(),
-    verifiedAt: row.page.verifiedAt?.toISOString() ?? null,
-    verifiedNote: row.page.verifiedNote,
+    verifiedAt: row.verifiedAt?.toISOString() ?? null,
+    verifiedNote: row.verifiedNote,
+    needsChange: row.needsChange,
     // A page that asserts the concept is its own source; never stale.
-    staleAgainstSource: row.rel === "asserts" ? false : isStale(row.page.verifiedAt, sourceUpdatedAt),
+    staleAgainstSource: row.rel === "asserts" ? false : row.needsChange || isStale(row.verifiedAt, sourceUpdatedAt),
   };
 }
 
@@ -619,7 +639,7 @@ function hostOf(url: string): string {
 
 /**
  * Canonical form for an external URL so the same Drive deck tagged from two
- * places is one row. Drops the fragment and trailing slash; on Google Docs
+ * places is one asset. Drops the fragment and trailing slash; on Google Docs
  * hosts also drops the action segment (/edit, /view) and query, which vary
  * per share link but point at the same file.
  */
@@ -638,36 +658,80 @@ export function normalizeExternalUrl(raw: string): string {
   return out;
 }
 
-function toExternalRow(row: { id: string; url: string; label: string; owner: string | null; rel: string; verifiedAt: Date | null; verifiedNote: string | null; concept: { displayName: string } }, sourceUpdatedAt: Date | undefined): ExternalDependentRow {
+type ExternalEdgeRow = {
+  id: string;
+  rel: string;
+  verifiedAt: Date | null;
+  verifiedNote: string | null;
+  needsChange: boolean;
+  concept: { displayName: string };
+  asset: {
+    id: string;
+    url: string;
+    label: string;
+    owner: string | null;
+    edges: Array<{ concept: { displayName: string } }>;
+  };
+};
+
+const EXTERNAL_EDGE_INCLUDE = {
+  concept: { select: { displayName: true } },
+  asset: {
+    select: {
+      id: true,
+      url: true,
+      label: true,
+      owner: true,
+      edges: { select: { concept: { select: { displayName: true } } } },
+    },
+  },
+};
+
+function toExternalRow(row: ExternalEdgeRow, sourceUpdatedAt: Date | undefined): ExternalDependentRow {
   return {
     id: row.id,
-    url: row.url,
-    host: hostOf(row.url),
-    label: row.label,
-    owner: row.owner,
+    assetId: row.asset.id,
+    url: row.asset.url,
+    host: hostOf(row.asset.url),
+    label: row.asset.label,
+    owner: row.asset.owner,
     rel: row.rel,
     via: row.concept.displayName,
+    alsoDependsOn: row.asset.edges.map((e) => e.concept.displayName).filter((t) => t !== row.concept.displayName).sort(),
     verifiedAt: row.verifiedAt?.toISOString() ?? null,
     verifiedNote: row.verifiedNote,
+    needsChange: row.needsChange,
     // An asset nobody has checked is stale on its face, source or not.
-    staleAgainstSource: row.verifiedAt === null ? true : isStale(row.verifiedAt, sourceUpdatedAt),
+    staleAgainstSource: row.needsChange || row.verifiedAt === null || isStale(row.verifiedAt, sourceUpdatedAt),
   };
 }
 
 function summarize(pages: DependentPage[], external: ExternalDependentRow[]): DependentsSummary {
-  const p = { total: pages.length, ok: 0, stale: 0, neverVerified: 0 };
+  const p = { total: pages.length, ok: 0, stale: 0, needsChange: 0, neverVerified: 0 };
   for (const d of pages) {
+    if (d.needsChange) { p.needsChange++; continue; }
     if (d.verifiedAt === null) p.neverVerified++;
     if (d.staleAgainstSource) p.stale++; else p.ok++;
   }
-  const e = { total: external.length, ok: 0, stale: 0, neverChecked: 0 };
+  const e = { total: external.length, ok: 0, stale: 0, needsChange: 0, neverChecked: 0 };
   for (const x of external) {
-    if (x.verifiedAt === null) e.neverChecked++;
+    if (x.needsChange) { e.needsChange++; continue; }
+    if (x.verifiedAt === null) { e.neverChecked++; continue; }
     if (x.staleAgainstSource) e.stale++; else e.ok++;
   }
+  const n = (c: number, one: string, many: string) => `${c} ${c === 1 ? one : many}`;
   const parts: string[] = [];
-  parts.push(`${p.total} page${p.total === 1 ? "" : "s"}: ${p.ok} ok, ${p.stale} stale${p.neverVerified ? ` (${p.neverVerified} never verified)` : ""}`);
-  if (e.total > 0) parts.push(`${e.total} external asset${e.total === 1 ? "" : "s"}: ${e.ok} checked, ${e.neverChecked} never checked${e.stale - e.neverChecked > 0 ? `, ${e.stale - e.neverChecked} stale` : ""}`);
+  const pp: string[] = [`${p.ok} ok`, `${p.stale} stale`];
+  if (p.needsChange) pp.push(`${p.needsChange} needs update`);
+  if (p.neverVerified) pp.push(`${p.neverVerified} never verified`);
+  parts.push(`${n(p.total, "page", "pages")}: ${pp.join(", ")}`);
+  if (e.total > 0) {
+    const ep: string[] = [`${e.ok} checked`];
+    if (e.stale) ep.push(`${e.stale} stale`);
+    if (e.needsChange) ep.push(`${e.needsChange} needs update`);
+    ep.push(`${e.neverChecked} never checked`);
+    parts.push(`${n(e.total, "external asset", "external assets")}: ${ep.join(", ")}`);
+  }
   return { pages: p, external: e, text: parts.join("; ") };
 }
 
@@ -686,6 +750,19 @@ async function sourceUpdatedAtByConcept(orgId: string, conceptIds: string[]): Pr
   return out;
 }
 
+/**
+ * Writing is verifying: after any write to a page, every edge it carries is
+ * confirmed as of now and any earlier note or needs-change flag goes, because
+ * the new content speaks for itself. Called from the page write path and from
+ * markTrusted.
+ */
+export async function verifyAllEdgesForPage(pageId: string): Promise<void> {
+  await db.pageConcept.updateMany({
+    where: { pageId },
+    data: { verifiedAt: new Date(), verifiedNote: null, needsChange: false },
+  });
+}
+
 export interface ExternalDependentInput {
   url: string;
   label?: string;
@@ -695,11 +772,12 @@ export interface ExternalDependentInput {
 }
 
 /**
- * Attach assets outside curata to a concept. One row per (org, concept, url);
- * re-tagging updates label/owner/rel and leaves verifiedAt alone. A new row
- * starts unverified: attaching a deck to a concept is not the same as opening
- * the deck and checking it, and a graph that reads "all checked" the second
- * it is built hides exactly the rows most likely to be wrong.
+ * Attach assets outside curata to a concept. One asset per (org, url), one
+ * edge per (asset, concept). Re-tagging updates label/owner on the asset and
+ * rel on the edge, and leaves verification alone. A new edge starts
+ * unverified: attaching a deck to a concept is not the same as opening the
+ * deck and checking it, and a graph that reads "all checked" the second it
+ * is built hides exactly the rows most likely to be wrong.
  */
 export async function upsertExternalDependents(
   orgId: string,
@@ -717,50 +795,82 @@ export async function upsertExternalDependents(
     }
     const url = normalizeExternalUrl(item.url);
     if (item.remove) {
-      await db.externalDependent.deleteMany({ where: { orgId, conceptId: concept.id, url } });
+      const asset = await db.externalAsset.findUnique({ where: { orgId_url: { orgId, url } }, select: { id: true } });
+      if (!asset) continue;
+      await db.externalEdge.deleteMany({ where: { assetId: asset.id, conceptId: concept.id } });
+      // An asset with no edges left is not tracked against anything; drop it.
+      const remaining = await db.externalEdge.count({ where: { assetId: asset.id } });
+      if (remaining === 0) await db.externalAsset.delete({ where: { id: asset.id } });
       continue;
     }
-    const label = item.label?.trim() || hostOf(url) + new URL(url).pathname;
-    const row = await db.externalDependent.upsert({
-      where: { orgId_conceptId_url: { orgId, conceptId: concept.id, url } },
-      create: { orgId, conceptId: concept.id, url, label, owner: item.owner ?? null, rel: item.rel ?? "depends", createdBy },
-      update: { label, owner: item.owner ?? undefined, rel: item.rel ?? undefined },
-      include: { concept: { select: { displayName: true } } },
+    const label = item.label?.trim();
+    const asset = await db.externalAsset.upsert({
+      where: { orgId_url: { orgId, url } },
+      create: { orgId, url, label: label || hostOf(url) + new URL(url).pathname, owner: item.owner ?? null, createdBy },
+      update: { label: label || undefined, owner: item.owner ?? undefined },
     });
-    out.push(toExternalRow(row, undefined));
+    const edge = await db.externalEdge.upsert({
+      where: { assetId_conceptId: { assetId: asset.id, conceptId: concept.id } },
+      create: { assetId: asset.id, conceptId: concept.id, rel: item.rel ?? "depends", createdBy },
+      update: { rel: item.rel ?? undefined },
+      include: EXTERNAL_EDGE_INCLUDE,
+    });
+    out.push(toExternalRow(edge, undefined));
   }
   return out;
 }
 
+export const VERIFY_STATUSES = ["holds", "needs_change"] as const;
+export type VerifyStatus = (typeof VERIFY_STATUSES)[number];
+
 /**
- * "Looked at it, still right." Bumps verifiedAt on a page (by slug) or an
- * external asset (by url, optionally scoped to one concept) without writing
- * a version or moving the trust pointer. Returns what was touched.
+ * "Looked at it." Records the outcome on the edge(s) named:
+ *  - slug + term: that page's edge to that concept
+ *  - slug alone: every edge the page carries
+ *  - url + term: that asset's edge to that concept
+ *  - url alone: every edge the asset carries
+ * status "holds" (default) clears stale; "needs_change" marks the edge as
+ * checked-and-wrong, which reads as stale until a write or a later holds.
+ * Never writes a version or moves the trust pointer.
  */
 export async function verifyDependent(
   orgId: string,
-  target: { slug?: string; url?: string; term?: string; note?: string }
-): Promise<{ kind: "page" | "external"; id: string; verifiedAt: string; note: string | null; count?: number }> {
+  target: { slug?: string; url?: string; term?: string; note?: string; status?: VerifyStatus }
+): Promise<{ kind: "page" | "external"; id: string; term: string | null; status: VerifyStatus; verifiedAt: string; note: string | null; count: number }> {
   const now = new Date();
   const note = target.note?.trim() || null;
+  const status: VerifyStatus = target.status ?? "holds";
+  if (!VERIFY_STATUSES.includes(status)) throw new Error(`status must be one of ${VERIFY_STATUSES.join("|")}`);
+  const data = { verifiedAt: now, verifiedNote: note, needsChange: status === "needs_change" };
+
+  let conceptId: string | undefined;
+  let termOut: string | null = null;
+  if (target.term) {
+    const normalizedTerm = normalizeTerm(target.term);
+    const concept = await findConceptForTerm(target.term, normalizedTerm);
+    if (!concept) throw new Error(`concept not found: ${normalizedTerm}`);
+    conceptId = concept.id;
+    termOut = concept.displayName;
+  }
+
   if (target.slug) {
     const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: target.slug } }, select: { id: true } });
     if (!page) throw new Error(`page not found: ${target.slug}`);
-    await db.page.update({ where: { id: page.id }, data: { verifiedAt: now, verifiedNote: note } });
-    return { kind: "page", id: target.slug, verifiedAt: now.toISOString(), note };
+    const res = await db.pageConcept.updateMany({ where: { pageId: page.id, ...(conceptId ? { conceptId } : {}) }, data });
+    if (res.count === 0) {
+      throw new Error(conceptId
+        ? `${target.slug} has no edge to ${termOut}; tag it first (map_dependencies or concepts on write_page)`
+        : `${target.slug} carries no concept tags, nothing to verify`);
+    }
+    return { kind: "page", id: target.slug, term: termOut, status, verifiedAt: now.toISOString(), note, count: res.count };
   }
   if (target.url) {
     const url = normalizeExternalUrl(target.url);
-    const where: Prisma.ExternalDependentWhereInput = { orgId, url };
-    if (target.term) {
-      const normalized = normalizeTerm(target.term);
-      const concept = await findConceptForTerm(target.term, normalized);
-      if (!concept) throw new Error(`concept not found: ${target.term}`);
-      where.conceptId = concept.id;
-    }
-    const res = await db.externalDependent.updateMany({ where, data: { verifiedAt: now, verifiedNote: note } });
-    if (res.count === 0) throw new Error(`no external dependent found for ${url}`);
-    return { kind: "external", id: url, verifiedAt: now.toISOString(), note, count: res.count };
+    const asset = await db.externalAsset.findUnique({ where: { orgId_url: { orgId, url } }, select: { id: true } });
+    if (!asset) throw new Error(`no external asset tracked at ${url}`);
+    const res = await db.externalEdge.updateMany({ where: { assetId: asset.id, ...(conceptId ? { conceptId } : {}) }, data });
+    if (res.count === 0) throw new Error(`${url} is not tracked against ${termOut}`);
+    return { kind: "external", id: url, term: termOut, status, verifiedAt: now.toISOString(), note, count: res.count };
   }
   throw new Error("slug or url is required");
 }
@@ -802,7 +912,7 @@ export async function mapDependencies(
     for (const slug of slugs ?? []) {
       const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } }, select: { id: true } });
       if (!page) { missing.push(slug); continue; }
-      await upsertConcepts(page.id, [{ term: input.term, kind: input.kind, rel }], createdBy);
+      await upsertConcepts(page.id, [{ term: input.term, kind: input.kind, rel }], createdBy, { verified: false });
       tagged.push({ slug, rel });
     }
   }
@@ -852,9 +962,9 @@ export async function getDependents(
   async function externals(conceptIds: string[], rel?: ConceptRel): Promise<ExternalDependentRow[]> {
     if (conceptIds.length === 0) return [];
     const [rows, sources] = await Promise.all([
-      db.externalDependent.findMany({
-        where: { orgId, conceptId: { in: conceptIds }, ...(rel ? { rel } : {}) },
-        include: { concept: { select: { displayName: true } } },
+      db.externalEdge.findMany({
+        where: { conceptId: { in: conceptIds }, asset: { orgId }, ...(rel ? { rel } : {}) },
+        include: EXTERNAL_EDGE_INCLUDE,
         orderBy: { updatedAt: "desc" },
       }),
       sourceUpdatedAtByConcept(orgId, conceptIds),
@@ -879,7 +989,6 @@ export async function getDependents(
         orderBy: { usageCount: "desc" },
         take: 25,
       });
-      // Rank by how many tokens overlap, keep the top five.
       near.sort((a, b) =>
         tokens.filter((t) => b.normalizedName.includes(t)).length - tokens.filter((t) => a.normalizedName.includes(t)).length
       );
