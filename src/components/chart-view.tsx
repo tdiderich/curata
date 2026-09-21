@@ -54,7 +54,7 @@ export function ChartView({ chart, columns }: { chart: Chart; columns: ChartNode
       {ordered.map((n) => {
         const isOpen = open === n.term;
         return (
-          <div key={n.term} className={`chart-card chart-node chart-node--${n.color}${isOpen ? " chart-card--open" : ""}`}>
+          <div key={n.term} className={`chart-card chart-node chart-node--${n.color}${isOpen ? " chart-card--open" : ""}${n.hidden ? " chart-card--hidden" : ""}`}>
             <button
               type="button"
               className="chart-card-toggle"
@@ -62,7 +62,7 @@ export function ChartView({ chart, columns }: { chart: Chart; columns: ChartNode
               onClick={() => setOpen(isOpen ? null : n.term)}
             >
               <span className="chart-node-title">
-                {n.title}
+                {n.title}{n.hidden && <span className="chart-card-tag">hidden</span>}
                 <span className="chart-card-chevron" aria-hidden>{isOpen ? "▾" : "▸"}</span>
               </span>
               <span className="chart-node-term">{n.term}</span>

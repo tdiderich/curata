@@ -10,13 +10,16 @@ import { can } from "@/lib/permissions";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Content map" };
 
-export default async function ChartPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
+export default async function ChartPage({ searchParams }: { searchParams: Promise<{ view?: string; hidden?: string }> }) {
   const ctx = await resolveOrg();
   if (!ctx) redirect(AUTH_MODE === "clerk" ? "/onboarding" : "/sign-in");
-  const { view } = await searchParams;
+  const { view, hidden } = await searchParams;
   const list = view === "list";
-  const chart = await getChart(ctx.orgId);
-  const columns = list ? [] : await Promise.all(chart.nodes.map((n) => getChartNode(ctx.orgId, n.term)));
+  const showHidden = hidden === "1";
+  const [chart, full] = await Promise.all([getChart(ctx.orgId), getChart(ctx.orgId, { includeHidden: true })]);
+  const hiddenCount = full.nodes.length - chart.nodes.length;
+  const shown = showHidden ? full : chart;
+  const columns = list ? [] : await Promise.all(shown.nodes.map((n) => getChartNode(ctx.orgId, n.term)));
   const needs = list ? await getNeedsLook(ctx.orgId) : [];
   return (
     <div className="dash-root">
@@ -41,7 +44,13 @@ export default async function ChartPage({ searchParams }: { searchParams: Promis
             </div>
             {list && <p className="cmap-summary">Pages that have potentially drifted from their source. Review manually or generate a prompt for your agent to take a pass.</p>}
           </header>
-          {list ? <ChartList nodes={needs} canEdit={can(ctx.role, "page:edit")} /> : <ChartView chart={chart} columns={columns} />}
+          {list ? <ChartList nodes={needs} canEdit={can(ctx.role, "page:edit")} /> : <ChartView chart={shown} columns={columns} />}
+          {!list && hiddenCount > 0 && (
+            <p className="cmap-hidden-note">
+              {hiddenCount} hidden node{hiddenCount === 1 ? "" : "s"}.{" "}
+              {showHidden ? <Link href="/map">Hide again</Link> : <Link href="/map?hidden=1">Show</Link>}
+            </p>
+          )}
         </div>
       </div>
     </div>
