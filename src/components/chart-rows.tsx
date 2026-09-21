@@ -56,7 +56,7 @@ function PagePreview({ slug }: { slug: string }) {
  * Checking a row = "needs update": the checked rows are the update queue,
  * and every change to it copies a fresh agent prompt to the clipboard.
  */
-export function ChartRows({ rows, term, canEdit, source }: { rows: ChartChild[]; term: string; canEdit: boolean; source: { slug: string; title: string; updatedAt: string } | null }) {
+export function ChartRows({ rows, term, canEdit, source, instructions = null }: { rows: ChartChild[]; term: string; canEdit: boolean; source: { slug: string; title: string; updatedAt: string } | null; instructions?: string | null }) {
   const router = useRouter();
   const [open, setOpen] = useState<string | null>(null);
   // Everything yellow or red starts checked: that is the update queue by definition. Browsers only allow clipboard writes on a click, so the first copy is the button.
@@ -97,6 +97,11 @@ export function ChartRows({ rows, term, canEdit, source }: { rows: ChartChild[];
     lines.push("Call get_config first to confirm you're pointed at the right org. get_chart term=" + term + " returns this node live.");
     lines.push("");
     lines.push(`The source of truth for "${term}" changed. Bring the content below in line with it, using the curata MCP tools.`);
+    if (instructions) {
+      lines.push("");
+      lines.push(`Instructions for this node, from its owner:`);
+      for (const l of instructions.split("\n")) lines.push(`> ${l}`);
+    }
     lines.push("");
     lines.push(`1. read_page ${source?.slug ?? "<source>"}, then read_version slug=${source?.slug ?? "<source>"} version_id=latest compare_to=previous to see exactly what changed (added and removed lines). get_versions lists older ids if the change you care about is further back.`);
     if (pages.length) {

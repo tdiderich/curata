@@ -62,6 +62,8 @@ export interface ChartNode {
   counts: Record<ChartColor, number>;
   hidden: boolean;
   promoted: boolean;
+  /** Per-node note for agents, appended to copied prompts. */
+  instructions: string | null;
 }
 
 export interface ChartNodeDetail extends ChartNode {
@@ -285,7 +287,7 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
       source: source ? { slug: source.slug, title: source.title, updatedAt: source.updatedAt.toISOString(), updatedBy: source.updatedBy } : null,
       fanOut: children.length,
       color, counts,
-      hidden: !!s?.hidden, promoted: !!s?.promoted,
+      hidden: !!s?.hidden, promoted: !!s?.promoted, instructions: s?.instructions ?? null,
       children,
     });
   }
@@ -294,8 +296,8 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
 }
 
 function stripChildren(n: ChartNodeDetail): ChartNode {
-  const { term, kind, title, source, fanOut, color, counts, hidden, promoted } = n;
-  return { term, kind, title, source, fanOut, color, counts, hidden, promoted };
+  const { term, kind, title, source, fanOut, color, counts, hidden, promoted, instructions } = n;
+  return { term, kind, title, source, fanOut, color, counts, hidden, promoted, instructions };
 }
 
 export async function getChart(orgId: string, opts: { includeHidden?: boolean } = {}): Promise<Chart> {
@@ -322,7 +324,7 @@ export async function getNeedsLook(orgId: string): Promise<Array<ChartNodeDetail
     .filter((n) => n.children.length > 0);
 }
 
-export async function setChartNode(orgId: string, term: string, patch: { hidden?: boolean; promoted?: boolean; sourceSlug?: string }): Promise<ChartNode> {
+export async function setChartNode(orgId: string, term: string, patch: { hidden?: boolean; promoted?: boolean; sourceSlug?: string; instructions?: string | null }): Promise<ChartNode> {
   const normalized = normalizeTerm(term);
   const concept = await findConceptForTerm(term, normalized);
   if (!concept) throw new Error(`concept not found: ${normalized}`);
@@ -334,7 +336,12 @@ export async function setChartNode(orgId: string, term: string, patch: { hidden?
     await db.pageConcept.deleteMany({ where: { conceptId: concept.id, rel: "asserts", pageId: { not: page.id }, page: { orgId } } });
     await upsertConcepts(page.id, [{ term, rel: "asserts" }], "system");
   }
-  const flags = { ...(patch.hidden !== undefined ? { hidden: patch.hidden } : {}), ...(patch.promoted !== undefined ? { promoted: patch.promoted } : {}) };
+  const flags = {
+    ...(patch.hidden !== undefined ? { hidden: patch.hidden } : {}),
+    ...(patch.promoted !== undefined ? { promoted: patch.promoted } : {}),
+    // Empty string clears the note.
+    ...(patch.instructions !== undefined ? { instructions: patch.instructions?.trim() ? patch.instructions.trim() : null } : {}),
+  };
   if (Object.keys(flags).length === 0) return stripChildren(await getChartNode(orgId, term));
   await db.chartNodeSetting.upsert({
     where: { orgId_conceptId: { orgId, conceptId: concept.id } },

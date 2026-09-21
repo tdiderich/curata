@@ -42,7 +42,7 @@ const STOCK_ACTIONS = [
   { id: "create-folder", title: "Create Folder", summary: "Organize pages into a named folder", route: null },
   { id: "create-report", title: "Create Report", summary: "Generate a report from brain content", route: null },
   { id: "cleanup", title: "Cleanup", summary: "Review stale pages, resolve flags, fix drift", route: "/cleanup" },
-  { id: "chart", title: "Content map", summary: "Templates, components and sources with what sits under them, colored by drift", route: "/chart" },
+  { id: "chart", title: "Content map", summary: "Templates, components and sources with what sits under them, colored by drift", route: "/map" },
   { id: "new-node", title: "New top level content item", summary: "Name it, pick the page that owns the truth, list what depends on it", route: "/map/new" },
   { id: "needs-look", title: "Needs a look", summary: "Everything yellow or red, grouped by what changed", route: "/map?view=list" },
   { id: "settings", title: "Settings", summary: "Org, theme, API keys, content rules", route: "/settings" },

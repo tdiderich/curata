@@ -381,6 +381,8 @@ model ChartNodeSetting {
   conceptId String   @map("concept_id")
   hidden    Boolean  @default(false)
   promoted  Boolean  @default(false)
+  /** Optional note appended to every copied agent prompt for this node: what "bring in line" means here. */
+  instructions String?
   updatedAt DateTime @updatedAt @map("updated_at")
 
   concept Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)

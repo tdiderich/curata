@@ -247,3 +247,19 @@ describe("verify outcomes on the chart", () => {
     expect(node.children.find((c) => c.kind === "external")?.color).toBe("green");
   });
 });
+
+describe("per-node instructions", () => {
+  it("stores, returns on the node, trims, and clears on empty string", async () => {
+    const { createTestOrg, createTestPage } = await import("./helpers");
+    const { upsertConcepts } = await import("@/lib/concepts");
+    const org = await createTestOrg({ name: "Instr Org", slug: "instr-org" });
+    const src = await createTestPage(org.id, { slug: "instr-src" });
+    await upsertConcepts(src.id, [{ term: "instr/launch", rel: "asserts" }], "system");
+    let node = await setChartNode(org.id, "instr/launch", { promoted: true, instructions: "  Decide if this matters to the customer. Add an agenda item.  " });
+    expect(node.instructions).toBe("Decide if this matters to the customer. Add an agenda item.");
+    expect((await getChartNode(org.id, "instr/launch")).instructions).toBe("Decide if this matters to the customer. Add an agenda item.");
+    node = await setChartNode(org.id, "instr/launch", { instructions: "" });
+    expect(node.instructions).toBeNull();
+    expect(node.promoted).toBe(true);
+  });
+});

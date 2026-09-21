@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ChartNodeDetail as ChartNodeDetailData } from "@/lib/chart";
 import { relativeTime } from "@/components/dependency-cells";
 import { SettingsSection } from "@/components/settings";
-import { ChartNodeToggle } from "@/components/chart-controls";
+import { ChartNodeToggle, ChartNodeInstructions } from "@/components/chart-controls";
 import { AddRelatedButton, ScopePanel } from "@/components/chart-scope";
 import { ChartRows } from "@/components/chart-rows";
 
@@ -39,11 +39,13 @@ export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; 
         )}
       </div>
 
+      <ChartNodeInstructions term={node.term} value={node.instructions} canEdit={canEdit} />
+
       <SettingsSection title="Related content">
         {canEdit && <ScopePanel term={node.term} />}
         {node.children.length === 0
           ? <div className="dash-empty stg-table">Nothing under this yet.{canEdit ? " Use Add related content above." : ""}</div>
-          : <ChartRows rows={node.children} term={node.term} canEdit={canEdit} source={node.source} />}
+          : <ChartRows rows={node.children} term={node.term} canEdit={canEdit} source={node.source} instructions={node.instructions} />}
       </SettingsSection>
     </div>
   );

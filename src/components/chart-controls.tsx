@@ -65,3 +65,58 @@ export function ChartNodeToggle({ term, field, value, onLabel, offLabel }: { ter
   }
   return <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => void flip()}>{value ? onLabel : offLabel}</button>;
 }
+
+/**
+ * Per-node instructions: what "bring this in line with the source" means
+ * here, when the default reading is wrong (e.g. "decide if this launch
+ * matters to the customer, add an agenda item"). Appended to every copied
+ * prompt. Same field set_chart_node instructions= writes.
+ */
+export function ChartNodeInstructions({ term, value, canEdit }: { term: string; value: string | null; canEdit: boolean }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    setBusy(true);
+    try {
+      const res = await fetch(`${basePath}/api/chart`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ term, instructions: draft }) });
+      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || `HTTP ${res.status}`); }
+      toast.success(draft.trim() ? "Instructions saved. They go into every prompt copied from here." : "Instructions cleared.");
+      setEditing(false);
+      router.refresh();
+    } catch (err) { toast.error(err instanceof Error ? err.message : String(err)); } finally { setBusy(false); }
+  }
+
+  if (!value && !canEdit) return null;
+  return (
+    <div className="cmap-instr">
+      <div className="cmap-instr-head">
+        <span className="cmap-source-label">Instructions for agents</span>
+        {canEdit && !editing && (
+          <button type="button" className="btn btn--ghost" onClick={() => { setDraft(value ?? ""); setEditing(true); }}>{value ? "Edit" : "Add"}</button>
+        )}
+      </div>
+      {editing ? (
+        <div className="cmap-instr-edit">
+          <textarea
+            className="stg-input cmap-instr-text"
+            rows={3}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={'What should an agent do with each item here? Optional. Example: "Read the launch, decide if it matters to this customer, and add an agenda item to their priorities page if so."'}
+          />
+          <div className="cmap-instr-actions">
+            <button type="button" className="btn btn--primary" disabled={busy} onClick={() => void save()}>Save</button>
+            <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => setEditing(false)}>Cancel</button>
+          </div>
+        </div>
+      ) : value ? (
+        <p className="cmap-instr-body">{value}</p>
+      ) : (
+        <span className="cmap-source-hint">Optional. Added to every prompt copied from this node, for when &ldquo;bring it in line with the source&rdquo; isn&rsquo;t the whole ask.</span>
+      )}
+    </div>
+  );
+}

@@ -22,7 +22,7 @@ export function ChartList({ nodes, canEdit }: { nodes: ChartNodeDetail[]; canEdi
               {" · "}{n.counts.red ? `${n.counts.red} red · ` : ""}{n.counts.yellow} yellow
             </span>
           </div>
-          <ChartRows rows={n.children} term={n.term} canEdit={canEdit} source={n.source} />
+          <ChartRows rows={n.children} term={n.term} canEdit={canEdit} source={n.source} instructions={n.instructions} />
         </section>
       ))}
     </div>

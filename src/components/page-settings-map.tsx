@@ -30,7 +30,7 @@ export function PageSettingsMap({ slug, title, view, nodes, canEdit }: { slug: s
         {view.asNode
           ? (view.asNode.children.length === 0
               ? <div className="dash-empty stg-table">Nothing under it yet. <Link href={chartHref(view.asNode.term)} className="stg-dep-link">Add related content on the map.</Link></div>
-              : <ChartRows rows={view.asNode.children} term={view.asNode.term} canEdit={canEdit} source={view.asNode.source} />)
+              : <ChartRows rows={view.asNode.children} term={view.asNode.term} canEdit={canEdit} source={view.asNode.source} instructions={view.asNode.instructions} />)
           : canEdit && <div className="stg-composer"><MakeNodeButton slug={slug} /></div>}
       </SettingsSection>
     </>

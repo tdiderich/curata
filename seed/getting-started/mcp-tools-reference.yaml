@@ -40,7 +40,7 @@ components:
           - **add_to_chart** - put a report under a node: `slug` for a page, or `url` with `label`, `owner`, `due_at`, `check`. Use the suggestions from `get_chart term=...` first
           - **remove_from_chart** - take a page or url out from under a node
           - **set_scope_item** - owner, label or check recipe on an external (shared across nodes), due date on one node's edge
-          - **set_chart_node** - `hidden`, or `promoted` (show a concept with fewer than three children)
+          - **set_chart_node** - `hidden`, `promoted` (show a concept with fewer than three children), or `instructions` (per-node note appended to copied prompts)
           - **rescan_inventory** - re-run the embeds and external-URL scan over every page, after upgrading or changing the ignored domains
           - **map_dependencies** - bulk form of add_to_chart: one call with `term`, `asserts`, `depends`, `references` slugs and `external` urls
           - **get_dependents** / **mark_verified** - the per-edge primitives the chart is built on
