@@ -10299,10 +10299,10 @@ body:has(.nav-reveal) .page-toolbar {
 .chart-leaves--grid .chart-leaf--more { grid-column: 1 / -1; }
 .scope-composer { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; padding: 14px; border: 1px solid rgba(var(--accent-rgb), 0.28); border-radius: 10px; background: rgba(var(--accent-rgb), 0.05); }
 .scope-composer .scope-group-label { margin-top: 4px; }
-.chart-rows { display: block; width: 100%; margin-top: 4px; }
+.chart-rows { display: block; width: 100%; margin-top: 8px; }
 .chart-rows-head, .chart-row-line { display: grid; width: 100%; box-sizing: border-box; grid-template-columns: 18px minmax(0, 1fr) 170px 260px 18px; gap: 12px; align-items: center; }
 .chart-rows-head { padding: 6px 12px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid rgba(var(--text-rgb), 0.10); min-height: 40px; }
-.chart-head-tools { display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--light); }
+.chart-head-tools { display: flex; align-items: center; gap: 8px; padding: 6px 12px 10px; font-size: 13px; color: var(--light); }
 .chart-head-count { font-weight: 600; margin-right: 4px; }
 .chart-row { display: block; width: 100%; border-bottom: 1px solid rgba(var(--text-rgb), 0.07); }
 .chart-row-line { padding: 12px; cursor: pointer; border-radius: 8px; }

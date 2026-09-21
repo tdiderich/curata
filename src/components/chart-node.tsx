@@ -20,7 +20,6 @@ export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; 
             </>
           )}
         </div>
-        <p className="cmap-meta"><span className="chart-node-term">{node.term}</span></p>
       </header>
 
       <div className={`cmap-meta-card${node.source ? "" : " cmap-meta-card--gap"}`}>
