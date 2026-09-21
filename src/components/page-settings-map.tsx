@@ -14,8 +14,8 @@ export function PageSettingsMap({ slug, title, view, nodes, canEdit }: { slug: s
   return (
     <>
       <SettingsSection
-        title="Under"
-        description="Top level items this page sits beneath. When one of their sources changes, this page needs a look."
+        title="Content sources"
+        description="Pages this one relies on for content and wording. When a source changes, this page may have drifted and needs a review."
       >
         <PageUnderRows slug={slug} title={title} under={view.under} canEdit={canEdit} />
         {canEdit && <AddUnderForm slug={slug} nodes={nodes.filter((n) => !view.under.some((u) => u.node.term === n.term))} />}
