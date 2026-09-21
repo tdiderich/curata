@@ -10256,3 +10256,9 @@ body:has(.nav-reveal) .page-toolbar {
 .chart-addnode-row:hover:not(:disabled) { background: rgba(var(--text-rgb), 0.06); }
 .chart-body-main .dash-th:nth-child(2), .chart-body-main .dash-td:nth-child(2) { white-space: nowrap; }
 .chart-addnode-row span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .chart-addnode-row span:last-child { flex: none; max-width: 45%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nn-mode button { background: none; border: 0; cursor: pointer; font: inherit; }
+.nn-hit { width: 100%; background: none; cursor: pointer; font: inherit; text-align: left; }
+.nn-hit:hover { background: rgba(var(--text-rgb), 0.05); }
+.nn-picked { border-color: rgba(var(--accent-rgb), 0.4); }
+.nn-related { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.nmf-opt { font-size: 12px; font-weight: 400; color: var(--muted); }

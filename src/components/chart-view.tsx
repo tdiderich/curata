@@ -46,7 +46,7 @@ export function ChartView({ chart, expanded }: { chart: Chart; expanded: ChartNo
   if (chart.nodes.length === 0) {
     return (
       <div className="cmap-col-empty chart-empty">
-        Nothing here yet. Pick a page that others depend on with &ldquo;Add to chart&rdquo;, or build a few pages from a template, and it shows up on its own.
+        Nothing here yet. Pick a page that others depend on with &ldquo;Add top level content item&rdquo;, or build a few pages from a template, and it shows up on its own.
       </div>
     );
   }

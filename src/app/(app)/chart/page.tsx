@@ -5,7 +5,6 @@ import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { getChart, getChartNode, getNeedsLook } from "@/lib/chart";
 import { ChartView } from "@/components/chart-view";
 import { ChartList } from "@/components/chart-list";
-import { AddNodeButton } from "@/components/chart-add-node";
 import { can } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +38,7 @@ export default async function ChartPage({ searchParams }: { searchParams: Promis
                 <Link href="/chart" className={`cmap-view${list ? "" : " cmap-view--on"}`}>Chart</Link>
                 <Link href="/chart?view=list" className={`cmap-view${list ? " cmap-view--on" : ""}`}>List</Link>
               </nav>
-              {can(ctx.role, "page:edit") && <AddNodeButton />}
+              {can(ctx.role, "page:edit") && <Link href="/chart/new" className="btn btn--primary">+ Add top level content item</Link>}
             </div>
             <p className="cmap-summary">
               {list

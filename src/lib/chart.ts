@@ -372,3 +372,44 @@ export async function promotePageToNode(orgId: string, slug: string, createdBy: 
   if (!existing) await upsertConcepts(page.id, [{ term, rel: "asserts" }], createdBy);
   return setChartNode(orgId, term, { promoted: true });
 }
+
+export interface CreateNodeInput {
+  /** Name shown on the chart. Also the title of a page created here. */
+  title: string;
+  /** Existing page to use as the source. Omit to create one from the title. */
+  slug?: string;
+  /** Related content to put under it right away. */
+  related?: Array<{ slug?: string; url?: string; label?: string }>;
+}
+
+/**
+ * "Add top level content item": name it, point at the page that owns the
+ * truth (or create that page now, as a stub with the name as its title),
+ * then put the related content under it. One call from the form.
+ */
+export async function createNode(orgId: string, orgSlug: string, input: CreateNodeInput, createdBy: string): Promise<ChartNodeDetail> {
+  const title = input.title.trim();
+  if (!title) throw new Error("title is required");
+  const { normalizeTerm: norm } = await import("./concepts");
+  let slug = input.slug?.trim();
+  if (!slug) {
+    const { writePage } = await import("./pages");
+    slug = norm(title).replace(/\//g, "-");
+    if (!slug) throw new Error("title needs at least one letter or digit");
+    const exists = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } }, select: { id: true } });
+    if (exists) throw new Error(`a page with slug ${slug} already exists; pick it as the source instead of creating a new one`);
+    const yaml = `title: ${JSON.stringify(title)}\nshell: document\ncomponents:\n  - type: markdown\n    body: |\n      Source of truth for ${title}. Everything under it on the content chart needs a look when this page changes.\n`;
+    const res = await writePage(orgId, orgSlug, slug, yaml, createdBy);
+    if (!res.ok) throw new Error(res.error);
+  }
+  const node = await promotePageToNode(orgId, slug, createdBy);
+  if (input.related?.length) {
+    const { addScopeItem } = await import("./scope");
+    for (const r of input.related) {
+      if (!r.slug && !r.url) continue;
+      if (r.slug === slug) continue;
+      await addScopeItem(orgId, node.term, { slug: r.slug, url: r.url, label: r.label }, createdBy);
+    }
+  }
+  return getChartNode(orgId, node.term);
+}

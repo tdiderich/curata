@@ -153,3 +153,25 @@ describe("promote a page to a node", () => {
     await expect(promotePageToNode(org.id, "nope", "tester")).rejects.toThrow(/page not found/);
   });
 });
+
+describe("createNode: the New top level content form", () => {
+  it("creates the source page when none is picked, promotes it, and puts related content under it", async () => {
+    const { createNode } = await import("@/lib/chart");
+    const org = await createTestOrg({ name: "Create Org", slug: "create-org" });
+    const dep = await createTestPage(org.id, { slug: "renewal-email", title: "Renewal email" });
+    const node = await createNode(org.id, org.slug, {
+      title: "Renewal pricing",
+      related: [{ slug: "renewal-email" }, { url: "https://app.hubspot.com/quotes/1", label: "Quote template" }],
+    }, "tester");
+    expect(node.term).toBe("renewal-pricing");
+    expect(node.source?.slug).toBe("renewal-pricing");
+    expect(node.promoted).toBe(true);
+    expect(node.children.map((c) => c.slug ?? c.url).sort()).toEqual(["https://app.hubspot.com/quotes/1", "renewal-email"]);
+    expect(await testDb.page.count({ where: { orgId: org.id, slug: "renewal-pricing" } })).toBe(1);
+    await expect(createNode(org.id, org.slug, { title: "Renewal pricing" }, "tester")).rejects.toThrow(/already exists/);
+    // Existing page as the source: nothing new is created.
+    const n2 = await createNode(org.id, org.slug, { title: "Renewal email", slug: "renewal-email" }, "tester");
+    expect(n2.source?.slug).toBe("renewal-email");
+    expect(dep.id).toBeTruthy();
+  });
+});
