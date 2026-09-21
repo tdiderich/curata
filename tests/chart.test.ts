@@ -114,3 +114,21 @@ describe("chart", () => {
     expect(tmpl.id).toBeTruthy();
   });
 });
+
+describe("page impact", () => {
+  it("counts what sits under the nodes a page is the source of, and reads as one line", async () => {
+    const { getPageImpact } = await import("@/lib/chart");
+    const org = await createTestOrg({ name: "Impact Org", slug: "impact-org" });
+    const src = await createTestPage(org.id, { slug: "impact-src" });
+    await upsertConcepts(src.id, [{ term: "impact/x", rel: "asserts" }], "tester");
+    for (const s of ["i1", "i2"]) {
+      const p = await createTestPage(org.id, { slug: s });
+      await upsertConcepts(p.id, [{ term: "impact/x", rel: "depends" }], "tester");
+    }
+    await upsertExternalDependents(org.id, "impact/x", [{ url: "https://hubspot.com/x" }], "tester");
+    const impact = await getPageImpact(org.id, "impact-src");
+    expect(impact.nodes).toEqual([{ term: "impact/x", pages: 2, external: 1 }]);
+    expect(impact.text).toBe("2 pages and 1 external under impact/x are yellow now. Agents can clear the pages; someone owns each external.");
+    expect((await getPageImpact(org.id, "i1")).text).toBeNull();
+  });
+});

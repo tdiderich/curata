@@ -69,7 +69,7 @@ import {
   removeProjectItem,
   deleteProject,
 } from "@/lib/projects";
-import { getChart, getChartNode, getNeedsLook, setChartNode } from "@/lib/chart";
+import { getChart, getChartNode, getNeedsLook, getPageImpact, setChartNode } from "@/lib/chart";
 import { addScopeItem, getAuditList, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
 import { backfillScan } from "@/lib/scan";
 import { ensureComponentIds, applyPatchOperations, buildOutline, formatOutline, locateComponent } from "@/lib/component-ids";
@@ -1085,6 +1085,8 @@ export async function dispatch(
         actorId,
         metadata: { slug: args.slug, folderId: args.folder_id },
       });
+      const cpImpact = await getPageImpact(orgId, args.slug);
+      if (cpImpact.text) cpResult.impact = cpImpact;
       return cpResult;
     }
 
@@ -1270,6 +1272,8 @@ export async function dispatch(
           matches: w.matches,
         }));
       }
+      const wpImpact = await getPageImpact(orgId, args.slug);
+      if (wpImpact.text) wpResult.impact = wpImpact;
       return wpResult;
     }
 
@@ -1477,6 +1481,8 @@ export async function dispatch(
         metadata: { slug: args.slug, operationCount: operations.length },
       });
       const ppResult: Record<string, unknown> = withShapeWarnings({ ...patchResult }, patchValidation.warnings);
+      const ppImpact = await getPageImpact(orgId, args.slug);
+      if (ppImpact.text) ppResult.impact = ppImpact;
       if (ppRuleCheck.warnings.length > 0) {
         ppResult.contentWarnings = ppRuleCheck.warnings.map((w) => ({
           scope: w.scope,

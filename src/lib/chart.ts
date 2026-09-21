@@ -310,3 +310,44 @@ export async function setChartNode(orgId: string, term: string, patch: { pinned?
   });
   return stripChildren(await getChartNode(orgId, term));
 }
+
+export interface PageImpact {
+  /** Nodes this page is the source of, with what sits under each. */
+  nodes: Array<{ term: string; pages: number; external: number }>;
+  pages: number;
+  external: number;
+  /** One line for a toast or an agent's summary. Null when nothing sits under this page. */
+  text: string | null;
+}
+
+/**
+ * What a write to this page just turned yellow: every node the page is the
+ * source of (asserts, or the template/component concept named by its slug)
+ * and the count of children under each. Echoed in write responses and
+ * toasted after a human save so awareness lands when it's cheap to act.
+ */
+export async function getPageImpact(orgId: string, slug: string): Promise<PageImpact> {
+  const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } }, select: { id: true } });
+  const empty: PageImpact = { nodes: [], pages: 0, external: 0, text: null };
+  if (!page) return empty;
+  const asserted = await db.pageConcept.findMany({ where: { pageId: page.id, rel: "asserts" }, select: { conceptId: true } });
+  const named = await db.concept.findMany({ where: { normalizedName: { in: [`template/${slug}`, `component/${slug}`] } }, select: { id: true } });
+  const ids = [...new Set([...asserted.map((a) => a.conceptId), ...named.map((n) => n.id)])];
+  if (ids.length === 0) return empty;
+  const [pageEdges, extEdges, concepts] = await Promise.all([
+    db.pageConcept.groupBy({ by: ["conceptId"], where: { conceptId: { in: ids }, rel: { in: [...CHILD_RELS] }, pageId: { not: page.id }, page: { orgId, status: { not: "archived" } } }, _count: { _all: true } }),
+    db.externalEdge.groupBy({ by: ["conceptId"], where: { conceptId: { in: ids }, asset: { orgId } }, _count: { _all: true } }),
+    db.concept.findMany({ where: { id: { in: ids } }, select: { id: true, displayName: true } }),
+  ]);
+  const nodes = concepts.map((c) => ({
+    term: c.displayName,
+    pages: pageEdges.find((e) => e.conceptId === c.id)?._count._all ?? 0,
+    external: extEdges.find((e) => e.conceptId === c.id)?._count._all ?? 0,
+  })).filter((n) => n.pages + n.external > 0).sort((a, b) => b.pages + b.external - (a.pages + a.external));
+  const pages = nodes.reduce((s, n) => s + n.pages, 0);
+  const external = nodes.reduce((s, n) => s + n.external, 0);
+  if (pages + external === 0) return empty;
+  const parts = [pages ? `${pages} page${pages === 1 ? "" : "s"}` : null, external ? `${external} external` : null].filter(Boolean).join(" and ");
+  const where = nodes.length === 1 ? nodes[0].term : `${nodes.length} nodes`;
+  return { nodes, pages, external, text: `${parts} under ${where} ${pages + external === 1 ? "is" : "are"} yellow now. Agents can clear the pages; someone owns each external.` };
+}

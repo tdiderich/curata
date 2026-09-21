@@ -460,6 +460,12 @@ export default function PageDetailClient({
         setEditingComponent(null);
         setEditMode(false);
         router.refresh();
+        // What this save just turned yellow on the content chart. Same
+        // summary an agent gets back from write_page.
+        void fetch(`${basePath}/api/chart/impact?slug=${encodeURIComponent(slug)}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((impact: { text: string | null } | null) => { if (impact?.text) toast.info(impact.text); })
+          .catch(() => {});
       } else {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         toast.error(data.error ?? "Save failed");
