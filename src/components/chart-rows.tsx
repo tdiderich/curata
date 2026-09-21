@@ -58,7 +58,8 @@ function PagePreview({ slug }: { slug: string }) {
 export function ChartRows({ rows, term, canEdit, source }: { rows: ChartChild[]; term: string; canEdit: boolean; source: { slug: string; title: string; updatedAt: string } | null }) {
   const router = useRouter();
   const [open, setOpen] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Everything yellow or red starts checked: that is the update queue by definition. Browsers only allow clipboard writes on a click, so the first copy is the button.
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(rows.filter((c) => c.color !== "green").map((c) => c.edgeId)));
   const [busy, setBusy] = useState(false);
 
   const byId = new Map(rows.map((c) => [c.edgeId, c]));
@@ -131,8 +132,7 @@ export function ChartRows({ rows, term, canEdit, source }: { rows: ChartChild[];
       {canEdit && picked.length > 0 && (
         <div className="chart-bulk">
           <span>{picked.length} need{picked.length === 1 ? "s" : ""} update</span>
-          <span className="stg-pcount">prompt on your clipboard</span>
-          <button type="button" className="btn btn--primary chart-bulk-copy" disabled={busy} onClick={() => void copyPrompt(picked)}>Copy again</button>
+          <button type="button" className="btn btn--primary chart-bulk-copy" disabled={busy} onClick={() => void copyPrompt(picked)}>Copy prompt</button>
           <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void act(picked, "holds")}>Mark complete</button>
           <button type="button" className="stg-qbtn stg-qbtn--ghost" onClick={() => setSelected(new Set())}>Clear</button>
         </div>
