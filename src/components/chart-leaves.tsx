@@ -21,12 +21,13 @@ export function Favicon({ host, inline = false }: { host: string; inline?: boole
  * first few are the ones that matter; past LEAF_PREVIEW the rest fold
  * behind "Show all N" so a node with 100 things under it stays one column.
  */
-export function ChartLeaves({ children }: { children: ChartChild[] }) {
+export function ChartLeaves({ children, grid = false }: { children: ChartChild[]; grid?: boolean }) {
   const [all, setAll] = useState(false);
-  const shown = all ? children : children.slice(0, LEAF_PREVIEW);
+  const limit = grid ? LEAF_PREVIEW * 3 : LEAF_PREVIEW;
+  const shown = all ? children : children.slice(0, limit);
   const hidden = children.length - shown.length;
   return (
-    <ul className="chart-leaves">
+    <ul className={`chart-leaves${grid ? " chart-leaves--grid" : ""}`}>
       {shown.map((c) => (
         <li key={c.edgeId} className={`chart-leaf chart-leaf--${c.color}`}>
           <span className={`chart-dot chart-dot--${c.color}`} />
@@ -41,7 +42,7 @@ export function ChartLeaves({ children }: { children: ChartChild[] }) {
           <button type="button" className="chart-leaf-more" onClick={() => setAll(true)}>Show all {children.length}</button>
         </li>
       )}
-      {all && children.length > LEAF_PREVIEW && (
+      {all && children.length > limit && (
         <li className="chart-leaf chart-leaf--more">
           <button type="button" className="chart-leaf-more" onClick={() => setAll(false)}>Show fewer</button>
         </li>
