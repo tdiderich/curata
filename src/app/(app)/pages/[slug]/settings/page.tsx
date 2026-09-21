@@ -10,12 +10,13 @@ import {
   resolveEffectiveTrustMode,
   parseTrustRule,
 } from "@/lib/approval";
-import { getPageConcepts, getDependents, normalizeTerm } from "@/lib/concepts";
+import { getPageConcepts, normalizeTerm } from "@/lib/concepts";
 import { DEFAULT_TAGS } from "@/lib/default-tags";
 import { SettingsTabs, SettingsSection } from "@/components/settings";
 import { PageSettingsGeneral } from "@/components/page-settings-general";
 import { PageSettingsTags } from "@/components/page-settings-tags";
-import { PageSettingsDependencies } from "@/components/page-settings-dependencies";
+import { PageSettingsMap } from "@/components/page-settings-map";
+import { getChart, getPageMapView } from "@/lib/chart";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
 
 export async function generateMetadata({
@@ -76,9 +77,10 @@ export default async function PageSettingsView({
   const hasTrustRuleAtScope = parseTrustRule(pageRow.rules) !== null;
 
   const pageTags: Array<{ term: string; kind: string; rel: string }> = [];
-  const [concepts, dependents, orgConcepts] = await Promise.all([
+  const [concepts, mapView, chart, orgConcepts] = await Promise.all([
     getPageConcepts(pageRow.id),
-    getDependents(ctx.orgId, { slug }),
+    getPageMapView(ctx.orgId, slug),
+    getChart(ctx.orgId, { includeHidden: true }),
     db.concept.findMany({
       where: { pages: { some: { page: { orgId: ctx.orgId, status: "active" } } } },
       select: { displayName: true, kind: true },
@@ -134,8 +136,8 @@ export default async function PageSettingsView({
       ),
     },
     {
-      label: "Dependencies",
-      content: <PageSettingsDependencies data={dependents} pageId={pageRow.id} canEdit={canEditPage} />,
+      label: "Content map",
+      content: <PageSettingsMap slug={slug} title={pageTitle} view={mapView} nodes={chart.nodes.map((n) => ({ term: n.term, title: n.title }))} canEdit={canEditPage} />,
     },
     {
       label: "Rules",

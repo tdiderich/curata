@@ -412,3 +412,33 @@ export async function createNode(orgId: string, orgSlug: string, input: CreateNo
   }
   return getChartNode(orgId, node.term);
 }
+
+export interface PageMapView {
+  /** Nodes this page sits under, with this page's own row under each. */
+  under: Array<{ node: ChartNode; me: ChartChild }>;
+  /** The node this page is the source of, if any. */
+  asNode: ChartNodeDetail | null;
+}
+
+/** The map from one page's point of view. Backs the page's Content map settings tab. */
+export async function getPageMapView(orgId: string, slug: string): Promise<PageMapView> {
+  const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } }, select: { id: true } });
+  if (!page) return { under: [], asNode: null };
+  const edges = await db.pageConcept.findMany({
+    where: { pageId: page.id, rel: { in: [...CHILD_RELS] } },
+    select: { concept: { select: { displayName: true } } },
+  });
+  const under: PageMapView["under"] = [];
+  for (const e of edges) {
+    const node = await getChartNode(orgId, e.concept.displayName).catch(() => null);
+    if (!node) continue;
+    const me = node.children.find((c) => c.slug === slug);
+    if (me) under.push({ node: stripChildren(node), me });
+  }
+  under.sort((a, b) => WORST.indexOf(a.me.color) - WORST.indexOf(b.me.color) || a.node.term.localeCompare(b.node.term));
+
+  const asserts = await db.pageConcept.findFirst({ where: { pageId: page.id, rel: "asserts" }, select: { concept: { select: { displayName: true } } } });
+  const named = asserts?.concept.displayName ?? (await db.concept.findFirst({ where: { normalizedName: { in: [`template/${slug}`, `component/${slug}`] } }, select: { displayName: true } }))?.displayName;
+  const asNode = named ? await getChartNode(orgId, named).catch(() => null) : null;
+  return { under, asNode };
+}

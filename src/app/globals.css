@@ -10308,3 +10308,4 @@ body:has(.nav-reveal) .page-toolbar {
 .chart-list .chart-group-head { padding: 0 12px; }
 @media (max-width: 900px) { .chart-row-line--list { grid-template-columns: minmax(0, 1fr) 130px; } .chart-row-line--list > .stg-dep-when, .chart-row-line--list > [class^="chart-text--"], .chart-rows-head.chart-row-line--list span:nth-child(2), .chart-rows-head.chart-row-line--list span:nth-child(3) { display: none; } }
 .chart-row-line--list .chart-td-action .stg-qbtn { white-space: nowrap; }
+.chart-row-line--static { cursor: default; grid-template-columns: 18px minmax(0, 1fr) 140px 260px 200px; } .chart-row-line--static:hover { background: none; }

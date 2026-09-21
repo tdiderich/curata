@@ -24,7 +24,7 @@ export type StatusBadgeTone =
  * this app's rule vocabulary; the concept-kind tones reuse the same shape so
  * the Tags tab badge matches the knowledge-graph legend. Relation tones
  * (depends/asserts/references/instantiates) and trust tones
- * (trusted/behind/untrusted) serve the Dependencies tab.
+ * (trusted/behind/untrusted) serve the trust and review surfaces.
  */
 export function StatusBadge({ tone, label }: { tone: StatusBadgeTone; label: string }) {
   return (
