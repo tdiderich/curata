@@ -40,11 +40,11 @@ export default async function ChartPage({ searchParams }: { searchParams: Promis
             </div>
             <p className="cmap-summary">
               {list
-                ? "The map as a list. Yellow and red only, grouped by what changed. Open a node to review and update."
+                ? "Pages that have potentially drifted from their source. Review manually or generate a prompt for your agent to take a pass."
                 : "Your pages, templates and links, arranged by what depends on what. When something at the top changes, everything below it needs a look until someone checks it."}
             </p>
           </header>
-          {list ? <ChartList nodes={needs} /> : <ChartView chart={chart} columns={columns} />}
+          {list ? <ChartList nodes={needs} canEdit={can(ctx.role, "page:edit")} /> : <ChartView chart={chart} columns={columns} />}
         </div>
       </div>
     </div>

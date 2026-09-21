@@ -489,7 +489,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
-  server.tool("add_to_chart", "Put a report under a node: an existing page (slug) or an external URL. External gets label, owner, due_at and an optional check recipe. Same edge map_dependencies writes, one row at a time. Use get_chart term=... first: its suggestions list is URLs already in the source or its children's bodies that probably belong here.",
+  server.tool("add_to_chart", "Put content under an existing node: a page (slug) or an external URL. Unknown term errors; make the node first with set_chart_node slug=. External gets label, owner, due_at and an optional check recipe. Same edge map_dependencies writes, one row at a time. Use get_chart term=... first: its suggestions list is URLs already in the source or its children's bodies that probably belong here.",
     {
       term: z.string().describe("Node term"),
       slug: z.string().optional().describe("Page slug to put under the node"),
@@ -539,15 +539,16 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
-  server.tool("set_chart_node", "Hide a node that is noise (a shared footer with 200 embeds), or promote a concept with fewer than 3 children so it shows on the map anyway. With slug alone: make that page a top-level node (it asserts a concept named after its slug, promoted).",
-    { term: z.string().optional().describe("Concept term"), slug: z.string().optional().describe("Page to make a node, instead of term"), hidden: z.boolean().optional(), promoted: z.boolean().optional() },
+  server.tool("set_chart_node", "Hide a node that is noise (a shared footer with 200 embeds), or promote a concept with fewer than 3 children so it shows on the map anyway. With slug alone: make that page a top-level node (it asserts a concept named after its slug, promoted). With term and slug: point the node's source of truth at that page (it becomes the asserter; any other asserter stops).",
+    { term: z.string().optional().describe("Concept term"), slug: z.string().optional().describe("Alone: page to make a node. With term: page to make this node's source of truth"), hidden: z.boolean().optional(), promoted: z.boolean().optional() },
     async ({ term, slug, hidden, promoted }) => {
       if (slug && !term) {
         const result = await promotePageToNode(orgId, slug, userId || "agent");
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
       if (!term) throw new Error("term or slug is required");
-      const patch: { hidden?: boolean; promoted?: boolean } = {};
+      const patch: { hidden?: boolean; promoted?: boolean; sourceSlug?: string } = {};
+      if (slug) patch.sourceSlug = slug;
       if (hidden !== undefined) patch.hidden = hidden;
       if (promoted !== undefined) patch.promoted = promoted;
       const result = await setChartNode(orgId, term, patch);

@@ -125,7 +125,7 @@ function colorFor(
   note: string | null,
   dueAt: Date | null,
   source: SourceRow | undefined,
-  sourceVersionTimes: Date[],
+  sourceVersions: Array<{ at: Date; hash: string }>,
   now: Date
 ): { color: ChartColor; reason: string | null } {
   // Someone looked and it's wrong. That outranks "nobody looked".
@@ -135,7 +135,19 @@ function colorFor(
   if (!stale) return { color: "green", reason: null };
   // A never-checked edge only counts source moves it lived through.
   const since = verifiedAt ?? edgeCreatedAt;
-  const moves = sourceVersionTimes.filter((t) => t > since).length;
+  // A "move" is a content change, not a version row: an edit that is then
+  // reverted counts once, and a re-save of identical content counts zero.
+  const atSince = [...sourceVersions].reverse().find((v) => v.at <= since)?.hash ?? null;
+  let moves = 0;
+  let last = atSince;
+  for (const v of sourceVersions) {
+    if (v.at <= since) continue;
+    if (v.hash !== last) moves++;
+    last = v.hash;
+  }
+  // Back to the content that was checked: nothing to look at.
+  if (last === atSince) moves = 0;
+  if (moves === 0 && verifiedAt) return { color: "green", reason: null };
   if (dueAt !== null && dueAt < now) return { color: "red", reason: "past due" };
   if (moves >= 2) return { color: "red", reason: `source moved ${moves} times, no check` };
   return { color: "yellow", reason: verifiedAt ? "not checked since the change" : "never checked" };
@@ -195,10 +207,10 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
   const sources = await resolveSources(orgId, nodeIds.map((id) => concepts.get(id)!));
   const sourcePageIds = [...new Set([...sources.values()].map((s) => s.pageId))];
   const versions = sourcePageIds.length
-    ? await db.pageVersion.findMany({ where: { pageId: { in: sourcePageIds } }, select: { pageId: true, createdAt: true } })
+    ? await db.pageVersion.findMany({ where: { pageId: { in: sourcePageIds } }, select: { pageId: true, createdAt: true, contentHash: true }, orderBy: { createdAt: "asc" } })
     : [];
-  const versionTimes = new Map<string, Date[]>();
-  for (const v of versions) versionTimes.set(v.pageId, [...(versionTimes.get(v.pageId) ?? []), v.createdAt]);
+  const versionTimes = new Map<string, Array<{ at: Date; hash: string }>>();
+  for (const v of versions) versionTimes.set(v.pageId, [...(versionTimes.get(v.pageId) ?? []), { at: v.createdAt, hash: v.contentHash }]);
 
   // "Also under": every chart node a page or asset sits beneath, across the whole org.
   const pageIds = [...new Set(pageEdges.map((e) => e.page.id))];
@@ -235,6 +247,7 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
     const concept = concepts.get(id)!;
     const source = sources.get(id);
     const times = source ? versionTimes.get(source.pageId) ?? [] : [];
+    // Content identical to what was there at the last check is not a move at all.
     const children: ChartChild[] = [];
     for (const e of pageEdges) {
       if (e.conceptId !== id) continue;
@@ -304,14 +317,24 @@ export async function getNeedsLook(orgId: string): Promise<Array<ChartNodeDetail
     .filter((n) => n.children.length > 0);
 }
 
-export async function setChartNode(orgId: string, term: string, patch: { hidden?: boolean; promoted?: boolean }): Promise<ChartNode> {
+export async function setChartNode(orgId: string, term: string, patch: { hidden?: boolean; promoted?: boolean; sourceSlug?: string }): Promise<ChartNode> {
   const normalized = normalizeTerm(term);
   const concept = await findConceptForTerm(term, normalized);
   if (!concept) throw new Error(`concept not found: ${normalized}`);
+  if (patch.sourceSlug) {
+    // Re-point the source of truth: the named page asserts this concept, any other asserter stops.
+    const { upsertConcepts } = await import("./concepts");
+    const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: patch.sourceSlug } }, select: { id: true } });
+    if (!page) throw new Error(`page not found: ${patch.sourceSlug}`);
+    await db.pageConcept.deleteMany({ where: { conceptId: concept.id, rel: "asserts", pageId: { not: page.id }, page: { orgId } } });
+    await upsertConcepts(page.id, [{ term, rel: "asserts" }], "system");
+  }
+  const flags = { ...(patch.hidden !== undefined ? { hidden: patch.hidden } : {}), ...(patch.promoted !== undefined ? { promoted: patch.promoted } : {}) };
+  if (Object.keys(flags).length === 0) return stripChildren(await getChartNode(orgId, term));
   await db.chartNodeSetting.upsert({
     where: { orgId_conceptId: { orgId, conceptId: concept.id } },
-    create: { orgId, conceptId: concept.id, ...patch },
-    update: patch,
+    create: { orgId, conceptId: concept.id, ...flags },
+    update: flags,
   });
   return stripChildren(await getChartNode(orgId, term));
 }

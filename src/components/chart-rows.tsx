@@ -94,13 +94,13 @@ export function ChartRows({ rows, term, canEdit, source }: { rows: ChartChild[];
     lines.push(`Node: ${nodeUrl}`);
     if (source) lines.push(`Source of truth: "${source.title}" at ${baseUrl}/pages/${source.slug} (slug ${source.slug}), last changed ${source.updatedAt.slice(0, 10)}`);
     lines.push("");
-    lines.push("Connect an MCP client to the endpoint above (Settings → Connect an agent mints a scoped key), or call get_config first to confirm you're pointed at the right org. get_chart term=" + term + " returns this node live.");
+    lines.push("Call get_config first to confirm you're pointed at the right org. get_chart term=" + term + " returns this node live.");
     lines.push("");
     lines.push(`The source of truth for "${term}" changed. Bring the content below in line with it, using the curata MCP tools.`);
     lines.push("");
     lines.push(`1. read_page ${source?.slug ?? "<source>"} and note what changed (get_versions shows the history).`);
     if (pages.length) {
-      lines.push("2. For each page, read_page it, update anything the source change makes wrong with patch_page or write_page, then mark_verified slug=<slug> term=" + term + " status=holds. If it's already right, mark_verified without editing.");
+      lines.push("2. For each page, read_page it, update anything the source change makes wrong, then mark_verified slug=<slug> term=" + term + " status=holds. If it's already right, mark_verified without editing. patch_page takes expected_hash (from read_page) and operations like [{\"op\":\"replace\",\"id\":\"<component id>\",\"components\":[{\"type\":\"markdown\",\"id\":\"<component id>\",\"body\":\"...\"}]}]. After writing, read_page channel=latest; if it says trustedBehind, the page is trust-locked and readers see the old version until a human runs mark_trusted. Say so.");
       for (const c of pages) lines.push(`   - ${c.slug}  |  ${baseUrl}/pages/${c.slug}  |  ${c.label}${c.reason ? `; ${c.reason}` : ""}${c.note ? `; note: ${c.note}` : ""}`);
     }
     if (ext.length) {

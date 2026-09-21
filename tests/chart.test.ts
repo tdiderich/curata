@@ -175,3 +175,37 @@ describe("createNode: the New top level content form", () => {
     expect(dep.id).toBeTruthy();
   });
 });
+
+describe("cold agent pass 2 fixes", () => {
+  it("set_chart_node with term and slug re-points the source; add_to_chart refuses an unknown term; a revert is one move", async () => {
+    const { setChartNode } = await import("@/lib/chart");
+    const { addScopeItem } = await import("@/lib/scope");
+    const org = await createTestOrg({ name: "Cold2 Org", slug: "cold2-org" });
+    const oldSrc = await createTestPage(org.id, { slug: "old-src", title: "Old" });
+    const newSrc = await createTestPage(org.id, { slug: "new-src", title: "New source" });
+    await upsertConcepts(oldSrc.id, [{ term: "cold2/x", rel: "asserts" }], "tester");
+    for (const s of ["c1", "c2", "c3"]) {
+      const p = await createTestPage(org.id, { slug: s });
+      await upsertConcepts(p.id, [{ term: "cold2/x", rel: "depends" }], "tester");
+    }
+    const node = await setChartNode(org.id, "cold2/x", { sourceSlug: "new-src" });
+    expect(node.source?.slug).toBe("new-src");
+    expect(node.title).toBe("New source");
+    expect(await testDb.pageConcept.count({ where: { pageId: oldSrc.id, rel: "asserts" } })).toBe(0);
+
+    await expect(addScopeItem(org.id, "cold2/nope", { slug: "c1" }, "tester")).rejects.toThrow(/concept not found: cold2\/nope/);
+
+    // Edit then revert the source: content is back where it was at the last check, so children stay green.
+    const before = await getChartNode(org.id, "cold2/x");
+    expect(before.children.every((c) => c.color === "green")).toBe(true);
+    const v0 = await testDb.pageVersion.findFirst({ where: { pageId: newSrc.id }, orderBy: { createdAt: "asc" } });
+    await bumpSource(newSrc.id, 1);
+    const mid = await getChartNode(org.id, "cold2/x");
+    expect(mid.children.filter((c) => c.slug).every((c) => c.color === "yellow")).toBe(true);
+    await new Promise((r) => setTimeout(r, 5));
+    await testDb.pageVersion.create({ data: { pageId: newSrc.id, yamlContent: v0!.yamlContent, contentHash: v0!.contentHash, createdBy: "tester" } });
+    await testDb.page.update({ where: { id: newSrc.id }, data: { updatedAt: new Date() } });
+    const after = await getChartNode(org.id, "cold2/x");
+    expect(after.children.filter((c) => c.slug).every((c) => c.color === "green")).toBe(true);
+  });
+});

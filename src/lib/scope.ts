@@ -137,6 +137,9 @@ function parseDue(raw: string | null | undefined): Date | null | undefined {
 export async function addScopeItem(orgId: string, term: string, input: AddScopeInput, createdBy: string): Promise<ChartChild> {
   if (!input.slug && !input.url) throw new Error("slug or url is required");
   const normalized = normalizeTerm(term);
+  if (!(await findConceptForTerm(term, normalized))) {
+    throw new Error(`concept not found: ${normalized}. add_to_chart only adds under an existing top level item; make one with set_chart_node slug=<source page> (or map_dependencies for bulk), then add.`);
+  }
   if (input.slug) {
     const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: input.slug } }, select: { id: true } });
     if (!page) throw new Error(`page not found: ${input.slug}`);

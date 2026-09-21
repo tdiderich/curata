@@ -1789,11 +1789,12 @@ export async function dispatch(
     case "set_chart_node": {
       if (args.slug && !args.term) return promotePageToNode(orgId, args.slug, userId || "agent");
       if (!args.term) throw new Error("term or slug is required");
-      const patch: { hidden?: boolean; promoted?: boolean } = {};
+      const patch: { hidden?: boolean; promoted?: boolean; sourceSlug?: string } = {};
       for (const k of ["hidden", "promoted"] as const) {
         if (args[k] !== undefined) patch[k] = args[k] === "true";
       }
-      if (Object.keys(patch).length === 0) throw new Error("give at least one of hidden, promoted");
+      if (args.slug) patch.sourceSlug = args.slug;
+      if (Object.keys(patch).length === 0) throw new Error("give at least one of slug (source page), hidden, promoted");
       return setChartNode(orgId, args.term, patch);
     }
 
