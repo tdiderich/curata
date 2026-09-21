@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import yaml from "js-yaml";
@@ -12,6 +12,7 @@ import { relativeTime } from "@/components/dependency-cells";
 import { toast } from "@/components/toast";
 import { PageRenderer, type PageData } from "@/generated/kazam-renderer";
 import { ScopeOwnerDue, ScopeRecipe, ScopeRemove } from "@/components/chart-scope";
+import { ContextMenu, type ContextMenuItem } from "@/components/context-menu";
 import { chartHref } from "@/components/chart-view";
 import { Favicon } from "@/components/chart-leaves";
 
@@ -22,9 +23,30 @@ function relLabel(c: ChartChild): string {
   return "depends on this";
 }
 
+/** Short pill label; the full reason rides on the tooltip and in the open row. */
+function pillText(c: ChartChild): string {
+  if (c.color === "red") return c.reason?.startsWith("mismatch") ? "Mismatch" : c.reason?.startsWith("past due") ? "Past due" : "Needs update";
+  if (c.color === "yellow") return c.reason?.startsWith("couldn't check") ? "Couldn't check" : c.lastCheckedAt ? "Changed since" : "Never checked";
+  return c.note === "edited" ? "Edited" : "Checked";
+}
+
 function stateText(c: ChartChild): string {
-  if (c.color === "green") return c.lastCheckedAt ? `${relativeTime(c.lastCheckedAt)}${c.note === "edited" ? " · edited" : ""}` : "nothing to drift against";
-  return `${c.lastCheckedAt ? `${relativeTime(c.lastCheckedAt)} · ` : ""}${c.reason ?? ""}`;
+  if (c.color === "green") return c.lastCheckedAt ? `checked ${relativeTime(c.lastCheckedAt)}${c.note === "edited" ? ", by edit" : ""}` : "nothing to drift against";
+  return `${c.lastCheckedAt ? `checked ${relativeTime(c.lastCheckedAt)} · ` : ""}${c.reason ?? ""}`;
+}
+
+type Filter = "all" | "attention" | "red" | "yellow" | "green";
+
+/** Kebab per row: opens the shared context menu with that row's actions. */
+function RowMenu({ items }: { items: ContextMenuItem[] }) {
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button ref={setAnchor} type="button" className="chart-kebab" aria-label="Row actions" onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}>···</button>
+      <ContextMenu items={items} anchorEl={anchor} open={open} onClose={() => setOpen(false)} />
+    </>
+  );
 }
 
 async function verify(body: Record<string, unknown>) {
@@ -58,20 +80,33 @@ function PagePreview({ slug }: { slug: string }) {
  * and every change to it copies a fresh agent prompt to the clipboard.
  */
 /**
- * `meta`: rows for the node's meta card (source of truth, instructions). When
- * given, ChartRows renders the card itself and adds a "Current state" row with
- * the counts and the update-queue actions, so the card and the rows read as one.
+ * Related content as a table. Click a row to review it here, no navigation.
+ * Checking a row = "needs update": the checked rows are the update queue,
+ * and every change to it copies a fresh agent prompt to the clipboard.
+ * Per-row actions live in the ··· menu. `header` (stat cards on the node
+ * page) renders above the toolbar.
  */
-export function ChartRows({ rows, term, canEdit, source, instructions = null, meta, gap = false }: { rows: ChartChild[]; term: string; canEdit: boolean; source: { slug: string; title: string; updatedAt: string } | null; instructions?: string | null; meta?: ReactNode; gap?: boolean }) {
+export function ChartRows({ rows, term, canEdit, source, instructions = null, header }: { rows: ChartChild[]; term: string; canEdit: boolean; source: { slug: string; title: string; updatedAt: string } | null; instructions?: string | null; header?: ReactNode }) {
   const router = useRouter();
   const [open, setOpen] = useState<string | null>(null);
   // Everything yellow or red starts checked: that is the update queue by definition. Browsers only allow clipboard writes on a click, so the first copy is the button.
   const [selected, setSelected] = useState<Set<string>>(() => new Set(rows.filter((c) => c.color !== "green").map((c) => c.edgeId)));
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
 
   const byId = new Map(rows.map((c) => [c.edgeId, c]));
   const picked = [...selected].map((id) => byId.get(id)).filter((c): c is ChartChild => !!c);
-  const counts = { red: rows.filter((c) => c.color === "red").length, yellow: rows.filter((c) => c.color === "yellow").length };
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((c) => {
+      if (filter === "attention" && c.color === "green") return false;
+      if ((filter === "red" || filter === "yellow" || filter === "green") && c.color !== filter) return false;
+      if (q && !`${c.label} ${c.slug ?? ""} ${c.host ?? ""} ${c.owner ?? ""}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [rows, query, filter]);
+  const allVisiblePicked = visible.length > 0 && visible.every((c) => selected.has(c.edgeId));
 
   async function act(rows: ChartChild[], status: "holds") {
     if (rows.length === 0) return;
@@ -85,10 +120,6 @@ export function ChartRows({ rows, term, canEdit, source, instructions = null, me
     } catch (err) { toast.error(err instanceof Error ? err.message : String(err)); } finally { setBusy(false); }
   }
 
-  /**
-   * A prompt an agent can run as-is: which source moved, which items are
-   * selected, what to do with each kind, and how to record the outcome.
-   */
   async function copyPrompt(list: ChartChild[]) {
     const baseUrl = `${window.location.origin}${basePath}`;
     const text = buildChartPrompt({ term, source, instructions, items: list, baseUrl });
@@ -108,40 +139,53 @@ export function ChartRows({ rows, term, canEdit, source, instructions = null, me
     if (list.length > 0) void copyPrompt(list);
   }
 
+  function toggleAll() {
+    const n = new Set(selected);
+    if (allVisiblePicked) visible.forEach((c) => n.delete(c.edgeId)); else visible.forEach((c) => n.add(c.edgeId));
+    setSelected(n);
+  }
+
+  function menuFor(c: ChartChild): ContextMenuItem[] {
+    const items: ContextMenuItem[] = [];
+    if (c.color !== "green") items.push({ label: "Mark complete", onClick: () => void act([c], "holds") });
+    items.push(selected.has(c.edgeId)
+      ? { label: "Remove from queue", onClick: () => toggle(c.edgeId, false) }
+      : { label: "Needs update", onClick: () => toggle(c.edgeId, true) });
+    items.push({ label: "Copy prompt for this", onClick: () => void copyPrompt([c]) });
+    items.push({ label: "", divider: true, onClick: () => {} });
+    if (c.kind === "page" && c.slug) items.push({ label: "Open page", onClick: () => window.open(`${basePath}/pages/${c.slug}`, "_blank") });
+    if (c.kind === "external" && c.url) items.push({ label: "Open link", onClick: () => window.open(c.url!, "_blank", "noreferrer") });
+    if (c.kind === "external" || c.rel === "depends") items.push({ label: "Remove from this node", danger: true, onClick: () => document.getElementById(`chart-remove-${c.edgeId}`)?.click() });
+    return items;
+  }
+
   return (
     <div className="chart-rows">
-      {meta !== undefined ? (
-        <div className={`cmap-meta-card${gap ? " cmap-meta-card--gap" : ""}`}>
-          {meta}
-          <div className="cmap-meta-row">
-            <span className="cmap-source-label">Current state</span>
-            <span className="chart-head-tools">
-              <span className="chart-head-count">
-                {counts.red > 0 && <span className="chart-text--red">{counts.red} red</span>}
-                {counts.red > 0 && counts.yellow > 0 && " · "}
-                {counts.yellow > 0 && <span className="chart-text--yellow">{counts.yellow} yellow</span>}
-                {counts.red === 0 && counts.yellow === 0 && <span className="chart-text--green">all checked</span>}
-                {canEdit && picked.length > 0 && <span className="stg-dep-when"> · {picked.length} queued</span>}
-              </span>
-              {canEdit && picked.length > 0 && (
-                <>
-                  <button type="button" className="btn btn--primary chart-bulk-copy" disabled={busy} onClick={() => void copyPrompt(picked)}>Copy prompt</button>
-                  <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void act(picked, "holds")}>Mark complete</button>
-                  <button type="button" className="stg-qbtn stg-qbtn--ghost" onClick={() => setSelected(new Set())}>Clear</button>
-                </>
-              )}
-            </span>
-          </div>
-        </div>
-      ) : canEdit && picked.length > 0 && (
-        <div className="chart-head-tools chart-head-tools--bare">
-          <span className="chart-head-count">{picked.length} need{picked.length === 1 ? "s" : ""} update</span>
-          <button type="button" className="btn btn--primary chart-bulk-copy" disabled={busy} onClick={() => void copyPrompt(picked)}>Copy prompt</button>
-          <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void act(picked, "holds")}>Mark complete</button>
-          <button type="button" className="stg-qbtn stg-qbtn--ghost" onClick={() => setSelected(new Set())}>Clear</button>
-        </div>
-      )}
-      {rows.map((c) => {
+      {header}
+      <div className="chart-toolbar">
+        <input className="stg-input chart-toolbar-search" placeholder="Search content" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <select className="stg-input chart-toolbar-select" value={filter} onChange={(e) => setFilter(e.target.value as Filter)} aria-label="Filter by state">
+          <option value="all">All states</option>
+          <option value="attention">Needs attention</option>
+          <option value="red">Red</option>
+          <option value="yellow">Yellow</option>
+          <option value="green">Checked</option>
+        </select>
+        <span className="cmap-spacer" />
+        {canEdit && (
+          <>
+            {picked.length > 0 && <span className="chart-toolbar-count">{picked.length} queued</span>}
+            <button type="button" className="btn btn--primary" disabled={busy || picked.length === 0} onClick={() => void copyPrompt(picked)}>Copy prompt</button>
+            <button type="button" className="btn btn--ghost" disabled={busy || picked.length === 0} onClick={() => void act(picked, "holds")}>Mark complete</button>
+          </>
+        )}
+      </div>
+      <div className="chart-rows-head chart-rows-head--table">
+        {canEdit && <input type="checkbox" className="chart-check" checked={allVisiblePicked} onChange={toggleAll} aria-label="Select all shown" />}
+        <span>Content</span><span>Owner · due</span><span>State</span><span />
+      </div>
+      {visible.length === 0 && <div className="scope-empty chart-rows-empty">Nothing matches.</div>}
+      {visible.map((c) => {
         const isOpen = open === c.edgeId;
         return (
           <div key={c.edgeId} className={`chart-row${isOpen ? " chart-row--open" : ""}`}>
@@ -155,23 +199,12 @@ export function ChartRows({ rows, term, canEdit, source, instructions = null, me
                 </span>
               </span>
               <span className="stg-dep-when">{c.owner ?? "—"}{c.dueAt ? ` · ${c.dueAt.slice(0, 10)}` : ""}</span>
-              <span className={`chart-text--${c.color}`}>{stateText(c)}</span>
-              <span className="chart-row-caret" aria-hidden>{isOpen ? "▴" : "▾"}</span>
+              <span className={`pill chart-pill chart-pill--${c.color}`} title={stateText(c)}><span className="pill-dot" />{pillText(c)}</span>
+              <span className="chart-row-end" onClick={(e) => e.stopPropagation()}>{canEdit ? <RowMenu items={menuFor(c)} /> : <span className="chart-row-caret" aria-hidden>{isOpen ? "▴" : "▾"}</span>}</span>
             </div>
             {isOpen && (
               <div className="chart-row-body">
-                {canEdit && (
-                  <div className="chart-row-actions">
-                    {c.color !== "green" && <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void act([c], "holds")}>Mark complete</button>}
-                    {!selected.has(c.edgeId)
-                      ? <button type="button" className="stg-qbtn" disabled={busy} onClick={() => toggle(c.edgeId, true)}>Needs update</button>
-                      : <button type="button" className="stg-qbtn" disabled={busy} onClick={() => toggle(c.edgeId, false)}>Remove from update queue</button>}
-                    <span className="cmap-spacer" />
-                    {c.kind === "page" && c.slug && <Link href={`/pages/${c.slug}`} className="stg-qbtn" target="_blank">Open page ↗</Link>}
-                    {c.kind === "external" && c.url && <a href={c.url} target="_blank" rel="noreferrer" className="stg-qbtn">Open link ↗</a>}
-                    {(c.kind === "external" || c.rel === "depends") && <ScopeRemove child={c} term={term} />}
-                  </div>
-                )}
+                <div className="chart-row-state">{stateText(c)}</div>
                 {c.kind === "page" && c.slug ? (
                   <>
                     {c.note && c.note !== "edited" && <div className="chart-row-note">Note: {c.note}</div>}
@@ -185,8 +218,10 @@ export function ChartRows({ rows, term, canEdit, source, instructions = null, me
                     {c.note && c.note !== "edited" && <div className="chart-ext-row"><span className="cmap-source-label">Last note</span><span>{c.note}</span></div>}
                   </div>
                 )}
+                {canEdit && (c.kind === "external" || c.rel === "depends") && <span className="chart-row-hidden-remove"><ScopeRemove child={c} term={term} id={`chart-remove-${c.edgeId}`} /></span>}
               </div>
             )}
+            {!isOpen && canEdit && (c.kind === "external" || c.rel === "depends") && <span className="chart-row-hidden-remove"><ScopeRemove child={c} term={term} id={`chart-remove-${c.edgeId}`} /></span>}
           </div>
         );
       })}

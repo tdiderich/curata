@@ -1,11 +1,11 @@
-import Link from "next/link";
 import type { ChartNodeDetail as ChartNodeDetailData } from "@/lib/chart";
 import { relativeTime } from "@/components/dependency-cells";
-import { ChartNodeToggle, ChartNodeInstructions } from "@/components/chart-controls";
+import { NodeMenu } from "@/components/chart-controls";
 import { AddRelatedButton, ScopePanel } from "@/components/chart-scope";
 import { ChartRows } from "@/components/chart-rows";
 
 export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; canEdit: boolean }) {
+  const attention = node.counts.red + node.counts.yellow;
   return (
     <div className="cmap">
       <header className="cmap-head">
@@ -13,13 +13,10 @@ export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; 
           <span className={`chart-dot chart-dot--${node.color} chart-dot--lg`} />
           <h1 className="cmap-title">{node.title}</h1>
           <span className="cmap-spacer" />
-          {canEdit && (
-            <>
-              <ChartNodeToggle term={node.term} field="hidden" value={node.hidden} onLabel="Show on content map" offLabel="Hide from content map" />
-              <AddRelatedButton />
-            </>
-          )}
+          <NodeMenu term={node.term} source={node.source} instructions={node.instructions} hidden={node.hidden} canEdit={canEdit} />
+          {canEdit && <AddRelatedButton />}
         </div>
+        {node.instructions && <p className="cmap-instr-line">{node.instructions}</p>}
       </header>
 
       {canEdit && <ScopePanel term={node.term} />}
@@ -29,22 +26,24 @@ export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; 
         canEdit={canEdit}
         source={node.source}
         instructions={node.instructions}
-        gap={!node.source}
-        meta={(
-          <>
-            <div className="cmap-meta-row">
-              <span className="cmap-source-label">Source of truth</span>
-              {node.source ? (
-                <span className="cmap-source-item">
-                  <Link href={`/pages/${node.source.slug}`} className="stg-dep-link">{node.source.title}</Link>
-                  <span className="stg-dep-when">changed {relativeTime(node.source.updatedAt)}{node.source.updatedBy ? ` by ${node.source.updatedBy}` : ""}</span>
-                </span>
-              ) : (
-                <span className="cmap-source-hint">No page owns the truth for <code>{node.term}</code> yet. Nothing here can drift until one does.</span>
-              )}
+        header={(
+          <div className="cmap-stats">
+            <div className={`cmap-stat${attention > 0 ? " cmap-stat--warn" : ""}`}>
+              <span className="cmap-stat-label">Needs update</span>
+              <span className="cmap-stat-value">{attention}</span>
+              <span className="cmap-stat-sub">{node.counts.red > 0 ? <span className="chart-text--red">{node.counts.red} red</span> : null}{node.counts.red > 0 && node.counts.yellow > 0 ? " · " : ""}{node.counts.yellow > 0 ? <span className="chart-text--yellow">{node.counts.yellow} yellow</span> : null}{attention === 0 ? "everything checked" : ""}</span>
             </div>
-            <ChartNodeInstructions term={node.term} value={node.instructions} canEdit={canEdit} />
-          </>
+            <div className="cmap-stat">
+              <span className="cmap-stat-label">Checked</span>
+              <span className="cmap-stat-value">{node.counts.green}</span>
+              <span className="cmap-stat-sub">of {node.fanOut} under this</span>
+            </div>
+            <div className={`cmap-stat${node.source ? "" : " cmap-stat--gap"}`}>
+              <span className="cmap-stat-label">Source changed</span>
+              <span className="cmap-stat-value cmap-stat-value--text">{node.source ? relativeTime(node.source.updatedAt) : "no source"}</span>
+              <span className="cmap-stat-sub">{node.source ? `${node.source.title}${node.source.updatedBy ? ` · ${node.source.updatedBy}` : ""}` : "nothing here can drift until a page owns the truth"}</span>
+            </div>
+          </div>
         )}
       />
     </div>

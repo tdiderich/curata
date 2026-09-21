@@ -232,12 +232,12 @@ export function ScopeRecipe({ child, suggested }: { child: ChartChild; suggested
   return <span className="scope-recipe scope-recipe--none">human only</span>;
 }
 
-export function ScopeRemove({ child, term }: { child: ChartChild; term: string }) {
+export function ScopeRemove({ child, term, id }: { child: ChartChild; term: string; id?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   async function remove() {
     setBusy(true);
     try { await call("DELETE", "/api/chart/scope", { term, slug: child.slug ?? undefined, url: child.url ?? undefined }); router.refresh(); } finally { setBusy(false); }
   }
-  return <button type="button" className="stg-qbtn stg-qbtn--danger" disabled={busy} onClick={() => void remove()} title="Take it out from under this node">Remove</button>;
+  return <button id={id} type="button" className="stg-qbtn stg-qbtn--danger" disabled={busy} onClick={() => void remove()} title="Take it out from under this node">Remove</button>;
 }
