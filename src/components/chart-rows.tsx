@@ -12,6 +12,7 @@ import { toast } from "@/components/toast";
 import { PageRenderer, type PageData } from "@/generated/kazam-renderer";
 import { ScopeOwnerDue, ScopeRecipe, ScopeRemove } from "@/components/chart-scope";
 import { chartHref } from "@/components/chart-view";
+import { Favicon } from "@/components/chart-leaves";
 
 function relLabel(c: ChartChild): string {
   if (c.kind === "external") return `external · ${c.host ?? ""}`;
@@ -147,7 +148,7 @@ export function ChartRows({ rows, term, canEdit, source }: { rows: ChartChild[];
             <div className="chart-row-line" onClick={() => setOpen(isOpen ? null : c.edgeId)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(isOpen ? null : c.edgeId); } }}>
               {canEdit && <input type="checkbox" className="chart-check" checked={selected.has(c.edgeId)} onChange={() => toggle(c.edgeId)} onClick={(e) => e.stopPropagation()} aria-label={`Select ${c.label}`} />}
               <span className="chart-cell-text">
-                <span className="chart-row-title">{c.label}</span>
+                <span className="chart-row-title">{c.kind === "external" && c.host && <Favicon host={c.host} inline />}{c.label}</span>
                 <span className="stg-pcount">
                   {relLabel(c)}
                   {c.alsoUnder.length > 0 && <> · also under {c.alsoUnder.map((t, i) => <span key={t}>{i > 0 && ", "}<Link href={chartHref(t)} className="chart-also-link" onClick={(e) => e.stopPropagation()}>{t}</Link></span>)}</>}

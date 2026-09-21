@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Chart, ChartNode, ChartNodeDetail } from "@/lib/chart";
+import { ChartLeaves } from "@/components/chart-leaves";
 
 export function chartHref(term: string): string {
   return `/map/${term.split("/").map(encodeURIComponent).join("/")}`;
@@ -37,17 +38,7 @@ export function ChartView({ chart, columns }: { chart: Chart; columns: ChartNode
         <div key={n.term} className="chart-col">
           <NodeCard node={n} />
           {n.children.length > 0 && <div className="chart-stem" />}
-          <ul className="chart-leaves">
-            {n.children.map((c) => (
-              <li key={c.edgeId} className={`chart-leaf chart-leaf--${c.color}`}>
-                <span className={`chart-dot chart-dot--${c.color}`} />
-                {c.kind === "page" && c.slug
-                  ? <Link href={`/pages/${c.slug}`} className="chart-leaf-label" title={c.reason ?? ""}>{c.label}</Link>
-                  : <a href={c.url ?? "#"} target="_blank" rel="noreferrer" className="chart-leaf-label" title={`${c.host ?? ""}${c.reason ? ` · ${c.reason}` : ""}`}>{c.label}</a>}
-                {c.kind === "external" && <span className="chart-leaf-ext" aria-label="external">↗</span>}
-              </li>
-            ))}
-          </ul>
+          <ChartLeaves>{n.children}</ChartLeaves>
         </div>
       ))}
     </div>

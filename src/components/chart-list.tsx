@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ChartChild, ChartNodeDetail } from "@/lib/chart";
 import { relativeTime } from "@/components/dependency-cells";
 import { chartHref } from "@/components/chart-view";
+import { Favicon } from "@/components/chart-leaves";
 import { ChartCheckButton } from "@/components/chart-controls";
 
 function relLabel(c: ChartChild): string {
@@ -32,6 +33,7 @@ export function ChartList({ nodes }: { nodes: ChartNodeDetail[] }) {
                 <div className="chart-row-line chart-row-line--list">
                   <span className="chart-cell-text">
                     <span className="chart-row-title">
+                      {c.kind === "external" && c.host && <Favicon host={c.host} inline />}
                       {c.kind === "page" && c.slug ? <Link href={chartHref(n.term)} className="chart-row-link">{c.label}</Link> : <a href={c.url ?? "#"} target="_blank" rel="noreferrer" className="chart-row-link">{c.label}</a>}
                     </span>
                     <span className="stg-pcount">
