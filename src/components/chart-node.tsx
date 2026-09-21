@@ -22,25 +22,31 @@ export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; 
         </div>
       </header>
 
-      <div className={`cmap-meta-card${node.source ? "" : " cmap-meta-card--gap"}`}>
-        <div className="cmap-meta-row">
-          <span className="cmap-source-label">Source of truth</span>
-          {node.source ? (
-            <span className="cmap-source-item">
-              <Link href={`/pages/${node.source.slug}`} className="stg-dep-link">{node.source.title}</Link>
-              <span className="stg-dep-when">changed {relativeTime(node.source.updatedAt)}{node.source.updatedBy ? ` by ${node.source.updatedBy}` : ""}</span>
-            </span>
-          ) : (
-            <span className="cmap-source-hint">No page owns the truth for <code>{node.term}</code> yet. Nothing here can drift until one does.</span>
-          )}
-        </div>
-        <ChartNodeInstructions term={node.term} value={node.instructions} canEdit={canEdit} />
-      </div>
-
       {canEdit && <ScopePanel term={node.term} />}
-      {node.children.length === 0
-        ? <div className="dash-empty stg-table">Nothing under this yet.{canEdit ? " Use Add related content above." : ""}</div>
-        : <ChartRows rows={node.children} term={node.term} canEdit={canEdit} source={node.source} instructions={node.instructions} />}
+      <ChartRows
+        rows={node.children}
+        term={node.term}
+        canEdit={canEdit}
+        source={node.source}
+        instructions={node.instructions}
+        gap={!node.source}
+        meta={(
+          <>
+            <div className="cmap-meta-row">
+              <span className="cmap-source-label">Source of truth</span>
+              {node.source ? (
+                <span className="cmap-source-item">
+                  <Link href={`/pages/${node.source.slug}`} className="stg-dep-link">{node.source.title}</Link>
+                  <span className="stg-dep-when">changed {relativeTime(node.source.updatedAt)}{node.source.updatedBy ? ` by ${node.source.updatedBy}` : ""}</span>
+                </span>
+              ) : (
+                <span className="cmap-source-hint">No page owns the truth for <code>{node.term}</code> yet. Nothing here can drift until one does.</span>
+              )}
+            </div>
+            <ChartNodeInstructions term={node.term} value={node.instructions} canEdit={canEdit} />
+          </>
+        )}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import yaml from "js-yaml";
@@ -57,7 +57,12 @@ function PagePreview({ slug }: { slug: string }) {
  * Checking a row = "needs update": the checked rows are the update queue,
  * and every change to it copies a fresh agent prompt to the clipboard.
  */
-export function ChartRows({ rows, term, canEdit, source, instructions = null }: { rows: ChartChild[]; term: string; canEdit: boolean; source: { slug: string; title: string; updatedAt: string } | null; instructions?: string | null }) {
+/**
+ * `meta`: rows for the node's meta card (source of truth, instructions). When
+ * given, ChartRows renders the card itself and adds a "Current state" row with
+ * the counts and the update-queue actions, so the card and the rows read as one.
+ */
+export function ChartRows({ rows, term, canEdit, source, instructions = null, meta, gap = false }: { rows: ChartChild[]; term: string; canEdit: boolean; source: { slug: string; title: string; updatedAt: string } | null; instructions?: string | null; meta?: ReactNode; gap?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState<string | null>(null);
   // Everything yellow or red starts checked: that is the update queue by definition. Browsers only allow clipboard writes on a click, so the first copy is the button.
@@ -66,6 +71,7 @@ export function ChartRows({ rows, term, canEdit, source, instructions = null }: 
 
   const byId = new Map(rows.map((c) => [c.edgeId, c]));
   const picked = [...selected].map((id) => byId.get(id)).filter((c): c is ChartChild => !!c);
+  const counts = { red: rows.filter((c) => c.color === "red").length, yellow: rows.filter((c) => c.color === "yellow").length };
 
   async function act(rows: ChartChild[], status: "holds") {
     if (rows.length === 0) return;
@@ -104,8 +110,31 @@ export function ChartRows({ rows, term, canEdit, source, instructions = null }: 
 
   return (
     <div className="chart-rows">
-      {canEdit && picked.length > 0 && (
-        <div className="chart-head-tools">
+      {meta !== undefined ? (
+        <div className={`cmap-meta-card${gap ? " cmap-meta-card--gap" : ""}`}>
+          {meta}
+          <div className="cmap-meta-row">
+            <span className="cmap-source-label">Current state</span>
+            <span className="chart-head-tools">
+              <span className="chart-head-count">
+                {counts.red > 0 && <span className="chart-text--red">{counts.red} red</span>}
+                {counts.red > 0 && counts.yellow > 0 && " · "}
+                {counts.yellow > 0 && <span className="chart-text--yellow">{counts.yellow} yellow</span>}
+                {counts.red === 0 && counts.yellow === 0 && <span className="chart-text--green">all checked</span>}
+                {canEdit && picked.length > 0 && <span className="stg-dep-when"> · {picked.length} queued</span>}
+              </span>
+              {canEdit && picked.length > 0 && (
+                <>
+                  <button type="button" className="btn btn--primary chart-bulk-copy" disabled={busy} onClick={() => void copyPrompt(picked)}>Copy prompt</button>
+                  <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void act(picked, "holds")}>Mark complete</button>
+                  <button type="button" className="stg-qbtn stg-qbtn--ghost" onClick={() => setSelected(new Set())}>Clear</button>
+                </>
+              )}
+            </span>
+          </div>
+        </div>
+      ) : canEdit && picked.length > 0 && (
+        <div className="chart-head-tools chart-head-tools--bare">
           <span className="chart-head-count">{picked.length} need{picked.length === 1 ? "s" : ""} update</span>
           <button type="button" className="btn btn--primary chart-bulk-copy" disabled={busy} onClick={() => void copyPrompt(picked)}>Copy prompt</button>
           <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void act(picked, "holds")}>Mark complete</button>
@@ -137,19 +166,23 @@ export function ChartRows({ rows, term, canEdit, source, instructions = null }: 
                     {!selected.has(c.edgeId)
                       ? <button type="button" className="stg-qbtn" disabled={busy} onClick={() => toggle(c.edgeId, true)}>Needs update</button>
                       : <button type="button" className="stg-qbtn" disabled={busy} onClick={() => toggle(c.edgeId, false)}>Remove from update queue</button>}
-                    {c.kind === "external" && <ScopeOwnerDue child={c} term={term} />}
-                    {c.kind === "external" && <ScopeRecipe child={c} suggested={c.check ? null : suggestCheck(c.url ?? "")} />}
                     <span className="cmap-spacer" />
                     {c.kind === "page" && c.slug && <Link href={`/pages/${c.slug}`} className="stg-qbtn" target="_blank">Open page ↗</Link>}
                     {c.kind === "external" && c.url && <a href={c.url} target="_blank" rel="noreferrer" className="stg-qbtn">Open link ↗</a>}
                     {(c.kind === "external" || c.rel === "depends") && <ScopeRemove child={c} term={term} />}
                   </div>
                 )}
-                {c.note && c.note !== "edited" && <div className="chart-row-note">Note: {c.note}</div>}
-                {c.kind === "page" && c.slug ? <PagePreview slug={c.slug} /> : (
-                  <div className="chart-ext-body">
-                    <a href={c.url ?? "#"} target="_blank" rel="noreferrer" className="stg-dep-link">{c.url}</a>
-                    <div className="scope-empty">Outside curata. {(c.check as CheckRecipe | null)?.via ? `An agent can check it via ${(c.check as CheckRecipe).via}.` : "Someone has to open it and look."}</div>
+                {c.kind === "page" && c.slug ? (
+                  <>
+                    {c.note && c.note !== "edited" && <div className="chart-row-note">Note: {c.note}</div>}
+                    <PagePreview slug={c.slug} />
+                  </>
+                ) : (
+                  <div className="chart-ext-meta">
+                    <div className="chart-ext-row"><span className="cmap-source-label">Link</span><a href={c.url ?? "#"} target="_blank" rel="noreferrer" className="stg-dep-link">{c.url}</a></div>
+                    <div className="chart-ext-row"><span className="cmap-source-label">Owner · due</span>{canEdit ? <ScopeOwnerDue child={c} term={term} /> : <span>{c.owner ?? "no owner"}{c.dueAt ? ` · ${c.dueAt.slice(0, 10)}` : ""}</span>}</div>
+                    <div className="chart-ext-row"><span className="cmap-source-label">How to check</span>{canEdit ? <ScopeRecipe child={c} suggested={c.check ? null : suggestCheck(c.url ?? "")} /> : <span>{(c.check as CheckRecipe | null)?.via ? `agent, via ${(c.check as CheckRecipe).via}` : "a person opens it and looks"}</span>}</div>
+                    {c.note && c.note !== "edited" && <div className="chart-ext-row"><span className="cmap-source-label">Last note</span><span>{c.note}</span></div>}
                   </div>
                 )}
               </div>

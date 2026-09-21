@@ -10302,6 +10302,11 @@ body:has(.nav-reveal) .page-toolbar {
 .chart-rows { display: block; width: 100%; margin-top: 8px; }
 .chart-rows-head, .chart-row-line { display: grid; width: 100%; box-sizing: border-box; grid-template-columns: 18px minmax(0, 1fr) 170px 260px 18px; gap: 12px; align-items: center; }
 .chart-rows-head { padding: 6px 12px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid rgba(var(--text-rgb), 0.10); min-height: 40px; }
+.chart-ext-meta { display: flex; flex-direction: column; margin-top: 6px; border: 1px solid rgba(var(--text-rgb), 0.08); border-radius: 8px; }
+.chart-ext-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 16px; align-items: center; padding: 8px 12px; font-size: 13px; }
+.chart-ext-row + .chart-ext-row { border-top: 1px solid rgba(var(--text-rgb), 0.06); }
+.chart-ext-row .stg-dep-link { word-break: break-all; }
+.chart-ext-row > .stg-qbtn, .chart-ext-row > .scope-edit, .chart-ext-row > .chart-recipe { justify-self: start; }
 .chart-head-tools { display: flex; align-items: center; gap: 8px; padding: 6px 12px 10px; font-size: 13px; color: var(--light); }
 .chart-head-count { font-weight: 600; margin-right: 4px; }
 .chart-row { display: block; width: 100%; border-bottom: 1px solid rgba(var(--text-rgb), 0.07); }
