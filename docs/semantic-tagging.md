@@ -65,9 +65,9 @@ Each concept tag carries a `rel`:
 
 Omitting `rel` on a tag the page already has leaves the existing rel alone. Terms may carry one `/` namespace: `feature/gcp-support`, `pricing/tier-2`, `template/pov-roi`.
 
-## The content chart
+## The content map
 
-Curata draws an org chart for content from the edges above plus two free ones. A **node** is any concept with three or more children (or one someone promoted): a template with instances, a component page with embedders, a source page with dependents, external assets put under it. Nobody draws it.
+Curata draws an content map from the edges above plus two free ones. A **node** is any concept with three or more children (or one someone promoted): a template with instances, a component page with embedders, a source page with dependents, external assets put under it. Nobody draws it.
 
 Every child has one color from one rule. Green: checked since the source last moved, or nothing to drift against. Yellow: the source moved since the last check, or it was never checked, or someone left a mismatch note. Red: yellow plus past due, or the source moved twice with no check. Node color is the worst child.
 

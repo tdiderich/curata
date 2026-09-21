@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Chart, ChartNode, ChartNodeDetail } from "@/lib/chart";
 
 export function chartHref(term: string): string {
-  return `/chart/${term.split("/").map(encodeURIComponent).join("/")}`;
+  return `/map/${term.split("/").map(encodeURIComponent).join("/")}`;
 }
 
 export function NodeCard({ node }: { node: ChartNode }) {

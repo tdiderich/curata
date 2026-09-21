@@ -17,7 +17,7 @@ components:
           - **read_page** - full page content by slug, with caveats and provenance the snippet omits
           - **list_pages** / **list_folders** / **get_folder_structure** - browse the brain's shape
           - **get_related** - pages linked or conceptually near a given page
-          - **get_chart** - the org chart for content: every node (template, component page, source page, or anything promoted) with one color from what sits under it. With `term`, one node's children plus suggested reports
+          - **get_chart** - the content map: every node (template, component page, source page, or anything promoted) with one color from what sits under it. With `term`, one node's children plus suggested reports
           - **get_needs_look** - the chart as a list: every yellow and red child grouped by the node whose source moved. The drift review queue
           - **audit** - your worklist for external drift: yellow/red externals split into `withRecipe` (run the check through your MCP) and `humanOnly`
           - **get_dependents** - per-edge view for one concept or page: dependents, asserter, instances, externals, each with `verifiedAt` and `staleAgainstSource`
@@ -28,11 +28,11 @@ components:
           - **list_templates** / **list_workflows** / **list_rules** - available templates, skill pages, and the write rules in force
 
   - type: section
-    heading: The content chart
+    heading: The content map
     components:
       - type: markdown
         body: |
-          Curata draws an org chart for content from what already exists: pages built from a template (`instantiates`), pages that embed another page's components with a `type: ref` block (`embeds`, written by the scan on every save), pages tagged `depends` on a concept some page `asserts`, and external assets put under a node. Anything with three or more children is a node. Change a node's source and everything under it goes yellow; check a child and it goes green; leave it past due or through two more source changes and it goes red. Nobody draws the chart. Humans see it at `/chart`, the list at `/chart?view=list`, one node at `/chart/<term>`.
+          Curata draws an content map from what already exists: pages built from a template (`instantiates`), pages that embed another page's components with a `type: ref` block (`embeds`, written by the scan on every save), pages tagged `depends` on a concept some page `asserts`, and external assets put under a node. Anything with three or more children is a node. Change a node's source and everything under it goes yellow; check a child and it goes green; leave it past due or through two more source changes and it goes red. Nobody draws the chart. Humans see it at `/map`, the list at `/map?view=list`, one node at `/map/<term>`.
 
           - **get_chart** - no args: every node, ranked by fan-out, with `color`, `counts`, `source`. `term`: that node's children (`color`, `reason`, `lastCheckedAt`, `owner`, `dueAt`, `alsoUnder`, `check`) plus `suggestions`: external URLs in the source's or a child's body that probably belong here
           - **get_needs_look** - yellow and red children only, grouped by node

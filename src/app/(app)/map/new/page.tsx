@@ -13,7 +13,7 @@ export default async function NewNodePage() {
   return (
     <div className="dash-root">
       <div className="dash-workspace">
-        <div className="cmap-nav"><Link href="/chart" className="btn btn--ghost">← Content</Link></div>
+        <div className="cmap-nav"><Link href="/map" className="btn btn--ghost">← Content</Link></div>
         <div className="cmap">
           <header className="cmap-head">
             <h1 className="cmap-title">New top level content item</h1>

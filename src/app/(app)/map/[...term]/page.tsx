@@ -7,7 +7,7 @@ import { getChartNode } from "@/lib/chart";
 import { ChartNodeDetail } from "@/components/chart-node";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Content chart" };
+export const metadata: Metadata = { title: "Content map" };
 
 export default async function ChartNodePage({ params }: { params: Promise<{ term: string[] }> }) {
   const ctx = await resolveOrg();
@@ -24,7 +24,7 @@ export default async function ChartNodePage({ params }: { params: Promise<{ term
   return (
     <div className="dash-root">
       <div className="dash-workspace">
-        <div className="cmap-nav"><Link href="/chart" className="btn btn--ghost">← Content</Link></div>
+        <div className="cmap-nav"><Link href="/map" className="btn btn--ghost">← Content</Link></div>
         {node ? <ChartNodeDetail node={node} canEdit={can(ctx.role, "page:edit")} /> : <div className="cmap-col-empty">{error}</div>}
       </div>
     </div>

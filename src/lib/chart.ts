@@ -2,7 +2,7 @@ import { db } from "./db";
 import { findConceptForTerm, normalizeTerm } from "./concepts";
 
 /**
- * The org chart for content. Nodes are concepts with fan-out: a template
+ * The content map. Nodes are concepts with fan-out: a template
  * (instances under it), a component page (pages embedding it), a source page
  * (pages that depend on the concept it asserts), or anything someone
  * promoted. Children are the edges under the node, each with one color:
@@ -360,7 +360,7 @@ export async function getPageImpact(orgId: string, slug: string): Promise<PageIm
 /**
  * Make a page a top-level node by hand. The page asserts a concept named
  * after its slug (or keeps the one it already asserts), and that concept is
- * promoted so it shows on the chart before anything sits under it.
+ * promoted so it shows on the map before anything sits under it.
  */
 export async function promotePageToNode(orgId: string, slug: string, createdBy: string): Promise<ChartNode> {
   const { upsertConcepts, normalizeTerm: norm } = await import("./concepts");
@@ -373,7 +373,7 @@ export async function promotePageToNode(orgId: string, slug: string, createdBy: 
 }
 
 export interface CreateNodeInput {
-  /** Name shown on the chart. Also the title of a page created here. */
+  /** Name shown on the map. Also the title of a page created here. */
   title: string;
   /** Existing page to use as the source. Omit to create one from the title. */
   slug?: string;

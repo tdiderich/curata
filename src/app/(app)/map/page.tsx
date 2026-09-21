@@ -8,7 +8,7 @@ import { ChartList } from "@/components/chart-list";
 import { can } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Content chart" };
+export const metadata: Metadata = { title: "Content map" };
 
 export default async function ChartPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const ctx = await resolveOrg();
@@ -25,7 +25,7 @@ export default async function ChartPage({ searchParams }: { searchParams: Promis
         <div className="cmap">
           <header className="cmap-head">
             <div className="cmap-title-row">
-              <h1 className="cmap-title">{list ? "Needs a look" : "Content"}</h1>
+              <h1 className="cmap-title">{list ? "Needs a look" : "Content map"}</h1>
               <span className="cmap-spacer" />
               <span className="chart-totals">
                 <span className="chart-dot chart-dot--red" /> {chart.totals.red}
@@ -33,10 +33,10 @@ export default async function ChartPage({ searchParams }: { searchParams: Promis
                 <span className="chart-dot chart-dot--green" /> {chart.totals.green}
               </span>
               <nav className="cmap-views">
-                <Link href="/chart" className={`cmap-view${list ? "" : " cmap-view--on"}`}>Chart</Link>
-                <Link href="/chart?view=list" className={`cmap-view${list ? " cmap-view--on" : ""}`}>List</Link>
+                <Link href="/map" className={`cmap-view${list ? "" : " cmap-view--on"}`}>Map</Link>
+                <Link href="/map?view=list" className={`cmap-view${list ? " cmap-view--on" : ""}`}>List</Link>
               </nav>
-              {can(ctx.role, "page:edit") && <Link href="/chart/new" className="btn btn--primary">+ Add top level content item</Link>}
+              {can(ctx.role, "page:edit") && <Link href="/map/new" className="btn btn--primary">+ Add top level content item</Link>}
             </div>
             <p className="cmap-summary">
               {list

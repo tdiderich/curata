@@ -77,7 +77,7 @@ export function NewNodeForm() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
-      router.push(`/chart/${String(body.term).split("/").map(encodeURIComponent).join("/")}`);
+      router.push(`/map/${String(body.term).split("/").map(encodeURIComponent).join("/")}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setBusy(false);
@@ -88,7 +88,7 @@ export function NewNodeForm() {
     <div className="nmf">
       <section className="nmf-step">
         <label className="nmf-label" htmlFor="nn-title">What is it?</label>
-        <p className="nmf-hint">The name people will see at the top of the chart: <code>Pricing</code>, <code>SSO</code>, <code>Company tagline</code>.</p>
+        <p className="nmf-hint">The name people will see at the top of the map: <code>Pricing</code>, <code>SSO</code>, <code>Company tagline</code>.</p>
         <input id="nn-title" className="stg-input" placeholder="Pricing" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
       </section>
 
@@ -157,7 +157,7 @@ export function NewNodeForm() {
             ))}
           </ul>
         )}
-        {related.length === 0 && <div className="scope-empty">Nothing yet. Fine to create it empty and add from the chart.</div>}
+        {related.length === 0 && <div className="scope-empty">Nothing yet. Fine to create it empty and add from the map.</div>}
       </section>
 
       <footer className="nmf-footer">

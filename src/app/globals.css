@@ -10157,7 +10157,7 @@ body:has(.nav-reveal) .page-toolbar {
 .npf-preview-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; color: var(--snow); }
 .npf-preview-include { color: var(--light-muted); }
 
-/* ── Content chart ─────────────────────────────────────────────── */
+/* ── Content map ─────────────────────────────────────────────── */
 :root { --chart-green: 76, 175, 125; --chart-yellow: 224, 178, 63; --chart-red: 217, 83, 79; }
 .chart-totals { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--light-muted); margin-right: 8px; }
 .chart-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }

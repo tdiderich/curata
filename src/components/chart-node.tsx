@@ -33,7 +33,7 @@ export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; 
           <span className={`chart-dot chart-dot--${node.color} chart-dot--lg`} />
           <h1 className="cmap-title">{node.title}</h1>
           <span className="cmap-spacer" />
-          {canEdit && <ChartNodeToggle term={node.term} field="hidden" value={node.hidden} onLabel="Show on chart" offLabel="Hide from chart" />}
+          {canEdit && <ChartNodeToggle term={node.term} field="hidden" value={node.hidden} onLabel="Show on map" offLabel="Hide from map" />}
         </div>
         <p className="cmap-meta"><span className="chart-node-term">{node.term}</span></p>
       </header>
