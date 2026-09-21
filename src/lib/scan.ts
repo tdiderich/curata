@@ -154,3 +154,26 @@ export async function syncPageScan(orgId: string, pageId: string, doc: unknown, 
 
   return { embeds, externalUrls, newExternalUrls };
 }
+
+/**
+ * Backfill: run the scan over every live page in the org. For pages written
+ * before the scan existed, and after changing the ignore list. Idempotent.
+ */
+export async function backfillScan(orgId: string, createdBy: string): Promise<{ pages: number; embeds: number; externalUrls: number }> {
+  const yaml = (await import("js-yaml")).default;
+  const pages = await db.page.findMany({
+    where: { orgId, status: { not: "archived" } },
+    select: { id: true, versions: { orderBy: { createdAt: "desc" }, take: 1, select: { yamlContent: true, jsonContent: true } } },
+  });
+  let embeds = 0, externalUrls = 0;
+  for (const p of pages) {
+    const v = p.versions[0];
+    if (!v) continue;
+    let doc: unknown = v.jsonContent;
+    if (!doc) { try { doc = yaml.load(v.yamlContent); } catch { continue; } }
+    const r = await syncPageScan(orgId, p.id, doc, createdBy);
+    embeds += r.embeds.length;
+    externalUrls += r.externalUrls.length;
+  }
+  return { pages: pages.length, embeds, externalUrls };
+}

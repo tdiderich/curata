@@ -70,6 +70,8 @@ import {
   deleteProject,
 } from "@/lib/projects";
 import { getChart, getChartNode, getNeedsLook, setChartNode } from "@/lib/chart";
+import { addScopeItem, getAuditList, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
+import { backfillScan } from "@/lib/scan";
 import { ensureComponentIds, applyPatchOperations, buildOutline, formatOutline, locateComponent } from "@/lib/component-ids";
 import { createHash } from "crypto";
 import type { PatchOperation } from "@/lib/component-ids";
@@ -109,6 +111,7 @@ export const READ_TOOLS = [
   "get_dependents",
   "get_chart",
   "get_needs_look",
+  "audit",
   "get_project",
   "list_projects",
   "preview_template",
@@ -120,7 +123,7 @@ export const READ_TOOLS = [
   "capture_thread",
   "read_component",
 ];
-export const WRITE_TOOLS = ["map_dependencies", "mark_verified", "set_chart_node", "create_project", "add_project_item", "update_project_item", "remove_project_item", "delete_project", "write_page", "create_page", "write_component", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted", "generate_digest"];
+export const WRITE_TOOLS = ["map_dependencies", "mark_verified", "set_chart_node", "add_to_chart", "remove_from_chart", "set_scope_item", "rescan_inventory", "create_project", "add_project_item", "update_project_item", "remove_project_item", "delete_project", "write_page", "create_page", "write_component", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted", "generate_digest"];
 export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 /**
@@ -222,6 +225,11 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_chart: { known: new Set(["term", "include_hidden"]) },
   get_needs_look: { known: new Set([]) },
   set_chart_node: { known: new Set(["term", "pinned", "hidden", "promoted"]) },
+  audit: { known: new Set([]) },
+  add_to_chart: { known: new Set(["term", "slug", "url", "label", "owner", "due_at", "check"]) },
+  remove_from_chart: { known: new Set(["term", "slug", "url"]) },
+  set_scope_item: { known: new Set(["url", "term", "owner", "label", "due_at", "check"]) },
+  rescan_inventory: { known: new Set([]) },
   map_dependencies: { known: new Set(["term", "kind", "asserts", "depends", "references", "external", "includes", "removeIncludes"]) },
   create_project: { known: new Set(["term", "title", "template_term", "template_terms", "source"]) },
   preview_template: { known: new Set(["term"]) },
@@ -1752,12 +1760,46 @@ export async function dispatch(
     }
 
     case "get_chart": {
-      if (args.term) return getChartNode(orgId, args.term);
+      if (args.term) {
+        const node = await getChartNode(orgId, args.term);
+        return { ...node, suggestions: await getScopeSuggestions(orgId, args.term) };
+      }
       return getChart(orgId, { includeHidden: args.include_hidden === "true" });
     }
 
     case "get_needs_look": {
       return getNeedsLook(orgId);
+    }
+
+    case "audit": {
+      return getAuditList(orgId);
+    }
+
+    case "add_to_chart": {
+      if (!args.term) throw new Error("term is required");
+      if (!args.slug && !args.url) throw new Error("slug or url is required");
+      let check: unknown;
+      if (args.check) { try { check = JSON.parse(args.check); } catch { throw new Error("check must be JSON like {\"via\":\"hubspot\",\"tool\":\"render_asset\",\"locator\":\"...\",\"ask\":\"...\"}"); } }
+      const child = await addScopeItem(orgId, args.term, { slug: args.slug || undefined, url: args.url || undefined, label: args.label || undefined, owner: args.owner || undefined, dueAt: args.due_at, check }, userId || "agent");
+      logAudit({ orgId, action: "dependencies.map", resourceType: "concept", resourceId: args.term, actorType: "apikey", actorId, metadata: { added: child.slug ?? child.url } });
+      return child;
+    }
+
+    case "remove_from_chart": {
+      if (!args.term) throw new Error("term is required");
+      if (!args.slug && !args.url) throw new Error("slug or url is required");
+      return removeScopeItem(orgId, args.term, { slug: args.slug || undefined, url: args.url || undefined }, userId || "agent");
+    }
+
+    case "rescan_inventory": {
+      return backfillScan(orgId, userId || "agent");
+    }
+
+    case "set_scope_item": {
+      if (!args.url) throw new Error("url is required");
+      let check: unknown;
+      if (args.check !== undefined) { try { check = args.check === "" || args.check === "null" ? null : JSON.parse(args.check); } catch { throw new Error("check must be JSON like {\"via\":\"hubspot\",\"tool\":\"render_asset\",\"locator\":\"...\",\"ask\":\"...\"}"); } }
+      return updateScopeItem(orgId, { url: args.url, term: args.term || undefined, owner: args.owner, label: args.label || undefined, dueAt: args.due_at, check });
     }
 
     case "set_chart_node": {

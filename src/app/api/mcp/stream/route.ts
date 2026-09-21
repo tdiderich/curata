@@ -31,6 +31,8 @@ import {
 } from "@/lib/concepts";
 import { getProject, listProjects, previewTemplate } from "@/lib/projects";
 import { getChart, getChartNode, getNeedsLook, setChartNode } from "@/lib/chart";
+import { addScopeItem, getAuditList, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
+import { backfillScan } from "@/lib/scan";
 import { ensureComponentIds, buildOutline, formatOutline } from "@/lib/component-ids";
 import { dispatch } from "@/lib/mcp-dispatch";
 import { toolDescription } from "@/lib/mcp-guidance";
@@ -478,7 +480,59 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   server.tool("get_chart", "The org chart for content. Without term: every node (a template, a component page, a source page, or anything promoted) ranked pinned-first then by fan-out, each with one color: green (children checked since the source last moved), yellow (source moved since last check, or never checked, or a mismatch note), red (yellow plus past due, or the source moved twice with no check). Node color is the worst child. With term: that node with every child under it, each child carrying its own color, reason, lastCheckedAt, owner, dueAt, alsoUnder (other nodes the same page or asset sits beneath) and, for externals, the check recipe when one exists. Nobody draws this; templates, ref blocks, asserts/depends tags and external scope build it.",
     { term: z.string().optional().describe("Node term to expand. Omit for the whole chart"), include_hidden: z.boolean().optional().describe("Whole-chart mode: include nodes someone hid") },
     async ({ term, include_hidden }) => {
-      const result = term ? await getChartNode(orgId, term) : await getChart(orgId, { includeHidden: include_hidden });
+      const result = term
+        ? { ...(await getChartNode(orgId, term)), suggestions: await getScopeSuggestions(orgId, term) }
+        : await getChart(orgId, { includeHidden: include_hidden });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("audit", "Your worklist for external drift. Every yellow or red external asset, split into withRecipe (each carries check: {via, tool, locator, ask}; run it through that MCP in your session, compare to the node's source page, then mark_verified url=... status=holds, or status=needs_change with a note saying what's off) and humanOnly (no recipe yet; suggestedCheck is a starting point you can save with set_scope_item). Curata never calls an MCP itself. Report both buckets back to the human, the second one is theirs.",
+    {},
+    async () => {
+      const result = await getAuditList(orgId);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("add_to_chart", "Put a report under a node: an existing page (slug) or an external URL. External gets label, owner, due_at and an optional check recipe. Same edge map_dependencies writes, one row at a time. Use get_chart term=... first: its suggestions list is URLs already in the source or its children's bodies that probably belong here.",
+    {
+      term: z.string().describe("Node term"),
+      slug: z.string().optional().describe("Page slug to put under the node"),
+      url: z.string().optional().describe("External URL to put under the node"),
+      label: z.string().optional(),
+      owner: z.string().optional().describe("Who checks this external when the source moves"),
+      due_at: z.string().optional().describe("ISO date. Past due while stale turns the row red"),
+      check: z.object({ via: z.string(), tool: z.string().optional(), locator: z.string().optional(), ask: z.string().optional() }).optional().describe("How an agent checks it: via = MCP server name"),
+    },
+    async ({ term, slug, url, label, owner, due_at, check }) => {
+      const result = await addScopeItem(orgId, term, { slug, url, label, owner, dueAt: due_at, check }, userId || "agent");
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("remove_from_chart", "Take a page or external URL out from under a node. The page and the asset stay; only this edge goes.",
+    { term: z.string(), slug: z.string().optional(), url: z.string().optional() },
+    async ({ term, slug, url }) => {
+      const result = await removeScopeItem(orgId, term, { slug, url }, userId || "agent");
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("rescan_inventory", "Re-run the write-path scan over every live page: embeds edges from ref blocks and the external URL inventory. Every write already does this for its own page; call this once after upgrading, or after changing the org's ignored domains.",
+    {},
+    async () => {
+      const result = await backfillScan(orgId, userId || "agent");
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("set_scope_item", "Update an external asset's owner, label or check recipe (shared across every node it sits under), and its due date (per node when term is given, else every edge). check: null clears the recipe.",
+    {
+      url: z.string(),
+      term: z.string().optional().describe("Scope due_at to this node's edge"),
+      owner: z.string().nullable().optional(),
+      label: z.string().optional(),
+      due_at: z.string().nullable().optional(),
+      check: z.object({ via: z.string(), tool: z.string().optional(), locator: z.string().optional(), ask: z.string().optional() }).nullable().optional(),
+    },
+    async ({ url, term, owner, label, due_at, check }) => {
+      const result = await updateScopeItem(orgId, { url, term, owner, label, dueAt: due_at, check });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
