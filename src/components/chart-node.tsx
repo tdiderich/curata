@@ -3,7 +3,7 @@ import type { ChartChild, ChartNodeDetail as ChartNodeDetailData } from "@/lib/c
 import { relativeTime } from "@/components/dependency-cells";
 import { SettingsSection, SettingsTable } from "@/components/settings";
 import { ChartCheckButton, ChartNodeToggle } from "@/components/chart-controls";
-import { ScopeOwnerDue, ScopePanel, ScopeRecipe, ScopeRemove } from "@/components/chart-scope";
+import { AddRelatedButton, ScopeOwnerDue, ScopePanel, ScopeRecipe, ScopeRemove } from "@/components/chart-scope";
 import { suggestCheck } from "@/lib/scope";
 import { chartHref } from "@/components/chart-view";
 
@@ -33,7 +33,12 @@ export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; 
           <span className={`chart-dot chart-dot--${node.color} chart-dot--lg`} />
           <h1 className="cmap-title">{node.title}</h1>
           <span className="cmap-spacer" />
-          {canEdit && <ChartNodeToggle term={node.term} field="hidden" value={node.hidden} onLabel="Show on map" offLabel="Hide from map" />}
+          {canEdit && (
+            <>
+              <ChartNodeToggle term={node.term} field="hidden" value={node.hidden} onLabel="Show on content map" offLabel="Hide from content map" />
+              <AddRelatedButton />
+            </>
+          )}
         </div>
         <p className="cmap-meta"><span className="chart-node-term">{node.term}</span></p>
       </header>
@@ -54,6 +59,7 @@ export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; 
       </div>
 
       <SettingsSection title="Related content">
+        {canEdit && <ScopePanel term={node.term} />}
         <SettingsTable
           head={
             <>
@@ -63,7 +69,7 @@ export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; 
               {canEdit && <th className="dash-th stg-th-right">&nbsp;</th>}
             </>
           }
-          empty={node.children.length === 0 ? `Nothing under this yet.${canEdit ? " Add related content below." : ""}` : undefined}
+          empty={node.children.length === 0 ? `Nothing under this yet.${canEdit ? " Use Add related content above." : ""}` : undefined}
         >
           {node.children.map((c) => (
             <tr key={c.edgeId} className="dash-row">
@@ -99,7 +105,6 @@ export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; 
             </tr>
           ))}
         </SettingsTable>
-        {canEdit && <ScopePanel term={node.term} />}
       </SettingsSection>
     </div>
   );

@@ -10270,5 +10270,5 @@ body:has(.nav-reveal) .page-toolbar {
 .chart-leaf-label { color: var(--snow); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 0; min-width: 0; }
 .chart-leaf-label:hover { text-decoration: underline; }
 .chart-leaf-ext { font-family: var(--mono, monospace); font-size: 10.5px; color: var(--muted); flex: none; }
-.scope-composer { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; padding: 14px; border: 1px solid rgba(var(--accent-rgb), 0.28); border-radius: 10px; background: rgba(var(--accent-rgb), 0.05); }
+.scope-composer { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; padding: 14px; border: 1px solid rgba(var(--accent-rgb), 0.28); border-radius: 10px; background: rgba(var(--accent-rgb), 0.05); }
 .scope-composer .scope-group-label { margin-top: 4px; }

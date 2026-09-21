@@ -20,9 +20,19 @@ async function call(method: string, path: string, body?: unknown) {
  * node, ranked by where it came from. One click adds. Detected content
  * (embeds, template instances, tagged depends) never needs this panel.
  */
+/** Header button that opens the composer under the table. */
+export function AddRelatedButton() {
+  return <button type="button" className="btn btn--primary" onClick={() => window.dispatchEvent(new CustomEvent("scope:toggle"))}>+ Add related content</button>;
+}
+
 export function ScopePanel({ term }: { term: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onToggle = () => setOpen((o) => !o);
+    window.addEventListener("scope:toggle", onToggle);
+    return () => window.removeEventListener("scope:toggle", onToggle);
+  }, []);
   const [suggestions, setSuggestions] = useState<ScopeSuggestion[] | null>(null);
   const [pageSugs, setPageSugs] = useState<PageSuggestion[]>([]);
   const [manual, setManual] = useState("");
@@ -63,6 +73,7 @@ export function ScopePanel({ term }: { term: string }) {
       if (input.slug) setPageSugs((s) => s.filter((x) => x.slug !== input.slug));
       setManual("");
       setResults([]);
+      setOpen(false);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -84,15 +95,7 @@ export function ScopePanel({ term }: { term: string }) {
     ["declared by a sibling", "Under a sibling node in the same folder"],
   ];
 
-  const sugCount = (suggestions?.length ?? 0) + pageSugs.length;
-  if (!open) {
-    return (
-      <div className="stg-composer">
-        <button type="button" className="stg-qbtn stg-dep-verify-btn" onClick={() => setOpen(true)}>+ Add related content</button>
-        {sugCount > 0 && <span className="stg-pcount">{sugCount} suggestion{sugCount === 1 ? "" : "s"}</span>}
-      </div>
-    );
-  }
+  if (!open) return null;
   return (
     <div className="scope-composer">
       <div className="scope-manual">
@@ -108,7 +111,6 @@ export function ScopePanel({ term }: { term: string }) {
           }}
         />
         <button type="button" className="stg-qbtn" disabled={!manual.trim() || busy !== null} onClick={addManual}>Add</button>
-        <button type="button" className="stg-qbtn stg-qbtn--ghost" onClick={() => { setOpen(false); setManual(""); }}>Done</button>
       </div>
       {results.length > 0 && (
         <div className="scope-group">
