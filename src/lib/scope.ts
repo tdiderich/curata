@@ -84,14 +84,17 @@ function hostOf(url: string): string | null {
  * only see mapped pages; this is how it points at the unmapped ones. Match
  * is a plain case-insensitive substring on the latest body for the source
  * page's title, the term's last segment, and the term's namespace (pricing
- * in pricing/tier-2), dashes turned to spaces. Noisy on purpose: a page
- * that says "pricing" and isn't under the pricing node is worth a look.
+ * in pricing/tier-2), dashes turned to spaces. Structural namespaces
+ * (feature, product, launch, group...) are skipped: "feature" matching
+ * every page is noise, "pricing" matching every page is the point.
  */
+const STRUCTURAL_NAMESPACES = new Set(["feature", "features", "product", "products", "launch", "group", "template", "component", "messaging", "process", "api", "doc", "docs", "page", "pages", "project", "topic", "team", "internal"]);
 export async function getPageSuggestions(orgId: string, term: string): Promise<PageSuggestion[]> {
   const node = await getChartNode(orgId, term);
   const under = new Set(node.children.filter((c) => c.slug).map((c) => c.slug!));
   if (node.source) under.add(node.source.slug);
-  const parts = normalizeTerm(term).split("/").map((s) => s.replace(/-/g, " ").trim());
+  const segs = normalizeTerm(term).split("/");
+  const parts = segs.filter((s, i) => i === segs.length - 1 || !STRUCTURAL_NAMESPACES.has(s)).map((s) => s.replace(/-/g, " ").trim());
   const needles = [...new Set([node.source?.title ?? "", ...parts].map((s) => s.trim()).filter((s) => s.length >= 4))];
   if (needles.length === 0) return [];
   const pages = await db.page.findMany({

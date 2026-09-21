@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getChart, getChartNode, getNeedsLook, setChartNode } from "@/lib/chart";
+import { getChart, getChartNode, getNeedsLook, promotePageToNode, setChartNode } from "@/lib/chart";
 
 /** GET ?term= for one node, ?view=list for needs-look, else the whole chart. PATCH {term, pinned|hidden|promoted}. */
 export async function GET(request: NextRequest) {
@@ -34,5 +34,21 @@ export async function PATCH(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: msg.startsWith("concept not found") ? 404 : 400 });
+  }
+}
+
+/** POST {slug}: make a page a top-level node. */
+export async function POST(request: NextRequest) {
+  const ctx = await resolveOrg();
+  if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!can(ctx.role, "page:edit")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  let body: { slug?: string };
+  try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid JSON body" }, { status: 400 }); }
+  if (!body.slug) return NextResponse.json({ error: "slug required" }, { status: 400 });
+  try {
+    return NextResponse.json(await promotePageToNode(ctx.orgId, body.slug, ctx.userId));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: msg }, { status: /not found/.test(msg) ? 404 : 400 });
   }
 }

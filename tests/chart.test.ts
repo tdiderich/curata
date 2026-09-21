@@ -139,3 +139,17 @@ describe("page impact", () => {
     expect((await getPageImpact(org.id, "i1")).text).toBeNull();
   });
 });
+
+describe("promote a page to a node", () => {
+  it("asserts a concept named after the slug and shows the node before anything sits under it", async () => {
+    const { promotePageToNode } = await import("@/lib/chart");
+    const org = await createTestOrg({ name: "Promote Org", slug: "promote-org" });
+    await createTestPage(org.id, { slug: "security-faq", title: "Security FAQ" });
+    const node = await promotePageToNode(org.id, "security-faq", "tester");
+    expect(node.term).toBe("security-faq");
+    expect(node.promoted).toBe(true);
+    expect(node.source?.slug).toBe("security-faq");
+    expect((await getChart(org.id)).nodes.map((n) => n.term)).toEqual(["security-faq"]);
+    await expect(promotePageToNode(org.id, "nope", "tester")).rejects.toThrow(/page not found/);
+  });
+});

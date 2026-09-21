@@ -25,6 +25,7 @@ export function ScopePanel({ term }: { term: string }) {
   const [suggestions, setSuggestions] = useState<ScopeSuggestion[] | null>(null);
   const [pageSugs, setPageSugs] = useState<PageSuggestion[]>([]);
   const [manual, setManual] = useState("");
+  const [results, setResults] = useState<Array<{ slug: string; title: string }>>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +36,22 @@ export function ScopePanel({ term }: { term: string }) {
     })();
   }, [term]);
 
+  // Same search the home bar uses. A URL skips search and adds directly.
+  useEffect(() => {
+    const q = manual.trim();
+    const skip = q.length < 2 || /^https?:\/\//i.test(q);
+    const t = setTimeout(() => {
+      void (async () => {
+        if (skip) { setResults([]); return; }
+        try {
+          const rows: Array<{ slug: string; title: string; type: string }> = await call("GET", `/api/search?query=${encodeURIComponent(q)}`);
+          setResults(rows.filter((r) => r.type === "page").slice(0, 8).map((r) => ({ slug: r.slug, title: r.title })));
+        } catch { setResults([]); }
+      })();
+    }, 180);
+    return () => clearTimeout(t);
+  }, [manual]);
+
   async function add(input: { url?: string; slug?: string; label?: string; check?: CheckRecipe | null }) {
     const key = input.url ?? input.slug ?? "";
     setBusy(key);
@@ -44,6 +61,7 @@ export function ScopePanel({ term }: { term: string }) {
       setSuggestions((s) => (s ?? []).filter((x) => x.url !== input.url));
       if (input.slug) setPageSugs((s) => s.filter((x) => x.slug !== input.slug));
       setManual("");
+      setResults([]);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -66,9 +84,9 @@ export function ScopePanel({ term }: { term: string }) {
   ];
 
   return (
-    <aside className="scope-panel">
-      <div className="scope-panel-title">Add related content</div>
-      <p className="scope-panel-hint">Pages and links curata found that might belong under this node. One click adds. Anything detected from templates, embeds or tags is already here.</p>
+    <aside className="scope-panel stg-section">
+      <h2 className="stg-section-title">Add related content</h2>
+      <p className="stg-section-desc scope-panel-hint">Pages and links curata found that might belong under this node. One click adds. Anything detected from templates, embeds or tags is already here.</p>
       {suggestions === null && <div className="scope-empty">Looking…</div>}
       {suggestions && suggestions.length === 0 && pageSugs.length === 0 && <div className="scope-empty">Nothing to suggest. Paste a URL or a page slug below.</div>}
       {pageSugs.length > 0 && (
@@ -106,13 +124,26 @@ export function ScopePanel({ term }: { term: string }) {
       <div className="scope-manual">
         <input
           className="stg-input"
-          placeholder="Paste a URL, or type a page slug"
+          placeholder="Search pages, or paste a URL"
           value={manual}
           onChange={(e) => setManual(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addManual(); } }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (results.length > 0 && !/^https?:\/\//i.test(manual)) void add({ slug: results[0].slug }); else addManual(); } }}
         />
         <button type="button" className="stg-qbtn" disabled={!manual.trim() || busy !== null} onClick={addManual}>Add</button>
       </div>
+      {results.length > 0 && (
+        <div className="scope-group">
+          {results.map((r) => (
+            <div key={r.slug} className="scope-sug">
+              <div className="scope-sug-main">
+                <span className="scope-sug-label">{r.title}</span>
+                <span className="scope-sug-url">{r.slug}</span>
+              </div>
+              <button type="button" className="stg-qbtn" disabled={busy === r.slug} onClick={() => void add({ slug: r.slug })}>{busy === r.slug ? "…" : "Add"}</button>
+            </div>
+          ))}
+        </div>
+      )}
       {error && <div className="stg-dep-verify-error">{error}</div>}
     </aside>
   );
@@ -138,8 +169,8 @@ export function ScopeOwnerDue({ child, term }: { child: ChartChild; term: string
 
   if (!editing) {
     return (
-      <button type="button" className="scope-inline" onClick={() => setEditing(true)} title="Set owner and due date">
-        {child.owner ?? <span className="chart-td-muted">no owner</span>}{child.dueAt ? ` · ${child.dueAt.slice(0, 10)}` : ""}
+      <button type="button" className="stg-qbtn chart-owner-btn" onClick={() => setEditing(true)} title="Set owner and due date">
+        {child.owner ?? "no owner"}{child.dueAt ? ` · ${child.dueAt.slice(0, 10)}` : ""}
       </button>
     );
   }
@@ -188,5 +219,5 @@ export function ScopeRemove({ child, term }: { child: ChartChild; term: string }
     setBusy(true);
     try { await call("DELETE", "/api/chart/scope", { term, slug: child.slug ?? undefined, url: child.url ?? undefined }); router.refresh(); } finally { setBusy(false); }
   }
-  return <button type="button" className="scope-inline scope-inline--danger" disabled={busy} onClick={() => void remove()} title="Take it out from under this node">Remove</button>;
+  return <button type="button" className="stg-qbtn stg-qbtn--danger" disabled={busy} onClick={() => void remove()} title="Take it out from under this node">Remove</button>;
 }

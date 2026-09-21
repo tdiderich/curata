@@ -171,9 +171,14 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
   const concepts = new Map<string, { id: string; normalizedName: string; displayName: string; kind: string }>();
   for (const e of pageEdges) concepts.set(e.conceptId, e.concept);
   for (const e of extEdges) concepts.set(e.conceptId, e.concept);
-  if (opts.conceptId && !concepts.has(opts.conceptId)) {
-    const c = await db.concept.findUnique({ where: { id: opts.conceptId }, select: { id: true, normalizedName: true, displayName: true, kind: true } });
-    if (c) concepts.set(c.id, c);
+  // A promoted or pinned concept is a node even before anything sits under it.
+  const wanted = [
+    ...(opts.conceptId ? [opts.conceptId] : []),
+    ...settings.filter((s) => s.promoted || s.pinned).map((s) => s.conceptId),
+  ].filter((id) => !concepts.has(id));
+  if (wanted.length > 0) {
+    const rows = await db.concept.findMany({ where: { id: { in: wanted } }, select: { id: true, normalizedName: true, displayName: true, kind: true } });
+    for (const c of rows) concepts.set(c.id, c);
   }
 
   const fanOut = new Map<string, number>();
@@ -351,4 +356,19 @@ export async function getPageImpact(orgId: string, slug: string): Promise<PageIm
   const parts = [pages ? `${pages} page${pages === 1 ? "" : "s"}` : null, external ? `${external} external` : null].filter(Boolean).join(" and ");
   const where = nodes.length === 1 ? nodes[0].term : `${nodes.length} nodes`;
   return { nodes, pages, external, text: `${parts} under ${where} need${pages + external === 1 ? "s" : ""} a look now. Agents can clear the pages; someone owns each external.` };
+}
+
+/**
+ * Make a page a top-level node by hand. The page asserts a concept named
+ * after its slug (or keeps the one it already asserts), and that concept is
+ * promoted so it shows on the chart before anything sits under it.
+ */
+export async function promotePageToNode(orgId: string, slug: string, createdBy: string): Promise<ChartNode> {
+  const { upsertConcepts, normalizeTerm: norm } = await import("./concepts");
+  const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } }, select: { id: true } });
+  if (!page) throw new Error(`page not found: ${slug}`);
+  const existing = await db.pageConcept.findFirst({ where: { pageId: page.id, rel: "asserts" }, select: { concept: { select: { displayName: true } } } });
+  const term = existing?.concept.displayName ?? norm(slug);
+  if (!existing) await upsertConcepts(page.id, [{ term, rel: "asserts" }], createdBy);
+  return setChartNode(orgId, term, { promoted: true });
 }

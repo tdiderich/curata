@@ -5,6 +5,8 @@ import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { getChart, getChartNode, getNeedsLook } from "@/lib/chart";
 import { ChartView } from "@/components/chart-view";
 import { ChartList } from "@/components/chart-list";
+import { AddNodeButton } from "@/components/chart-add-node";
+import { can } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Content chart" };
@@ -37,11 +39,12 @@ export default async function ChartPage({ searchParams }: { searchParams: Promis
                 <Link href="/chart" className={`cmap-view${list ? "" : " cmap-view--on"}`}>Chart</Link>
                 <Link href="/chart?view=list" className={`cmap-view${list ? " cmap-view--on" : ""}`}>List</Link>
               </nav>
+              {can(ctx.role, "page:edit") && <AddNodeButton />}
             </div>
             <p className="cmap-summary">
               {list
                 ? "Same chart, as a list. Yellow and red only, grouped by what changed."
-                : "Drawn from templates, components, sources and links. Change a node, everything under it changes color."}
+                : "Your pages, templates and links, arranged by what depends on what. When something at the top changes, everything below it needs a look until someone checks it."}
             </p>
           </header>
           {list ? <ChartList nodes={needs} /> : <ChartView chart={chart} expanded={worst} />}

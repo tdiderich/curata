@@ -29,7 +29,7 @@ import {
   VERIFY_STATUSES,
   CONCEPT_RELS,
 } from "@/lib/concepts";
-import { getChart, getChartNode, getNeedsLook, setChartNode } from "@/lib/chart";
+import { getChart, getChartNode, getNeedsLook, promotePageToNode, setChartNode } from "@/lib/chart";
 import { addScopeItem, getAuditList, getPageSuggestions, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
 import { backfillScan } from "@/lib/scan";
 import { ensureComponentIds, buildOutline, formatOutline } from "@/lib/component-ids";
@@ -539,9 +539,14 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
-  server.tool("set_chart_node", "Pin a node to the top row, hide one that is noise (a shared footer with 200 embeds), or promote a concept with fewer than 3 children so it shows on the chart anyway.",
-    { term: z.string().describe("Concept term"), pinned: z.boolean().optional(), hidden: z.boolean().optional(), promoted: z.boolean().optional() },
-    async ({ term, pinned, hidden, promoted }) => {
+  server.tool("set_chart_node", "Pin a node to the top row, hide one that is noise (a shared footer with 200 embeds), or promote a concept with fewer than 3 children so it shows on the chart anyway. With slug alone: make that page a top-level node (it asserts a concept named after its slug, promoted).",
+    { term: z.string().optional().describe("Concept term"), slug: z.string().optional().describe("Page to make a node, instead of term"), pinned: z.boolean().optional(), hidden: z.boolean().optional(), promoted: z.boolean().optional() },
+    async ({ term, slug, pinned, hidden, promoted }) => {
+      if (slug && !term) {
+        const result = await promotePageToNode(orgId, slug, userId || "agent");
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      }
+      if (!term) throw new Error("term or slug is required");
       const patch: { pinned?: boolean; hidden?: boolean; promoted?: boolean } = {};
       if (pinned !== undefined) patch.pinned = pinned;
       if (hidden !== undefined) patch.hidden = hidden;

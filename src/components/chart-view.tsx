@@ -46,7 +46,7 @@ export function ChartView({ chart, expanded }: { chart: Chart; expanded: ChartNo
   if (chart.nodes.length === 0) {
     return (
       <div className="cmap-col-empty chart-empty">
-        Nothing with fan-out yet. Build a page from a template, embed a component with a <code>ref</code> block, or tag a page <code>asserts</code> and three others <code>depends</code>, and a node shows up here. Or promote any concept from its page.
+        Nothing here yet. Pick a page that others depend on with &ldquo;Add to chart&rdquo;, or build a few pages from a template, and it shows up on its own.
       </div>
     );
   }

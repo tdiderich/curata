@@ -10165,9 +10165,9 @@ body:has(.nav-reveal) .page-toolbar {
 .chart-dot--green { background: rgb(var(--chart-green)); }
 .chart-dot--yellow { background: rgb(var(--chart-yellow)); }
 .chart-dot--red { background: rgb(var(--chart-red)); }
-.chart-text--green { color: rgb(var(--chart-green)); font-size: 12.5px; }
-.chart-text--yellow { color: rgb(var(--chart-yellow)); font-size: 12.5px; }
-.chart-text--red { color: rgb(var(--chart-red)); font-size: 12.5px; }
+.chart-text--green { color: rgb(var(--chart-green)); font-size: 12px; font-family: var(--mono); white-space: nowrap; }
+.chart-text--yellow { color: rgb(var(--chart-yellow)); font-size: 12px; }
+.chart-text--red { color: rgb(var(--chart-red)); font-size: 12px; }
 .chart-empty { text-align: left; line-height: 1.5; }
 .chart-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: stretch; }
 .chart-node { width: 220px; box-sizing: border-box; padding: 14px 16px; border: 1px solid rgba(var(--text-rgb), 0.10); border-top-width: 3px; border-radius: 10px; background: rgba(var(--text-rgb), 0.035); display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: var(--snow); }
@@ -10239,3 +10239,20 @@ body:has(.nav-reveal) .page-toolbar {
 .scope-recipe--sug .scope-inline { font-size: 11.5px; color: var(--accent); }
 .scope-recipe-x { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0 2px; font-size: 13px; }
 @media (max-width: 1000px) { .chart-body { flex-direction: column; } .scope-panel { width: 100%; } }
+.chart-cell-main { display: flex; gap: 10px; align-items: flex-start; }
+.chart-cell-main .chart-dot { margin-top: 5px; }
+.chart-cell-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.chart-actions { display: inline-flex; gap: 4px; align-items: center; justify-content: flex-end; }
+.chart-owner-btn { padding-left: 0; padding-right: 0; border-color: transparent !important; }
+.chart-owner-btn:hover { background: none !important; }
+.scope-panel.stg-section { padding: 16px; }
+.scope-panel .stg-section-desc { margin-top: 0; }
+.chart-body-main .dash-td:nth-child(3) { white-space: nowrap; }
+.chart-also-link { color: var(--light-muted); text-decoration: none; border-bottom: 1px dotted rgba(var(--text-rgb), 0.3); } .chart-also-link:hover { color: var(--snow); }
+.chart-addnode { position: relative; width: 320px; }
+.chart-addnode-pop { position: absolute; top: 40px; right: 0; z-index: 20; width: 360px; display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px solid rgba(var(--text-rgb), 0.12); border-radius: 10px; background: var(--bg, #141413); box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
+.chart-addnode-results { display: flex; flex-direction: column; gap: 2px; }
+.chart-addnode-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border: 0; border-radius: 6px; background: none; color: var(--snow); font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
+.chart-addnode-row:hover:not(:disabled) { background: rgba(var(--text-rgb), 0.06); }
+.chart-body-main .dash-th:nth-child(2), .chart-body-main .dash-td:nth-child(2) { white-space: nowrap; }
+.chart-addnode-row span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .chart-addnode-row span:last-child { flex: none; max-width: 45%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
