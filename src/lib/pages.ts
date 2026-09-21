@@ -889,7 +889,8 @@ export async function markTrusted(
 
   await db.page.update({ where: { id: page.id }, data: { trustedVersionId: versionId } });
   // A trust pin is also a verification, of every edge the page carries.
-  await verifyAllEdgesForPage(page.id);
+  // A human pinning a version is a deliberate check, not an edit.
+  await verifyAllEdgesForPage(page.id, null);
 
   await logAudit({
     orgId,

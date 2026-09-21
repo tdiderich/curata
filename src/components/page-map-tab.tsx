@@ -97,7 +97,7 @@ export function PageUnderRows({ slug, title, under, canEdit }: { slug: string; t
               <span className="stg-pcount">{u.node.term}{u.me.rel === "embeds" ? " · embeds it" : u.me.rel === "instantiates" ? " · built from it" : ""}</span>
             </span>
             <span className="stg-dep-when">{u.node.source ? relativeTime(u.node.source.updatedAt) : "—"}</span>
-            <span className={`chart-text--${u.me.color}`}>{u.me.color === "green" ? (u.me.lastCheckedAt ? relativeTime(u.me.lastCheckedAt) : "nothing to drift against") : `${u.me.lastCheckedAt ? `${relativeTime(u.me.lastCheckedAt)} · ` : ""}${u.me.reason ?? ""}`}</span>
+            <span className={`chart-text--${u.me.color}`}>{u.me.color === "green" ? (u.me.lastCheckedAt ? `${relativeTime(u.me.lastCheckedAt)}${u.me.note === "edited" ? " · edited" : ""}` : "nothing to drift against") : `${u.me.lastCheckedAt ? `${relativeTime(u.me.lastCheckedAt)} · ` : ""}${u.me.reason ?? ""}`}</span>
             <span className="chart-actions">
               {canEdit && u.me.color !== "green" && <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void complete([u])}>Mark complete</button>}
               {canEdit && u.me.rel === "depends" && <button type="button" className="stg-qbtn stg-qbtn--danger" disabled={busy} onClick={() => void remove(u.node.term)}>Remove</button>}

@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       url: body.url || undefined,
       term: body.term || undefined,
       note: typeof body.note === "string" ? body.note.slice(0, 500) : undefined,
-      status: body.status === "needs_change" ? "needs_change" : "holds",
+      status: body.status === "needs_change" ? "needs_change" : body.status === "unreachable" ? "unreachable" : "holds",
     });
     logAudit({
       orgId: ctx.orgId,

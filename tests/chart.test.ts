@@ -209,3 +209,41 @@ describe("cold agent pass 2 fixes", () => {
     expect(after.children.filter((c) => c.slug).every((c) => c.color === "green")).toBe(true);
   });
 });
+
+describe("verify outcomes on the chart", () => {
+  it("a write reads as edited, unreachable stays yellow with the reason and never escalates on moves", async () => {
+    const org = await createTestOrg({ name: "Verify Org", slug: "verify-org" });
+    const src = await createTestPage(org.id, { slug: "v-src" });
+    await upsertConcepts(src.id, [{ term: "verify/x", rel: "asserts" }], "tester");
+    const dep = await createTestPage(org.id, { slug: "v-dep" });
+    await upsertConcepts(dep.id, [{ term: "verify/x", rel: "depends" }], "tester");
+    await upsertExternalDependents(org.id, "verify/x", [{ url: "https://docs.google.com/document/d/v1" }], "tester");
+    const { verifyAllEdgesForPage } = await import("@/lib/concepts");
+
+    await bumpSource(src.id, 1);
+    await verifyAllEdgesForPage(dep.id);
+    let node = await getChartNode(org.id, "verify/x");
+    const page = node.children.find((c) => c.slug === "v-dep")!;
+    expect(page.color).toBe("green");
+    expect(page.note).toBe("edited");
+
+    await verifyDependent(org.id, { url: "https://docs.google.com/document/d/v1", term: "verify/x", status: "unreachable", note: "no google-drive MCP this session" });
+    node = await getChartNode(org.id, "verify/x");
+    let ext = node.children.find((c) => c.kind === "external")!;
+    expect(ext.color).toBe("yellow");
+    expect(ext.reason).toBe("couldn't check · no google-drive MCP this session");
+    expect(ext.lastCheckedAt).toBeNull();
+
+    // Two more source moves would make an unchecked row red; an unreachable one stays yellow.
+    await bumpSource(src.id, 2);
+    node = await getChartNode(org.id, "verify/x");
+    ext = node.children.find((c) => c.kind === "external")!;
+    expect(ext.color).toBe("yellow");
+    expect(node.children.find((c) => c.slug === "v-dep")?.color).toBe("red");
+
+    // A real check clears it.
+    await verifyDependent(org.id, { url: "https://docs.google.com/document/d/v1", term: "verify/x" });
+    node = await getChartNode(org.id, "verify/x");
+    expect(node.children.find((c) => c.kind === "external")?.color).toBe("green");
+  });
+});

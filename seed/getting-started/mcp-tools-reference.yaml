@@ -21,7 +21,7 @@ components:
           - **get_needs_look** - the chart as a list: every yellow and red child grouped by the node whose source moved. The drift review queue
           - **audit** - your worklist for external drift: yellow/red externals split into `withRecipe` (run the check through your MCP) and `humanOnly`
           - **get_dependents** - per-edge view for one concept or page: dependents, asserter, instances, externals, each with `verifiedAt` and `staleAgainstSource`
-          - **mark_verified** - "looked at it": `slug` or `url` plus `term`, `status` holds or needs_change, `note` for what you found. No new version
+          - **mark_verified** - "looked at it": `slug` or `url` plus `term`, `status` holds, needs_change, or unreachable (could not access it this session), `note` for what you found. No new version. Write responses carry `trust` (mode, trustedBehind, hint) so you know when a locked page still shows readers the old version
           - **get_semantic_map** / **get_vocabulary** - the org's concept graph and tag vocabulary
           - **get_versions** - a page's version history
           - **get_config** / **get_component_reference** - org settings and the component catalog

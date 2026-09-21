@@ -300,10 +300,10 @@ describe("verifiedAt and staleAgainstSource", () => {
     expect(r.dependents[0].verifiedNote).toBe("does not mention grouping");
     expect(r.summary.pages).toEqual({ total: 1, ok: 1, stale: 0, needsChange: 0, neverVerified: 0 });
 
-    // A rewrite speaks for itself: the note from the last verification goes.
+    // A rewrite speaks for itself: the note from the last verification is replaced by "edited".
     await dispatch("write_page", { slug: "deck-notes", content: "title: Deck notes\nshell: document\ncomponents: []\n" }, orgId, "verify-org", "key", "u1");
     r = await getDependents(orgId, { term: T("feat/grouping") });
-    expect(r.dependents[0].verifiedNote).toBeNull();
+    expect(r.dependents[0].verifiedNote).toBe("edited");
   });
 
   it("never-verified dependent with a source is stale; with no source it is not", async () => {
@@ -321,7 +321,7 @@ describe("verifiedAt and staleAgainstSource", () => {
     await dispatch("write_page", { slug: "bump-me", content: "title: Bump\nshell: document\ncomponents: []\n" }, orgId, "verify-org", "key", "u1");
     let edges = await testDb.pageConcept.findMany({ where: { pageId: page.id } });
     expect(edges).toHaveLength(2);
-    for (const e of edges) { expect(e.verifiedAt).not.toBeNull(); expect(e.needsChange).toBe(false); expect(e.verifiedNote).toBeNull(); }
+    for (const e of edges) { expect(e.verifiedAt).not.toBeNull(); expect(e.needsChange).toBe(false); expect(e.verifiedNote).toBe("edited"); }
 
     await testDb.pageConcept.updateMany({ where: { pageId: page.id }, data: { verifiedAt: null } });
     await testDb.organization.update({ where: { id: orgId }, data: { rules: [{ kind: "trust", mode: "locked" }] } });

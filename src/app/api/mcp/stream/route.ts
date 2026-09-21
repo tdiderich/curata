@@ -460,7 +460,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       slug: z.string().optional().describe("Page slug to verify"),
       url: z.string().optional().describe("External asset URL to verify"),
       term: z.string().optional().describe("Scope to this page's or asset's edge to one concept. Omit to cover all its edges"),
-      status: z.enum(VERIFY_STATUSES).optional().describe("holds (default) or needs_change"),
+      status: z.enum(VERIFY_STATUSES).optional().describe("holds (default): looked, still right. needs_change: looked, it is wrong (row goes red). unreachable: tried, could not look (no access to that system this session); row stays yellow with your note, never a misleading holds"),
       note: z.string().optional().describe("Why it still holds, like 'does not quote the price'. Shown next to the verified badge"),
     },
     viaDispatch("mark_verified"));
@@ -482,7 +482,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
-  server.tool("audit", "Your worklist for external drift. Every yellow or red external asset, split into withRecipe (each carries check: {via, tool, locator, ask}; run it through that MCP in your session, compare to the node's source page, then mark_verified url=... status=holds, or status=needs_change with a note saying what's off) and humanOnly (no recipe yet; suggestedCheck is a starting point you can save with set_scope_item). Curata never calls an MCP itself. Report both buckets back to the human, the second one is theirs.",
+  server.tool("audit", "Your worklist for external drift. Every yellow or red external asset, split into withRecipe (each carries check: {via, tool, locator, ask}; run it through that MCP in your session, compare to the node's source page, then mark_verified url=... status=holds, or status=needs_change with a note saying what's off, or status=unreachable with a note when you have no access to that system) and humanOnly (no recipe yet; suggestedCheck is a starting point you can save with set_scope_item). Curata never calls an MCP itself. Report both buckets back to the human, the second one is theirs.",
     {},
     async () => {
       const result = await getAuditList(orgId);

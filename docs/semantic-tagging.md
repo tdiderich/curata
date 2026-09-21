@@ -89,7 +89,7 @@ Every save also records every absolute http(s) URL on the page as an `ExternalAs
 ### Per-edge primitives
 
 - `get_dependents` — given a `term` or `slug`, one row per edge: dependents, the asserter, instances, externals, each with `verifiedAt` and `staleAgainstSource`.
-- `mark_verified` — "looked at it." Records the outcome on one edge (`slug` or `url` plus `term`) or on every edge the page or asset carries (omit `term`), without writing a version. `status` is `holds` (default) or `needs_change`. Optional `note`. Any write to a page verifies every edge it carries and clears notes, and so does `mark_trusted`.
+- `mark_verified` — "looked at it." Records the outcome on one edge (`slug` or `url` plus `term`) or on every edge the page or asset carries (omit `term`), without writing a version. `status` is `holds` (default), `needs_change` (looked, it is wrong, row goes red), or `unreachable` (tried, no access to that system this session; row stays yellow with your note instead of a misleading holds). Optional `note`. Any write to a page verifies every edge it carries, leaving the note `edited` so a rewrite reads differently from a deliberate check, and clears notes, and so does `mark_trusted`.
 
 A page that depends on `pricing/tier-2` and on `messaging/tagline` is two edges, checked separately. Edges created by `map_dependencies` or `add_to_chart` start unverified (wiring a page into the chart is not checking it); edges created alongside a write start verified as of that write.
 

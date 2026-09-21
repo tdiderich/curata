@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { findConceptForTerm, normalizeTerm } from "./concepts";
+import { findConceptForTerm, normalizeTerm, UNREACHABLE_PREFIX } from "./concepts";
 
 /**
  * The content map. Nodes are concepts with fan-out: a template
@@ -133,6 +133,11 @@ function colorFor(
   if (!source) return { color: "green", reason: null };
   const stale = !verifiedAt || verifiedAt < source.updatedAt;
   if (!stale) return { color: "green", reason: null };
+  // Someone tried and couldn't look: stays yellow, never escalates to red on moves, says why.
+  if (note?.startsWith(UNREACHABLE_PREFIX)) {
+    const why = note.slice(UNREACHABLE_PREFIX.length).trim();
+    return { color: dueAt !== null && dueAt < now ? "red" : "yellow", reason: `couldn't check${why ? ` · ${why}` : ""}` };
+  }
   // A never-checked edge only counts source moves it lived through.
   const since = verifiedAt ?? edgeCreatedAt;
   // A "move" is a content change, not a version row: an edit that is then

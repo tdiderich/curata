@@ -392,6 +392,28 @@ function resolveChannelArg(args: Record<string, string>): Channel {
 /// system-id conventions — reuse it rather than inventing a second lookup.
 /// canApprove only branches on owner/admin vs everyone else, so collapsing
 /// non-managers to "member" here is equivalent to the real role.
+/**
+ * What a writer needs to know about trust after a write: the mode in force
+ * and whether readers on the default channel still see an older, pinned
+ * version. Locked pages swallow edits silently otherwise.
+ */
+async function trustSummary(orgId: string, slug: string): Promise<{ mode: string; trustedBehind: boolean; hint: string | null }> {
+  const page = await db.page.findUnique({
+    where: { orgId_slug: { orgId, slug } },
+    select: { folderId: true, rules: true, trustedVersionId: true, versions: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true } } },
+  });
+  if (!page) return { mode: "auto", trustedBehind: false, hint: null };
+  const { mode } = await resolveEffectiveTrustMode(orgId, page.folderId, page.rules);
+  const latest = page.versions[0]?.id ?? null;
+  const trustedBehind = !!page.trustedVersionId && latest !== null && page.trustedVersionId !== latest;
+  const hint = trustedBehind
+    ? "saved to latest; readers on the trusted channel still see the pinned version until someone runs mark_trusted"
+    : mode === "locked" && !page.trustedVersionId
+      ? "trust mode is locked and nothing is pinned yet; readers see latest until a version is marked trusted"
+      : null;
+  return { mode, trustedBehind, hint };
+}
+
 async function resolveTrustEligibility(orgId: string, userId: string | undefined, slug: string): Promise<boolean> {
   const actorUserId = userId || "agent";
   const orgRole: Role = (await isOrgManager(orgId, actorUserId)) ? "owner" : "member";
@@ -1066,6 +1088,7 @@ export async function dispatch(
       });
       const cpImpact = await getPageImpact(orgId, args.slug);
       if (cpImpact.text) cpResult.impact = cpImpact;
+      cpResult.trust = await trustSummary(orgId, args.slug);
       return cpResult;
     }
 
@@ -1253,6 +1276,7 @@ export async function dispatch(
       }
       const wpImpact = await getPageImpact(orgId, args.slug);
       if (wpImpact.text) wpResult.impact = wpImpact;
+      wpResult.trust = await trustSummary(orgId, args.slug);
       return wpResult;
     }
 
@@ -1462,6 +1486,7 @@ export async function dispatch(
       const ppResult: Record<string, unknown> = withShapeWarnings({ ...patchResult }, patchValidation.warnings);
       const ppImpact = await getPageImpact(orgId, args.slug);
       if (ppImpact.text) ppResult.impact = ppImpact;
+      ppResult.trust = await trustSummary(orgId, args.slug);
       if (ppRuleCheck.warnings.length > 0) {
         ppResult.contentWarnings = ppRuleCheck.warnings.map((w) => ({
           scope: w.scope,

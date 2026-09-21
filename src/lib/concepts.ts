@@ -793,10 +793,10 @@ export async function sourceUpdatedAtByConcept(orgId: string, conceptIds: string
  * the new content speaks for itself. Called from the page write path and from
  * markTrusted.
  */
-export async function verifyAllEdgesForPage(pageId: string): Promise<void> {
+export async function verifyAllEdgesForPage(pageId: string, note: string | null = EDITED_NOTE): Promise<void> {
   await db.pageConcept.updateMany({
     where: { pageId },
-    data: { verifiedAt: new Date(), verifiedNote: null, needsChange: false },
+    data: { verifiedAt: new Date(), verifiedNote: note, needsChange: false },
   });
 }
 
@@ -857,7 +857,11 @@ export async function upsertExternalDependents(
   return out;
 }
 
-export const VERIFY_STATUSES = ["holds", "needs_change"] as const;
+export const VERIFY_STATUSES = ["holds", "needs_change", "unreachable"] as const;
+/** verifiedNote prefix that marks "tried, could not reach it". Keeps the row yellow. */
+export const UNREACHABLE_PREFIX = "unreachable:";
+/** verifiedNote a page write leaves behind so a rewrite reads as "edited", not as a deliberate check. */
+export const EDITED_NOTE = "edited";
 export type VerifyStatus = (typeof VERIFY_STATUSES)[number];
 
 /**
@@ -889,7 +893,11 @@ export async function verifyDependent(
     termOut = concept.displayName;
   }
 
-  const data = { verifiedAt: now, verifiedNote: note, needsChange: status === "needs_change" };
+  // unreachable: tried, could not look. Records the attempt in the note,
+  // leaves verifiedAt alone so the row stays yellow, clears needsChange.
+  const data = status === "unreachable"
+    ? { verifiedNote: `${UNREACHABLE_PREFIX} ${note ?? "no access this session"}`, needsChange: false }
+    : { verifiedAt: now, verifiedNote: note, needsChange: status === "needs_change" };
 
   if (target.slug) {
     const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: target.slug } }, select: { id: true } });
@@ -901,7 +909,7 @@ export async function verifyDependent(
         : `${target.slug} carries no concept tags, nothing to verify`);
     }
     await db.pageConcept.updateMany({ where: { id: { in: rows.map((r) => r.id) } }, data });
-    return { kind: "page", id: target.slug, term: termOut, status, verifiedAt: now.toISOString(), note, count: rows.length };
+    return { kind: "page", id: target.slug, term: termOut, status, verifiedAt: now.toISOString(), note: data.verifiedNote, count: rows.length };
   }
   if (target.url) {
     const url = normalizeExternalUrl(target.url);
@@ -910,7 +918,7 @@ export async function verifyDependent(
     const rows = await db.externalEdge.findMany({ where: { assetId: asset.id, ...(conceptId ? { conceptId } : {}) }, select: { id: true } });
     if (rows.length === 0) throw new Error(`${url} is not tracked against ${termOut}`);
     await db.externalEdge.updateMany({ where: { id: { in: rows.map((r) => r.id) } }, data });
-    return { kind: "external", id: url, term: termOut, status, verifiedAt: now.toISOString(), note, count: rows.length };
+    return { kind: "external", id: url, term: termOut, status, verifiedAt: now.toISOString(), note: data.verifiedNote, count: rows.length };
   }
   throw new Error("slug or url is required");
 }

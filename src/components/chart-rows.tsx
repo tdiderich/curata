@@ -22,7 +22,7 @@ function relLabel(c: ChartChild): string {
 }
 
 function stateText(c: ChartChild): string {
-  if (c.color === "green") return c.lastCheckedAt ? relativeTime(c.lastCheckedAt) : "nothing to drift against";
+  if (c.color === "green") return c.lastCheckedAt ? `${relativeTime(c.lastCheckedAt)}${c.note === "edited" ? " · edited" : ""}` : "nothing to drift against";
   return `${c.lastCheckedAt ? `${relativeTime(c.lastCheckedAt)} · ` : ""}${c.reason ?? ""}`;
 }
 
@@ -174,7 +174,7 @@ export function ChartRows({ rows, term, canEdit, source }: { rows: ChartChild[];
                     {(c.kind === "external" || c.rel === "depends") && <ScopeRemove child={c} term={term} />}
                   </div>
                 )}
-                {c.note && <div className="chart-row-note">Note: {c.note}</div>}
+                {c.note && c.note !== "edited" && <div className="chart-row-note">Note: {c.note}</div>}
                 {c.kind === "page" && c.slug ? <PagePreview slug={c.slug} /> : (
                   <div className="chart-ext-body">
                     <a href={c.url ?? "#"} target="_blank" rel="noreferrer" className="stg-dep-link">{c.url}</a>
