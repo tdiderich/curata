@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { StatusBadge, type StatusBadgeTone } from "@/components/settings/status-badge";
 import type { DependentPage, ExternalDependentRow } from "@/lib/concepts";
+import { chartHref } from "@/components/chart-view";
 
 /**
- * Cells shared by every dependency surface: the settings tab, /map/<term>
- * (table and board), the page pill and the dashboard card. Pure markup, no
- * fetch, so they render identically in Storybook and the app.
+ * Cells shared by every dependency surface: the settings tab, the content
+ * chart, the page pill and the dashboard card. Pure markup, no fetch, so
+ * they render identically in Storybook and the app.
  */
 
 const REL_TONE: Record<string, StatusBadgeTone> = {
@@ -90,7 +91,7 @@ export function pageLink(d: Pick<DependentPage, "slug" | "title">) {
 
 export function termLink(term: string) {
   return (
-    <Link href={`/map/${term}`} className="stg-dep-term">
+    <Link href={chartHref(term)} className="stg-dep-term">
       {term}
     </Link>
   );

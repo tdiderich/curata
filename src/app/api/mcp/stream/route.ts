@@ -29,7 +29,6 @@ import {
   VERIFY_STATUSES,
   CONCEPT_RELS,
 } from "@/lib/concepts";
-import { getProject, listProjects, previewTemplate } from "@/lib/projects";
 import { getChart, getChartNode, getNeedsLook, setChartNode } from "@/lib/chart";
 import { addScopeItem, getAuditList, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
 import { backfillScan } from "@/lib/scan";
@@ -430,7 +429,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
-  server.tool("map_dependencies", "Build a dependency graph around one concept in a single call: tag the page(s) that own the truth (asserts), the pages that go stale when it changes (depends), pages that merely mention it (references), assets outside curata like a Drive deck or a GitHub README (external), and other maps to reuse as sub-maps (includes). Additive, never removes edges except removeIncludes. Unknown slugs come back in `missing`, unknown include terms in `missingIncludes`, instead of failing the call.",
+  server.tool("map_dependencies", "Build a dependency graph around one concept in a single call: tag the page(s) that own the truth (asserts), the pages that go stale when it changes (depends), pages that merely mention it (references), and assets outside curata like a Drive deck or a GitHub README (external). Additive, never removes edges. Unknown slugs come back in `missing` instead of failing the call. add_to_chart is the one-row form.",
     {
       term: z.string().describe("Concept term, namespaced with one slash: feature/investigations-grouping, pricing/tier-2, messaging/tagline"),
       kind: z.string().optional().describe("Concept kind for a new term: feature, pricing, api, process, ..."),
@@ -444,8 +443,6 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
         rel: z.enum(CONCEPT_RELS).optional().describe("Defaults to depends"),
         remove: z.boolean().optional().describe("Detach this url from the concept"),
       })).optional().describe("Assets outside curata that go stale when the concept changes"),
-      includes: z.array(z.string()).optional().describe("Terms of other maps to reuse as sub-maps, like group/sales-enablement. Must already exist (get_vocabulary or /map lists them); a shared sub-map's rows are verified per-context, so checking it for this map never marks it checked for another map that also includes it"),
-      removeIncludes: z.array(z.string()).optional().describe("Terms of sub-maps to detach from this one"),
     },
     async (a) => {
       // Arrays go through dispatch as JSON strings, same as concepts/links on
@@ -463,13 +460,12 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       slug: z.string().optional().describe("Page slug to verify"),
       url: z.string().optional().describe("External asset URL to verify"),
       term: z.string().optional().describe("Scope to this page's or asset's edge to one concept. Omit to cover all its edges"),
-      context: z.string().optional().describe("If this edge was reached through an include (a sub-map inside another map), the root map term you're checking it for. Requires term. Without context, verifying a shared sub-map's row applies to that sub-map's own view only, never to a different map that also includes it"),
       status: z.enum(VERIFY_STATUSES).optional().describe("holds (default) or needs_change"),
       note: z.string().optional().describe("Why it still holds, like 'does not quote the price'. Shown next to the verified badge"),
     },
     viaDispatch("mark_verified"));
 
-  server.tool("get_dependents", "Directional dependency view for a concept or page: which pages depend on it (go stale if it changes), which page asserts it (source of truth), which pages were built from it as a template, which external assets (Drive, GitHub, ...) hang off it, and which sub-maps it includes (their rows are merged in, tagged with `group`, and verified per this concept as context). Every row carries verifiedAt and staleAgainstSource (true when the source of truth changed after that row was last verified, or nobody has checked it for this map). Call before changing something to see what else has to move, and after to see what still has not been looked at. `summary.text` is a one-line count ready to hand to a human. Unknown terms error with near matches instead of returning an empty graph.",
+  server.tool("get_dependents", "Directional dependency view for a concept or page: which pages depend on it (go stale if it changes), which page asserts it (source of truth), which pages were built from it as a template, and which external assets (Drive, GitHub, ...) hang off it. Every row carries verifiedAt and staleAgainstSource (true when the source of truth changed after that row was last verified). Call before changing something to see what else has to move, and after to see what still has not been looked at. `summary.text` is a one-line count ready to hand to a human. Unknown terms error with near matches instead of returning an empty graph.",
     { slug: z.string().optional().describe("Page slug. Returns what this page depends on (asserters), what depends on it, and its template instances"), term: z.string().optional().describe("Concept term, like pricing/tier-2. Returns asserters, dependents, and instances of the concept"), rel: z.enum(CONCEPT_RELS).optional().describe("Term mode only: restrict to one relation") },
     async ({ slug, term, rel }) => {
       if (!slug && !term) throw new Error("slug or term is required");
@@ -553,73 +549,6 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       const result = await setChartNode(orgId, term, patch);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
-
-  server.tool("create_project", "Clone a map into a trackable project: a run of the work you're actually going to do, not just the drift signal. The template's own depends/external become brand-new, independent edges on this project's own term (editing the template afterward never reaches this project); any sub-map it includes (a shared checklist like sales-enablement) stays live-referenced, verified per project the same way an ordinary include works. Omit template_term to start blank.",
-    {
-      term: z.string().describe("New, unique term for this project, namespaced like a map: product-launch/sso"),
-      title: z.string().describe("Human name for the project"),
-      template_term: z.string().optional().describe("Existing map term to clone from"),
-      template_terms: z.array(z.string()).optional().describe("Clone from several maps at once; merged with template_term if both given"),
-      source: z.string().optional().describe("Page that owns the truth for this project, if different from the template's"),
-    },
-    async (a) => {
-      const flat: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(a)) {
-        if (v === undefined) continue;
-        flat[k] = typeof v === "string" ? v : JSON.stringify(v);
-      }
-      return viaDispatch("create_project")(flat);
-    });
-
-  server.tool("preview_template", "See what create_project would clone from a map before committing to it: its own depends/external, and each sub-map it would pull in as a live-referenced shared checklist.",
-    { term: z.string().describe("The map term to preview") },
-    async ({ term }) => {
-      const result = await previewTemplate(orgId, term);
-      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-    });
-
-  server.tool("get_project", "Read a project: its own tracked items (owner, due date, done, doneAt/doneBy) overlaid on the live dependency graph, plus each included sub-map's items the same way. done is a distinct claim from verified — a done item can still show doneStale if the source moved again after it was marked done, and staleAgainstSource / verifiedAt keep meaning exactly what they mean on an ordinary map.",
-    { term: z.string().describe("The project's term") },
-    async ({ term }) => {
-      const result = await getProject(orgId, term);
-      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-    });
-
-  server.tool("list_projects", "Every project in the org, newest first, with its completion roll-up. Use this before create_project to check whether a shared checklist (a group term) is already in use by another project, and to check that marking something done or verified in one project never shows up as done in another that reuses the same checklist.",
-    {},
-    async () => {
-      const result = await listProjects(orgId);
-      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-    });
-
-  server.tool("add_project_item", "Add one more page or external asset to a project's own tracked items, after creation. Never touches an included sub-map.",
-    {
-      term: z.string().describe("The project's term"),
-      slug: z.string().optional().describe("Page slug to track"),
-      url: z.string().optional().describe("External asset URL to track"),
-      label: z.string().optional().describe("Label for a new external asset"),
-      owner: z.string().optional().describe("Who owns this item"),
-      due_date: z.string().optional().describe("ISO date"),
-    },
-    viaDispatch("add_project_item"));
-
-  server.tool("update_project_item", "Mark a project item done or open, or change its owner/due date. done means the update shipped; it is separate from verified, which means the source hasn't moved since someone looked. Returns the project so you can see doneStale if the source moved again after doneAt.",
-    {
-      term: z.string().describe("The project's term"),
-      item_id: z.string().describe("The item's id, from get_project"),
-      done: z.boolean().optional(),
-      owner: z.string().optional().describe("Empty string clears it"),
-      due_date: z.string().optional().describe("ISO date; empty string clears it"),
-    },
-    viaDispatch("update_project_item"));
-
-  server.tool("remove_project_item", "Detach an item from a project's own tracked set and its underlying edge. Never touches an included sub-map's items.",
-    { term: z.string().describe("The project's term"), item_id: z.string().describe("The item's id, from get_project") },
-    viaDispatch("remove_project_item"));
-
-  server.tool("delete_project", "Remove a project: detaches all of its own cloned edges, then the project itself. Never touches the template it was cloned from or an included sub-map's edges.",
-    { term: z.string().describe("The project's term") },
-    viaDispatch("delete_project"));
 
   server.tool("get_semantic_map", "Get full knowledge graph topology — all concepts with their pages and all cross-page links",
     { kind: z.string().optional() },

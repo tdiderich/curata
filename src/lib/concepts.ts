@@ -535,8 +535,6 @@ export interface DependentPage {
   needsChange: boolean;
   /** True when the concept's source of truth changed after this edge was last verified, or nobody has looked. */
   staleAgainstSource: boolean;
-  /** Set when this row was pulled in through an included sub-map, to the term of that sub-map's root concept. Undefined for a direct edge. */
-  group?: string;
 }
 
 export interface ExternalDependentRow {
@@ -555,8 +553,6 @@ export interface ExternalDependentRow {
   verifiedNote: string | null;
   needsChange: boolean;
   staleAgainstSource: boolean;
-  /** Set when this row was pulled in through an included sub-map, to the term of that sub-map's root concept. Undefined for a direct edge. */
-  group?: string;
 }
 
 export interface DependentsSummary {
@@ -583,10 +579,6 @@ export interface DependentsResult {
   asserterGaps: string[];
   /** Assets outside curata (Drive, GitHub, ...) that depend on the concept(s). Edges, not pages. */
   external: ExternalDependentRow[];
-  /** Sub-maps included by this concept (term mode only). Their own depends/external are already merged into dependents/external above, tagged with group; this lists just the child roots and their own roll-up. */
-  includes: Array<{ term: string; kind: string; summary: DependentsSummary }>;
-  /** True if the include tree was cut off by the depth cap (defensive; writes refuse cycles, this guards a race). */
-  truncated: boolean;
   /** Counts over dependents + instances + external, so a caller can answer "what still needs a look" without walking rows. */
   summary: DependentsSummary;
 }
@@ -632,7 +624,7 @@ export function isStale(verifiedAt: Date | null, sourceUpdatedAt: Date | undefin
 // Trust follows the same page > folder > org > "auto" resolution as every
 // read path: in auto mode latest is trusted by definition, so a page with
 // no pinned version is not "untrusted", it is simply not locked.
-function toDependentPage(row: PageConceptWithPage, trustMode: TrustMode, sourceUpdatedAt: Date | undefined, group?: string): DependentPage {
+function toDependentPage(row: PageConceptWithPage, trustMode: TrustMode, sourceUpdatedAt: Date | undefined): DependentPage {
   const latestId = row.page.versions[0]?.id ?? null;
   const trusted = trustMode === "auto" || !!row.page.trustedVersionId;
   return {
@@ -649,7 +641,6 @@ function toDependentPage(row: PageConceptWithPage, trustMode: TrustMode, sourceU
     needsChange: row.needsChange,
     // A page that asserts the concept is its own source; never stale.
     staleAgainstSource: row.rel === "asserts" ? false : row.needsChange || isStale(row.verifiedAt, sourceUpdatedAt),
-    ...(group ? { group } : {}),
   };
 }
 
@@ -707,7 +698,7 @@ const EXTERNAL_EDGE_INCLUDE = {
   },
 };
 
-function toExternalRow(row: ExternalEdgeRow, sourceUpdatedAt: Date | undefined, group?: string): ExternalDependentRow {
+function toExternalRow(row: ExternalEdgeRow, sourceUpdatedAt: Date | undefined): ExternalDependentRow {
   return {
     id: row.id,
     assetId: row.asset.id,
@@ -723,103 +714,7 @@ function toExternalRow(row: ExternalEdgeRow, sourceUpdatedAt: Date | undefined, 
     needsChange: row.needsChange,
     // An asset nobody has checked is stale on its face, source or not.
     staleAgainstSource: row.needsChange || row.verifiedAt === null || isStale(row.verifiedAt, sourceUpdatedAt),
-    ...(group ? { group } : {}),
   };
-}
-
-/**
- * Per-context verification override. An edge's own verifiedAt/verifiedNote/
- * needsChange columns are the record "for the concept this edge is tagged
- * to" (contextConceptId === row's own concept). Viewed through an include
- * from a DIFFERENT root, that base record must not apply - verifying a
- * shared leaf for one launch would otherwise silently clear staleness for
- * every other launch that includes the same group. If no override row
- * exists yet for that other context, the row reads as never checked for
- * it, not as whatever the base fields happen to say.
- */
-function applyContext<T extends { id: string; verifiedAt: Date | null; verifiedNote: string | null; needsChange: boolean; concept: { id: string } }>(
-  row: T,
-  edgeType: "page" | "external",
-  contextConceptId: string,
-  contextMap: Map<string, { verifiedAt: Date; verifiedNote: string | null; needsChange: boolean }>
-): T {
-  if (row.concept.id === contextConceptId) return row;
-  const ctx = contextMap.get(`${edgeType}:${row.id}`);
-  if (ctx) return { ...row, verifiedAt: ctx.verifiedAt, verifiedNote: ctx.verifiedNote, needsChange: ctx.needsChange };
-  return { ...row, verifiedAt: null, verifiedNote: null, needsChange: false };
-}
-
-/** Batch-fetch every context override for a set of edge ids under one context concept, keyed "type:id" for applyContext. */
-async function loadVerificationContexts(
-  contextConceptId: string,
-  pageEdgeIds: string[],
-  externalEdgeIds: string[]
-): Promise<Map<string, { verifiedAt: Date; verifiedNote: string | null; needsChange: boolean }>> {
-  const out = new Map<string, { verifiedAt: Date; verifiedNote: string | null; needsChange: boolean }>();
-  const rows = await db.conceptVerificationContext.findMany({
-    where: {
-      contextConceptId,
-      OR: [
-        ...(pageEdgeIds.length ? [{ edgeType: "page", edgeId: { in: pageEdgeIds } }] : []),
-        ...(externalEdgeIds.length ? [{ edgeType: "external", edgeId: { in: externalEdgeIds } }] : []),
-      ],
-    },
-    select: { edgeType: true, edgeId: true, verifiedAt: true, verifiedNote: true, needsChange: true },
-  });
-  for (const r of rows) out.set(`${r.edgeType}:${r.edgeId}`, { verifiedAt: r.verifiedAt, verifiedNote: r.verifiedNote, needsChange: r.needsChange });
-  return out;
-}
-
-/**
- * Include one map (child) as a sub-map of another (parent): the parent's
- * /map view pulls in the child's depends/external, and mark_verified on a
- * pulled-in row can be scoped to the parent's context so a shared group
- * does not carry verification state between the maps that include it.
- * Refuses a cycle: parent cannot already be reachable from child.
- */
-export async function includeMap(orgId: string, parentTerm: string, childTerm: string, createdBy: string): Promise<{ parent: string; child: string }> {
-  const parentNorm = normalizeTerm(parentTerm);
-  const childNorm = normalizeTerm(childTerm);
-  if (!parentNorm || !childNorm) throw new Error("parent and child terms are required");
-  if (parentNorm === childNorm) throw new Error(`a map cannot include itself: ${parentNorm}`);
-  const parent = await ensureConcept(parentTerm, parentNorm, await findConceptForTerm(parentTerm, parentNorm));
-  const child = await findConceptForTerm(childTerm, childNorm);
-  if (!child) throw new Error(`concept not found: ${childNorm}. Create it first (map_dependencies or a tag) before including it.`);
-
-  const descendants = await collectIncludedConceptIds(child.id, 6);
-  if (descendants.has(parent.id)) {
-    throw new Error(`including ${childNorm} in ${parentNorm} would create a cycle: ${childNorm} already includes ${parentNorm} (directly or transitively)`);
-  }
-
-  await db.conceptInclude.upsert({
-    where: { parentId_childId: { parentId: parent.id, childId: child.id } },
-    create: { parentId: parent.id, childId: child.id, createdBy },
-    update: {},
-  });
-  return { parent: parent.displayName, child: child.displayName };
-}
-
-/** Detach a sub-map from a parent. No-op if it was not included. */
-export async function removeIncludeMap(orgId: string, parentTerm: string, childTerm: string): Promise<void> {
-  const parent = await findConceptForTerm(parentTerm, normalizeTerm(parentTerm));
-  const child = await findConceptForTerm(childTerm, normalizeTerm(childTerm));
-  if (!parent || !child) return;
-  await db.conceptInclude.deleteMany({ where: { parentId: parent.id, childId: child.id } });
-}
-
-/** BFS over ConceptInclude, child -> grandchildren, depth-capped, cycle-safe via visited set. */
-async function collectIncludedConceptIds(rootId: string, maxDepth: number): Promise<Set<string>> {
-  const seen = new Set<string>([rootId]);
-  let frontier = [rootId];
-  for (let depth = 0; depth < maxDepth && frontier.length > 0; depth++) {
-    const rows = await db.conceptInclude.findMany({ where: { parentId: { in: frontier } }, select: { childId: true } });
-    const next: string[] = [];
-    for (const r of rows) {
-      if (!seen.has(r.childId)) { seen.add(r.childId); next.push(r.childId); }
-    }
-    frontier = next;
-  }
-  return seen;
 }
 
 function summarize(pages: DependentPage[], external: ExternalDependentRow[]): DependentsSummary {
@@ -977,13 +872,12 @@ export type VerifyStatus = (typeof VERIFY_STATUSES)[number];
  */
 export async function verifyDependent(
   orgId: string,
-  target: { slug?: string; url?: string; term?: string; context?: string; note?: string; status?: VerifyStatus }
-): Promise<{ kind: "page" | "external"; id: string; term: string | null; context: string | null; status: VerifyStatus; verifiedAt: string; note: string | null; count: number }> {
+  target: { slug?: string; url?: string; term?: string; note?: string; status?: VerifyStatus }
+): Promise<{ kind: "page" | "external"; id: string; term: string | null; status: VerifyStatus; verifiedAt: string; note: string | null; count: number }> {
   const now = new Date();
   const note = target.note?.trim() || null;
   const status: VerifyStatus = target.status ?? "holds";
   if (!VERIFY_STATUSES.includes(status)) throw new Error(`status must be one of ${VERIFY_STATUSES.join("|")}`);
-  if (target.context && !target.term) throw new Error("term is required when context is given (context scopes verification of the term's edge to a different root)");
 
   let conceptId: string | undefined;
   let termOut: string | null = null;
@@ -993,28 +887,6 @@ export async function verifyDependent(
     if (!concept) throw new Error(`concept not found: ${normalizedTerm}`);
     conceptId = concept.id;
     termOut = concept.displayName;
-  }
-
-  let contextConceptId: string | undefined;
-  let contextOut: string | null = null;
-  if (target.context) {
-    const normalizedContext = normalizeTerm(target.context);
-    const contextConcept = await findConceptForTerm(target.context, normalizedContext);
-    if (!contextConcept) throw new Error(`concept not found: ${normalizedContext}`);
-    contextOut = contextConcept.displayName;
-    // Context equal to the edge's own concept is just the base record.
-    if (contextConcept.id !== conceptId) contextConceptId = contextConcept.id;
-  }
-
-  async function writeContextRows(edgeType: "page" | "external", edgeIds: string[]): Promise<void> {
-    if (!contextConceptId) return;
-    for (const edgeId of edgeIds) {
-      await db.conceptVerificationContext.upsert({
-        where: { edgeType_edgeId_contextConceptId: { edgeType, edgeId, contextConceptId } },
-        create: { edgeType, edgeId, contextConceptId, verifiedAt: now, verifiedNote: note, needsChange: status === "needs_change", createdBy: "agent" },
-        update: { verifiedAt: now, verifiedNote: note, needsChange: status === "needs_change" },
-      });
-    }
   }
 
   const data = { verifiedAt: now, verifiedNote: note, needsChange: status === "needs_change" };
@@ -1028,12 +900,8 @@ export async function verifyDependent(
         ? `${target.slug} has no edge to ${termOut}; tag it first (map_dependencies or concepts on write_page)`
         : `${target.slug} carries no concept tags, nothing to verify`);
     }
-    if (contextConceptId) {
-      await writeContextRows("page", rows.map((r) => r.id));
-    } else {
-      await db.pageConcept.updateMany({ where: { id: { in: rows.map((r) => r.id) } }, data });
-    }
-    return { kind: "page", id: target.slug, term: termOut, context: contextOut, status, verifiedAt: now.toISOString(), note, count: rows.length };
+    await db.pageConcept.updateMany({ where: { id: { in: rows.map((r) => r.id) } }, data });
+    return { kind: "page", id: target.slug, term: termOut, status, verifiedAt: now.toISOString(), note, count: rows.length };
   }
   if (target.url) {
     const url = normalizeExternalUrl(target.url);
@@ -1041,12 +909,8 @@ export async function verifyDependent(
     if (!asset) throw new Error(`no external asset tracked at ${url}`);
     const rows = await db.externalEdge.findMany({ where: { assetId: asset.id, ...(conceptId ? { conceptId } : {}) }, select: { id: true } });
     if (rows.length === 0) throw new Error(`${url} is not tracked against ${termOut}`);
-    if (contextConceptId) {
-      await writeContextRows("external", rows.map((r) => r.id));
-    } else {
-      await db.externalEdge.updateMany({ where: { id: { in: rows.map((r) => r.id) } }, data });
-    }
-    return { kind: "external", id: url, term: termOut, context: contextOut, status, verifiedAt: now.toISOString(), note, count: rows.length };
+    await db.externalEdge.updateMany({ where: { id: { in: rows.map((r) => r.id) } }, data });
+    return { kind: "external", id: url, term: termOut, status, verifiedAt: now.toISOString(), note, count: rows.length };
   }
   throw new Error("slug or url is required");
 }
@@ -1062,24 +926,19 @@ export interface MapDependenciesInput {
   references?: string[];
   /** Assets outside curata that go stale when it changes. */
   external?: ExternalDependentInput[];
-  /** Other maps (concept terms) to pull in as sub-maps. Reported in missingIncludes, not thrown, if a term does not exist yet. */
-  includes?: string[];
-  /** Detach these sub-maps. No error if they were not included. */
-  removeIncludes?: string[];
 }
 
 /**
  * Build a whole dependency graph around one concept in one call: tag every
- * listed page with the matching rel, attach the external assets, and wire
- * up sub-maps. Additive, never removes edges (removeIncludes is the one
- * exception, for the edit form). Unknown slugs and unknown include terms
- * are reported back, not thrown, so one typo does not lose the rest.
+ * listed page with the matching rel and attach the external assets.
+ * Additive, never removes edges. Unknown slugs are reported back, not
+ * thrown, so one typo does not lose the rest.
  */
 export async function mapDependencies(
   orgId: string,
   input: MapDependenciesInput,
   createdBy: string
-): Promise<{ term: string; tagged: Array<{ slug: string; rel: ConceptRel }>; external: ExternalDependentRow[]; missing: string[]; includes: string[]; missingIncludes: string[] }> {
+): Promise<{ term: string; tagged: Array<{ slug: string; rel: ConceptRel }>; external: ExternalDependentRow[]; missing: string[] }> {
   const normalized = normalizeTerm(input.term);
   if (!normalized) throw new Error("term is required");
   const tagged: Array<{ slug: string; rel: ConceptRel }> = [];
@@ -1100,24 +959,10 @@ export async function mapDependencies(
   const external = input.external?.length
     ? await upsertExternalDependents(orgId, input.term, input.external, createdBy)
     : [];
-  for (const childTerm of input.removeIncludes ?? []) {
-    await removeIncludeMap(orgId, input.term, childTerm);
+  if (tagged.length === 0 && external.length === 0 && missing.length === 0) {
+    throw new Error("nothing to map: pass asserts, depends, references, or external");
   }
-  const includes: string[] = [];
-  const missingIncludes: string[] = [];
-  for (const childTerm of input.includes ?? []) {
-    try {
-      const r = await includeMap(orgId, input.term, childTerm, createdBy);
-      includes.push(r.child);
-    } catch (err) {
-      if (err instanceof Error && err.message.startsWith("concept not found")) { missingIncludes.push(childTerm); continue; }
-      throw err;
-    }
-  }
-  if (tagged.length === 0 && external.length === 0 && missing.length === 0 && includes.length === 0 && missingIncludes.length === 0 && !(input.removeIncludes?.length)) {
-    throw new Error("nothing to map: pass asserts, depends, references, external, or includes");
-  }
-  return { term: normalized, tagged, external, missing, includes, missingIncludes };
+  return { term: normalized, tagged, external, missing };
 }
 
 /**
@@ -1129,7 +974,7 @@ export async function getDependents(
   orgId: string,
   opts: { slug?: string; term?: string; rel?: ConceptRel }
 ): Promise<DependentsResult> {
-  const empty: DependentsResult = { concepts: [], asserters: [], dependents: [], instances: [], asserterGaps: [], external: [], includes: [], truncated: false, summary: summarize([], []) };
+  const empty: DependentsResult = { concepts: [], asserters: [], dependents: [], instances: [], asserterGaps: [], external: [], summary: summarize([], []) };
   const pageScope = { orgId, status: { not: "archived" } };
 
   const [trustFolders, trustOrg] = await Promise.all([
@@ -1201,90 +1046,15 @@ export async function getDependents(
       externals([concept.id], opts.rel),
     ]);
 
-    // Sub-maps: pull each direct include's own depends/external into this
-    // view, verification resolved against THIS concept as context so a
-    // group shared by two maps never shows one map's check on the other's.
-    const MAX_INCLUDE_DEPTH = 4;
-    const includeRows = await db.conceptInclude.findMany({
-      where: { parentId: concept.id },
-      select: { child: { select: { id: true, displayName: true, kind: true } } },
-      orderBy: { createdAt: "asc" },
-    });
-    const includesOut: DependentsResult["includes"] = [];
-    let mergedDependents = dependents;
-    let mergedExternal = external;
-    let truncated = false;
-    if (includeRows.length > 0 && (filter("depends"))) {
-      const seenPageKey = new Set(mergedDependents.map((d) => d.slug));
-      const seenExtKey = new Set(mergedExternal.map((e) => e.url));
-      const visitedConcepts = new Set<string>([concept.id]);
-      let frontier = includeRows.map((r) => ({ id: r.child.id, term: r.child.displayName, kind: r.child.kind, group: r.child.displayName }));
-      for (let depth = 0; depth < MAX_INCLUDE_DEPTH && frontier.length > 0; depth++) {
-        const nextFrontier: typeof frontier = [];
-        for (const node of frontier) {
-          if (visitedConcepts.has(node.id)) continue;
-          visitedConcepts.add(node.id);
-
-          const [rawPageRows, rawExtRows, childSources] = await Promise.all([
-            db.pageConcept.findMany({
-              where: { conceptId: node.id, rel: "depends", page: pageScope },
-              include: DEPENDENT_PAGE_INCLUDE,
-              orderBy: { page: { updatedAt: "desc" } },
-            }),
-            db.externalEdge.findMany({
-              where: { conceptId: node.id, rel: "depends", asset: { orgId } },
-              include: EXTERNAL_EDGE_INCLUDE,
-              orderBy: { updatedAt: "desc" },
-            }),
-            sourceUpdatedAtByConcept(orgId, [node.id]),
-          ]);
-          const ctxMap = await loadVerificationContexts(concept.id, rawPageRows.map((r) => r.id), rawExtRows.map((r) => r.id));
-          const childSource = childSources.get(node.id);
-
-          for (const raw of rawPageRows) {
-            const withCtx = applyContext(raw, "page", concept.id, ctxMap);
-            const mapped = toDependentPage(withCtx, resolveTrust(raw.page.folderId, raw.page.rules), childSource, node.group);
-            if (seenPageKey.has(mapped.slug)) continue;
-            seenPageKey.add(mapped.slug);
-            mergedDependents = [...mergedDependents, mapped];
-          }
-          for (const raw of rawExtRows) {
-            const withCtx = applyContext(raw, "external", concept.id, ctxMap);
-            const mapped = toExternalRow(withCtx, childSource, node.group);
-            if (seenExtKey.has(mapped.url)) continue;
-            seenExtKey.add(mapped.url);
-            mergedExternal = [...mergedExternal, mapped];
-          }
-
-          if (node.group === node.term) {
-            includesOut.push({
-              term: node.term,
-              kind: node.kind,
-              summary: summarize(mergedDependents.filter((d) => d.group === node.term), mergedExternal.filter((e) => e.group === node.term)),
-            });
-          }
-
-          const grandchildren = await db.conceptInclude.findMany({ where: { parentId: node.id }, select: { child: { select: { id: true, displayName: true, kind: true } } } });
-          for (const g of grandchildren) {
-            if (!visitedConcepts.has(g.child.id)) nextFrontier.push({ id: g.child.id, term: g.child.displayName, kind: g.child.kind, group: node.group });
-          }
-        }
-        frontier = nextFrontier;
-      }
-      if (frontier.length > 0) truncated = true;
-    }
-
     return {
       concept: { term: concept.displayName, kind: concept.kind, usageCount: concept.usageCount },
       concepts: [],
       asserters,
-      dependents: mergedDependents,
+      dependents,
       instances,
-      asserterGaps: (mergedDependents.length > 0 || mergedExternal.length > 0) && asserters.length === 0 ? [concept.displayName] : [],
-      external: mergedExternal,
-      includes: includesOut,
-      truncated,
-      summary: summarize([...mergedDependents, ...instances], mergedExternal),
+      asserterGaps: (dependents.length > 0 || external.length > 0) && asserters.length === 0 ? [concept.displayName] : [],
+      external,
+      summary: summarize([...dependents, ...instances], external),
     };
   }
 
@@ -1329,63 +1099,9 @@ export async function getDependents(
       instances,
       asserterGaps,
       external,
-      includes: [],
-      truncated: false,
       summary: summarize([...dependents, ...instances], external),
     };
   }
 
   return empty;
-}
-
-export interface ConceptMapRow {
-  term: string;
-  kind: string;
-  /** Pages that assert it; first is shown as "source". */
-  sources: Array<{ slug: string; title: string; updatedAt: string }>;
-  summary: DependentsSummary;
-  /** dependents + external still needing a human: stale, needs update, or never checked. */
-  needsLook: number;
-  total: number;
-}
-
-/**
- * Every concept in the org that something depends on, with its verification
- * roll-up, ranked by how much still needs a human. Backs /map and the
- * dashboard card. One getDependents per concept: fine at tens of concepts,
- * revisit with a grouped query when an org passes a few hundred.
- */
-export async function listConceptMaps(orgId: string): Promise<ConceptMapRow[]> {
-  const [pageEdges, extEdges] = await Promise.all([
-    db.pageConcept.findMany({
-      where: { rel: { in: ["depends", "asserts", "instantiates", "embeds"] }, page: { orgId, status: { not: "archived" } } },
-      select: { conceptId: true, concept: { select: { displayName: true, kind: true } } },
-      distinct: ["conceptId"],
-    }),
-    db.externalEdge.findMany({
-      where: { asset: { orgId } },
-      select: { conceptId: true, concept: { select: { displayName: true, kind: true } } },
-      distinct: ["conceptId"],
-    }),
-  ]);
-  const concepts = new Map<string, { term: string; kind: string }>();
-  for (const e of [...pageEdges, ...extEdges]) concepts.set(e.conceptId, { term: e.concept.displayName, kind: e.concept.kind });
-
-  const rows: ConceptMapRow[] = [];
-  for (const { term, kind } of concepts.values()) {
-    const r = await getDependents(orgId, { term });
-    const total = r.summary.pages.total + r.summary.external.total;
-    if (total === 0 && r.asserters.length === 0) continue;
-    const needsLook = total - r.summary.pages.ok - r.summary.external.ok;
-    rows.push({
-      term,
-      kind,
-      sources: r.asserters.map((a) => ({ slug: a.slug, title: a.title, updatedAt: a.updatedAt })),
-      summary: r.summary,
-      needsLook,
-      total,
-    });
-  }
-  rows.sort((a, b) => b.needsLook - a.needsLook || b.total - a.total || a.term.localeCompare(b.term));
-  return rows;
 }

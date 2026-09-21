@@ -17,30 +17,35 @@ components:
           - **read_page** - full page content by slug, with caveats and provenance the snippet omits
           - **list_pages** / **list_folders** / **get_folder_structure** - browse the brain's shape
           - **get_related** - pages linked or conceptually near a given page
-          - **get_dependents** - what depends on a concept or page, what asserts it, what was built from it, external assets attached to it, and which of those are stale against the source
-          - **map_dependencies** - build a dependency graph around one concept in one call (asserts, depends, references, external urls, includes for reusing another map as a sub-map)
-          - **mark_verified** - record that a page or external asset was checked against a concept: `status` holds or needs_change, `note` for what you found, `context` to scope a shared sub-map's row to the map you're checking it for, no new version
-          - **list_projects** / **get_project** - every project and its completion roll-up; one project's own tracked items overlaid on the live graph
+          - **get_chart** - the org chart for content: every node (template, component page, source page, or anything promoted) with one color from what sits under it. With `term`, one node's children plus suggested reports
+          - **get_needs_look** - the chart as a list: every yellow and red child grouped by the node whose source moved. The drift review queue
+          - **audit** - your worklist for external drift: yellow/red externals split into `withRecipe` (run the check through your MCP) and `humanOnly`
+          - **get_dependents** - per-edge view for one concept or page: dependents, asserter, instances, externals, each with `verifiedAt` and `staleAgainstSource`
+          - **mark_verified** - "looked at it": `slug` or `url` plus `term`, `status` holds or needs_change, `note` for what you found. No new version
           - **get_semantic_map** / **get_vocabulary** - the org's concept graph and tag vocabulary
           - **get_versions** - a page's version history
           - **get_config** / **get_component_reference** - org settings and the component catalog
           - **list_templates** / **list_workflows** / **list_rules** - available templates, skill pages, and the write rules in force
 
   - type: section
-    heading: Plan and track a project
+    heading: The content chart
     components:
       - type: markdown
         body: |
-          A map is the org's shared drift signal: it says what breaks if a thing changes, not whether anyone has done anything about it. A project is a scoped, disposable run of that work: clone a map's checklist, add your own items, assign owners and due dates, mark things done. Deleting a project only removes the project and its own cloned edges - never the template it was cloned from, and never a sub-map it included (that stays a live, shared checklist for whoever else includes it).
+          Curata draws an org chart for content from what already exists: pages built from a template (`instantiates`), pages that embed another page's components with a `type: ref` block (`embeds`, written by the scan on every save), pages tagged `depends` on a concept some page `asserts`, and external assets put under a node. Anything with three or more children is a node. Change a node's source and everything under it goes yellow; check a child and it goes green; leave it past due or through two more source changes and it goes red. Nobody draws the chart. Humans see it at `/chart`, the list at `/chart?view=list`, one node at `/chart/<term>`.
 
-          **This "group" is not that group.** A reusable checklist is a concept tagged `kind: "group"` in the vocabulary (`group/sales-enablement`), found via `get_vocabulary` or by walking `get_dependents`. `list_groups`/`create_group` (below, under access) are unrelated: people-membership access-control groups. Same word, two different systems.
+          - **get_chart** - no args: every node, pinned first then by fan-out, with `color`, `counts`, `source`. `term`: that node's children (`color`, `reason`, `lastCheckedAt`, `owner`, `dueAt`, `alsoUnder`, `check`) plus `suggestions`: external URLs in the source's or a child's body that probably belong here
+          - **get_needs_look** - yellow and red children only, grouped by node
+          - **audit** - externals needing a look. `withRecipe` items carry `check: {via, tool, locator, ask}`: run it through that MCP in your session, compare to the source page, then `mark_verified url=... status=holds` or `status=needs_change note=...`. `humanOnly` items have no recipe yet; hand that list to the human, or save `suggestedCheck` with `set_scope_item`
+          - **add_to_chart** - put a report under a node: `slug` for a page, or `url` with `label`, `owner`, `due_at`, `check`. Use the suggestions from `get_chart term=...` first
+          - **remove_from_chart** - take a page or url out from under a node
+          - **set_scope_item** - owner, label or check recipe on an external (shared across nodes), due date on one node's edge
+          - **set_chart_node** - `pinned`, `hidden`, or `promoted` (show a concept with fewer than three children)
+          - **rescan_inventory** - re-run the embeds and external-URL scan over every page, after upgrading or changing the ignored domains
+          - **map_dependencies** - bulk form of add_to_chart: one call with `term`, `asserts`, `depends`, `references` slugs and `external` urls
+          - **get_dependents** / **mark_verified** - the per-edge primitives the chart is built on
 
-          - **create_project** - clone a map (`template_term`) into a trackable project, or start blank. The template's own depends/external become independent edges on the project's own term; anything it includes stays a live-referenced shared checklist.
-          - **get_project** - the project's own items (owner, due_date, done, doneAt/doneBy, doneStale) overlaid on the live graph, plus each included sub-map's items the same way
-          - **list_projects** - every project, newest first, with a completion roll-up - check this before create_project to see whether a checklist is already reused elsewhere
-          - **add_project_item** / **remove_project_item** - add or drop one of the project's own tracked items, after creation
-          - **update_project_item** - mark an item done/open, or change owner/due_date. done is a separate claim from verified: a done item can still show doneStale if the source moved again after doneAt
-          - **delete_project** - removes the project and detaches its own cloned edges; never touches the template or an included sub-map
+          Every `write_page`, `create_page` and `patch_page` response carries `impact` when the page is a node's source: how many pages and externals just went yellow. Say it back to the human.
 
   - type: section
     heading: Write and edit

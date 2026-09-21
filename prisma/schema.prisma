@@ -271,62 +271,10 @@ model Concept {
 
   pages PageConcept[]
   externalEdges ExternalEdge[]
-  includesAsParent ConceptInclude[] @relation("IncludeParent")
-  includesAsChild  ConceptInclude[] @relation("IncludeChild")
-  verificationContexts ConceptVerificationContext[]
   chartSettings    ChartNodeSetting[]
 
   @@index([orgId, isRecommended])
   @@map("concepts")
-}
-
-// A map (root or group) including another map as a sub-map: parent's tree
-// pulls in child's dependents/external when rendered. Additive edge on the
-// concept graph, org-scoped by convention (both concepts already carry
-// their own org's pages) - not FK'd to org directly since Concept isn't
-// either. Cycles are refused at write time (see includeMap in concepts.ts),
-// never at read time, so a bad cycle can never make getDependents loop.
-model ConceptInclude {
-  id        String   @id @default(cuid())
-  parentId  String   @map("parent_id")
-  childId   String   @map("child_id")
-  createdBy String   @map("created_by")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  parent Concept @relation("IncludeParent", fields: [parentId], references: [id], onDelete: Cascade)
-  child  Concept @relation("IncludeChild", fields: [childId], references: [id], onDelete: Cascade)
-
-  @@unique([parentId, childId])
-  @@index([childId])
-  @@map("concept_includes")
-}
-
-// Per-context verification override for an edge (PageConcept or
-// ExternalEdge) reached through an include chain. The edge's own
-// verifiedAt/verifiedNote/needsChange columns are the record "for the
-// concept this edge is tagged to" (its own context). This table holds the
-// record "for a DIFFERENT root concept viewing it through an include" -
-// verifying a shared leaf for one launch must never paint it verified for
-// another launch that includes the same group. contextConceptId is that
-// other root; absent = no override yet, read path treats it as never
-// checked for that context rather than falling back to the base fields.
-model ConceptVerificationContext {
-  id               String    @id @default(cuid())
-  edgeType         String    @map("edge_type") // "page" | "external"
-  edgeId           String    @map("edge_id")   // PageConcept.id or ExternalEdge.id
-  contextConceptId String    @map("context_concept_id")
-  verifiedAt       DateTime  @map("verified_at")
-  verifiedNote     String?   @map("verified_note")
-  needsChange      Boolean   @default(false) @map("needs_change")
-  createdBy        String    @map("created_by")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-
-  contextConcept Concept @relation(fields: [contextConceptId], references: [id], onDelete: Cascade)
-
-  @@unique([edgeType, edgeId, contextConceptId])
-  @@index([contextConceptId])
-  @@map("concept_verification_contexts")
 }
 
 model PageConcept {
@@ -352,7 +300,6 @@ model PageConcept {
   page    Page    @relation(fields: [pageId], references: [id], onDelete: Cascade)
   concept Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
 
-  projectItems ProjectItem[]
 
   @@unique([pageId, conceptId, section])
   @@index([pageId])
@@ -419,7 +366,6 @@ model ExternalEdge {
 
   asset   ExternalAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
   concept Concept       @relation(fields: [conceptId], references: [id], onDelete: Cascade)
-  projectItems ProjectItem[]
 
   @@unique([assetId, conceptId])
   @@index([conceptId])
@@ -442,67 +388,6 @@ model ChartNodeSetting {
 
   @@unique([orgId, conceptId])
   @@map("chart_node_settings")
-}
-
-// A project is a run of a map you're actually executing: cloned from a
-// template (or started blank) at a point in time, tracked to completion.
-// Cloning creates independent edges for the template's own depends/external
-// (new PageConcept/ExternalEdge rows on this project's own term, so editing
-// the template later never touches an existing project) while any sub-map
-// the template includes stays a live reference - a genuinely shared
-// checklist (docs refresh, compliance) keeps behaving like the dependency
-// graph everywhere else: one place to fix, verified per project via the
-// same ConceptVerificationContext mechanism as an ordinary include.
-model Project {
-  id         String   @id @default(cuid())
-  orgId      String   @map("org_id")
-  /// The concept term this project tracks. Its own PageConcept/ExternalEdge
-  /// rows (via mapDependencies against this term) are what get_dependents
-  /// already renders; Project/ProjectItem layer completion tracking on top.
-  term       String
-  /// The template's term, if cloned from one. Informational - editing the
-  /// template after clone does not change this project's own items.
-  clonedFrom String?  @map("cloned_from")
-  title      String
-  createdBy  String   @map("created_by")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-
-  items ProjectItem[]
-
-  @@unique([orgId, term])
-  @@map("projects")
-}
-
-// One trackable item on a project: a page-edge or an external-edge, plus
-// the fields the graph edge itself has no room for - owner, a due date,
-// and done, which is a distinct claim from verified (verified means "the
-// source hasn't moved since I looked"; done means "I shipped the update").
-// A done item that goes stale afterward (the source changed after doneAt)
-// is a real signal worth surfacing, computed at read time, not stored.
-model ProjectItem {
-  id              String    @id @default(cuid())
-  projectId       String    @map("project_id")
-  kind            String // "page" | "external"
-  pageConceptId   String?   @map("page_concept_id")
-  externalEdgeId  String?   @map("external_edge_id")
-  owner           String?
-  dueDate         DateTime? @map("due_date")
-  done            Boolean   @default(false)
-  doneAt          DateTime? @map("done_at")
-  doneBy          String?   @map("done_by")
-  createdBy       String    @map("created_by")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  pageConcept  PageConcept?  @relation(fields: [pageConceptId], references: [id], onDelete: Cascade)
-  externalEdge ExternalEdge? @relation(fields: [externalEdgeId], references: [id], onDelete: Cascade)
-
-  @@unique([projectId, pageConceptId])
-  @@unique([projectId, externalEdgeId])
-  @@index([projectId])
-  @@map("project_items")
 }
 
 model PageLink {
