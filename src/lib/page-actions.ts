@@ -14,7 +14,7 @@ export type PageActionIcon =
   | "present"
   | "pdf"
   | "discard"
-  | "settings"
+  | "settings" | "map"
   | "folder"
   | "report"
   | "broom"
