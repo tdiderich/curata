@@ -22,6 +22,7 @@ async function call(method: string, path: string, body?: unknown) {
  */
 export function ScopePanel({ term }: { term: string }) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<ScopeSuggestion[] | null>(null);
   const [pageSugs, setPageSugs] = useState<PageSuggestion[]>([]);
   const [manual, setManual] = useState("");
@@ -83,12 +84,49 @@ export function ScopePanel({ term }: { term: string }) {
     ["declared by a sibling", "Under a sibling node in the same folder"],
   ];
 
+  const sugCount = (suggestions?.length ?? 0) + pageSugs.length;
+  if (!open) {
+    return (
+      <div className="stg-composer">
+        <button type="button" className="stg-qbtn stg-dep-verify-btn" onClick={() => setOpen(true)}>+ Add related content</button>
+        {sugCount > 0 && <span className="stg-pcount">{sugCount} suggestion{sugCount === 1 ? "" : "s"}</span>}
+      </div>
+    );
+  }
   return (
-    <aside className="scope-panel stg-section">
-      <h2 className="stg-section-title">Add related content</h2>
-      <p className="stg-section-desc scope-panel-hint">Pages and links curata found that might belong under this node. One click adds. Anything detected from templates, embeds or tags is already here.</p>
-      {suggestions === null && <div className="scope-empty">Looking…</div>}
-      {suggestions && suggestions.length === 0 && pageSugs.length === 0 && <div className="scope-empty">Nothing to suggest. Paste a URL or a page slug below.</div>}
+    <div className="scope-composer">
+      <div className="scope-manual">
+        <input
+          autoFocus
+          className="stg-input"
+          placeholder="Search pages, or paste a URL"
+          value={manual}
+          onChange={(e) => setManual(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") { setOpen(false); setManual(""); }
+            if (e.key === "Enter") { e.preventDefault(); if (results.length > 0 && !/^https?:\/\//i.test(manual)) void add({ slug: results[0].slug }); else addManual(); }
+          }}
+        />
+        <button type="button" className="stg-qbtn" disabled={!manual.trim() || busy !== null} onClick={addManual}>Add</button>
+        <button type="button" className="stg-qbtn stg-qbtn--ghost" onClick={() => { setOpen(false); setManual(""); }}>Done</button>
+      </div>
+      {results.length > 0 && (
+        <div className="scope-group">
+          {results.map((r) => (
+            <div key={r.slug} className="scope-sug">
+              <div className="scope-sug-main">
+                <span className="scope-sug-label">{r.title}</span>
+                <span className="scope-sug-url">{r.slug}</span>
+              </div>
+              <button type="button" className="stg-qbtn" disabled={busy === r.slug} onClick={() => void add({ slug: r.slug })}>{busy === r.slug ? "…" : "Add"}</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {results.length === 0 && manual.trim().length < 2 && (
+        <>
+      {suggestions === null && <div className="scope-empty">Looking for suggestions…</div>}
+      {suggestions && suggestions.length === 0 && pageSugs.length === 0 && <div className="scope-empty">Nothing to suggest yet. Search a page or paste a URL above.</div>}
       {pageSugs.length > 0 && (
         <div className="scope-group">
           <div className="scope-group-label">Pages that mention it, not under it</div>
@@ -121,31 +159,10 @@ export function ScopePanel({ term }: { term: string }) {
           </div>
         );
       })}
-      <div className="scope-manual">
-        <input
-          className="stg-input"
-          placeholder="Search pages, or paste a URL"
-          value={manual}
-          onChange={(e) => setManual(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (results.length > 0 && !/^https?:\/\//i.test(manual)) void add({ slug: results[0].slug }); else addManual(); } }}
-        />
-        <button type="button" className="stg-qbtn" disabled={!manual.trim() || busy !== null} onClick={addManual}>Add</button>
-      </div>
-      {results.length > 0 && (
-        <div className="scope-group">
-          {results.map((r) => (
-            <div key={r.slug} className="scope-sug">
-              <div className="scope-sug-main">
-                <span className="scope-sug-label">{r.title}</span>
-                <span className="scope-sug-url">{r.slug}</span>
-              </div>
-              <button type="button" className="stg-qbtn" disabled={busy === r.slug} onClick={() => void add({ slug: r.slug })}>{busy === r.slug ? "…" : "Add"}</button>
-            </div>
-          ))}
-        </div>
+        </>
       )}
       {error && <div className="stg-dep-verify-error">{error}</div>}
-    </aside>
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { ThemeScript } from "@/components/theme-script";
+import { themeAttributes } from "@/components/theme-script";
 import { Toaster } from "@/components/toast";
 
 import "./kazam.css";
@@ -90,16 +90,18 @@ export default async function RootLayout({
     // DB unavailable during static generation — use defaults
   }
 
+  // Theme attributes go straight on <html> so the first paint is right and
+  // nothing re-runs a script on every client render.
+  const attrs = themeAttributes({ theme, mode, texture, glow, depth });
   const body = (
     <>
-      <ThemeScript theme={theme} mode={mode} texture={texture} glow={glow} depth={depth} />
       {children}
       <Toaster />
     </>
   );
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning {...attrs}>
       <body className="shell-standard">
         {AUTH_MODE === "clerk" ? <ClerkWrapper>{body}</ClerkWrapper> : body}
       </body>
