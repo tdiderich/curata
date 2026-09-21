@@ -13,7 +13,7 @@ export function NodeCard({ node }: { node: ChartNode }) {
       : [node.counts.red ? `${node.counts.red} red` : null, node.counts.yellow ? `${node.counts.yellow} yellow` : null].filter(Boolean).join(" · ");
   return (
     <Link href={chartHref(node.term)} className={`chart-node chart-node--${node.color}`}>
-      <span className="chart-node-title">{node.title}{node.pinned && <span className="chart-pin" title="Pinned">●</span>}</span>
+      <span className="chart-node-title">{node.title}</span>
       <span className="chart-node-term">{node.term}</span>
       <span className="chart-node-foot">
         <span className="chart-node-kind">{node.kind} · {node.fanOut} under</span>

@@ -60,7 +60,6 @@ export interface ChartNode {
   fanOut: number;
   color: ChartColor;
   counts: Record<ChartColor, number>;
-  pinned: boolean;
   hidden: boolean;
   promoted: boolean;
 }
@@ -171,10 +170,10 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
   const concepts = new Map<string, { id: string; normalizedName: string; displayName: string; kind: string }>();
   for (const e of pageEdges) concepts.set(e.conceptId, e.concept);
   for (const e of extEdges) concepts.set(e.conceptId, e.concept);
-  // A promoted or pinned concept is a node even before anything sits under it.
+  // A promoted concept is a node even before anything sits under it.
   const wanted = [
     ...(opts.conceptId ? [opts.conceptId] : []),
-    ...settings.filter((s) => s.promoted || s.pinned).map((s) => s.conceptId),
+    ...settings.filter((s) => s.promoted).map((s) => s.conceptId),
   ].filter((id) => !concepts.has(id));
   if (wanted.length > 0) {
     const rows = await db.concept.findMany({ where: { id: { in: wanted } }, select: { id: true, normalizedName: true, displayName: true, kind: true } });
@@ -189,7 +188,7 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
     const s = settingBy.get(id);
     if (s?.hidden && !opts.includeHidden) return false;
     if (opts.allFanOut || opts.conceptId) return true;
-    return (fanOut.get(id) ?? 0) >= NODE_FANOUT_THRESHOLD || !!s?.promoted || !!s?.pinned;
+    return (fanOut.get(id) ?? 0) >= NODE_FANOUT_THRESHOLD || !!s?.promoted;
   });
   if (nodeIds.length === 0) return [];
 
@@ -225,7 +224,7 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
     for (const c of ext) allFan.set(c.conceptId, (allFan.get(c.conceptId) ?? 0) + c._count._all);
   }
   const allSettings = opts.conceptId ? new Map((await db.chartNodeSetting.findMany({ where: { orgId } })).map((s) => [s.conceptId, s])) : settingBy;
-  const isNode = (id: string) => (allFan.get(id) ?? 0) >= NODE_FANOUT_THRESHOLD || !!allSettings.get(id)?.promoted || !!allSettings.get(id)?.pinned;
+  const isNode = (id: string) => (allFan.get(id) ?? 0) >= NODE_FANOUT_THRESHOLD || !!allSettings.get(id)?.promoted;
   const pageAlso = new Map<string, string[]>();
   for (const e of allPageEdges) if (isNode(e.concept.id)) pageAlso.set(e.pageId, [...(pageAlso.get(e.pageId) ?? []), e.concept.displayName]);
   const assetAlso = new Map<string, string[]>();
@@ -268,17 +267,17 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
       source: source ? { slug: source.slug, title: source.title, updatedAt: source.updatedAt.toISOString(), updatedBy: source.updatedBy } : null,
       fanOut: children.length,
       color, counts,
-      pinned: !!s?.pinned, hidden: !!s?.hidden, promoted: !!s?.promoted,
+      hidden: !!s?.hidden, promoted: !!s?.promoted,
       children,
     });
   }
-  out.sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.fanOut - a.fanOut || a.term.localeCompare(b.term));
+  out.sort((a, b) => b.fanOut - a.fanOut || a.term.localeCompare(b.term));
   return out;
 }
 
 function stripChildren(n: ChartNodeDetail): ChartNode {
-  const { term, kind, title, source, fanOut, color, counts, pinned, hidden, promoted } = n;
-  return { term, kind, title, source, fanOut, color, counts, pinned, hidden, promoted };
+  const { term, kind, title, source, fanOut, color, counts, hidden, promoted } = n;
+  return { term, kind, title, source, fanOut, color, counts, hidden, promoted };
 }
 
 export async function getChart(orgId: string, opts: { includeHidden?: boolean } = {}): Promise<Chart> {
@@ -305,7 +304,7 @@ export async function getNeedsLook(orgId: string): Promise<Array<ChartNodeDetail
     .filter((n) => n.children.length > 0);
 }
 
-export async function setChartNode(orgId: string, term: string, patch: { pinned?: boolean; hidden?: boolean; promoted?: boolean }): Promise<ChartNode> {
+export async function setChartNode(orgId: string, term: string, patch: { hidden?: boolean; promoted?: boolean }): Promise<ChartNode> {
   const normalized = normalizeTerm(term);
   const concept = await findConceptForTerm(term, normalized);
   if (!concept) throw new Error(`concept not found: ${normalized}`);

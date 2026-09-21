@@ -211,7 +211,7 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_dependents: { known: new Set(["slug", "term", "rel"]) },
   get_chart: { known: new Set(["term", "include_hidden"]) },
   get_needs_look: { known: new Set([]) },
-  set_chart_node: { known: new Set(["term", "slug", "pinned", "hidden", "promoted"]) },
+  set_chart_node: { known: new Set(["term", "slug", "hidden", "promoted"]) },
   audit: { known: new Set([]) },
   add_to_chart: { known: new Set(["term", "slug", "url", "label", "owner", "due_at", "check"]) },
   remove_from_chart: { known: new Set(["term", "slug", "url"]) },
@@ -1789,11 +1789,11 @@ export async function dispatch(
     case "set_chart_node": {
       if (args.slug && !args.term) return promotePageToNode(orgId, args.slug, userId || "agent");
       if (!args.term) throw new Error("term or slug is required");
-      const patch: { pinned?: boolean; hidden?: boolean; promoted?: boolean } = {};
-      for (const k of ["pinned", "hidden", "promoted"] as const) {
+      const patch: { hidden?: boolean; promoted?: boolean } = {};
+      for (const k of ["hidden", "promoted"] as const) {
         if (args[k] !== undefined) patch[k] = args[k] === "true";
       }
-      if (Object.keys(patch).length === 0) throw new Error("give at least one of pinned, hidden, promoted");
+      if (Object.keys(patch).length === 0) throw new Error("give at least one of hidden, promoted");
       return setChartNode(orgId, args.term, patch);
     }
 

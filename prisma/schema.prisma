@@ -372,14 +372,13 @@ model ExternalEdge {
   @@map("external_edges")
 }
 
-// Per-org chart overrides for a concept. Concepts are global, so pin/hide/
+// Per-org chart overrides for a concept. Concepts are global, so hide/
 // promote live here. A node with fan-out under the threshold shows on the
 // chart only when promoted; a hidden node is kept out of the top row.
 model ChartNodeSetting {
   id        String   @id @default(cuid())
   orgId     String   @map("org_id")
   conceptId String   @map("concept_id")
-  pinned    Boolean  @default(false)
   hidden    Boolean  @default(false)
   promoted  Boolean  @default(false)
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -10176,7 +10176,6 @@ body:has(.nav-reveal) .page-toolbar {
 .chart-node--yellow { border-top-color: rgb(var(--chart-yellow)); }
 .chart-node--red { border-top-color: rgb(var(--chart-red)); }
 .chart-node-title { font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; gap: 6px; }
-.chart-pin { color: var(--accent); font-size: 9px; }
 .chart-node-term { font-family: var(--mono, monospace); font-size: 11.5px; color: var(--muted); }
 .chart-node-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-size: 12px; }
 .chart-node-kind { color: var(--muted); }
@@ -10210,7 +10209,6 @@ body:has(.nav-reveal) .page-toolbar {
 .chart-td-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .chart-td-muted { font-size: 13px; color: var(--light-muted); }
 .chart-td-action { display: flex; justify-content: flex-end; }
-.chart-also { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--snow); padding: 6px 10px; border: 1px solid rgba(var(--accent-rgb), 0.35); border-radius: 8px; background: rgba(var(--accent-rgb), 0.08); }
 .chart-check { display: inline-flex; align-items: center; gap: 8px; }
 @media (max-width: 900px) { .chart-li, .chart-tr { grid-template-columns: 10px minmax(0, 1fr) auto; } .chart-li-owner, .chart-td-muted, .chart-tr--head { display: none; } }
 .chart-body { display: flex; gap: 24px; align-items: flex-start; }

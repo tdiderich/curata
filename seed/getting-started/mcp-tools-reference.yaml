@@ -34,13 +34,13 @@ components:
         body: |
           Curata draws an org chart for content from what already exists: pages built from a template (`instantiates`), pages that embed another page's components with a `type: ref` block (`embeds`, written by the scan on every save), pages tagged `depends` on a concept some page `asserts`, and external assets put under a node. Anything with three or more children is a node. Change a node's source and everything under it goes yellow; check a child and it goes green; leave it past due or through two more source changes and it goes red. Nobody draws the chart. Humans see it at `/chart`, the list at `/chart?view=list`, one node at `/chart/<term>`.
 
-          - **get_chart** - no args: every node, pinned first then by fan-out, with `color`, `counts`, `source`. `term`: that node's children (`color`, `reason`, `lastCheckedAt`, `owner`, `dueAt`, `alsoUnder`, `check`) plus `suggestions`: external URLs in the source's or a child's body that probably belong here
+          - **get_chart** - no args: every node, ranked by fan-out, with `color`, `counts`, `source`. `term`: that node's children (`color`, `reason`, `lastCheckedAt`, `owner`, `dueAt`, `alsoUnder`, `check`) plus `suggestions`: external URLs in the source's or a child's body that probably belong here
           - **get_needs_look** - yellow and red children only, grouped by node
           - **audit** - externals needing a look. `withRecipe` items carry `check: {via, tool, locator, ask}`: run it through that MCP in your session, compare to the source page, then `mark_verified url=... status=holds` or `status=needs_change note=...`. `humanOnly` items have no recipe yet; hand that list to the human, or save `suggestedCheck` with `set_scope_item`
           - **add_to_chart** - put a report under a node: `slug` for a page, or `url` with `label`, `owner`, `due_at`, `check`. Use the suggestions from `get_chart term=...` first
           - **remove_from_chart** - take a page or url out from under a node
           - **set_scope_item** - owner, label or check recipe on an external (shared across nodes), due date on one node's edge
-          - **set_chart_node** - `pinned`, `hidden`, or `promoted` (show a concept with fewer than three children)
+          - **set_chart_node** - `hidden`, or `promoted` (show a concept with fewer than three children)
           - **rescan_inventory** - re-run the embeds and external-URL scan over every page, after upgrading or changing the ignored domains
           - **map_dependencies** - bulk form of add_to_chart: one call with `term`, `asserts`, `depends`, `references` slugs and `external` urls
           - **get_dependents** / **mark_verified** - the per-edge primitives the chart is built on

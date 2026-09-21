@@ -4,18 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
 import type { ChartChild } from "@/lib/chart";
+import { toast } from "@/components/toast";
 
 /**
  * "Checked": one click sets lastCheckedAt on this edge. Same call as the
  * mark_verified tool, so a human clicking and an agent calling leave the
- * same state. If the same page or asset sits under other nodes, the row
- * offers to check it there too, because a check is per edge.
+ * same state. A check is per edge, so the toast names the other nodes the
+ * same page or asset still needs a look under.
  */
 export function ChartCheckButton({ child, term }: { child: ChartChild; term: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [offerAlso, setOfferAlso] = useState(false);
 
   async function check(terms: string[]) {
     setBusy(true);
@@ -32,8 +32,9 @@ export function ChartCheckButton({ child, term }: { child: ChartChild; term: str
           throw new Error(body.error || `HTTP ${res.status}`);
         }
       }
-      if (terms.length === 1 && child.alsoUnder.length > 0) setOfferAlso(true);
-      else setOfferAlso(false);
+      toast.success(child.alsoUnder.length > 0
+        ? `Checked ${child.label} here. Still needs a look under ${child.alsoUnder.join(", ")}.`
+        : `Checked ${child.label}.`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -42,15 +43,6 @@ export function ChartCheckButton({ child, term }: { child: ChartChild; term: str
     }
   }
 
-  if (offerAlso) {
-    return (
-      <span className="chart-also">
-        <span>Also under {child.alsoUnder.join(", ")}, still yellow there.</span>
-        <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void check(child.alsoUnder)}>Check there too</button>
-        <button type="button" className="stg-qbtn stg-qbtn--ghost" onClick={() => setOfferAlso(false)}>Leave it</button>
-      </span>
-    );
-  }
   return (
     <span className="chart-check">
       <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void check([term])} title="Looked at it, it's right for this node">
@@ -61,7 +53,7 @@ export function ChartCheckButton({ child, term }: { child: ChartChild; term: str
   );
 }
 
-export function ChartNodeToggle({ term, field, value, onLabel, offLabel }: { term: string; field: "pinned" | "hidden" | "promoted"; value: boolean; onLabel: string; offLabel: string }) {
+export function ChartNodeToggle({ term, field, value, onLabel, offLabel }: { term: string; field: "hidden" | "promoted"; value: boolean; onLabel: string; offLabel: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   async function flip() {

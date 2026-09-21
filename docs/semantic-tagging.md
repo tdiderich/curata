@@ -71,11 +71,11 @@ Curata draws an org chart for content from the edges above plus two free ones. A
 
 Every child has one color from one rule. Green: checked since the source last moved, or nothing to drift against. Yellow: the source moved since the last check, or it was never checked, or someone left a mismatch note. Red: yellow plus past due, or the source moved twice with no check. Node color is the worst child.
 
-- `get_chart` — no args: every node, pinned first then by fan-out. `term`: that node's children with `color`, `reason`, `lastCheckedAt`, `owner`, `dueAt`, `alsoUnder` (other nodes the same page or asset sits beneath), `check` (an external's recipe), plus `suggestions`: URLs found in the source's or a child's body that probably belong under it.
+- `get_chart` — no args: every node, ranked by fan-out. `term`: that node's children with `color`, `reason`, `lastCheckedAt`, `owner`, `dueAt`, `alsoUnder` (other nodes the same page or asset sits beneath), `check` (an external's recipe), plus `suggestions`: URLs found in the source's or a child's body that probably belong under it.
 - `get_needs_look` — yellow and red only, grouped by node. The review queue for drift.
 - `add_to_chart` / `remove_from_chart` — put a page (`slug`) or an external (`url`, `label`, `owner`, `due_at`, `check`) under a node, or take it out. `map_dependencies` is the bulk form: `term`, `asserts`, `depends`, `references` slugs and `external` urls in one call; unknown slugs come back in `missing`.
 - `set_scope_item` — owner, label and check recipe on an external (shared by every node it sits under); `due_at` per node when `term` is given.
-- `set_chart_node` — `pinned`, `hidden`, `promoted`.
+- `set_chart_node` — `hidden` or `promoted`.
 - `rescan_inventory` — re-run the scan over every page.
 
 ### How an agent checks an external
