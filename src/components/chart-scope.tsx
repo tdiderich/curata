@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
 import type { ChartChild } from "@/lib/chart";
-import type { CheckRecipe, PageSuggestion, ScopeSuggestion } from "@/lib/scope";
+import type { PageSuggestion, ScopeSuggestion } from "@/lib/scope";
+import type { CheckRecipe } from "@/lib/check-recipes";
 
 async function call(method: string, path: string, body?: unknown) {
   const res = await fetch(`${basePath}${path}`, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
