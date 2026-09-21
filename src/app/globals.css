@@ -10300,3 +10300,11 @@ body:has(.nav-reveal) .page-toolbar {
 .chart-check:checked { background: rgb(var(--accent-rgb)); border-color: rgb(var(--accent-rgb)); }
 .chart-check:checked::after { content: ""; width: 9px; height: 5px; border-left: 2px solid var(--snow); border-bottom: 2px solid var(--snow); transform: translateY(-1px) rotate(-45deg); }
 .chart-check:focus-visible { outline: 2px solid rgba(var(--accent-rgb), 0.5); outline-offset: 1px; }
+.chart-row-line--list { grid-template-columns: minmax(0, 1fr) 170px 260px 130px; cursor: default; }
+.chart-row-line--list:hover { background: none; }
+.chart-rows--list { margin-top: 4px; }
+.chart-row-link { color: var(--snow); text-decoration: none; }
+.chart-row-link:hover { text-decoration: underline; }
+.chart-list .chart-group-head { padding: 0 12px; }
+@media (max-width: 900px) { .chart-row-line--list { grid-template-columns: minmax(0, 1fr) 130px; } .chart-row-line--list > .stg-dep-when, .chart-row-line--list > [class^="chart-text--"], .chart-rows-head.chart-row-line--list span:nth-child(2), .chart-rows-head.chart-row-line--list span:nth-child(3) { display: none; } }
+.chart-row-line--list .chart-td-action .stg-qbtn { white-space: nowrap; }

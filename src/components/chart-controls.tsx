@@ -46,7 +46,7 @@ export function ChartCheckButton({ child, term }: { child: ChartChild; term: str
   return (
     <span className="chart-check">
       <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void check([term])} title="Looked at it, it's right for this node">
-        {busy ? "Saving" : "Checked"}
+        {busy ? "Saving" : "Mark complete"}
       </button>
       {error && <span className="stg-dep-verify-error">{error}</span>}
     </span>

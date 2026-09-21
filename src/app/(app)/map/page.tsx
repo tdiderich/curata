@@ -40,7 +40,7 @@ export default async function ChartPage({ searchParams }: { searchParams: Promis
             </div>
             <p className="cmap-summary">
               {list
-                ? "Same chart, as a list. Yellow and red only, grouped by what changed."
+                ? "The map as a list. Yellow and red only, grouped by what changed. Open a node to review and update."
                 : "Your pages, templates and links, arranged by what depends on what. When something at the top changes, everything below it needs a look until someone checks it."}
             </p>
           </header>
