@@ -10262,3 +10262,13 @@ body:has(.nav-reveal) .page-toolbar {
 .nn-picked { border-color: rgba(var(--accent-rgb), 0.4); }
 .nn-related { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .nmf-opt { font-size: 12px; font-weight: 400; color: var(--muted); }
+.chart-org { display: flex; gap: 20px; align-items: flex-start; overflow-x: auto; padding-bottom: 12px; }
+.chart-col { display: flex; flex-direction: column; align-items: stretch; width: 240px; flex: none; }
+.chart-col .chart-node { width: 240px; }
+.chart-stem { width: 2px; height: 18px; margin-left: 22px; background: rgba(var(--text-rgb), 0.18); }
+.chart-leaves { list-style: none; margin: 0; padding: 0 0 0 12px; display: flex; flex-direction: column; gap: 6px; border-left: 2px solid rgba(var(--text-rgb), 0.18); margin-left: 22px; }
+.chart-leaf { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; background: rgba(var(--text-rgb), 0.035); border: 1px solid rgba(var(--text-rgb), 0.08); font-size: 13px; min-width: 0; }
+.chart-leaf .chart-dot { width: 8px; height: 8px; }
+.chart-leaf-label { color: var(--snow); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 0; min-width: 0; }
+.chart-leaf-label:hover { text-decoration: underline; }
+.chart-leaf-ext { font-family: var(--mono, monospace); font-size: 10.5px; color: var(--muted); flex: none; }

@@ -1,6 +1,5 @@
 import Link from "next/link";
-import type { Chart, ChartChild, ChartNode, ChartNodeDetail } from "@/lib/chart";
-import { relativeTime } from "@/components/dependency-cells";
+import type { Chart, ChartNode, ChartNodeDetail } from "@/lib/chart";
 
 export function chartHref(term: string): string {
   return `/chart/${term.split("/").map(encodeURIComponent).join("/")}`;
@@ -24,25 +23,7 @@ export function NodeCard({ node }: { node: ChartNode }) {
   );
 }
 
-export function ChildCard({ child }: { child: ChartChild }) {
-  const state = child.color === "green"
-    ? child.lastCheckedAt ? `Checked ${relativeTime(child.lastCheckedAt)}` : "Nothing to drift against"
-    : child.reason ?? "Needs a look";
-  return (
-    <div className={`chart-child chart-child--${child.color}`}>
-      <div className="chart-child-top">
-        {child.kind === "page" && child.slug
-          ? <Link href={`/pages/${child.slug}`} className="chart-child-label">{child.label}</Link>
-          : <a href={child.url ?? "#"} target="_blank" rel="noreferrer" className="chart-child-label">{child.label}</a>}
-        <span className="chart-child-kind">{child.kind === "external" ? `external · ${child.host ?? ""}` : child.rel === "embeds" ? "embeds" : child.rel === "instantiates" ? "built from" : "page"}</span>
-      </div>
-      <div className={`chart-text--${child.color}`}>{state}{child.owner ? ` · ${child.owner}` : ""}</div>
-      {child.alsoUnder.length > 0 && <div className="chart-child-also">also under {child.alsoUnder.join(", ")}</div>}
-    </div>
-  );
-}
-
-export function ChartView({ chart, expanded }: { chart: Chart; expanded: ChartNodeDetail | null }) {
+export function ChartView({ chart, columns }: { chart: Chart; columns: ChartNodeDetail[] }) {
   if (chart.nodes.length === 0) {
     return (
       <div className="cmap-col-empty chart-empty">
@@ -51,22 +32,24 @@ export function ChartView({ chart, expanded }: { chart: Chart; expanded: ChartNo
     );
   }
   return (
-    <>
-      <div className="chart-row">
-        {chart.nodes.map((n) => <NodeCard key={n.term} node={n} />)}
-      </div>
-      {expanded && (
-        <section className="chart-expanded">
-          <div className="chart-expanded-head">
-            Under <Link href={chartHref(expanded.term)} className="chart-node-term">{expanded.term}</Link>
-            {expanded.source && <> · changed {relativeTime(expanded.source.updatedAt)}{expanded.source.updatedBy ? ` by ${expanded.source.updatedBy}` : ""}</>}
-            {" · "}{expanded.fanOut} under
-          </div>
-          <div className="chart-grid">
-            {expanded.children.map((c) => <ChildCard key={c.edgeId} child={c} />)}
-          </div>
-        </section>
-      )}
-    </>
+    <div className="chart-org">
+      {columns.map((n) => (
+        <div key={n.term} className="chart-col">
+          <NodeCard node={n} />
+          {n.children.length > 0 && <div className="chart-stem" />}
+          <ul className="chart-leaves">
+            {n.children.map((c) => (
+              <li key={c.edgeId} className={`chart-leaf chart-leaf--${c.color}`}>
+                <span className={`chart-dot chart-dot--${c.color}`} />
+                {c.kind === "page" && c.slug
+                  ? <Link href={`/pages/${c.slug}`} className="chart-leaf-label" title={c.reason ?? ""}>{c.label}</Link>
+                  : <a href={c.url ?? "#"} target="_blank" rel="noreferrer" className="chart-leaf-label" title={`${c.host ?? ""}${c.reason ? ` · ${c.reason}` : ""}`}>{c.label}</a>}
+                {c.kind === "external" && <span className="chart-leaf-ext" aria-label="external">↗</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }

@@ -16,9 +16,7 @@ export default async function ChartPage({ searchParams }: { searchParams: Promis
   const { view } = await searchParams;
   const list = view === "list";
   const chart = await getChart(ctx.orgId);
-  const worst = !list && chart.nodes.length > 0
-    ? await getChartNode(ctx.orgId, [...chart.nodes].sort((a, b) => ["red", "yellow", "green"].indexOf(a.color) - ["red", "yellow", "green"].indexOf(b.color))[0].term)
-    : null;
+  const columns = list ? [] : await Promise.all(chart.nodes.map((n) => getChartNode(ctx.orgId, n.term)));
   const needs = list ? await getNeedsLook(ctx.orgId) : [];
   return (
     <div className="dash-root">
@@ -46,7 +44,7 @@ export default async function ChartPage({ searchParams }: { searchParams: Promis
                 : "Your pages, templates and links, arranged by what depends on what. When something at the top changes, everything below it needs a look until someone checks it."}
             </p>
           </header>
-          {list ? <ChartList nodes={needs} /> : <ChartView chart={chart} expanded={worst} />}
+          {list ? <ChartList nodes={needs} /> : <ChartView chart={chart} columns={columns} />}
         </div>
       </div>
     </div>
