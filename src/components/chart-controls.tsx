@@ -91,13 +91,8 @@ export function ChartNodeInstructions({ term, value, canEdit }: { term: string; 
 
   if (!value && !canEdit) return null;
   return (
-    <div className="cmap-instr">
-      <div className="cmap-instr-head">
-        <span className="cmap-source-label">Instructions for agents</span>
-        {canEdit && !editing && (
-          <button type="button" className="btn btn--ghost" onClick={() => { setDraft(value ?? ""); setEditing(true); }}>{value ? "Edit" : "Add"}</button>
-        )}
-      </div>
+    <div className="cmap-meta-row cmap-instr">
+      <span className="cmap-source-label">Instructions</span>
       {editing ? (
         <div className="cmap-instr-edit">
           <textarea
@@ -105,17 +100,18 @@ export function ChartNodeInstructions({ term, value, canEdit }: { term: string; 
             rows={3}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder={'What should an agent do with each item here? Optional. Example: "Read the launch, decide if it matters to this customer, and add an agenda item to their priorities page if so."'}
+            placeholder={'What should an agent do with each item here? Example: "Read the launch, decide if it matters to this customer, and add an agenda item to their priorities page if so."'}
           />
           <div className="cmap-instr-actions">
             <button type="button" className="btn btn--primary" disabled={busy} onClick={() => void save()}>Save</button>
             <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => setEditing(false)}>Cancel</button>
           </div>
         </div>
-      ) : value ? (
-        <p className="cmap-instr-body">{value}</p>
       ) : (
-        <span className="cmap-source-hint">Optional. Added to every prompt copied from this node, for when &ldquo;bring it in line with the source&rdquo; isn&rsquo;t the whole ask.</span>
+        <span className="cmap-source-item cmap-instr-line">
+          {value ? <span className="cmap-instr-body">{value}</span> : <span className="cmap-source-hint">None. Added to every prompt copied from here.</span>}
+          {canEdit && <button type="button" className="cmap-instr-edit-btn" onClick={() => { setDraft(value ?? ""); setEditing(true); }}>{value ? "Edit" : "Add"}</button>}
+        </span>
       )}
     </div>
   );

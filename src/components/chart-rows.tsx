@@ -104,16 +104,19 @@ export function ChartRows({ rows, term, canEdit, source, instructions = null }: 
 
   return (
     <div className="chart-rows">
-      {canEdit && picked.length > 0 && (
-        <div className="chart-bulk">
-          <span>{picked.length} need{picked.length === 1 ? "s" : ""} update</span>
-          <button type="button" className="btn btn--primary chart-bulk-copy" disabled={busy} onClick={() => void copyPrompt(picked)}>Copy prompt</button>
-          <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void act(picked, "holds")}>Mark complete</button>
-          <button type="button" className="stg-qbtn stg-qbtn--ghost" onClick={() => setSelected(new Set())}>Clear</button>
-        </div>
-      )}
       <div className="chart-rows-head">
-        {canEdit && <span />}<span>Content</span><span>Owner · due</span><span>Last checked</span><span />
+        {canEdit && <span />}
+        <span className="chart-rows-head-main">
+          {canEdit && picked.length > 0 ? (
+            <span className="chart-head-tools">
+              <span className="chart-head-count">{picked.length} need{picked.length === 1 ? "s" : ""} update</span>
+              <button type="button" className="btn btn--primary chart-bulk-copy" disabled={busy} onClick={() => void copyPrompt(picked)}>Copy prompt</button>
+              <button type="button" className="stg-qbtn" disabled={busy} onClick={() => void act(picked, "holds")}>Mark complete</button>
+              <button type="button" className="stg-qbtn stg-qbtn--ghost" onClick={() => setSelected(new Set())}>Clear</button>
+            </span>
+          ) : "Content"}
+        </span>
+        <span>Owner · due</span><span>Last checked</span><span />
       </div>
       {rows.map((c) => {
         const isOpen = open === c.edgeId;

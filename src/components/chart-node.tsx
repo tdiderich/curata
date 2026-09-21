@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ChartNodeDetail as ChartNodeDetailData } from "@/lib/chart";
 import { relativeTime } from "@/components/dependency-cells";
-import { SettingsSection } from "@/components/settings";
 import { ChartNodeToggle, ChartNodeInstructions } from "@/components/chart-controls";
 import { AddRelatedButton, ScopePanel } from "@/components/chart-scope";
 import { ChartRows } from "@/components/chart-rows";
@@ -24,29 +23,25 @@ export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; 
         <p className="cmap-meta"><span className="chart-node-term">{node.term}</span></p>
       </header>
 
-      <div className={`cmap-source${node.source ? "" : " cmap-source--gap"}`}>
-        <span className="cmap-source-label">Source of truth</span>
-        {node.source ? (
-          <>
+      <div className={`cmap-meta-card${node.source ? "" : " cmap-meta-card--gap"}`}>
+        <div className="cmap-meta-row">
+          <span className="cmap-source-label">Source of truth</span>
+          {node.source ? (
             <span className="cmap-source-item">
               <Link href={`/pages/${node.source.slug}`} className="stg-dep-link">{node.source.title}</Link>
               <span className="stg-dep-when">changed {relativeTime(node.source.updatedAt)}{node.source.updatedBy ? ` by ${node.source.updatedBy}` : ""}</span>
             </span>
-            <span className="cmap-source-hint">When this page changes, everything below needs a look.</span>
-          </>
-        ) : (
-          <span className="cmap-source-hint">No page owns the truth for <code>{node.term}</code> yet. Nothing here can drift until one does.</span>
-        )}
+          ) : (
+            <span className="cmap-source-hint">No page owns the truth for <code>{node.term}</code> yet. Nothing here can drift until one does.</span>
+          )}
+        </div>
+        <ChartNodeInstructions term={node.term} value={node.instructions} canEdit={canEdit} />
       </div>
 
-      <ChartNodeInstructions term={node.term} value={node.instructions} canEdit={canEdit} />
-
-      <SettingsSection title="Related content">
-        {canEdit && <ScopePanel term={node.term} />}
-        {node.children.length === 0
-          ? <div className="dash-empty stg-table">Nothing under this yet.{canEdit ? " Use Add related content above." : ""}</div>
-          : <ChartRows rows={node.children} term={node.term} canEdit={canEdit} source={node.source} instructions={node.instructions} />}
-      </SettingsSection>
+      {canEdit && <ScopePanel term={node.term} />}
+      {node.children.length === 0
+        ? <div className="dash-empty stg-table">Nothing under this yet.{canEdit ? " Use Add related content above." : ""}</div>
+        : <ChartRows rows={node.children} term={node.term} canEdit={canEdit} source={node.source} instructions={node.instructions} />}
     </div>
   );
 }
