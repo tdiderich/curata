@@ -16,9 +16,9 @@ async function call(method: string, path: string, body?: unknown) {
 }
 
 /**
- * Add report: what curata found that probably belongs under this node,
- * ranked by where it came from. One click adds. Detected reports (embeds,
- * template instances, tagged depends) never need this panel.
+ * Add related content: what curata found that probably belongs under this
+ * node, ranked by where it came from. One click adds. Detected content
+ * (embeds, template instances, tagged depends) never needs this panel.
  */
 export function ScopePanel({ term }: { term: string }) {
   const router = useRouter();
@@ -61,14 +61,14 @@ export function ScopePanel({ term }: { term: string }) {
 
   const groups: Array<[ScopeSuggestion["why"], string]> = [
     ["in source body", "In the source page's body"],
-    ["in a child's body", "In a report's body"],
+    ["in a child's body", "Linked from content already under it"],
     ["declared by a sibling", "Under a sibling node in the same folder"],
   ];
 
   return (
     <aside className="scope-panel">
-      <div className="scope-panel-title">Add report</div>
-      <p className="scope-panel-hint">Things curata found that might belong under this node. One click adds it. Detected reports never need this.</p>
+      <div className="scope-panel-title">Add related content</div>
+      <p className="scope-panel-hint">Pages and links curata found that might belong under this node. One click adds. Anything detected from templates, embeds or tags is already here.</p>
       {suggestions === null && <div className="scope-empty">Looking…</div>}
       {suggestions && suggestions.length === 0 && pageSugs.length === 0 && <div className="scope-empty">Nothing to suggest. Paste a URL or a page slug below.</div>}
       {pageSugs.length > 0 && (

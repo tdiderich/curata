@@ -30,11 +30,11 @@ export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; 
       <div className="chart-body">
         <div className="chart-body-main">
           {node.children.length === 0 ? (
-            <div className="cmap-col-empty">Nothing under this yet.{canEdit ? " Add a report on the right." : ""}</div>
+            <div className="cmap-col-empty">Nothing under this yet.{canEdit ? " Add related content on the right." : ""}</div>
           ) : (
             <div className="chart-table">
               <div className="chart-tr chart-tr--head">
-                <span /><span>Report</span><span>Owner · due</span><span>Last checked</span><span />
+                <span /><span>Content</span><span>Owner · due</span><span>Last checked</span><span />
               </div>
               {node.children.map((c) => (
                 <div key={c.edgeId} className="chart-tr">
