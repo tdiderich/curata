@@ -30,6 +30,7 @@ const KIND_TONE: Record<string, StatusBadgeTone> = {
   finding: "finding",
   framework: "framework",
   template: "template",
+  component: "component",
 };
 
 /** Rels a human picks. instantiates is system-written and stays read-only. */
@@ -39,6 +40,7 @@ const REL_HINT: Record<string, string> = {
   depends: "Goes stale when it changes. Shows up on the map as something to re-check.",
   asserts: "This page is the source of truth for it. Changing this page marks dependents stale.",
   instantiates: "Built from this template by create_from_template.",
+  embeds: "Embeds that page's components via a ref block. Written by the scan on save.",
 };
 
 export function PageSettingsTags({ pageId, initialTags, tagOptions, canEdit, folderTag }: PageSettingsTagsProps) {

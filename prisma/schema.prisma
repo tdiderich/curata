@@ -22,6 +22,8 @@ model Organization {
   glow      String   @default("none")
   depth     String   @default("soft")
   rules     Json?
+  /// Hosts the external-URL inventory skips (slack.com, giphy.com...). Chart layer 1.
+  ignoredDomains String[] @default([]) @map("ignored_domains")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -143,6 +145,7 @@ model Page {
   concepts    PageConcept[]
   linksFrom   PageLink[]    @relation("PageLinksFrom")
   linksTo     PageLink[]    @relation("PageLinksTo")
+  externalRefs ExternalRef[]
   shares      PageShare[]
   shareLinks  ShareLink[]
 
@@ -370,9 +373,27 @@ model ExternalAsset {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   edges ExternalEdge[]
+  refs  ExternalRef[]
 
   @@unique([orgId, url])
   @@map("external_assets")
+}
+
+// Inventory: page body mentions this external URL. System-written by the
+// write-path scan, never by hand. No verification on it; it's the lockfile,
+// not the chart. Scope (ExternalEdge) is the declared blast radius.
+model ExternalRef {
+  id        String   @id @default(cuid())
+  pageId    String   @map("page_id")
+  assetId   String   @map("asset_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  page  Page          @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  asset ExternalAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, assetId])
+  @@index([assetId])
+  @@map("external_refs")
 }
 
 // asset --rel--> concept, with the same per-edge verification as PageConcept.

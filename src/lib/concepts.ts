@@ -8,8 +8,11 @@ import { makeTrustModeResolver, type TrustMode } from "./approval";
  * today's behavior. `depends` means the page is wrong if the concept changes.
  * `asserts` means the page is the source of truth for the concept.
  * `instantiates` is system-written by create_from_template and never by hand.
+ * `embeds` is system-written by the write-path scan when a page carries a
+ * `type: ref` block (or a section with a slug) pointing at another page: the
+ * embedding page depends on that component page, nobody had to tag it.
  */
-export const CONCEPT_RELS = ["depends", "asserts", "references", "instantiates"] as const;
+export const CONCEPT_RELS = ["depends", "asserts", "references", "instantiates", "embeds"] as const;
 export type ConceptRel = (typeof CONCEPT_RELS)[number];
 export const DEFAULT_REL: ConceptRel = "references";
 
@@ -21,6 +24,14 @@ export function isConceptRel(rel: unknown): rel is ConceptRel {
 export function templateConceptTerm(templateSlug: string): string {
   return `template/${templateSlug}`;
 }
+
+/** Concept term a page that embeds another page's components carries. */
+export function componentConceptTerm(componentSlug: string): string {
+  return `component/${componentSlug}`;
+}
+
+/** System-written rels: never pruned by a caller's declared set, never hand-tagged. */
+export const SYSTEM_RELS: ReadonlySet<string> = new Set(["instantiates", "embeds"]);
 
 export interface ConceptInput {
   term: string;
@@ -857,6 +868,27 @@ export async function sourceUpdatedAtByConcept(orgId: string, conceptIds: string
     const cur = out.get(r.conceptId);
     if (!cur || r.page.updatedAt > cur) out.set(r.conceptId, r.page.updatedAt);
   }
+  // template/<slug> and component/<slug> concepts are system-written; the
+  // source is the page with that slug whether or not anyone tagged it asserts.
+  const missing = conceptIds.filter((id) => !out.has(id));
+  if (missing.length > 0) {
+    const concepts = await db.concept.findMany({ where: { id: { in: missing } }, select: { id: true, normalizedName: true } });
+    const bySlug = new Map<string, string[]>();
+    for (const c of concepts) {
+      const m = /^(template|component)\/(.+)$/.exec(c.normalizedName);
+      if (!m) continue;
+      const list = bySlug.get(m[2]) ?? [];
+      list.push(c.id);
+      bySlug.set(m[2], list);
+    }
+    if (bySlug.size > 0) {
+      const pages = await db.page.findMany({
+        where: { orgId, slug: { in: [...bySlug.keys()] }, status: { not: "archived" } },
+        select: { slug: true, updatedAt: true },
+      });
+      for (const pg of pages) for (const id of bySlug.get(pg.slug) ?? []) out.set(id, pg.updatedAt);
+    }
+  }
   return out;
 }
 
@@ -1164,7 +1196,7 @@ export async function getDependents(
     const filter = (r: ConceptRel) => !opts.rel || opts.rel === r;
     const [asserters, dependents, instances, external] = await Promise.all([
       filter("asserts") ? edges([concept.id], ["asserts"]) : [],
-      filter("depends") ? edges([concept.id], ["depends"]) : [],
+      filter("depends") ? edges([concept.id], ["depends", "embeds"]) : [],
       filter("instantiates") ? edges([concept.id], ["instantiates"]) : [],
       externals([concept.id], opts.rel),
     ]);
@@ -1326,7 +1358,7 @@ export interface ConceptMapRow {
 export async function listConceptMaps(orgId: string): Promise<ConceptMapRow[]> {
   const [pageEdges, extEdges] = await Promise.all([
     db.pageConcept.findMany({
-      where: { rel: { in: ["depends", "asserts", "instantiates"] }, page: { orgId, status: { not: "archived" } } },
+      where: { rel: { in: ["depends", "asserts", "instantiates", "embeds"] }, page: { orgId, status: { not: "archived" } } },
       select: { conceptId: true, concept: { select: { displayName: true, kind: true } } },
       distinct: ["conceptId"],
     }),

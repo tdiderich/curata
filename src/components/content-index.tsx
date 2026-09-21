@@ -14,15 +14,16 @@ interface ViewProps {
   untaggedPanel?: ReactNode;
 }
 
-type Kind = "vendor" | "finding" | "framework" | "topic" | "template" | "folder";
+type Kind = "vendor" | "finding" | "framework" | "topic" | "template" | "component" | "folder";
 
-const KIND_ORDER: Kind[] = ["vendor", "finding", "framework", "topic", "template", "folder"];
+const KIND_ORDER: Kind[] = ["vendor", "finding", "framework", "topic", "template", "component", "folder"];
 const KIND_LABEL: Record<Kind, string> = {
   vendor: "Vendor",
   finding: "Finding",
   framework: "Framework",
   topic: "Topic",
   template: "Template",
+  component: "Component",
   folder: "Folder",
 };
 
@@ -33,7 +34,7 @@ function tagKind(t: GraphTag): Kind {
 }
 
 function groupTags(tags: GraphTag[]) {
-  const groups: Record<Kind, GraphTag[]> = { vendor: [], finding: [], framework: [], topic: [], template: [], folder: [] };
+  const groups: Record<Kind, GraphTag[]> = { vendor: [], finding: [], framework: [], topic: [], template: [], component: [], folder: [] };
   for (const t of tags) groups[tagKind(t)].push(t);
   for (const k of KIND_ORDER) groups[k].sort((a, b) => b.pages - a.pages);
   return groups;

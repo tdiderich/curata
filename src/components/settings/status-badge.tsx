@@ -8,6 +8,8 @@ export type StatusBadgeTone =
   | "finding"
   | "framework"
   | "template"
+  | "component"
+  | "embeds"
   | "depends"
   | "asserts"
   | "references"

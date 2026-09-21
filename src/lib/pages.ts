@@ -14,6 +14,7 @@ import { extractSalientTerms } from "./salient-terms";
 import { extractDeclaredPageType } from "./required-components";
 import { makeApprovalRuleResolver, makeTrustModeResolver, resolveEffectiveTrustMode } from "./approval";
 import { verifyAllEdgesForPage } from "./concepts";
+import { syncPageScan } from "./scan";
 import type { TrustMode } from "./approval";
 
 /// npm dist-tag style read channel: "latest" is the current behavior (newest
@@ -781,6 +782,15 @@ async function _writePageInternal(
     await pruneVersions(pageId);
   } catch (err) {
     console.error(`[version-retention] pruneVersions failed for page ${pageId}:`, err);
+  }
+
+  // Free edges: embeds + external URL inventory. Same rule as the prune, a
+  // scan failure never takes a committed write down with it.
+  try {
+    const doc = jsonContent ?? (yaml.load(yamlContent) as unknown);
+    await syncPageScan(orgId, pageId, doc, createdBy);
+  } catch (err) {
+    console.error(`[scan] syncPageScan failed for page ${pageId}:`, err);
   }
 
   return { ok: true, slug, contentHash };
