@@ -98,7 +98,7 @@ export function ChartRows({ rows, term, canEdit, source }: { rows: ChartChild[];
     lines.push("");
     lines.push(`The source of truth for "${term}" changed. Bring the content below in line with it, using the curata MCP tools.`);
     lines.push("");
-    lines.push(`1. read_page ${source?.slug ?? "<source>"} and note what changed (get_versions shows the history).`);
+    lines.push(`1. read_page ${source?.slug ?? "<source>"}, then read_version slug=${source?.slug ?? "<source>"} version_id=latest compare_to=previous to see exactly what changed (added and removed lines). get_versions lists older ids if the change you care about is further back.`);
     if (pages.length) {
       lines.push("2. For each page, read_page it, update anything the source change makes wrong, then mark_verified slug=<slug> term=" + term + " status=holds. If it's already right, mark_verified without editing. patch_page takes expected_hash (from read_page) and operations like [{\"op\":\"replace\",\"id\":\"<component id>\",\"components\":[{\"type\":\"markdown\",\"id\":\"<component id>\",\"body\":\"...\"}]}]. After writing, read_page channel=latest; if it says trustedBehind, the page is trust-locked and readers see the old version until a human runs mark_trusted. Say so.");
       for (const c of pages) lines.push(`   - ${c.slug}  |  ${baseUrl}/pages/${c.slug}  |  ${c.label}${c.reason ? `; ${c.reason}` : ""}${c.note ? `; note: ${c.note}` : ""}`);

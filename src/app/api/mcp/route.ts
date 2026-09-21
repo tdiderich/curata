@@ -97,10 +97,13 @@ export async function POST(request: NextRequest) {
     // The YAML guide only helps when the failure was about page content.
     // Param and lookup errors already say what is valid; pointing them at
     // the component reference sends the caller to the wrong document.
+    const aboutPatch = /patch_page operations|Unknown op|requires an "id"|requires components|set_field/i.test(message);
     const aboutContent = /yaml|component|shell|content must/i.test(message);
-    const hint = aboutContent
-      ? "Call get_component_reference (no args) for the full YAML authoring guide with component syntax and examples."
-      : `GET /api/mcp lists every tool with its accepted params; the error above names what this call accepted.`;
+    const hint = aboutPatch
+      ? "patch_page takes expected_hash (contentHash from read_page) and operations, a JSON array of {op, id?, components?, field?, value?}. The ops and an example are in the error above."
+      : aboutContent
+        ? "Call get_component_reference (no args) for the full YAML authoring guide with component syntax and examples."
+        : `GET /api/mcp lists every tool with its accepted params; the error above names what this call accepted.`;
     return NextResponse.json({ error: message, hint }, { status: 400 });
   }
 }

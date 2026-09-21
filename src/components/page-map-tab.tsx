@@ -41,7 +41,7 @@ export function PageUnderRows({ slug, title, under, canEdit }: { slug: string; t
       `The page "${title}" depends on ${list.length} source page${list.length === 1 ? "" : "s"} for content and wording, and ${list.length === 1 ? "that source has" : "those sources have"} changed. Review each source and confirm this page is fully updated for the recent changes, using the curata MCP tools.`,
       "",
       `1. read_page ${slug} so you know what it says today.`,
-      "2. For each source below, read_page it and note what changed (get_versions shows the history):",
+      "2. For each source below, read_page it, then read_version slug=<source slug> version_id=latest compare_to=previous to see exactly what changed (added and removed lines; get_versions lists older ids):",
       ...list.map((u) => `   - ${u.node.term}  |  ${u.node.source ? `"${u.node.source.title}" at ${baseUrl}/pages/${u.node.source.slug} (slug ${u.node.source.slug}), changed ${u.node.source.updatedAt.slice(0, 10)}` : "no source page"}  |  ${u.me.reason ?? "needs a look"}`),
       `3. Where ${slug} disagrees with a source, update it. patch_page takes expected_hash (from read_page) and operations like [{"op":"replace","id":"<component id>","components":[{"type":"markdown","id":"<component id>","body":"..."}]}]. Then for each term above: mark_verified slug=${slug} term=<term> status=holds. If a source's change didn't touch anything on this page, mark_verified it anyway.`,
       `4. After writing, read_page ${slug} channel=latest. If the response says trustedBehind, the page is trust-locked: your edit is saved but readers still see the old version until a human runs mark_trusted. Say so in your report.`,

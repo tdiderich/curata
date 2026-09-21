@@ -62,6 +62,7 @@ import type { ConceptInput, ConceptRel, ExternalDependentInput, LinkInput, Verif
 import { getChart, getChartNode, getNeedsLook, getPageImpact, promotePageToNode, setChartNode } from "@/lib/chart";
 import { addScopeItem, getAuditList, getPageSuggestions, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
 import { backfillScan } from "@/lib/scan";
+import { readVersion } from "@/lib/versions";
 import { ensureComponentIds, applyPatchOperations, buildOutline, formatOutline, locateComponent } from "@/lib/component-ids";
 import { createHash } from "crypto";
 import type { PatchOperation } from "@/lib/component-ids";
@@ -93,6 +94,7 @@ export const READ_TOOLS = [
   "list_folders",
   "get_folder_structure",
   "get_versions",
+  "read_version",
   "validate_page",
   "list_workflows",
   "list_templates",
@@ -190,6 +192,7 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   create_folder: { known: new Set(["name", "parent_id", "visibility", "rules"]), aliases: { parentId: "parent_id" } },
   update_folder: { known: new Set(["id", "name", "parent_id", "visibility", "rules"]), aliases: { parentId: "parent_id" } },
   get_versions: { known: new Set(["slug", "limit"]) },
+  read_version: { known: new Set(["slug", "version_id", "compare_to"]) },
   validate_page: { known: new Set(["slug", "content"]), aliases: { yaml: "content" } },
   create_page: { known: new Set(["slug", "content", "folder_id", "visibility", "sort_order", "rules", "concepts", "links", "capture_token", "dedup_ack"]), aliases: { folderId: "folder_id", sortOrder: "sort_order", yaml: "content" } },
   move_page: { known: new Set(["slug", "folder_id"]), aliases: { folderId: "folder_id" } },
@@ -954,6 +957,13 @@ export async function dispatch(
       await db.folder.update({ where: { id: args.id }, data: ufData });
       logAudit({ orgId, action: "folder.update", resourceType: "folder", resourceId: args.id, actorType: "apikey", actorId, metadata: { name: args.name, parentId: args.parent_id, visibility: args.visibility, hasRules: !!ufRulesParsed } });
       return { ok: true, id: args.id };
+    }
+
+    case "read_version": {
+      if (!args.slug) throw new Error("slug is required");
+      if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
+      if (!args.version_id) throw new Error('version_id is required: an id from get_versions, or "latest" / "previous"');
+      return readVersion(orgId, args.slug, args.version_id, args.compare_to || undefined);
     }
 
     case "get_versions": {

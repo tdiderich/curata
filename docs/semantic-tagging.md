@@ -86,6 +86,14 @@ An external asset can carry a recipe: `{via, tool, locator, ask}`, where `via` i
 
 Every save also records every absolute http(s) URL on the page as an `ExternalAsset` (one per normalized URL per org) plus an `ExternalRef` per page. That is the inventory, not scope: nothing goes yellow because a page mentions a URL. It feeds `get_chart`'s suggestions. A default ignore list (slack, giphy, calendly, zoom, loom, linkedin, x) merges with the org's `ignoredDomains`.
 
+### What changed in the source
+
+`read_version slug=<source> version_id=latest compare_to=previous` returns the current content plus the line diff from the previous version (added and removed lines). `get_versions` lists older ids for a diff further back. Agents use this before touching a dependent page, so "bring it in line" is grounded in the actual change rather than in two hashes.
+
+### Editing a dependent page
+
+`patch_page` takes `expected_hash` (the contentHash from `read_page`) and `operations`, a JSON array. Ops: `replace`, `insert_before`, `insert_after` (need `id` and `components`), `remove` (needs `id`), `prepend`, `append` (need `components`), `set_field` (needs `field`, one of title, subtitle, eyebrow, shell, and `value`). `components` is an array of full component objects. Example: `[{"op":"replace","id":"markdown-0","components":[{"type":"markdown","id":"markdown-0","body":"## New\n- ..."}]}]`. Every error names the ops and repeats this example.
+
 ### Per-edge primitives
 
 - `get_dependents` — given a `term` or `slug`, one row per edge: dependents, the asserter, instances, externals, each with `verifiedAt` and `staleAgainstSource`.

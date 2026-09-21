@@ -1,3 +1,5 @@
+import { patchOpsText } from "./patch-ops-doc";
+
 type Component = Record<string, unknown>;
 
 function toKebab(str: string): string {
@@ -340,7 +342,7 @@ export function applyPatchOperations(page: PageObject, operations: PatchOperatio
   for (const op of operations) {
     const items = resolveComponents(op);
     const needItems = () => {
-      if (items.length === 0) throw new Error(`"${op.op}" requires components or value, but none were provided`);
+      if (items.length === 0) throw new Error(`"${op.op}" requires components (an array of full component objects), but none were provided.\n${patchOpsText()}`);
     };
     const target = () => {
       if (!op.id) throw notFound(undefined, op.op, result.components);
@@ -383,14 +385,14 @@ export function applyPatchOperations(page: PageObject, operations: PatchOperatio
         break;
       }
       case "set_field": {
-        if (!op.field) throw new Error("set_field requires a field name");
+        if (!op.field) throw new Error(`set_field requires "field" (title, subtitle, eyebrow, shell) and "value".\n${patchOpsText()}`);
         const allowed = ["title", "subtitle", "eyebrow", "shell"];
         if (!allowed.includes(op.field)) throw new Error(`set_field: "${op.field}" is not an allowed field (${allowed.join(", ")})`);
         result[op.field] = op.value;
         break;
       }
       default:
-        throw new Error(`Unknown op: "${(op as PatchOperation).op}"`);
+        throw new Error(`Unknown op: "${(op as PatchOperation).op}".\n${patchOpsText()}`);
     }
   }
 

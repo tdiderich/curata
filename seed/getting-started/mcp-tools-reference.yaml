@@ -23,7 +23,7 @@ components:
           - **get_dependents** - per-edge view for one concept or page: dependents, asserter, instances, externals, each with `verifiedAt` and `staleAgainstSource`
           - **mark_verified** - "looked at it": `slug` or `url` plus `term`, `status` holds, needs_change, or unreachable (could not access it this session), `note` for what you found. No new version. Write responses carry `trust` (mode, trustedBehind, hint) so you know when a locked page still shows readers the old version
           - **get_semantic_map** / **get_vocabulary** - the org's concept graph and tag vocabulary
-          - **get_versions** - a page's version history
+          - **get_versions** / **read_version** - a page's version history; read one version's content, or the line diff between two (`version_id=latest compare_to=previous` answers "what changed")
           - **get_config** / **get_component_reference** - org settings and the component catalog
           - **list_templates** / **list_workflows** / **list_rules** - available templates, skill pages, and the write rules in force
 
@@ -56,7 +56,7 @@ components:
 
           - **create_page** - new page, fails if the slug exists (search for duplicates first)
           - **write_page** - create or update by slug (upsert)
-          - **patch_page** - targeted component operations without rewriting the full YAML
+          - **patch_page** - targeted component operations without rewriting the full YAML. `expected_hash` from read_page, `operations` a JSON array: `replace` / `insert_before` / `insert_after` (id, components), `remove` (id), `prepend` / `append` (components), `set_field` (field: title|subtitle|eyebrow|shell, value). `components` are full component objects. Example: `[{"op":"replace","id":"markdown-0","components":[{"type":"markdown","id":"markdown-0","body":"..."}]}]`
           - **replace_in_page** - simple find and replace inside a page
           - **restore_page_version** - roll a page back to a previous version
           - **create_from_template** - instantiate a template page

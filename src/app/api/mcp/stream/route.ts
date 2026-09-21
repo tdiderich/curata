@@ -32,6 +32,8 @@ import {
 import { getChart, getChartNode, getNeedsLook, promotePageToNode, setChartNode } from "@/lib/chart";
 import { addScopeItem, getAuditList, getPageSuggestions, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
 import { backfillScan } from "@/lib/scan";
+import { readVersion } from "@/lib/versions";
+import { patchOpsText } from "@/lib/patch-ops-doc";
 import { ensureComponentIds, buildOutline, formatOutline } from "@/lib/component-ids";
 import { dispatch } from "@/lib/mcp-dispatch";
 import { toolDescription } from "@/lib/mcp-guidance";
@@ -238,7 +240,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     },
     viaDispatch("write_component"));
 
-  server.tool("patch_page", toolDescription("patch_page", "Apply targeted operations to a page without rewriting full YAML"),
+  server.tool("patch_page", toolDescription("patch_page", "Apply targeted operations to a page without rewriting full YAML.\n" + patchOpsText()),
     {
       slug: z.string().describe("Page slug"),
       expected_hash: z.string().optional().describe("Content hash from last read_page — rejects if page was modified. Required when operations are given."),
@@ -600,7 +602,15 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     {},
     viaDispatch("get_review_queue"));
 
-  server.tool("get_versions", "List version history for a page",
+  server.tool("read_version", "Read one past version of a page, the way the versions UI does: its full content plus who wrote it and when. With compare_to, also the line diff from that version to this one (added and removed lines), which is how you answer \"what changed in the source\" on the content map instead of inferring it from two hashes. version_id accepts an id from get_versions, or \"latest\" / \"previous\".",
+    { slug: z.string(), version_id: z.string().describe('Version id, or "latest" / "previous"'), compare_to: z.string().optional().describe('Another version id, or "latest" / "previous", to diff against') },
+    async ({ slug, version_id, compare_to }) => {
+      validateSlug(slug);
+      const result = await readVersion(orgId, slug, version_id, compare_to);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("get_versions", "List version history for a page. read_version reads one, or the diff between two.",
     { slug: z.string(), limit: z.string().optional().describe("Max versions to return (default 10, max 50)") },
     viaDispatch("get_versions"));
 
