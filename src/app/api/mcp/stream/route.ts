@@ -30,6 +30,7 @@ import {
   CONCEPT_RELS,
 } from "@/lib/concepts";
 import { getProject, listProjects, previewTemplate } from "@/lib/projects";
+import { getChart, getChartNode, getNeedsLook, setChartNode } from "@/lib/chart";
 import { ensureComponentIds, buildOutline, formatOutline } from "@/lib/component-ids";
 import { dispatch } from "@/lib/mcp-dispatch";
 import { toolDescription } from "@/lib/mcp-guidance";
@@ -471,6 +472,31 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     async ({ slug, term, rel }) => {
       if (!slug && !term) throw new Error("slug or term is required");
       const result = await getDependents(orgId, { slug, term, rel });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("get_chart", "The org chart for content. Without term: every node (a template, a component page, a source page, or anything promoted) ranked pinned-first then by fan-out, each with one color: green (children checked since the source last moved), yellow (source moved since last check, or never checked, or a mismatch note), red (yellow plus past due, or the source moved twice with no check). Node color is the worst child. With term: that node with every child under it, each child carrying its own color, reason, lastCheckedAt, owner, dueAt, alsoUnder (other nodes the same page or asset sits beneath) and, for externals, the check recipe when one exists. Nobody draws this; templates, ref blocks, asserts/depends tags and external scope build it.",
+    { term: z.string().optional().describe("Node term to expand. Omit for the whole chart"), include_hidden: z.boolean().optional().describe("Whole-chart mode: include nodes someone hid") },
+    async ({ term, include_hidden }) => {
+      const result = term ? await getChartNode(orgId, term) : await getChart(orgId, { includeHidden: include_hidden });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("get_needs_look", "The chart as a list: every yellow and red child, grouped by the node whose source moved. This is the review queue for drift. Clear a page child by rewriting the page or calling mark_verified; clear an external child by running its check recipe (get_chart term=... shows it) and calling mark_verified with url.",
+    {},
+    async () => {
+      const result = await getNeedsLook(orgId);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    });
+
+  server.tool("set_chart_node", "Pin a node to the top row, hide one that is noise (a shared footer with 200 embeds), or promote a concept with fewer than 3 children so it shows on the chart anyway.",
+    { term: z.string().describe("Concept term"), pinned: z.boolean().optional(), hidden: z.boolean().optional(), promoted: z.boolean().optional() },
+    async ({ term, pinned, hidden, promoted }) => {
+      const patch: { pinned?: boolean; hidden?: boolean; promoted?: boolean } = {};
+      if (pinned !== undefined) patch.pinned = pinned;
+      if (hidden !== undefined) patch.hidden = hidden;
+      if (promoted !== undefined) patch.promoted = promoted;
+      const result = await setChartNode(orgId, term, patch);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 

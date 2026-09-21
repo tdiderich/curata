@@ -69,6 +69,7 @@ import {
   removeProjectItem,
   deleteProject,
 } from "@/lib/projects";
+import { getChart, getChartNode, getNeedsLook, setChartNode } from "@/lib/chart";
 import { ensureComponentIds, applyPatchOperations, buildOutline, formatOutline, locateComponent } from "@/lib/component-ids";
 import { createHash } from "crypto";
 import type { PatchOperation } from "@/lib/component-ids";
@@ -106,6 +107,8 @@ export const READ_TOOLS = [
   "get_vocabulary",
   "get_related",
   "get_dependents",
+  "get_chart",
+  "get_needs_look",
   "get_project",
   "list_projects",
   "preview_template",
@@ -117,7 +120,7 @@ export const READ_TOOLS = [
   "capture_thread",
   "read_component",
 ];
-export const WRITE_TOOLS = ["map_dependencies", "mark_verified", "create_project", "add_project_item", "update_project_item", "remove_project_item", "delete_project", "write_page", "create_page", "write_component", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted", "generate_digest"];
+export const WRITE_TOOLS = ["map_dependencies", "mark_verified", "set_chart_node", "create_project", "add_project_item", "update_project_item", "remove_project_item", "delete_project", "write_page", "create_page", "write_component", "move_page", "annotate_page", "update_annotation", "patch_page", "create_folder", "update_folder", "create_from_template", "flag_page", "set_rules", "create_group", "update_group", "delete_group", "add_group_member", "remove_group_member", "mark_trusted", "clear_trusted", "generate_digest"];
 export const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 /**
@@ -216,6 +219,9 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_vocabulary: { known: new Set(["kind", "query"]) },
   get_related: { known: new Set(["slug", "term"]) },
   get_dependents: { known: new Set(["slug", "term", "rel"]) },
+  get_chart: { known: new Set(["term", "include_hidden"]) },
+  get_needs_look: { known: new Set([]) },
+  set_chart_node: { known: new Set(["term", "pinned", "hidden", "promoted"]) },
   map_dependencies: { known: new Set(["term", "kind", "asserts", "depends", "references", "external", "includes", "removeIncludes"]) },
   create_project: { known: new Set(["term", "title", "template_term", "template_terms", "source"]) },
   preview_template: { known: new Set(["term"]) },
@@ -1743,6 +1749,25 @@ export async function dispatch(
       const verified = await verifyDependent(orgId, { slug: args.slug || undefined, url: args.url || undefined, term: args.term || undefined, context: args.context || undefined, note: args.note || undefined, status: (args.status as VerifyStatus) || undefined });
       logAudit({ orgId, action: "page.verify", resourceType: verified.kind, resourceId: verified.id, actorType: "apikey", actorId, metadata: { context: verified.context } });
       return { ok: true, ...verified };
+    }
+
+    case "get_chart": {
+      if (args.term) return getChartNode(orgId, args.term);
+      return getChart(orgId, { includeHidden: args.include_hidden === "true" });
+    }
+
+    case "get_needs_look": {
+      return getNeedsLook(orgId);
+    }
+
+    case "set_chart_node": {
+      if (!args.term) throw new Error("term is required");
+      const patch: { pinned?: boolean; hidden?: boolean; promoted?: boolean } = {};
+      for (const k of ["pinned", "hidden", "promoted"] as const) {
+        if (args[k] !== undefined) patch[k] = args[k] === "true";
+      }
+      if (Object.keys(patch).length === 0) throw new Error("give at least one of pinned, hidden, promoted");
+      return setChartNode(orgId, args.term, patch);
     }
 
     case "get_dependents": {

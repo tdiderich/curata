@@ -43,6 +43,8 @@ const STOCK_ACTIONS = [
   { id: "create-report", title: "Create Report", summary: "Generate a report from brain content", route: null },
   { id: "cleanup", title: "Cleanup", summary: "Review stale pages, resolve flags, fix drift", route: "/cleanup" },
   { id: "new-map", title: "New map", summary: "A change is coming: pick what has to be looked at", route: "/map/new" },
+  { id: "chart", title: "Content chart", summary: "Templates, components and sources with what sits under them, colored by drift", route: "/chart" },
+  { id: "needs-look", title: "Needs a look", summary: "Everything yellow or red, grouped by what changed", route: "/chart?view=list" },
   { id: "map", title: "Map", summary: "What depends on what, and what still needs a look", route: "/map" },
   { id: "new-project", title: "New project", summary: "Clone a map into work you're actually going to track to done", route: "/projects/new" },
   { id: "projects", title: "Projects", summary: "Runs in progress: owners, due dates, done", route: "/projects" },

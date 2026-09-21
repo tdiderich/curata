@@ -274,6 +274,7 @@ model Concept {
   includesAsParent ConceptInclude[] @relation("IncludeParent")
   includesAsChild  ConceptInclude[] @relation("IncludeChild")
   verificationContexts ConceptVerificationContext[]
+  chartSettings    ChartNodeSetting[]
 
   @@index([orgId, isRecommended])
   @@map("concepts")
@@ -368,6 +369,8 @@ model ExternalAsset {
   url       String
   label     String
   owner     String?
+  /// How an agent can check this asset: { via: "<mcp server>", tool, locator, ask }. Suggested by domain, confirmed by a human.
+  check     Json?
   createdBy String   @map("created_by")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -408,6 +411,8 @@ model ExternalEdge {
   verifiedAt   DateTime? @map("verified_at")
   verifiedNote String?   @map("verified_note")
   needsChange  Boolean   @default(false) @map("needs_change")
+  /// When a human wants this looked at by. Past due while stale turns the row red on the chart.
+  dueAt        DateTime? @map("due_at")
   createdBy    String    @map("created_by")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
@@ -419,6 +424,24 @@ model ExternalEdge {
   @@unique([assetId, conceptId])
   @@index([conceptId])
   @@map("external_edges")
+}
+
+// Per-org chart overrides for a concept. Concepts are global, so pin/hide/
+// promote live here. A node with fan-out under the threshold shows on the
+// chart only when promoted; a hidden node is kept out of the top row.
+model ChartNodeSetting {
+  id        String   @id @default(cuid())
+  orgId     String   @map("org_id")
+  conceptId String   @map("concept_id")
+  pinned    Boolean  @default(false)
+  hidden    Boolean  @default(false)
+  promoted  Boolean  @default(false)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  concept Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, conceptId])
+  @@map("chart_node_settings")
 }
 
 // A project is a run of a map you're actually executing: cloned from a
