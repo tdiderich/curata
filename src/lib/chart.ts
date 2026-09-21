@@ -291,7 +291,9 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
       children,
     });
   }
-  out.sort((a, b) => b.fanOut - a.fanOut || a.term.localeCompare(b.term));
+  // Attention first: red, then yellow, then green; ties by how much sits under the node.
+  const rank: Record<ChartColor, number> = { red: 0, yellow: 1, green: 2 };
+  out.sort((a, b) => rank[a.color] - rank[b.color] || b.fanOut - a.fanOut || a.term.localeCompare(b.term));
   return out;
 }
 

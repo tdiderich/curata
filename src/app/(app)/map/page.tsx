@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { getChart, getChartNode, getNeedsLook } from "@/lib/chart";
-import { ChartView } from "@/components/chart-view";
+import { ChartCopyAll, ChartView } from "@/components/chart-view";
 import { ChartList } from "@/components/chart-list";
 import { can } from "@/lib/permissions";
 
@@ -36,13 +36,10 @@ export default async function ChartPage({ searchParams }: { searchParams: Promis
                 <Link href="/map" className={`cmap-view${list ? "" : " cmap-view--on"}`}>Map</Link>
                 <Link href="/map?view=list" className={`cmap-view${list ? " cmap-view--on" : ""}`}>List</Link>
               </nav>
+              {!list && can(ctx.role, "page:edit") && <ChartCopyAll columns={columns} />}
               {can(ctx.role, "page:edit") && <Link href="/map/new" className="btn btn--primary">+ Add top level content item</Link>}
             </div>
-            <p className="cmap-summary">
-              {list
-                ? "Pages that have potentially drifted from their source. Review manually or generate a prompt for your agent to take a pass."
-                : "Your pages, templates and links, arranged by what depends on what. When something at the top changes, everything below it needs a look until someone checks it."}
-            </p>
+            {list && <p className="cmap-summary">Pages that have potentially drifted from their source. Review manually or generate a prompt for your agent to take a pass.</p>}
           </header>
           {list ? <ChartList nodes={needs} canEdit={can(ctx.role, "page:edit")} /> : <ChartView chart={chart} columns={columns} />}
         </div>

@@ -4,6 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Chart, ChartNode, ChartNodeDetail } from "@/lib/chart";
 import { ChartLeaves } from "@/components/chart-leaves";
+import { buildMapPrompt } from "@/lib/chart-prompt";
+import { basePath } from "@/lib/api-fetch";
+import { toast } from "@/components/toast";
 
 export function chartHref(term: string): string {
   return `/map/${term.split("/").map(encodeURIComponent).join("/")}`;
@@ -37,6 +40,8 @@ export function NodeCard({ node }: { node: ChartNode }) {
  */
 export function ChartView({ chart, columns }: { chart: Chart; columns: ChartNodeDetail[] }) {
   const [open, setOpen] = useState<string | null>(null);
+  // The open card leads; everything else keeps the map's attention-first order.
+  const ordered = open ? [...columns.filter((n) => n.term === open), ...columns.filter((n) => n.term !== open)] : columns;
   if (chart.nodes.length === 0) {
     return (
       <div className="cmap-col-empty chart-empty">
@@ -46,7 +51,7 @@ export function ChartView({ chart, columns }: { chart: Chart; columns: ChartNode
   }
   return (
     <div className="chart-grid">
-      {columns.map((n) => {
+      {ordered.map((n) => {
         const isOpen = open === n.term;
         return (
           <div key={n.term} className={`chart-card chart-node chart-node--${n.color}${isOpen ? " chart-card--open" : ""}`}>
@@ -82,4 +87,19 @@ export function ChartView({ chart, columns }: { chart: Chart; columns: ChartNode
       })}
     </div>
   );
+}
+
+/** Title-row button: one brief for everything yellow or red across every node. Hidden when nothing needs attention. */
+export function ChartCopyAll({ columns }: { columns: ChartNodeDetail[] }) {
+  const attention = columns.map((n) => ({ ...n, items: n.children.filter((c) => c.color !== "green") })).filter((n) => n.items.length > 0);
+  const count = attention.reduce((sum, n) => sum + n.items.length, 0);
+  if (count === 0) return null;
+  async function copyAll() {
+    const baseUrl = `${window.location.origin}${basePath}`;
+    try {
+      await navigator.clipboard.writeText(buildMapPrompt(attention, baseUrl));
+      toast.success(`Prompt for ${count} item${count === 1 ? "" : "s"} across ${attention.length} node${attention.length === 1 ? "" : "s"} on your clipboard.`);
+    } catch { toast.error("Couldn't copy to the clipboard."); }
+  }
+  return <button type="button" className="btn btn--ghost" onClick={() => void copyAll()} title={`${count} item${count === 1 ? "" : "s"} across ${attention.length} node${attention.length === 1 ? "" : "s"}`}>Copy prompt for all {count}</button>;
 }
