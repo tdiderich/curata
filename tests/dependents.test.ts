@@ -207,12 +207,12 @@ describe("getDependents", () => {
     expect(r.asserters).toHaveLength(1);
   });
 
-  it("returns empty for unknown term or slug", async () => {
+  it("errors on unknown term or slug instead of a silent empty graph", async () => {
     const src = await createTestPage(orgId, { slug: "near-src" });
     await upsertConcepts(src.id, [{ term: T("pricing/tier-2"), rel: "asserts" }], "agent");
     await expect(getDependents(orgId, { term: T("tier-2-pricing") })).rejects.toThrow(/concept not found: dep-tier-2-pricing\. Did you mean: .*dep-pricing\/tier-2/);
     await expect(getDependents(orgId, { term: "zzz-nothing-like-this" })).rejects.toThrow(/get_vocabulary lists every concept/);
-    expect((await getDependents(orgId, { slug: "no-such-page" })).concepts).toEqual([]);
+    await expect(getDependents(orgId, { slug: "no-such-page" })).rejects.toThrow(/page not found: no-such-page/);
   });
 });
 

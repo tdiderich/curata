@@ -9,9 +9,10 @@ import { findConceptForTerm, normalizeTerm } from "./concepts";
  *
  *   green   source unchanged since last check, or checked after it moved,
  *           or nothing to drift against
- *   yellow  source moved since last check (or never checked), or someone
- *           left a mismatch note
- *   red     yellow, plus past due or the source moved twice with no check
+ *   yellow  source moved since last check, or never checked
+ *   red     someone looked and it's wrong (mismatch note), or yellow plus
+ *           past due, or the source moved twice since the last check (or
+ *           since the edge was added, when it was never checked)
  *
  * Node color is the worst child. Nobody draws this; the write path did.
  */
@@ -120,6 +121,7 @@ async function resolveSources(orgId: string, concepts: Array<{ id: string; norma
 
 function colorFor(
   verifiedAt: Date | null,
+  edgeCreatedAt: Date,
   needsChange: boolean,
   note: string | null,
   dueAt: Date | null,
@@ -127,14 +129,13 @@ function colorFor(
   sourceVersionTimes: Date[],
   now: Date
 ): { color: ChartColor; reason: string | null } {
-  if (needsChange) {
-    const red = dueAt !== null && dueAt < now;
-    return { color: red ? "red" : "yellow", reason: note ? `mismatch: ${note}` : "mismatch found" };
-  }
+  // Someone looked and it's wrong. That outranks "nobody looked".
+  if (needsChange) return { color: "red", reason: note ? `mismatch: ${note}` : "mismatch found" };
   if (!source) return { color: "green", reason: null };
   const stale = !verifiedAt || verifiedAt < source.updatedAt;
   if (!stale) return { color: "green", reason: null };
-  const since = verifiedAt ?? new Date(0);
+  // A never-checked edge only counts source moves it lived through.
+  const since = verifiedAt ?? edgeCreatedAt;
   const moves = sourceVersionTimes.filter((t) => t > since).length;
   if (dueAt !== null && dueAt < now) return { color: "red", reason: "past due" };
   if (moves >= 2) return { color: "red", reason: `source moved ${moves} times, no check` };
@@ -150,7 +151,7 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
     db.pageConcept.findMany({
       where: { ...conceptFilter, rel: { in: [...CHILD_RELS] }, page: { orgId, status: { not: "archived" } } },
       select: {
-        id: true, conceptId: true, rel: true, verifiedAt: true, verifiedNote: true, needsChange: true,
+        id: true, conceptId: true, rel: true, verifiedAt: true, verifiedNote: true, needsChange: true, createdAt: true,
         page: { select: { id: true, slug: true, title: true } },
         concept: { select: { id: true, normalizedName: true, displayName: true, kind: true } },
       },
@@ -158,7 +159,7 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
     db.externalEdge.findMany({
       where: { ...conceptFilter, asset: { orgId } },
       select: {
-        id: true, conceptId: true, rel: true, verifiedAt: true, verifiedNote: true, needsChange: true, dueAt: true,
+        id: true, conceptId: true, rel: true, verifiedAt: true, verifiedNote: true, needsChange: true, dueAt: true, createdAt: true,
         asset: { select: { id: true, url: true, label: true, owner: true, check: true } },
         concept: { select: { id: true, normalizedName: true, displayName: true, kind: true } },
       },
@@ -234,7 +235,7 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
     for (const e of pageEdges) {
       if (e.conceptId !== id) continue;
       if (source && e.page.id === source.pageId) continue;
-      const { color, reason } = colorFor(e.verifiedAt, e.needsChange, e.verifiedNote, null, source, times, now);
+      const { color, reason } = colorFor(e.verifiedAt, e.createdAt, e.needsChange, e.verifiedNote, null, source, times, now);
       children.push({
         kind: "page", edgeId: e.id, label: e.page.title, slug: e.page.slug, url: null, host: null, rel: e.rel, color, reason,
         lastCheckedAt: e.verifiedAt?.toISOString() ?? null, note: e.verifiedNote, owner: null, dueAt: null,
@@ -243,7 +244,7 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
     }
     for (const e of extEdges) {
       if (e.conceptId !== id) continue;
-      const { color, reason } = colorFor(e.verifiedAt, e.needsChange, e.verifiedNote, e.dueAt, source, times, now);
+      const { color, reason } = colorFor(e.verifiedAt, e.createdAt, e.needsChange, e.verifiedNote, e.dueAt, source, times, now);
       children.push({
         kind: "external", edgeId: e.id, label: e.asset.label, slug: null, url: e.asset.url, host: hostOf(e.asset.url), rel: e.rel, color, reason,
         lastCheckedAt: e.verifiedAt?.toISOString() ?? null, note: e.verifiedNote, owner: e.asset.owner, dueAt: e.dueAt?.toISOString() ?? null,
@@ -349,5 +350,5 @@ export async function getPageImpact(orgId: string, slug: string): Promise<PageIm
   if (pages + external === 0) return empty;
   const parts = [pages ? `${pages} page${pages === 1 ? "" : "s"}` : null, external ? `${external} external` : null].filter(Boolean).join(" and ");
   const where = nodes.length === 1 ? nodes[0].term : `${nodes.length} nodes`;
-  return { nodes, pages, external, text: `${parts} under ${where} ${pages + external === 1 ? "is" : "are"} yellow now. Agents can clear the pages; someone owns each external.` };
+  return { nodes, pages, external, text: `${parts} under ${where} need${pages + external === 1 ? "s" : ""} a look now. Agents can clear the pages; someone owns each external.` };
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { addScopeItem, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
+import { addScopeItem, getPageSuggestions, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
 
 function fail(err: unknown) {
   const msg = err instanceof Error ? err.message : String(err);
@@ -14,7 +14,10 @@ export async function GET(request: NextRequest) {
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const term = request.nextUrl.searchParams.get("term");
   if (!term) return NextResponse.json({ error: "term required" }, { status: 400 });
-  try { return NextResponse.json(await getScopeSuggestions(ctx.orgId, term)); } catch (err) { return fail(err); }
+  try {
+    if (request.nextUrl.searchParams.get("kind") === "pages") return NextResponse.json(await getPageSuggestions(ctx.orgId, term));
+    return NextResponse.json(await getScopeSuggestions(ctx.orgId, term));
+  } catch (err) { return fail(err); }
 }
 
 async function gate(): Promise<{ res: NextResponse; ctx?: undefined } | { res?: undefined; ctx: { orgId: string; userId: string } }> {

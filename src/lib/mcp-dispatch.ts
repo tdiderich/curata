@@ -60,7 +60,7 @@ import {
 } from "@/lib/concepts";
 import type { ConceptInput, ConceptRel, ExternalDependentInput, LinkInput, VerifyStatus } from "@/lib/concepts";
 import { getChart, getChartNode, getNeedsLook, getPageImpact, setChartNode } from "@/lib/chart";
-import { addScopeItem, getAuditList, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
+import { addScopeItem, getAuditList, getPageSuggestions, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
 import { backfillScan } from "@/lib/scan";
 import { ensureComponentIds, applyPatchOperations, buildOutline, formatOutline, locateComponent } from "@/lib/component-ids";
 import { createHash } from "crypto";
@@ -1745,7 +1745,8 @@ export async function dispatch(
     case "get_chart": {
       if (args.term) {
         const node = await getChartNode(orgId, args.term);
-        return { ...node, suggestions: await getScopeSuggestions(orgId, args.term) };
+        const [suggestions, pageSuggestions] = await Promise.all([getScopeSuggestions(orgId, args.term), getPageSuggestions(orgId, args.term)]);
+        return { ...node, suggestions, pageSuggestions };
       }
       return getChart(orgId, { includeHidden: args.include_hidden === "true" });
     }

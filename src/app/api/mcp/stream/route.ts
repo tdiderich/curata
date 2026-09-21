@@ -30,7 +30,7 @@ import {
   CONCEPT_RELS,
 } from "@/lib/concepts";
 import { getChart, getChartNode, getNeedsLook, setChartNode } from "@/lib/chart";
-import { addScopeItem, getAuditList, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
+import { addScopeItem, getAuditList, getPageSuggestions, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
 import { backfillScan } from "@/lib/scan";
 import { ensureComponentIds, buildOutline, formatOutline } from "@/lib/component-ids";
 import { dispatch } from "@/lib/mcp-dispatch";
@@ -473,11 +473,11 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
-  server.tool("get_chart", "The org chart for content. Without term: every node (a template, a component page, a source page, or anything promoted) ranked pinned-first then by fan-out, each with one color: green (children checked since the source last moved), yellow (source moved since last check, or never checked, or a mismatch note), red (yellow plus past due, or the source moved twice with no check). Node color is the worst child. With term: that node with every child under it, each child carrying its own color, reason, lastCheckedAt, owner, dueAt, alsoUnder (other nodes the same page or asset sits beneath) and, for externals, the check recipe when one exists. Nobody draws this; templates, ref blocks, asserts/depends tags and external scope build it.",
+  server.tool("get_chart", "The org chart for content. Without term: every node (a template, a component page, a source page, or anything promoted) ranked pinned-first then by fan-out, each with one color: green (children checked since the source last moved), yellow (source moved since last check, or never checked), red (mismatch found via needs_change, or yellow plus past due, or the source moved twice since the last check). Node color is the worst child. With term: that node with every child under it, each child carrying its own color, reason, lastCheckedAt, owner, dueAt, alsoUnder (other nodes the same page or asset sits beneath) and, for externals, the check recipe when one exists; plus suggestions (external URLs in the source or a child that are not under it yet) and pageSuggestions (pages whose body mentions the node by name but are not under it: read them, then add_to_chart slug= if they depend on it). Nobody draws this; templates, ref blocks, asserts/depends tags and external scope build it.",
     { term: z.string().optional().describe("Node term to expand. Omit for the whole chart"), include_hidden: z.boolean().optional().describe("Whole-chart mode: include nodes someone hid") },
     async ({ term, include_hidden }) => {
       const result = term
-        ? { ...(await getChartNode(orgId, term)), suggestions: await getScopeSuggestions(orgId, term) }
+        ? { ...(await getChartNode(orgId, term)), suggestions: await getScopeSuggestions(orgId, term), pageSuggestions: await getPageSuggestions(orgId, term) }
         : await getChart(orgId, { includeHidden: include_hidden });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
@@ -518,7 +518,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
-  server.tool("set_scope_item", "Update an external asset's owner, label or check recipe (shared across every node it sits under), and its due date (per node when term is given, else every edge). check: null clears the recipe.",
+  server.tool("set_scope_item", "Update an external asset's owner, label or check recipe (shared across every node it sits under), and its due date (per node when term is given, else every edge). check: null clears the recipe. Not needed right after add_to_chart, which takes the same fields.",
     {
       url: z.string(),
       term: z.string().optional().describe("Scope due_at to this node's edge"),

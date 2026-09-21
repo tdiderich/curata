@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { basePath } from "@/lib/api-fetch";
 import type { ChartChild } from "@/lib/chart";
-import type { CheckRecipe, ScopeSuggestion } from "@/lib/scope";
+import type { CheckRecipe, PageSuggestion, ScopeSuggestion } from "@/lib/scope";
 
 async function call(method: string, path: string, body?: unknown) {
   const res = await fetch(`${basePath}${path}`, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
@@ -23,6 +23,7 @@ async function call(method: string, path: string, body?: unknown) {
 export function ScopePanel({ term }: { term: string }) {
   const router = useRouter();
   const [suggestions, setSuggestions] = useState<ScopeSuggestion[] | null>(null);
+  const [pageSugs, setPageSugs] = useState<PageSuggestion[]>([]);
   const [manual, setManual] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +31,7 @@ export function ScopePanel({ term }: { term: string }) {
   useEffect(() => {
     void (async () => {
       try { setSuggestions(await call("GET", `/api/chart/scope?term=${encodeURIComponent(term)}`)); } catch { setSuggestions([]); }
+      try { setPageSugs(await call("GET", `/api/chart/scope?term=${encodeURIComponent(term)}&kind=pages`)); } catch { setPageSugs([]); }
     })();
   }, [term]);
 
@@ -40,6 +42,7 @@ export function ScopePanel({ term }: { term: string }) {
     try {
       await call("POST", "/api/chart/scope", { term, ...input });
       setSuggestions((s) => (s ?? []).filter((x) => x.url !== input.url));
+      if (input.slug) setPageSugs((s) => s.filter((x) => x.slug !== input.slug));
       setManual("");
       router.refresh();
     } catch (err) {
@@ -67,7 +70,21 @@ export function ScopePanel({ term }: { term: string }) {
       <div className="scope-panel-title">Add report</div>
       <p className="scope-panel-hint">Things curata found that might belong under this node. One click adds it. Detected reports never need this.</p>
       {suggestions === null && <div className="scope-empty">Looking…</div>}
-      {suggestions && suggestions.length === 0 && <div className="scope-empty">Nothing to suggest. Paste a URL or a page slug below.</div>}
+      {suggestions && suggestions.length === 0 && pageSugs.length === 0 && <div className="scope-empty">Nothing to suggest. Paste a URL or a page slug below.</div>}
+      {pageSugs.length > 0 && (
+        <div className="scope-group">
+          <div className="scope-group-label">Pages that mention it, not under it</div>
+          {pageSugs.map((s) => (
+            <div key={s.slug} className="scope-sug">
+              <div className="scope-sug-main">
+                <span className="scope-sug-label">{s.title}</span>
+                <span className="scope-sug-url">{s.slug} · mentions &ldquo;{s.matched}&rdquo;</span>
+              </div>
+              <button type="button" className="stg-qbtn" disabled={busy === s.slug} onClick={() => void add({ slug: s.slug })}>{busy === s.slug ? "…" : "Add"}</button>
+            </div>
+          ))}
+        </div>
+      )}
       {suggestions && groups.map(([why, label]) => {
         const rows = suggestions.filter((s) => s.why === why);
         if (rows.length === 0) return null;

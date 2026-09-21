@@ -1063,7 +1063,7 @@ export async function getDependents(
       where: { orgId_slug: { orgId, slug: opts.slug } },
       select: { id: true, slug: true, title: true },
     });
-    if (!page) return empty;
+    if (!page) throw new Error(`page not found: ${opts.slug}. list_pages or search_pages to find the slug.`);
 
     const own = await db.pageConcept.findMany({
       where: { pageId: page.id },

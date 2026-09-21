@@ -58,6 +58,13 @@ export function suggestCheck(url: string): CheckRecipe | null {
   return null;
 }
 
+export interface PageSuggestion {
+  slug: string;
+  title: string;
+  /** What in its body matched: the source page's title or the term's last segment. */
+  matched: string;
+}
+
 export interface ScopeSuggestion {
   url: string;
   label: string;
@@ -70,6 +77,34 @@ export interface ScopeSuggestion {
 
 function hostOf(url: string): string | null {
   try { return new URL(url).host.replace(/^www\./, ""); } catch { return null; }
+}
+
+/**
+ * Pages that mention this node by name but aren't under it. The chart can
+ * only see mapped pages; this is how it points at the unmapped ones. Match
+ * is a plain case-insensitive substring on the latest body for the source
+ * page's title, the term's last segment, and the term's namespace (pricing
+ * in pricing/tier-2), dashes turned to spaces. Noisy on purpose: a page
+ * that says "pricing" and isn't under the pricing node is worth a look.
+ */
+export async function getPageSuggestions(orgId: string, term: string): Promise<PageSuggestion[]> {
+  const node = await getChartNode(orgId, term);
+  const under = new Set(node.children.filter((c) => c.slug).map((c) => c.slug!));
+  if (node.source) under.add(node.source.slug);
+  const parts = normalizeTerm(term).split("/").map((s) => s.replace(/-/g, " ").trim());
+  const needles = [...new Set([node.source?.title ?? "", ...parts].map((s) => s.trim()).filter((s) => s.length >= 4))];
+  if (needles.length === 0) return [];
+  const pages = await db.page.findMany({
+    where: { orgId, status: { not: "archived" }, slug: { notIn: [...under] } },
+    select: { slug: true, title: true, versions: { orderBy: { createdAt: "desc" }, take: 1, select: { yamlContent: true } } },
+  });
+  const out: PageSuggestion[] = [];
+  for (const p of pages) {
+    const body = (p.versions[0]?.yamlContent ?? "").toLowerCase();
+    const hit = needles.find((n) => body.includes(n.toLowerCase()));
+    if (hit) out.push({ slug: p.slug, title: p.title, matched: hit });
+  }
+  return out;
 }
 
 /** External URLs that probably belong under this node but aren't declared yet. */
@@ -197,14 +232,21 @@ export async function updateScopeItem(orgId: string, input: UpdateScopeInput): P
   return { url: updated.url, owner: updated.owner, label: updated.label, check: (updated.check as CheckRecipe | null) ?? null, dueAt: edgeDue?.toISOString() ?? null };
 }
 
-export async function removeScopeItem(orgId: string, term: string, input: { slug?: string; url?: string }, createdBy: string): Promise<{ removed: true }> {
+export async function removeScopeItem(orgId: string, term: string, input: { slug?: string; url?: string }, createdBy: string): Promise<{ removed: boolean }> {
   if (!input.slug && !input.url) throw new Error("slug or url is required");
+  const concept = await findConceptForTerm(term, normalizeTerm(term));
+  if (!concept) throw new Error(`concept not found: ${normalizeTerm(term)}`);
   if (input.slug) {
     const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: input.slug } }, select: { id: true } });
     if (!page) throw new Error(`page not found: ${input.slug}`);
+    const had = await db.pageConcept.count({ where: { pageId: page.id, conceptId: concept.id } });
+    if (had === 0) return { removed: false };
     await upsertConcepts(page.id, [{ term, remove: true }], createdBy);
   } else {
-    await upsertExternalDependents(orgId, term, [{ url: input.url!, remove: true }], createdBy);
+    const url = normalizeExternalUrl(input.url!);
+    const had = await db.externalEdge.count({ where: { conceptId: concept.id, asset: { orgId, url } } });
+    if (had === 0) return { removed: false };
+    await upsertExternalDependents(orgId, term, [{ url, remove: true }], createdBy);
   }
   return { removed: true };
 }

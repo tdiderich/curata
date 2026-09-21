@@ -11,7 +11,7 @@ import { testDb } from "./setup";
 import { writePage } from "@/lib/pages";
 import { upsertConcepts, verifyDependent } from "@/lib/concepts";
 import { getChartNode } from "@/lib/chart";
-import { addScopeItem, getAuditList, getScopeSuggestions, parseCheckRecipe, removeScopeItem, suggestCheck, updateScopeItem } from "@/lib/scope";
+import { addScopeItem, getAuditList, getPageSuggestions, getScopeSuggestions, parseCheckRecipe, removeScopeItem, suggestCheck, updateScopeItem } from "@/lib/scope";
 
 describe("scope", () => {
   it("suggests URLs from the source body and children's bodies, adds one with a recipe, edits owner/due, audits, removes", async () => {
@@ -74,8 +74,16 @@ describe("scope", () => {
     const added = await addScopeItem(org.id, "scope/pricing", { slug: "extra-page" }, "tester");
     expect(added.kind).toBe("page");
     expect(added.color).toBe("yellow");
-    await removeScopeItem(org.id, "scope/pricing", { slug: "extra-page" }, "tester");
-    await removeScopeItem(org.id, "scope/pricing", { url: child.url! }, "tester");
+    expect(await removeScopeItem(org.id, "scope/pricing", { slug: "extra-page" }, "tester")).toEqual({ removed: true });
+    expect(await removeScopeItem(org.id, "scope/pricing", { slug: "extra-page" }, "tester")).toEqual({ removed: false });
+    expect(await removeScopeItem(org.id, "scope/pricing", { url: child.url! }, "tester")).toEqual({ removed: true });
+    expect(await removeScopeItem(org.id, "scope/pricing", { url: child.url! }, "tester")).toEqual({ removed: false });
+
+    // Pages that mention the node by name but aren't under it.
+    await writePage(org.id, org.slug, "unmapped-mention", `title: Enterprise policy\ncomponents:\n  - type: markdown\n    content: Our Pricing tiers differ from the public list.\n`, "tester");
+    const pageSugs = await getPageSuggestions(org.id, "scope/pricing");
+    expect(pageSugs.map((s) => s.slug)).toContain("unmapped-mention");
+    expect(pageSugs.some((s) => s.slug === "dep-a")).toBe(false);
     node = await getChartNode(org.id, "scope/pricing");
     expect(node.children.some((c) => c.slug === "extra-page" || c.url === child.url)).toBe(false);
     expect(extra.id).toBeTruthy();

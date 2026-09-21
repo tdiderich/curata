@@ -41,6 +41,7 @@ describe("chart", () => {
     expect(node.fanOut).toBe(4);
     expect(node.source?.slug).toBe("pricing");
     // Fresh page edges are verified on tag; the external was attached, not checked, so it's yellow.
+    // A never-checked edge only counts source moves after it was added, so it is yellow, never born red.
     expect(node.counts).toEqual({ green: 3, yellow: 1, red: 0 });
     expect(node.color).toBe("yellow");
 
@@ -71,6 +72,12 @@ describe("chart", () => {
     expect(ext.color).toBe("red");
     expect(ext.reason).toBe("past due");
     expect(detail.color).toBe("red");
+
+    // needs_change outranks "nobody looked": mismatch is red even with no due date and one move.
+    await verifyDependent(org.id, { slug: "battle-card", term: "chart/pricing", status: "needs_change", note: "still says $12" });
+    detail = await getChartNode(org.id, "chart/pricing");
+    expect(detail.children.find((c) => c.slug === "battle-card")?.color).toBe("red");
+    expect(detail.children.find((c) => c.slug === "battle-card")?.reason).toBe("mismatch: still says $12");
 
     // Needs-look list is the same rows, greens dropped, grouped by node.
     const list = await getNeedsLook(org.id);
@@ -128,7 +135,7 @@ describe("page impact", () => {
     await upsertExternalDependents(org.id, "impact/x", [{ url: "https://hubspot.com/x" }], "tester");
     const impact = await getPageImpact(org.id, "impact-src");
     expect(impact.nodes).toEqual([{ term: "impact/x", pages: 2, external: 1 }]);
-    expect(impact.text).toBe("2 pages and 1 external under impact/x are yellow now. Agents can clear the pages; someone owns each external.");
+    expect(impact.text).toBe("2 pages and 1 external under impact/x need a look now. Agents can clear the pages; someone owns each external.");
     expect((await getPageImpact(org.id, "i1")).text).toBeNull();
   });
 });
