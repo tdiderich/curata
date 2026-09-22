@@ -7,7 +7,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 import { testDb } from "./setup";
-import { getChart, getChartNode, getNeedsLook, setChartNode, NODE_FANOUT_THRESHOLD } from "@/lib/chart";
+import { getChart, getChartNode, getNeedsLook, setChartNode, NODE_FANOUT_THRESHOLD, statusFromYaml, groupFor } from "@/lib/chart";
 import { upsertConcepts, upsertExternalDependents, verifyDependent } from "@/lib/concepts";
 
 async function bumpSource(pageId: string, times = 1) {
@@ -261,5 +261,31 @@ describe("per-node instructions", () => {
     node = await setChartNode(org.id, "instr/launch", { instructions: "" });
     expect(node.instructions).toBeNull();
     expect(node.promoted).toBe(true);
+  });
+});
+
+describe("node groups from the source page's Status", () => {
+  it("reads the meta Status field, maps finished words to completed, no status to watching", () => {
+    const y = "title: L\ncomponents:\n  - id: m\n    type: meta\n    fields:\n      - key: Owner\n        value: T\n      - key: status\n        value: In progress\n";
+    expect(statusFromYaml(y)).toBe("In progress");
+    expect(groupFor("In progress")).toBe("active");
+    expect(groupFor("Planned")).toBe("active");
+    expect(groupFor("Shipped")).toBe("completed");
+    expect(groupFor("Done 2026-09")).toBe("completed");
+    expect(groupFor(null)).toBe("watching");
+    expect(statusFromYaml("title: X\ncomponents:\n  - id: a\n    type: markdown\n    body: hi\n")).toBeNull();
+    expect(statusFromYaml("not: [valid")).toBeNull();
+  });
+
+  it("puts a node whose source carries a Status on the active tab", async () => {
+    const { createTestOrg, createTestPage } = await import("./helpers");
+    const { upsertConcepts } = await import("@/lib/concepts");
+    const org = await createTestOrg({ name: "Grp Org", slug: "grp-org" });
+    const src = await createTestPage(org.id, { slug: "grp-launch", yamlContent: "title: L\ncomponents:\n  - id: m\n    type: meta\n    fields:\n      - key: Status\n        value: Planned\n" });
+    await upsertConcepts(src.id, [{ term: "grp/launch", rel: "asserts" }], "system");
+    await setChartNode(org.id, "grp/launch", { promoted: true });
+    const node = await getChartNode(org.id, "grp/launch");
+    expect(node.source?.status).toBe("Planned");
+    expect(node.group).toBe("active");
   });
 });

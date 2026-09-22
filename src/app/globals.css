@@ -10278,6 +10278,14 @@ body:has(.nav-reveal) .page-toolbar {
 .chart-card--open { grid-column: 1 / -1; }
 .chart-card-toggle { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 14px 16px; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: 0 0 10px 10px; }
 .chart-card-toggle:hover { background: rgba(var(--text-rgb), 0.03); }
+.cmap-tabs { display: flex; gap: 4px; border-bottom: 1px solid rgba(var(--text-rgb), 0.10); margin-top: 4px; }
+.cmap-tab { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; margin-bottom: -1px; border-bottom: 2px solid transparent; font-size: 13.5px; color: var(--light-muted); text-decoration: none; }
+.cmap-tab:hover { color: var(--snow); }
+.cmap-tab--on { color: var(--snow); border-bottom-color: rgb(var(--accent-rgb)); }
+.cmap-tab-count { font-size: 11.5px; color: var(--muted); }
+.cmap-tab-attn { font-size: 10.5px; font-weight: 600; padding: 0 6px; border-radius: 999px; background: rgba(var(--chart-yellow), 0.16); color: rgb(var(--chart-yellow)); }
+.chart-card-status--active { color: rgb(var(--chart-yellow)); }
+.chart-card-status--completed { color: rgb(var(--chart-green)); }
 .cmap-hidden-note { margin: 14px 0 0; font-size: 13px; color: var(--light-muted); } .cmap-hidden-note a { color: var(--snow); }
 .chart-card--hidden { opacity: .6; } .chart-card--hidden:hover { opacity: 1; }
 .chart-card-tag { align-self: center; flex: none; font-size: 11px; font-weight: 500; color: var(--light-muted); border: 1px solid rgba(var(--text-rgb), 0.18); border-radius: 4px; padding: 0 6px; margin-left: 8px; vertical-align: middle; }

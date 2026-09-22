@@ -62,12 +62,13 @@ export function ChartView({ chart, columns }: { chart: Chart; columns: ChartNode
               onClick={() => setOpen(isOpen ? null : n.term)}
             >
               <span className="chart-node-title">
-                {n.title}{n.hidden && <span className="chart-card-tag">hidden</span>}
+                {n.title}
+                {n.hidden && <span className="chart-card-tag">hidden</span>}
                 <span className="chart-card-chevron" aria-hidden>{isOpen ? "▾" : "▸"}</span>
               </span>
               <span className="chart-node-term">{n.term}</span>
               <span className="chart-node-foot">
-                <span className="chart-node-kind">{n.kind} · {n.fanOut} under</span>
+                <span className="chart-node-kind">{n.kind} · {n.fanOut} under{n.source?.status ? <> · <span className={`chart-card-status chart-card-status--${n.group}`}>{n.source.status}</span></> : null}</span>
                 <span className={`chart-node-summary chart-text--${n.color}`}>{summaryFor(n)}</span>
               </span>
             </button>

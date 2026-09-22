@@ -1,4 +1,5 @@
 import { db } from "./db";
+import yaml from "js-yaml";
 import { findConceptForTerm, normalizeTerm, UNREACHABLE_PREFIX } from "./concepts";
 
 /**
@@ -50,6 +51,44 @@ export interface ChartSource {
   title: string;
   updatedAt: string;
   updatedBy: string | null;
+  /** The source page's meta Status field, if it has one ("Planned", "Shipped"...). */
+  status: string | null;
+}
+
+/**
+ * Which tab a node lives on. A source page with a meta Status is a piece of
+ * work: active until the status reads finished, then completed. No status
+ * means a standing watch (templates, components, topics).
+ */
+export type ChartGroup = "active" | "watching" | "completed";
+export const CHART_GROUPS: ChartGroup[] = ["active", "watching", "completed"];
+const DONE_STATUS = /\b(shipped|done|complete|completed|closed|launched|released|archived)\b/i;
+
+export function groupFor(status: string | null): ChartGroup {
+  if (!status || !status.trim()) return "watching";
+  return DONE_STATUS.test(status) ? "completed" : "active";
+}
+
+/** The Status value from a page's meta component, or null. Case-insensitive on the key. */
+export function statusFromYaml(yamlText: string | null | undefined): string | null {
+  if (!yamlText) return null;
+  let doc: unknown;
+  try { doc = yaml.load(yamlText); } catch { return null; }
+  const walk = (nodes: unknown): string | null => {
+    if (!Array.isArray(nodes)) return null;
+    for (const n of nodes) {
+      if (!n || typeof n !== "object") continue;
+      const c = n as { type?: string; fields?: Array<{ key?: string; value?: unknown }>; components?: unknown };
+      if (c.type === "meta" && Array.isArray(c.fields)) {
+        const f = c.fields.find((x) => typeof x?.key === "string" && x.key.trim().toLowerCase() === "status");
+        if (f && f.value !== undefined && f.value !== null) return String(f.value).trim() || null;
+      }
+      const inner = walk(c.components);
+      if (inner) return inner;
+    }
+    return null;
+  };
+  return walk((doc as { components?: unknown } | null)?.components);
 }
 
 export interface ChartNode {
@@ -64,6 +103,7 @@ export interface ChartNode {
   promoted: boolean;
   /** Per-node note for agents, appended to copied prompts. */
   instructions: string | null;
+  group: ChartGroup;
 }
 
 export interface ChartNodeDetail extends ChartNode {
@@ -84,7 +124,7 @@ function hostOf(url: string): string | null {
   try { return new URL(url).host.replace(/^www\./, ""); } catch { return null; }
 }
 
-interface SourceRow { pageId: string; slug: string; title: string; updatedAt: Date; updatedBy: string | null }
+interface SourceRow { pageId: string; slug: string; title: string; updatedAt: Date; updatedBy: string | null; status: string | null }
 
 /** Source page per concept: the asserter, else the page named by a template/ or component/ term. */
 async function resolveSources(orgId: string, concepts: Array<{ id: string; normalizedName: string }>): Promise<Map<string, SourceRow>> {
@@ -93,12 +133,12 @@ async function resolveSources(orgId: string, concepts: Array<{ id: string; norma
   const ids = concepts.map((c) => c.id);
   const asserts = await db.pageConcept.findMany({
     where: { conceptId: { in: ids }, rel: "asserts", page: { orgId, status: { not: "archived" } } },
-    select: { conceptId: true, page: { select: { id: true, slug: true, title: true, updatedAt: true, versions: { orderBy: { createdAt: "desc" }, take: 1, select: { createdBy: true } } } } },
+    select: { conceptId: true, page: { select: { id: true, slug: true, title: true, updatedAt: true, versions: { orderBy: { createdAt: "desc" }, take: 1, select: { createdBy: true, yamlContent: true } } } } },
   });
   for (const r of asserts) {
     const cur = out.get(r.conceptId);
     if (!cur || r.page.updatedAt > cur.updatedAt) {
-      out.set(r.conceptId, { pageId: r.page.id, slug: r.page.slug, title: r.page.title, updatedAt: r.page.updatedAt, updatedBy: r.page.versions[0]?.createdBy ?? null });
+      out.set(r.conceptId, { pageId: r.page.id, slug: r.page.slug, title: r.page.title, updatedAt: r.page.updatedAt, updatedBy: r.page.versions[0]?.createdBy ?? null, status: statusFromYaml(r.page.versions[0]?.yamlContent) });
     }
   }
   const bySlug = new Map<string, string[]>();
@@ -111,10 +151,10 @@ async function resolveSources(orgId: string, concepts: Array<{ id: string; norma
   if (bySlug.size > 0) {
     const pages = await db.page.findMany({
       where: { orgId, slug: { in: [...bySlug.keys()] }, status: { not: "archived" } },
-      select: { id: true, slug: true, title: true, updatedAt: true, versions: { orderBy: { createdAt: "desc" }, take: 1, select: { createdBy: true } } },
+      select: { id: true, slug: true, title: true, updatedAt: true, versions: { orderBy: { createdAt: "desc" }, take: 1, select: { createdBy: true, yamlContent: true } } },
     });
     for (const pg of pages) for (const id of bySlug.get(pg.slug) ?? []) {
-      out.set(id, { pageId: pg.id, slug: pg.slug, title: pg.title, updatedAt: pg.updatedAt, updatedBy: pg.versions[0]?.createdBy ?? null });
+      out.set(id, { pageId: pg.id, slug: pg.slug, title: pg.title, updatedAt: pg.updatedAt, updatedBy: pg.versions[0]?.createdBy ?? null, status: statusFromYaml(pg.versions[0]?.yamlContent) });
     }
   }
   return out;
@@ -284,10 +324,11 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
       term: concept.displayName,
       kind: concept.kind || (source ? "source" : "topic"),
       title: source?.title ?? concept.displayName,
-      source: source ? { slug: source.slug, title: source.title, updatedAt: source.updatedAt.toISOString(), updatedBy: source.updatedBy } : null,
+      source: source ? { slug: source.slug, title: source.title, updatedAt: source.updatedAt.toISOString(), updatedBy: source.updatedBy, status: source.status } : null,
       fanOut: children.length,
       color, counts,
       hidden: !!s?.hidden, promoted: !!s?.promoted, instructions: s?.instructions ?? null,
+      group: groupFor(source?.status ?? null),
       children,
     });
   }
@@ -298,8 +339,8 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
 }
 
 function stripChildren(n: ChartNodeDetail): ChartNode {
-  const { term, kind, title, source, fanOut, color, counts, hidden, promoted, instructions } = n;
-  return { term, kind, title, source, fanOut, color, counts, hidden, promoted, instructions };
+  const { term, kind, title, source, fanOut, color, counts, hidden, promoted, instructions, group } = n;
+  return { term, kind, title, source, fanOut, color, counts, hidden, promoted, instructions, group };
 }
 
 export async function getChart(orgId: string, opts: { includeHidden?: boolean } = {}): Promise<Chart> {
