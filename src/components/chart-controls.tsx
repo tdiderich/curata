@@ -132,34 +132,29 @@ export function NodeMenu({ term, source, instructions, canEdit }: { term: string
 export function NodeStatusSelect({ term, status, hidden, hasSource }: { term: string; status: string | null; hidden: boolean; hasSource: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const known = ["Planned", "In progress", "Shipped"];
-  const current = hidden ? "__hidden" : status ? (known.includes(status) ? status : "__custom") : "__watching";
+  const current = hidden ? "hidden" : status ? (DONE_WORDS.test(status) ? "done" : "active") : "watching";
 
   async function change(v: string) {
     setBusy(true);
     try {
       const body: Record<string, unknown> = { term };
-      if (v === "__hidden") body.hidden = true;
-      else { body.hidden = false; body.status = v === "__watching" ? null : v; }
+      if (v === "hidden") body.hidden = true;
+      else { body.hidden = false; body.status = v === "watching" ? null : v === "done" ? "Done" : "Active"; }
       const res = await fetch(`${basePath}/api/chart`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || `HTTP ${res.status}`); }
-      toast.success(v === "__hidden" ? "Hidden. It's on the Hidden tab of the map." : v === "__watching" ? "Back to Watching." : `Status: ${v}.`);
+      toast.success(v === "hidden" ? "Hidden. It's on the Hidden tab of the map." : v === "watching" ? "Watching." : v === "done" ? "Done." : "Active.");
       router.refresh();
     } catch (err) { toast.error(err instanceof Error ? err.message : String(err)); } finally { setBusy(false); }
   }
 
   return (
-    <select className="stg-input cmap-status-select" value={current} disabled={busy} onChange={(e) => void change(e.target.value)} aria-label="Node status" title={hasSource ? "Writes the Status field on the source page" : "No source page: only Watching and Hidden apply"}>
-      <option value="__watching">Watching</option>
-      <optgroup label="Active">
-        <option value="Planned" disabled={!hasSource}>Planned</option>
-        <option value="In progress" disabled={!hasSource}>In progress</option>
-      </optgroup>
-      <optgroup label="Completed">
-        <option value="Shipped" disabled={!hasSource}>Shipped</option>
-      </optgroup>
-      {current === "__custom" && <option value="__custom">{status}</option>}
-      <option value="__hidden">Hidden</option>
+    <select className="stg-input cmap-status-select" value={current} disabled={busy} onChange={(e) => void change(e.target.value)} aria-label="Node status" title={hasSource ? `Writes the Status field on the source page${status ? ` (now: ${status})` : ""}` : "No source page: only Watching and Hidden apply"}>
+      <option value="active" disabled={!hasSource}>Active</option>
+      <option value="watching">Watching</option>
+      <option value="done" disabled={!hasSource}>Done</option>
+      <option value="hidden">Hidden</option>
     </select>
   );
 }
+
+const DONE_WORDS = /\b(shipped|done|complete|completed|closed|launched|released|archived)\b/i;

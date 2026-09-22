@@ -75,8 +75,8 @@ Every child has one color from one rule. Green: checked since the source last mo
 - `get_needs_look` — yellow and red only, grouped by node. The review queue for drift.
 - `add_to_chart` / `remove_from_chart` — put a page (`slug`) or an external (`url`, `label`, `owner`, `due_at`, `check`) under a node, or take it out. `map_dependencies` is the bulk form: `term`, `asserts`, `depends`, `references` slugs and `external` urls in one call; unknown slugs come back in `missing`.
 - `set_scope_item` — owner, label and check recipe on an external (shared by every node it sits under); `due_at` per node when `term` is given.
-- Nodes carry a `group`: `active` when the source page has a meta `Status` field that isn't finished (Planned, In progress), `completed` when it reads Shipped / Done / Complete, `watching` when there is no Status. `/map` shows one tab per group plus Hidden.
-- `set_chart_node` — `hidden`, `promoted`, `instructions` (a note appended to every prompt copied from the node, for when "bring in line with the source" is not the ask; empty string clears), or `status` (writes the source page's meta Status field: Planned / In progress → Active tab, Shipped → Completed, empty clears back to Watching).
+- Nodes carry a `group`: `active` when the source page has a meta `Status` field that isn't finished (Planned, In progress), `completed` when it reads Shipped / Done / Complete, `watching` when there is no Status. `/map` shows Active, Watching, Done, and Hidden tabs.
+- `set_chart_node` — `hidden`, `promoted`, `instructions` (a note appended to every prompt copied from the node, for when "bring in line with the source" is not the ask; empty string clears), or `status` (writes the source page's meta Status field: any unfinished value like Active or Planned → Active tab, Shipped / Done → Done tab, empty clears back to Watching).
 - `rescan_inventory` — re-run the scan over every page.
 
 ### How an agent checks an external

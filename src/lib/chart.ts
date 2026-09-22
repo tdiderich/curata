@@ -522,7 +522,6 @@ export async function getPageMapView(orgId: string, slug: string): Promise<PageM
   return { under, asNode };
 }
 
-export const STATUS_OPTIONS = ["Planned", "In progress", "Shipped"] as const;
 
 /**
  * Set (or clear) the Status field on a node's source page. One source of

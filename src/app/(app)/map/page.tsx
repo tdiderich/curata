@@ -11,11 +11,11 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Content map" };
 
 type Tab = ChartGroup | "hidden";
-const TAB_LABEL: Record<Tab, string> = { active: "Active", watching: "Watching", completed: "Completed", hidden: "Hidden" };
+const TAB_LABEL: Record<Tab, string> = { active: "Active", watching: "Watching", completed: "Done", hidden: "Hidden" };
 const TAB_EMPTY: Record<Tab, string> = {
-  active: "Nothing in flight. A node lands here when its source page carries a meta Status that isn't finished (Planned, In progress).",
+  active: "Nothing in flight. Set a node to Active from its page and it lands here.",
   watching: "Nothing watched yet. Pick a page that others depend on with “Add top level content item”, or build a few pages from a template.",
-  completed: "Nothing finished yet. A node moves here when its source page's Status reads Shipped, Done, or Complete.",
+  completed: "Nothing done yet. Set a node to Done from its page, or give its source page a Status of Shipped or Done.",
   hidden: "Nothing hidden.",
 };
 
