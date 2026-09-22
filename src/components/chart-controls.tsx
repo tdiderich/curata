@@ -72,7 +72,7 @@ export function ChartNodeToggle({ term, field, value, onLabel, offLabel }: { ter
  * (appended to every copied prompt), hide or show on the map. Editing opens
  * a panel under the header; same field set_chart_node instructions= writes.
  */
-export function NodeMenu({ term, source, instructions, hidden, canEdit }: { term: string; source: { slug: string } | null; instructions: string | null; hidden: boolean; canEdit: boolean }) {
+export function NodeMenu({ term, source, instructions, canEdit }: { term: string; source: { slug: string } | null; instructions: string | null; canEdit: boolean }) {
   const router = useRouter();
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -95,8 +95,6 @@ export function NodeMenu({ term, source, instructions, hidden, canEdit }: { term
   if (source) items.push({ label: "View source page", onClick: () => router.push(`/pages/${source.slug}`) });
   if (canEdit) {
     items.push({ label: instructions ? "Edit instructions" : "Add instructions", onClick: () => { setDraft(instructions ?? ""); setEditing(true); } });
-    items.push({ label: "", divider: true, onClick: () => {} });
-    items.push({ label: hidden ? "Show on content map" : "Hide from content map", onClick: () => void patch({ hidden: !hidden }, hidden ? "Back on the map." : "Hidden from the map. Find it under \"hidden nodes\" at the bottom of the map.") });
   }
   if (items.length === 0) return null;
 
@@ -122,5 +120,46 @@ export function NodeMenu({ term, source, instructions, hidden, canEdit }: { term
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Where the node lives: Watching (no status), Planned / In progress (Active),
+ * Shipped (Completed), or Hidden. Status values write the source page's meta
+ * Status field, so the page and the map never disagree. Hidden is the node
+ * flag. Same knobs set_chart_node status= and hidden= turn.
+ */
+export function NodeStatusSelect({ term, status, hidden, hasSource }: { term: string; status: string | null; hidden: boolean; hasSource: boolean }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const known = ["Planned", "In progress", "Shipped"];
+  const current = hidden ? "__hidden" : status ? (known.includes(status) ? status : "__custom") : "__watching";
+
+  async function change(v: string) {
+    setBusy(true);
+    try {
+      const body: Record<string, unknown> = { term };
+      if (v === "__hidden") body.hidden = true;
+      else { body.hidden = false; body.status = v === "__watching" ? null : v; }
+      const res = await fetch(`${basePath}/api/chart`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || `HTTP ${res.status}`); }
+      toast.success(v === "__hidden" ? "Hidden. It's on the Hidden tab of the map." : v === "__watching" ? "Back to Watching." : `Status: ${v}.`);
+      router.refresh();
+    } catch (err) { toast.error(err instanceof Error ? err.message : String(err)); } finally { setBusy(false); }
+  }
+
+  return (
+    <select className="stg-input cmap-status-select" value={current} disabled={busy} onChange={(e) => void change(e.target.value)} aria-label="Node status" title={hasSource ? "Writes the Status field on the source page" : "No source page: only Watching and Hidden apply"}>
+      <option value="__watching">Watching</option>
+      <optgroup label="Active">
+        <option value="Planned" disabled={!hasSource}>Planned</option>
+        <option value="In progress" disabled={!hasSource}>In progress</option>
+      </optgroup>
+      <optgroup label="Completed">
+        <option value="Shipped" disabled={!hasSource}>Shipped</option>
+      </optgroup>
+      {current === "__custom" && <option value="__custom">{status}</option>}
+      <option value="__hidden">Hidden</option>
+    </select>
   );
 }

@@ -1,6 +1,6 @@
 import type { ChartNodeDetail as ChartNodeDetailData } from "@/lib/chart";
 import { relativeTime } from "@/components/dependency-cells";
-import { NodeMenu } from "@/components/chart-controls";
+import { NodeMenu, NodeStatusSelect } from "@/components/chart-controls";
 import { AddRelatedButton, ScopePanel } from "@/components/chart-scope";
 import { ChartRows } from "@/components/chart-rows";
 
@@ -13,7 +13,8 @@ export function ChartNodeDetail({ node, canEdit }: { node: ChartNodeDetailData; 
           <span className={`chart-dot chart-dot--${node.color} chart-dot--lg`} />
           <h1 className="cmap-title">{node.title}</h1>
           <span className="cmap-spacer" />
-          <NodeMenu term={node.term} source={node.source} instructions={node.instructions} hidden={node.hidden} canEdit={canEdit} />
+          <NodeMenu term={node.term} source={node.source} instructions={node.instructions} canEdit={canEdit} />
+          {canEdit && <NodeStatusSelect term={node.term} status={node.source?.status ?? null} hidden={node.hidden} hasSource={!!node.source} />}
           {canEdit && <AddRelatedButton />}
         </div>
         {node.instructions && <p className="cmap-instr-line">{node.instructions}</p>}

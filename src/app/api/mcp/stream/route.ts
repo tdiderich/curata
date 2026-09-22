@@ -29,7 +29,7 @@ import {
   VERIFY_STATUSES,
   CONCEPT_RELS,
 } from "@/lib/concepts";
-import { getChart, getChartNode, getNeedsLook, promotePageToNode, setChartNode } from "@/lib/chart";
+import { getChart, getChartNode, getNeedsLook, promotePageToNode, setChartNode, setSourceStatus } from "@/lib/chart";
 import { addScopeItem, getAuditList, getPageSuggestions, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
 import { backfillScan } from "@/lib/scan";
 import { readVersion } from "@/lib/versions";
@@ -542,8 +542,8 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     });
 
   server.tool("set_chart_node", "Hide a node that is noise (a shared footer with 200 embeds), or promote a concept with fewer than 3 children so it shows on the map anyway. With slug alone: make that page a top-level node (it asserts a concept named after its slug, promoted). With term and slug: point the node's source of truth at that page (it becomes the asserter; any other asserter stops). instructions: a note appended to every prompt copied from this node, for when 'bring in line with the source' is not the ask (e.g. 'decide if this launch matters to the customer and add an agenda item'). Empty string clears it.",
-    { term: z.string().optional().describe("Concept term"), slug: z.string().optional().describe("Alone: page to make a node. With term: page to make this node's source of truth"), hidden: z.boolean().optional(), promoted: z.boolean().optional(), instructions: z.string().optional().describe("Per-node note for agents, appended to copied prompts. Empty string clears") },
-    async ({ term, slug, hidden, promoted, instructions }) => {
+    { term: z.string().optional().describe("Concept term"), slug: z.string().optional().describe("Alone: page to make a node. With term: page to make this node's source of truth"), hidden: z.boolean().optional(), promoted: z.boolean().optional(), instructions: z.string().optional().describe("Per-node note for agents, appended to copied prompts. Empty string clears"), status: z.string().optional().describe("Sets the Status field on the node's source page: Planned / In progress puts the node on the Active tab, Shipped / Done on Completed, empty string clears it back to Watching") },
+    async ({ term, slug, hidden, promoted, instructions, status }) => {
       if (slug && !term) {
         const result = await promotePageToNode(orgId, slug, userId || "agent");
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
@@ -554,7 +554,8 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       if (hidden !== undefined) patch.hidden = hidden;
       if (promoted !== undefined) patch.promoted = promoted;
       if (instructions !== undefined) patch.instructions = instructions;
-      const result = await setChartNode(orgId, term, patch);
+      if (status !== undefined) await setSourceStatus(orgId, orgSlug, term, status || null, userId || "agent");
+      const result = Object.keys(patch).length === 0 ? await getChartNode(orgId, term) : await setChartNode(orgId, term, patch);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 

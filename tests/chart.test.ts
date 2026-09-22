@@ -7,7 +7,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 import { testDb } from "./setup";
-import { getChart, getChartNode, getNeedsLook, setChartNode, NODE_FANOUT_THRESHOLD, statusFromYaml, groupFor } from "@/lib/chart";
+import { getChart, getChartNode, getNeedsLook, setChartNode, setSourceStatus, NODE_FANOUT_THRESHOLD, statusFromYaml, groupFor } from "@/lib/chart";
 import { upsertConcepts, upsertExternalDependents, verifyDependent } from "@/lib/concepts";
 
 async function bumpSource(pageId: string, times = 1) {
@@ -287,5 +287,25 @@ describe("node groups from the source page's Status", () => {
     const node = await getChartNode(org.id, "grp/launch");
     expect(node.source?.status).toBe("Planned");
     expect(node.group).toBe("active");
+  });
+});
+
+describe("setSourceStatus", () => {
+  it("adds a meta Status when the page has none, updates it, and clears it back to watching", async () => {
+    const { createTestOrg, createTestPage } = await import("./helpers");
+    const { upsertConcepts } = await import("@/lib/concepts");
+    const org = await createTestOrg({ name: "Stat Org", slug: "stat-org" });
+    const src = await createTestPage(org.id, { slug: "stat-src", yamlContent: "title: S\ncomponents:\n  - id: h\n    type: header\n    title: S\n  - id: b\n    type: markdown\n    body: hi\n" });
+    await upsertConcepts(src.id, [{ term: "stat/node", rel: "asserts" }], "system");
+    await setChartNode(org.id, "stat/node", { promoted: true });
+    expect((await getChartNode(org.id, "stat/node")).group).toBe("watching");
+    await setSourceStatus(org.id, org.slug, "stat/node", "Planned", "tester");
+    let node = await getChartNode(org.id, "stat/node");
+    expect(node.source?.status).toBe("Planned"); expect(node.group).toBe("active");
+    await setSourceStatus(org.id, org.slug, "stat/node", "Shipped", "tester");
+    expect((await getChartNode(org.id, "stat/node")).group).toBe("completed");
+    await setSourceStatus(org.id, org.slug, "stat/node", null, "tester");
+    node = await getChartNode(org.id, "stat/node");
+    expect(node.source?.status).toBeNull(); expect(node.group).toBe("watching");
   });
 });

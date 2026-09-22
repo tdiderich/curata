@@ -1,5 +1,6 @@
 import { db } from "./db";
 import yaml from "js-yaml";
+import { readPageYaml, writePage } from "./pages";
 import { findConceptForTerm, normalizeTerm, UNREACHABLE_PREFIX } from "./concepts";
 
 /**
@@ -519,4 +520,50 @@ export async function getPageMapView(orgId: string, slug: string): Promise<PageM
   const named = asserts?.concept.displayName ?? (await db.concept.findFirst({ where: { normalizedName: { in: [`template/${slug}`, `component/${slug}`] } }, select: { displayName: true } }))?.displayName;
   const asNode = named ? await getChartNode(orgId, named).catch(() => null) : null;
   return { under, asNode };
+}
+
+export const STATUS_OPTIONS = ["Planned", "In progress", "Shipped"] as const;
+
+/**
+ * Set (or clear) the Status field on a node's source page. One source of
+ * truth: the page's meta component. Null removes the field, which puts the
+ * node back on Watching. Adds a meta component when the page has none.
+ * Returns the page's new content hash, or throws when the node has no source.
+ */
+export async function setSourceStatus(orgId: string, orgSlug: string, term: string, status: string | null, createdBy: string): Promise<{ status: string | null }> {
+  const node = await getChartNode(orgId, term);
+  if (!node.source) throw new Error("this node has no source page; give it one before setting a status");
+  const cur = await readPageYaml(orgId, node.source.slug);
+  if (!cur) throw new Error(`page not found: ${node.source.slug}`);
+  const doc = (yaml.load(cur.yaml) as { components?: Array<Record<string, unknown>>; [k: string]: unknown }) ?? {};
+  const comps = Array.isArray(doc.components) ? doc.components : [];
+  type Field = { key?: string; value?: unknown };
+  const findMeta = (list: Array<Record<string, unknown>>): Record<string, unknown> | null => {
+    for (const c of list) {
+      if (c.type === "meta" && Array.isArray(c.fields)) return c;
+      const inner = Array.isArray(c.components) ? findMeta(c.components as Array<Record<string, unknown>>) : null;
+      if (inner) return inner;
+    }
+    return null;
+  };
+  let meta = findMeta(comps);
+  const value = status?.trim() || null;
+  if (!meta) {
+    if (!value) return { status: null };
+    meta = { id: "meta-status", type: "meta", fields: [] };
+    // After a header if there is one, else at the top.
+    const at = comps.findIndex((c) => c.type === "header");
+    comps.splice(at >= 0 ? at + 1 : 0, 0, meta);
+  }
+  const fields = meta.fields as Field[];
+  const idx = fields.findIndex((f) => typeof f.key === "string" && f.key.trim().toLowerCase() === "status");
+  if (value) {
+    if (idx >= 0) fields[idx] = { ...fields[idx], value }; else fields.push({ key: "Status", value });
+  } else if (idx >= 0) {
+    fields.splice(idx, 1);
+  }
+  doc.components = comps;
+  const res = await writePage(orgId, orgSlug, node.source.slug, yaml.dump(doc, { lineWidth: -1, noRefs: true }), createdBy, cur.contentHash);
+  if (!res.ok) throw new Error(res.error);
+  return { status: value };
 }

@@ -59,7 +59,7 @@ import {
   VERIFY_STATUSES,
 } from "@/lib/concepts";
 import type { ConceptInput, ConceptRel, ExternalDependentInput, LinkInput, VerifyStatus } from "@/lib/concepts";
-import { getChart, getChartNode, getNeedsLook, getPageImpact, promotePageToNode, setChartNode } from "@/lib/chart";
+import { getChart, getChartNode, getNeedsLook, getPageImpact, promotePageToNode, setChartNode, setSourceStatus } from "@/lib/chart";
 import { addScopeItem, getAuditList, getPageSuggestions, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
 import { backfillScan } from "@/lib/scan";
 import { readVersion } from "@/lib/versions";
@@ -214,7 +214,7 @@ const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string,
   get_dependents: { known: new Set(["slug", "term", "rel"]) },
   get_chart: { known: new Set(["term", "include_hidden"]) },
   get_needs_look: { known: new Set([]) },
-  set_chart_node: { known: new Set(["term", "slug", "hidden", "promoted", "instructions"]) },
+  set_chart_node: { known: new Set(["term", "slug", "hidden", "promoted", "instructions", "status"]) },
   audit: { known: new Set([]) },
   add_to_chart: { known: new Set(["term", "slug", "url", "label", "owner", "due_at", "check"]) },
   remove_from_chart: { known: new Set(["term", "slug", "url"]) },
@@ -1830,7 +1830,10 @@ export async function dispatch(
       }
       if (args.slug) patch.sourceSlug = args.slug;
       if (args.instructions !== undefined) patch.instructions = args.instructions;
-      if (Object.keys(patch).length === 0) throw new Error("give at least one of slug (source page), hidden, promoted, instructions");
+      const hasStatus = args.status !== undefined;
+      if (Object.keys(patch).length === 0 && !hasStatus) throw new Error("give at least one of slug (source page), hidden, promoted, instructions, status");
+      if (hasStatus) await setSourceStatus(orgId, orgSlug, args.term, args.status || null, userId || "agent");
+      if (Object.keys(patch).length === 0) return getChartNode(orgId, args.term);
       return setChartNode(orgId, args.term, patch);
     }
 
