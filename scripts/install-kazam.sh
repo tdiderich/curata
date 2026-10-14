@@ -11,6 +11,13 @@ VERSION_FILE="$BIN_DIR/.kazam-version"
 
 mkdir -p "$BIN_DIR"
 
+# A symlinked .bin/kazam points at a local kazam build. curl -o would write
+# through the link and overwrite that build with the release binary.
+if [ -L "$KAZAM" ]; then
+  echo "kazam is a symlink to a local build ($(readlink "$KAZAM")), skipping download"
+  exit 0
+fi
+
 # Detect platform
 case "$(uname -s)-$(uname -m)" in
   Darwin-arm64) ASSET="kazam-darwin-arm64" ;;

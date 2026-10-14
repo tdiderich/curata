@@ -126,6 +126,242 @@ function chartBlocks(c: Node, depth: number): string[] {
   return out;
 }
 
+// ── HUD components (tier_summary, journey_track, next_steps) ──
+
+/**
+ * A scalar as display text. js-yaml turns an unquoted `2026-10-24` into a
+ * Date, so dates come back as their ISO day rather than a full timestamp.
+ */
+function val(v: unknown): string | undefined {
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? undefined : v.toISOString().slice(0, 10);
+  if (typeof v === "number" && Number.isFinite(v)) return String(v);
+  return str(v);
+}
+
+/** Days since the epoch for an ISO `YYYY-MM-DD` (or Date), else undefined. */
+function isoDays(v: unknown): number | undefined {
+  const iso = val(v);
+  const m = iso ? /^(\d{4})-(\d{2})-(\d{2})/.exec(iso) : null;
+  if (!m) return undefined;
+  return Math.round(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86_400_000);
+}
+
+const daysText = (n: number): string => `${n} ${n === 1 ? "day" : "days"}`;
+
+const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
+const linked = (label: string, href: unknown): string => {
+  const h = str(href);
+  return h ? `[${label}](${h})` : label;
+};
+
+/** A table that keeps only the columns at least one row fills in. */
+function sparseTable(columns: Array<[string, (row: Node) => string | undefined]>, rows: Node[]): string {
+  const keep = columns.filter(([, get], i) => i === 0 || rows.some((r) => get(r)));
+  return table(
+    keep.map(([h]) => h),
+    rows.map((r) => keep.map(([, get]) => cell(get(r) ?? ""))),
+  );
+}
+
+function tierSummaryBlocks(c: Node): string[] {
+  const tiers = arr(c.tiers).filter((t) => str(t.label));
+  if (!tiers.length) return [];
+  const countLabel = capitalize(str(c.count_label) ?? "accounts");
+  const valueLabel = str(c.share_label) ?? "Value";
+  const pct = (v: unknown) => (num(v) === undefined ? undefined : `${num(v)}%`);
+  const out = [
+    sparseTable(
+      [
+        ["Tier", (t) => linked(str(t.label)!, t.href)],
+        [countLabel, (t) => val(t.count)],
+        [valueLabel, (t) => val(t.value)],
+        ["Share", (t) => pct(t.share)],
+        ["Detail", (t) => val(t.detail)],
+      ],
+      tiers,
+    ),
+  ];
+  for (const t of tiers) {
+    // Soonest renewal first, the order the opened panel shows them in.
+    const accounts = arr(t.accounts)
+      .filter((a) => str(a.name))
+      .map((a, i) => ({ a, i }))
+      .sort((x, y) => (isoDays(x.a.renewal) ?? Infinity) - (isoDays(y.a.renewal) ?? Infinity) || x.i - y.i)
+      .map(({ a }) => a);
+    if (!accounts.length) continue;
+    out.push(`**${str(t.label)} ${countLabel.toLowerCase()}**`);
+    out.push(
+      sparseTable(
+        [
+          ["Account", (a) => linked(str(a.name)!, a.href)],
+          [valueLabel, (a) => val(a.value)],
+          ["Share", (a) => pct(a.share)],
+          ["Renewal", (a) => val(a.renewal)],
+          ["Detail", (a) => val(a.detail)],
+        ],
+        accounts,
+      ),
+    );
+  }
+  return out;
+}
+
+function journeyBlocks(c: Node, depth: number): string[] {
+  const out: string[] = [];
+  const title = str(c.title);
+  if (title) out.push(heading(depth, title));
+
+  const stages = arr(c.stages).filter((s) => str(s.label));
+  const current = c.current && typeof c.current === "object" ? (c.current as Node) : undefined;
+  const currentLabel = str(current?.label);
+
+  const stageLines = stages.map((s, i) => {
+    const date = val(s.date);
+    const next = i + 1 < stages.length ? stages[i + 1].date : current?.date;
+    const a = isoDays(s.date);
+    const b = isoDays(next);
+    const bits = [`- ${str(s.label)}`];
+    if (date) bits.push(date);
+    if (a !== undefined && b !== undefined && b >= a) bits.push(`(${daysText(b - a)})`);
+    if (str(s.status) === "upcoming") bits.push("(upcoming)");
+    return bits.join(" ");
+  });
+  if (stageLines.length) out.push(`**Stages**\n${stageLines.join("\n")}`);
+
+  if (currentLabel) {
+    const date = val(current?.date);
+    const kind = current?.temporary === true ? " (temporary)" : "";
+    out.push(`**Current:** ${currentLabel}${kind}${date ? ` since ${date}` : ""}`);
+  }
+
+  // In dated mode the renderer marks `end` on the rail as the contract end
+  // ("Renews" unless `end_label` says otherwise); in even mode it is unused.
+  const dated =
+    stages.every((s) => isoDays(s.date) !== undefined) &&
+    arr(c.touchpoints).every((t) => isoDays(t.date) !== undefined) &&
+    (!current || isoDays(current.date) !== undefined) &&
+    arr(c.detours).every((d) => isoDays(d.from) !== undefined);
+  const endDate = isoDays(c.end) !== undefined ? val(c.end) : undefined;
+  if (dated && endDate) out.push(`**${str(c.end_label) ?? "Renews"}:** ${endDate}`);
+
+  const detourLines = arr(c.detours)
+    .filter((d) => str(d.label))
+    .map((d) => {
+      const from = val(d.from);
+      const to = val(d.to);
+      const a = isoDays(d.from);
+      const b = isoDays(d.to);
+      const after = num(d.after);
+      const bits = [`- ${str(d.label)}`];
+      if (from) bits.push(to ? `${from} to ${to}` : `from ${from}`);
+      else if (after !== undefined && stages[after]) bits.push(`after ${str(stages[after].label)}`);
+      if (a !== undefined && b !== undefined && b >= a) bits.push(`(${daysText(b - a)})`);
+      return bits.join(" ");
+    });
+  if (detourLines.length) out.push(`**Detours**\n${detourLines.join("\n")}`);
+
+  const tpLines = arr(c.touchpoints)
+    .filter((t) => str(t.label))
+    .map((t) => {
+      const date = val(t.date);
+      const upcoming = str(t.status) === "upcoming" ? " (upcoming)" : "";
+      return `- ${date ? `${date}: ` : ""}${str(t.label)}${upcoming}`;
+    });
+  if (tpLines.length) out.push(`**Touchpoints**\n${tpLines.join("\n")}`);
+
+  const history = c.history && typeof c.history === "object" ? (c.history as Node) : undefined;
+  const events = arr(history?.events)
+    .filter((e) => str(e.label))
+    .map((e, i) => ({ e, i }))
+    .sort((x, y) => (isoDays(x.e.date) ?? Infinity) - (isoDays(y.e.date) ?? Infinity) || x.i - y.i)
+    .map(({ e }) => {
+      const date = val(e.date);
+      const kind = str(e.kind) ? ` (${str(e.kind)})` : "";
+      const detail = val(e.detail);
+      return `- ${date ? `${date}: ` : ""}${str(e.label)}${kind}${detail ? `. ${detail}` : ""}`;
+    });
+  if (events.length) out.push(`**History**\n${events.join("\n")}`);
+
+  return out;
+}
+
+const STEP_MARK: Record<string, string> = { done: "[x]" };
+
+function stepLine(s: Node, opts: { stripPrefix?: string; showOwner: boolean }): string | undefined {
+  const label = str(s.label);
+  if (!label) return undefined;
+  const status = str(s.status);
+  let detail = str(s.detail);
+  if (detail && opts.stripPrefix && detail.startsWith(`${opts.stripPrefix}: `)) {
+    detail = detail.slice(opts.stripPrefix.length + 2);
+  }
+  const meta = [
+    val(s.due) ? `due ${val(s.due)}` : undefined,
+    status === "overdue" ? "overdue" : undefined,
+    opts.showOwner && str(s.owner) ? `owner ${str(s.owner)}` : undefined,
+  ].filter(Boolean);
+  const head = `- ${STEP_MARK[status ?? ""] ?? "[ ]"} ${linked(label, s.href)}`;
+  return `${head}${detail ? `: ${detail}` : ""}${meta.length ? ` (${meta.join(", ")})` : ""}`;
+}
+
+function nextStepsBlocks(c: Node, depth: number): string[] {
+  const out: string[] = [];
+  const title = str(c.title);
+  if (title) out.push(heading(depth, title));
+
+  const steps = arr(c.steps);
+  const accounts = arr(c.accounts).filter((a) => str(a.id) && str(a.name));
+  if (!accounts.length) {
+    const lines = steps.map((s) => stepLine(s, { showOwner: true })).filter((x): x is string => !!x);
+    out.push(lines.length ? lines.join("\n") : "Nothing due.");
+    return out;
+  }
+
+  // Same order as the rendered board: overdue first, then soonest due, then
+  // nothing due, names breaking ties. `order: as_written` keeps the source order.
+  const summary = (id: string) => {
+    const open = steps.filter((s) => s.account === id && str(s.status) !== "done");
+    const due = open.map((s) => isoDays(s.due)).filter((d): d is number => d !== undefined);
+    return {
+      open: open.length,
+      overdue: open.filter((s) => str(s.status) === "overdue").length,
+      soonest: due.length ? Math.min(...due) : Infinity,
+    };
+  };
+  const rows = accounts.map((a, i) => ({ a, i, sum: summary(str(a.id)!) }));
+  if (str(c.order) !== "as_written") {
+    const group = (r: (typeof rows)[number]) => (r.sum.overdue > 0 ? 0 : r.sum.open > 0 ? 1 : 2);
+    rows.sort((x, y) => {
+      const gx = group(x);
+      const gy = group(y);
+      if (gx !== gy) return gx - gy;
+      if (gx < 2 && x.sum.soonest !== y.sum.soonest) return x.sum.soonest - y.sum.soonest;
+      return str(x.a.name)!.toLowerCase().localeCompare(str(y.a.name)!.toLowerCase()) || x.i - y.i;
+    });
+  }
+
+  for (const { a, sum } of rows) {
+    const name = str(a.name)!;
+    const meta = [str(a.stage), str(a.owner) ? `owner ${str(a.owner)}` : undefined].filter(Boolean);
+    const counts = sum.open === 0 ? "nothing due" : `${sum.open} open${sum.overdue ? `, ${sum.overdue} overdue` : ""}`;
+    const head = `**${linked(name, a.href)}**${meta.length ? ` (${meta.join(", ")})` : ""}: ${counts}`;
+    const lines = steps
+      .filter((s) => s.account === a.id)
+      .map((s) => stepLine(s, { stripPrefix: name, showOwner: !str(a.owner) }))
+      .filter((x): x is string => !!x);
+    out.push(lines.length ? `${head}\n${lines.join("\n")}` : head);
+  }
+
+  const ids = new Set(accounts.map((a) => str(a.id)));
+  const loose = steps
+    .filter((s) => !(typeof s.account === "string" && ids.has(s.account)))
+    .map((s) => stepLine(s, { showOwner: true }))
+    .filter((x): x is string => !!x);
+  if (loose.length) out.push(`**Other steps**\n${loose.join("\n")}`);
+  return out;
+}
+
 function componentBlocks(c: Node, depth: number): string[] {
   const type = str(c.type);
   if (!type) return [];
@@ -705,6 +941,31 @@ function componentBlocks(c: Node, depth: number): string[] {
       if (keys.length) out.push(keys.map((k) => `\`${k}\``).join(" + "));
       break;
     }
+
+    case "tier_summary":
+      out.push(...tierSummaryBlocks(c));
+      break;
+
+    case "journey_track":
+      out.push(...journeyBlocks(c, depth));
+      break;
+
+    case "health_breakdown": {
+      const lines = arr(c.items)
+        .map((item) => {
+          const label = str(item.label);
+          if (!label) return undefined;
+          const bits = [val(item.tier), val(item.value), val(item.detail)].filter(Boolean);
+          return bits.length ? `- **${label}:** ${bits.join(", ")}` : `- **${label}**`;
+        })
+        .filter((x): x is string => !!x);
+      if (lines.length) out.push(lines.join("\n"));
+      break;
+    }
+
+    case "next_steps":
+      out.push(...nextStepsBlocks(c, depth));
+      break;
 
     // Presentation-only: an icon or a role_map placeholder carries no content
     // an agent can use, so they contribute nothing.

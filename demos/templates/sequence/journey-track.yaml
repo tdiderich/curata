@@ -1,0 +1,42 @@
+title: "Customer Journey"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A journey_track for one account. Main stages sit on the line, a Save detour leaves it and comes back, and touchpoints sit in the band below. The Details switch swaps the track for the dated history, newest first."
+  - type: section
+    heading: "Ostra Health"
+    components:
+      - type: journey_track
+        id: account-journey
+        title: Journey
+        start: "2025-11-01"
+        end: "2026-11-15"
+        end_label: Renews
+        stages:
+          - { label: Onboarding, date: "2025-11-03" }
+          - { label: Operationalizing, date: "2026-02-12" }
+          - { label: Adopted, date: "2026-06-20" }
+        detours:
+          - { label: Save, from: "2026-03-20", to: "2026-05-20" }
+        current: { label: Renewal, date: "2026-10-01", temporary: true }
+        touchpoints:
+          - { label: Kickoff, date: "2025-11-25" }
+          - { label: Config review, date: "2026-02-25" }
+          - { label: Exec call, date: "2026-07-10" }
+          - { label: Renewal review, date: "2026-10-20", status: upcoming }
+        history:
+          events:
+            - { date: "2025-11-03", label: Entered Onboarding, kind: stage }
+            - { date: "2025-11-05", label: Kickoff, kind: call }
+            - { date: "2025-11-12", label: Weekly cadence started, kind: cadence }
+            - { date: "2025-12-02", label: Connectors live, detail: "AWS and Okta", kind: note }
+            - { date: "2026-02-12", label: Entered Operationalizing, kind: stage }
+            - { date: "2026-02-25", label: Config review, kind: call }
+            - { date: "2026-03-20", label: Entered Save, detail: "Champion left, usage dipped", kind: stage }
+            - { date: "2026-04-15", label: New champion named, kind: note }
+            - { date: "2026-05-20", label: Left Save, kind: stage }
+            - { date: "2026-06-20", label: Entered Adopted, kind: stage }
+            - { date: "2026-07-10", label: Exec call, kind: call }
+            - { date: "2026-10-01", label: Entered Renewal, kind: stage }

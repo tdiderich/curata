@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ensureComponentIds, applyPatchOperations } from "@/lib/component-ids";
+import { ensureComponentIds, applyPatchOperations, buildOutline } from "@/lib/component-ids";
 
 describe("ensureComponentIds", () => {
   it("stamps id on section from eyebrow + heading", () => {
@@ -235,5 +235,26 @@ describe("applyPatchOperations", () => {
     const original = JSON.parse(JSON.stringify(basePage));
     applyPatchOperations(basePage, [{ op: "set_field", field: "title", value: "Changed" }]);
     expect(basePage).toEqual(original);
+  });
+});
+
+describe("buildOutline labels for HUD components", () => {
+  it("falls back to item labels or counts when there is no title", () => {
+    const outline = buildOutline([
+      { id: "t", type: "tier_summary", tiers: [{ label: "Outstanding", count: "2" }, { label: "Good", count: "1" }] },
+      { id: "h", type: "health_breakdown", items: [{ label: "Adoption" }, { label: "Sentiment" }] },
+      { id: "j", type: "journey_track", stages: [{ label: "Onboarding" }, { label: "Adopted" }] },
+      { id: "n", type: "next_steps", accounts: [{ id: "a", name: "A" }], steps: [{ label: "x" }, { label: "y" }] },
+      { id: "n2", type: "next_steps", steps: [{ label: "x" }] },
+      { id: "j2", type: "journey_track", title: "Journey", stages: [{ label: "Onboarding" }] },
+    ]);
+    expect(outline.map((e) => e.label)).toEqual([
+      "Outstanding / Good",
+      "Adoption / Sentiment",
+      "Onboarding > Adopted",
+      "1 account, 2 steps",
+      "1 step",
+      "Journey",
+    ]);
   });
 });

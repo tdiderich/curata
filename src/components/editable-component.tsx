@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useCallback } from "react";
-import type { ComponentData } from "@/generated/kazam-renderer";
+import { EDITOR_TYPES, type ComponentData } from "@/generated/kazam-renderer";
 
 interface EditableComponentProps {
   comp: ComponentData;
@@ -16,8 +16,11 @@ interface EditableComponentProps {
   draggingId?: string | null;
 }
 
+const TYPE_LABELS = new Map(EDITOR_TYPES.map((t) => [t.type, t.label]));
+
 function compLabel(comp: ComponentData): string {
-  return (comp.heading as string) || (comp.title as string) || (comp.eyebrow as string) || (comp.label as string) || (comp.type as string) || "";
+  const type = comp.type as string;
+  return (comp.heading as string) || (comp.title as string) || (comp.eyebrow as string) || (comp.label as string) || TYPE_LABELS.get(type) || type || "";
 }
 
 export function EditableComponent({

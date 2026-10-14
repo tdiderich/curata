@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import yaml from "js-yaml";
 import { agentPreamble, pageToMarkdown, pageToPrompt } from "@/lib/page-markdown";
 
 describe("pageToMarkdown", () => {
@@ -262,6 +263,188 @@ describe("pageToMarkdown", () => {
   it("honours omitTitle and titleDepth", () => {
     expect(pageToMarkdown({ title: "T", components: [] }, { omitTitle: true })).not.toContain("# T");
     expect(pageToMarkdown({ title: "T", components: [] }, { titleDepth: 2 })).toContain("## T");
+  });
+});
+
+describe("pageToMarkdown: HUD components", () => {
+  // Parsed with js-yaml like real page content, so unquoted dates arrive as Date objects.
+  const page = (src: string) => yaml.load(src) as Record<string, unknown>;
+
+  it("renders tier_summary as a table plus each tier's accounts, soonest renewal first", () => {
+    const md = pageToMarkdown(
+      page(`
+title: T
+components:
+  - type: tier_summary
+    share_label: ARR
+    tiers:
+      - label: Outstanding
+        count: 6
+        value: $406K
+        share: 31.2
+        accounts:
+          - { name: Brightline, value: $240K, share: 18.4, renewal: 2027-03-03, detail: Adopted }
+          - { name: Larkspur, value: $95K, share: 7.3, renewal: 2026-11-02 }
+      - { label: Poor, count: "0", value: $0, share: 0 }
+`),
+    );
+    expect(md).toContain("| Tier | Accounts | ARR | Share |\n");
+    expect(md).toContain("| Outstanding | 6 | $406K | 31.2% |");
+    expect(md).toContain("| Poor | 0 | $0 | 0% |");
+    expect(md).toContain("**Outstanding accounts**");
+    expect(md).toContain("| Account | ARR | Share | Renewal | Detail |");
+    expect(md.indexOf("| Larkspur | $95K | 7.3% | 2026-11-02 |")).toBeLessThan(
+      md.indexOf("| Brightline | $240K | 18.4% | 2027-03-03 | Adopted |"),
+    );
+  });
+
+  it("drops tier_summary columns no tier fills in", () => {
+    const md = pageToMarkdown({
+      title: "T",
+      components: [{ type: "tier_summary", count_label: "teams", tiers: [{ label: "A", count: "3" }] }],
+    });
+    expect(md).toContain("| Tier | Teams |");
+    expect(md).toContain("| A | 3 |");
+    expect(md).not.toContain("Share");
+  });
+
+  it("renders journey_track stages with durations, detours, current, touchpoints and dated history", () => {
+    const md = pageToMarkdown(
+      page(`
+title: T
+components:
+  - type: journey_track
+    title: Journey
+    end: 2026-11-15
+    stages:
+      - { label: Onboarding, date: 2025-11-03 }
+      - { label: Adopted, date: 2026-02-12 }
+    detours:
+      - { label: Save, from: 2026-03-20, to: 2026-05-20 }
+    current: { label: Renewal, date: 2026-10-01, temporary: true }
+    touchpoints:
+      - { label: Kickoff, date: 2025-11-25 }
+      - { label: Renewal review, date: 2026-10-20, status: upcoming }
+    history:
+      events:
+        - { date: 2026-03-20, label: Entered Save, detail: Champion left, kind: stage }
+        - { date: 2025-11-05, label: Kickoff, kind: call }
+`),
+    );
+    expect(md).toContain("## Journey");
+    expect(md).toContain("- Onboarding 2025-11-03 (101 days)");
+    expect(md).toContain("- Adopted 2026-02-12 (231 days)");
+    expect(md).toContain("**Current:** Renewal (temporary) since 2026-10-01");
+    expect(md).toContain("**Renews:** 2026-11-15");
+    expect(md).toContain("- Save 2026-03-20 to 2026-05-20 (61 days)");
+    expect(md).toContain("- 2025-11-25: Kickoff");
+    expect(md).toContain("- 2026-10-20: Renewal review (upcoming)");
+    expect(md).toContain("**History**");
+    expect(md.indexOf("- 2025-11-05: Kickoff (call)")).toBeLessThan(
+      md.indexOf("- 2026-03-20: Entered Save (stage). Champion left"),
+    );
+  });
+
+  it("renders an undated journey_track in list order with detours placed after a stage", () => {
+    const md = pageToMarkdown({
+      title: "T",
+      components: [
+        {
+          type: "journey_track",
+          end: "2026-12-31",
+          stages: [{ label: "Onboarding" }, { label: "Adopted", status: "upcoming" }],
+          detours: [{ label: "Save", after: 0 }],
+        },
+      ],
+    });
+    expect(md).toContain("- Onboarding\n- Adopted (upcoming)");
+    expect(md).toContain("- Save after Onboarding");
+    expect(md).not.toContain("Renews");
+  });
+
+  it("renders health_breakdown as label: tier, value, detail lines", () => {
+    const md = pageToMarkdown({
+      title: "T",
+      components: [
+        {
+          type: "health_breakdown",
+          items: [
+            { label: "License utilization", tier: "Okay", shade: 3, value: "28.4%", detail: "of assets investigated" },
+            { label: "Sentiment", tier: "Good", detail: "Responsive" },
+            { label: "Bare" },
+          ],
+        },
+      ],
+    });
+    expect(md).toContain("- **License utilization:** Okay, 28.4%, of assets investigated");
+    expect(md).toContain("- **Sentiment:** Good, Responsive");
+    expect(md).toContain("- **Bare**");
+  });
+
+  it("renders next_steps as a checklist with due date, status and owner", () => {
+    const md = pageToMarkdown(
+      page(`
+title: T
+components:
+  - type: next_steps
+    title: Next steps
+    steps:
+      - { label: Book the renewal review, detail: Contract ends in 120 days, due: 2026-10-24, owner: Will }
+      - { label: Send the recap, due: 2026-10-10, status: overdue }
+      - { label: Confirm the champion, status: done }
+`),
+    );
+    expect(md).toContain("## Next steps");
+    expect(md).toContain("- [ ] Book the renewal review: Contract ends in 120 days (due 2026-10-24, owner Will)");
+    expect(md).toContain("- [ ] Send the recap (due 2026-10-10, overdue)");
+    expect(md).toContain("- [x] Confirm the champion");
+  });
+
+  it("groups next_steps per account, overdue accounts first, and strips the account prefix", () => {
+    const md = pageToMarkdown(
+      page(`
+title: T
+components:
+  - type: next_steps
+    accounts:
+      - { id: brightline, name: Brightline, stage: Adopted, owner: Tyler }
+      - { id: larkspur, name: Larkspur, stage: Onboarding, owner: Tyler, href: ./larkspur }
+      - { id: northfield, name: Northfield }
+    steps:
+      - { label: Exec call, detail: "Brightline: one every 90 days", account: brightline, due: 2026-11-04 }
+      - { label: Move past onboarding, detail: "Larkspur: day 52 of 45", account: larkspur, due: 2026-10-17, status: overdue }
+      - { label: Kickoff deck, account: northfield, status: done, owner: Will }
+      - { label: Write the QBR deck, owner: Will }
+`),
+    );
+    const lark = md.indexOf("**[Larkspur](./larkspur)** (Onboarding, owner Tyler): 1 open, 1 overdue");
+    const bright = md.indexOf("**Brightline** (Adopted, owner Tyler): 1 open");
+    const north = md.indexOf("**Northfield**: nothing due");
+    expect(lark).toBeGreaterThan(-1);
+    expect(bright).toBeGreaterThan(lark);
+    expect(north).toBeGreaterThan(bright);
+    expect(md).toContain("- [ ] Move past onboarding: day 52 of 45 (due 2026-10-17, overdue)");
+    expect(md).toContain("- [ ] Exec call: one every 90 days (due 2026-11-04)");
+    expect(md).toContain("- [x] Kickoff deck (owner Will)");
+    expect(md).toContain("**Other steps**\n- [ ] Write the QBR deck (owner Will)");
+  });
+
+  it("keeps next_steps accounts as written with order: as_written", () => {
+    const md = pageToMarkdown({
+      title: "T",
+      components: [
+        {
+          type: "next_steps",
+          order: "as_written",
+          accounts: [
+            { id: "a", name: "Alpha" },
+            { id: "b", name: "Beta" },
+          ],
+          steps: [{ label: "Late", account: "b", status: "overdue" }],
+        },
+      ],
+    });
+    expect(md.indexOf("**Alpha**")).toBeLessThan(md.indexOf("**Beta**"));
   });
 });
 

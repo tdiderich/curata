@@ -1,0 +1,26 @@
+title: "Next Steps by Account"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A next_steps board with one row per account. Rows sort overdue first, then by the soonest due step. Click a row to open its steps, or filter by owner with the chips. ?account=larkspur opens a row on load."
+  - type: section
+    heading: "My accounts"
+    components:
+      - type: next_steps
+        id: owner-next
+        title: From the journey rules
+        owners: [Tyler, Will]
+        accounts:
+          - { id: larkspur, name: Larkspur, stage: Onboarding, shade: 3, owner: Tyler }
+          - { id: brightline, name: Brightline, stage: Adopted, shade: 1, owner: Tyler }
+          - { id: ostra, name: Ostra Health, stage: Renewal, shade: 2, owner: Will }
+          - { id: northfield, name: Northfield, stage: Operationalizing, shade: 2, owner: Will }
+        steps:
+          - { label: Book the renewal review, detail: "Ostra Health: contract ends in 32 days", account: ostra, due: "2026-10-24" }
+          - { label: Send the Q3 value recap, account: ostra, due: "2026-10-10", status: overdue }
+          - { label: Schedule the exec roadmap call, detail: "Brightline: Adopted, one every 90 days", account: brightline, due: "2026-11-04" }
+          - { label: Move past onboarding, detail: "Larkspur: day 52 of a 45 day target", account: larkspur, due: "2026-10-17", status: overdue }
+          - { label: Confirm SSO rollout, detail: "Larkspur: IT owner named last week", account: larkspur, due: "2026-10-28" }
+          - { label: Kickoff deck, account: northfield, status: done }

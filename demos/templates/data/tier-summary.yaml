@@ -1,0 +1,37 @@
+title: "Portfolio by Health Tier"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A tier_summary with one card per health tier: account count, ARR, and share of the book. Click a tier with accounts to open its list, soonest renewal first. Add ?tier=Outstanding to the URL to open a tier on load."
+  - type: section
+    heading: "Book of business"
+    components:
+      - type: markdown
+        body: "Tiers come from the weekly health score. Shares are percent of total ARR and add to 100."
+      - type: tier_summary
+        id: portfolio-tiers
+        count_label: accounts
+        share_label: ARR
+        tiers:
+          - label: Outstanding
+            count: "2"
+            value: $335K
+            share: 50.4
+            accounts:
+              - { name: Brightline, value: $240K, share: 36.1, renewal: "2027-03-03", detail: Adopted }
+              - { name: Larkspur, value: $95K, share: 14.3, renewal: "2026-11-02", detail: Renewal }
+          - label: Good
+            count: "1"
+            value: $210K
+            share: 31.6
+            accounts:
+              - { name: Ostra Health, value: $210K, share: 31.6, renewal: "2026-11-15", detail: Renewal }
+          - label: Okay
+            count: "1"
+            value: $120K
+            share: 18.0
+            accounts:
+              - { name: Northfield, value: $120K, share: 18.0, renewal: "2027-06-30", detail: Operationalizing }
+          - { label: Poor, count: "0", value: $0, share: 0 }

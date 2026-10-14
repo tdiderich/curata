@@ -191,7 +191,34 @@ function labelOf(c: Component): string | null {
     const first = c.body.trim().split("\n")[0];
     return first.length > 60 ? `${first.slice(0, 57)}...` : first;
   }
-  return null;
+  return listLabelOf(c);
+}
+
+/** Item labels joined, for components whose only names live on their list items. */
+const LABEL_LISTS: Record<string, string> = {
+  tier_summary: "tiers",
+  health_breakdown: "items",
+  journey_track: "stages",
+};
+
+function listLabelOf(c: Component): string | null {
+  const type = typeof c.type === "string" ? c.type : "";
+  if (type === "next_steps") {
+    const accounts = Array.isArray(c.accounts) ? c.accounts.length : 0;
+    const steps = Array.isArray(c.steps) ? c.steps.length : 0;
+    if (accounts) return `${accounts} account${accounts === 1 ? "" : "s"}, ${steps} step${steps === 1 ? "" : "s"}`;
+    return steps ? `${steps} step${steps === 1 ? "" : "s"}` : null;
+  }
+  const key = LABEL_LISTS[type];
+  const list = key ? c[key] : undefined;
+  if (!Array.isArray(list)) return null;
+  const labels = list
+    .map((x) => (x && typeof x === "object" ? (x as Record<string, unknown>).label : undefined))
+    .filter((v): v is string => typeof v === "string" && !!v.trim())
+    .map((v) => v.trim());
+  if (!labels.length) return null;
+  const joined = labels.join(type === "journey_track" ? " > " : " / ");
+  return joined.length > 60 ? `${joined.slice(0, 57)}...` : joined;
 }
 
 /** Flat, depth-annotated list of every component. Run ensureComponentIds first. */

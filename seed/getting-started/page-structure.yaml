@@ -264,6 +264,7 @@ components:
           - Sections with `eyebrow` + `heading` create visual hierarchy - use them to organize long pages.
           - `stat_grid` is great for KPIs at the top of any report.
           - `callout` with `variant: warn` or `variant: success` draws attention to key takeaways.
+          - For account health pages, `tier_summary` shows a portfolio by tier, `health_breakdown` explains one account's score, `journey_track` shows its stages and history, and `next_steps` lists what is due, per account if you give it `accounts`. Quote dates: `"2026-10-24"`.
 
       - type: markdown
         body: |

@@ -71,6 +71,20 @@ export const TEMPLATES: Template[] = [
     group: "Data",
     previewUrl: "/p/curata-internal/template-progress-bar",
   },
+  {
+    slug: "tier-summary",
+    title: "Tier Summary: Portfolio by Health",
+    description: "Accounts grouped by health tier with ARR and share of the book; each tier opens into its account list.",
+    group: "Data",
+    previewUrl: "/p/curata-internal/template-tier-summary",
+  },
+  {
+    slug: "health-breakdown",
+    title: "Health Breakdown: Account Score",
+    description: "One card per health dimension showing the tier an account lands in and the rule behind it.",
+    group: "Data",
+    previewUrl: "/p/curata-internal/template-health-breakdown",
+  },
   // Structure
   {
     slug: "org-chart",
@@ -128,6 +142,20 @@ export const TEMPLATES: Template[] = [
     description: "A phased Curata rollout plan with now/next/later horizons, dates, and status tracking.",
     group: "Sequence",
     previewUrl: "/p/curata-internal/template-priority-queue",
+  },
+  {
+    slug: "journey-track",
+    title: "Journey Track: Customer Journey",
+    description: "One account's stages on a dated line, a Save detour, touchpoints, and the full history behind a Details switch.",
+    group: "Sequence",
+    previewUrl: "/p/curata-internal/template-journey-track",
+  },
+  {
+    slug: "next-steps",
+    title: "Next Steps: Account Board",
+    description: "Open steps grouped by account with due dates and owner filters, overdue accounts first.",
+    group: "Sequence",
+    previewUrl: "/p/curata-internal/template-next-steps",
   },
   // Layout
   {
@@ -221,6 +249,13 @@ export const TEMPLATES: Template[] = [
     description: "A stat grid for the headline numbers, and a timeline underneath for status at a glance.",
     group: "Structured data",
     previewUrl: "/p/curata-internal/template-showcase-stat-timeline",
+  },
+  {
+    slug: "showcase-customer-hud",
+    title: "Customer HUD",
+    description: "Portfolio tiers, an owner's next steps board, and one account's health and journey on a single page.",
+    group: "Structured data",
+    previewUrl: "/p/curata-internal/template-showcase-customer-hud",
   },
   {
     slug: "showcase-tables",

@@ -129,6 +129,56 @@ export const PALETTE: PaletteEntry[] = [
       color: green`,
   },
   {
+    type: "tier_summary",
+    label: "Tier Summary",
+    description: "One card per tier with a count, value, and share bar; tiers open into account lists",
+    group: "Data",
+    stub: `- type: tier_summary
+  count_label: accounts
+  share_label: ARR
+  tiers:
+    - label: Outstanding
+      count: "2"
+      value: $335K
+      share: 64.4
+      accounts:
+        - name: Brightline
+          value: $240K
+          renewal: "2027-03-03"
+        - name: Larkspur
+          value: $95K
+          renewal: "2026-11-02"
+    - label: Good
+      count: "1"
+      value: $160K
+      share: 30.8
+    - label: Poor
+      count: "1"
+      value: $25K
+      share: 4.8`,
+  },
+  {
+    type: "health_breakdown",
+    label: "Health Breakdown",
+    description: "One card per health dimension: the tier it lands in and the rule behind it",
+    group: "Data",
+    stub: `- type: health_breakdown
+  items:
+    - label: Adoption
+      tier: Good
+      shade: 2
+      detail: "Weekly active users above target"
+    - label: Utilization
+      tier: Okay
+      shade: 3
+      value: "28.4%"
+      detail: "of licensed seats in use"
+    - label: Sentiment
+      tier: Outstanding
+      shade: 1
+      detail: "Responsive, positive relationship"`,
+  },
+  {
     type: "progress_bar",
     label: "Progress Bar",
     description: "Horizontal bar showing completion toward a target",
@@ -455,6 +505,56 @@ export const PALETTE: PaletteEntry[] = [
     - title: Task B
       priority: next
       status: planned`,
+  },
+  {
+    type: "journey_track",
+    label: "Journey Track",
+    description: "One account's journey: stages on a line, detours, touchpoints, and a dated history",
+    group: "Sequence",
+    stub: `- type: journey_track
+  title: Journey
+  stages:
+    - label: Onboarding
+      date: "2026-01-05"
+    - label: Operationalizing
+      date: "2026-03-02"
+    - label: Adopted
+      date: "2026-06-15"
+  current:
+    label: Renewal
+    date: "2026-10-01"
+    temporary: true
+  touchpoints:
+    - label: Kickoff
+      date: "2026-01-12"
+    - label: Renewal review
+      date: "2026-10-20"
+      status: upcoming
+  history:
+    events:
+      - date: "2026-01-05"
+        label: Entered Onboarding
+        kind: stage
+      - date: "2026-01-12"
+        label: Kickoff
+        kind: call`,
+  },
+  {
+    type: "next_steps",
+    label: "Next Steps",
+    description: "To-do list with due dates, or one expandable row per account",
+    group: "Sequence",
+    stub: `- type: next_steps
+  title: Next steps
+  steps:
+    - label: Book the renewal review
+      detail: "Contract ends in 90 days"
+      due: "2026-10-24"
+    - label: Send the value recap
+      due: "2026-10-10"
+      status: overdue
+    - label: Confirm the new champion
+      status: done`,
   },
   // --- Layout ---
   {

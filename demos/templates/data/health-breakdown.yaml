@@ -1,0 +1,19 @@
+title: "Account Health Breakdown"
+shell: standard
+components:
+  - type: callout
+    variant: info
+    title: What this page shows
+    body: "A health_breakdown with one card per health dimension. Each card names the tier the account lands in and the rule behind it, so the overall score is easy to explain."
+  - type: section
+    heading: "Ostra Health"
+    components:
+      - type: markdown
+        body: "Overall: Good. Scored 2026-10-12 from the last 30 days of product and call data."
+      - type: health_breakdown
+        id: account-health
+        items:
+          - { label: Noise reduction, tier: Outstanding, shade: 1, detail: "50% or more of findings auto-triaged" }
+          - { label: License utilization, tier: Okay, shade: 3, value: "28.4%", detail: "of assets investigated, 30 days" }
+          - { label: User activity, tier: Good, shade: 2, detail: "Portal stickiness 0.5 or more, seen this week" }
+          - { label: Sentiment, tier: Good, shade: 2, detail: "Positive relationship, responsive" }

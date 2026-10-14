@@ -31,6 +31,54 @@ function measureContent(): { width: number; height: number } {
   };
 }
 
+/**
+ * Opens everything a reader would otherwise click to see, so the export shows
+ * it. Works on DOM state alone (drop `hidden`, set aria-expanded), so it holds
+ * whether the renderer leaves closed panels out, marks them `hidden` in React,
+ * or ships them open and lets a script hide them. Runs inside the browser via
+ * page.evaluate, so it must stay self-contained.
+ *
+ * - tier_summary: every tier's account panel open.
+ * - next_steps: every account row expanded.
+ * - journey_track: the timeline, with the full Details log under it.
+ */
+export function expandInteractive(): void {
+  const open = (el: Element) => el.removeAttribute("hidden");
+
+  document.querySelectorAll("[data-tier-summary]").forEach((root) => {
+    root.querySelectorAll("[data-tier-toggle]").forEach((btn) => {
+      btn.setAttribute("aria-expanded", "true");
+      btn.classList.add("is-open");
+    });
+    root.querySelectorAll("[data-tier-panel]").forEach(open);
+  });
+
+  document.querySelectorAll("[data-next-steps]").forEach((root) => {
+    root.querySelectorAll("[data-acct-toggle]").forEach((btn) => {
+      btn.setAttribute("aria-expanded", "true");
+      btn.closest("[data-acct]")?.classList.add("is-open");
+      const panel = btn.getAttribute("aria-controls");
+      const el = panel ? root.querySelector(`[id="${panel}"]`) : null;
+      if (el) open(el);
+    });
+  });
+
+  document.querySelectorAll(".c-journey").forEach((root) => {
+    root.querySelectorAll("[data-jt-panel]").forEach((panel) => {
+      open(panel);
+      const el = panel as HTMLElement;
+      if (panel.getAttribute("data-jt-panel") === "details") {
+        el.classList.remove("has-more");
+        el.style.maxHeight = "none";
+        el.style.overflow = "visible";
+        el.style.marginTop = "16px";
+      }
+    });
+    // Both views are on the page now, so the switcher has nothing to switch.
+    root.querySelectorAll(".c-jt-toggle").forEach((t) => ((t as HTMLElement).style.display = "none"));
+  });
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function screenshotPage(url: string, browser: any): Promise<Buffer> {
   const page = await browser.newPage({ viewport: { width: EXPORT_WIDTH, height: 800 } });
@@ -60,6 +108,8 @@ export async function screenshotPage(url: string, browser: any): Promise<Buffer>
       tabs.appendChild(frag);
     });
   });
+
+  await page.evaluate(expandInteractive);
 
   const bounds = await page.evaluate(measureContent);
   await page.setViewportSize({ width: bounds.width, height: bounds.height });
