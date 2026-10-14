@@ -50,7 +50,11 @@ export function expandInteractive(): void {
       btn.setAttribute("aria-expanded", "true");
       btn.classList.add("is-open");
     });
-    root.querySelectorAll("[data-tier-panel]").forEach(open);
+    root.querySelectorAll("[data-tier-panel]").forEach((panel) => {
+      open(panel);
+      // The panel fades in on open; skip that so the capture isn't mid-fade.
+      (panel as HTMLElement).style.animation = "none";
+    });
   });
 
   document.querySelectorAll("[data-next-steps]").forEach((root) => {
