@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { track, identifyOrg } from "@/lib/analytics";
 import { seedGettingStartedPage } from "./seed-page";
 import { generateFunSlug } from "./slug-words";
 import { DEFAULT_CONTENT_RULES } from "./content-rules";
@@ -217,6 +218,8 @@ export async function seedOrg(name: string, slug?: string): Promise<{ id: string
 
   await seedOrgContent(org.id);
 
+  track("org_created", org.id, null, { via: "seed" });
+  identifyOrg(org.id, { name: org.name, slug: org.slug });
   return { id: org.id, slug: org.slug };
 }
 

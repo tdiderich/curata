@@ -77,6 +77,9 @@ importers:
       posthog-js:
         specifier: ^1.444.3
         version: 1.444.3(@types/react@19.2.14)(preact-render-to-string@6.5.11(preact@10.24.3))(react@19.2.4)
+      posthog-node:
+        specifier: ^5.61.2
+        version: 5.61.2
       prisma:
         specifier: ^7.8.0
         version: 7.8.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(magicast@0.5.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
@@ -3483,6 +3486,18 @@ packages:
       '@types/react':
         optional: true
       react:
+        optional: true
+
+  posthog-node@5.61.2:
+    resolution: {integrity: sha512-6pMhzR+APW+CBreUlHce3qrxwU7l90gYp1A5eN0kf/o3rVf++Zz2KPtZQC63ct+hWkzCwi3Arm+GT8EjUBrUag==}
+    engines: {node: ^20.20.0 || >=22.22.0}
+    peerDependencies:
+      '@opentelemetry/api': ^1.2.0
+      rxjs: ^7.0.0
+    peerDependenciesMeta:
+      '@opentelemetry/api':
+        optional: true
+      rxjs:
         optional: true
 
   preact-render-to-string@6.5.11:
@@ -7535,6 +7550,10 @@ snapshots:
       react: 19.2.4
     transitivePeerDependencies:
       - preact-render-to-string
+
+  posthog-node@5.61.2:
+    dependencies:
+      '@posthog/core': 1.62.0
 
   preact-render-to-string@6.5.11(preact@10.24.3):
     dependencies:

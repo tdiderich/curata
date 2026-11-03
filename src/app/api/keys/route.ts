@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { track } from "@/lib/analytics";
 import { resolveOrg } from "@/lib/auth";
 import { generateApiKey, hashApiKey } from "@/lib/api-key";
 import { can } from "@/lib/permissions";
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
         ...(expiresAt ? { expiresAt } : {}),
       },
     });
+    track("api_key_created", ctx.orgId, ctx.userId, { expires_in: body.expiresIn ?? "never" });
     logAudit({
       orgId: ctx.orgId,
       action: "apikey.create",

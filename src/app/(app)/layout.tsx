@@ -3,6 +3,7 @@ import { AUTH_MODE, resolveOrg, resolveCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { basePath } from "@/lib/api-fetch";
 import { ActionBar } from "@/components/action-bar";
+import { AnalyticsIdentify } from "@/components/analytics-identify";
 import type { ActionBarPage } from "@/components/action-bar-types";
 
 function UserAvatar({ name, email }: { name: string; email: string }) {
@@ -46,6 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let pages: ActionBarPage[] = [];
   let orgName = "curata";
   let logoUrl: string | null = null;
+  let identity: { userId: string; email: string; name: string; orgId: string } | null = null;
 
   try {
     const ctx = await resolveOrg();
@@ -76,6 +78,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         select: { slug: true, title: true, folderId: true, pinned: true, visibility: true },
       });
       pages = rawPages;
+
+      // Only resolve the user (a Clerk API call in clerk mode) when analytics
+      // is on, so installs without PostHog pay nothing for it.
+      if (process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) {
+        const user = await resolveCurrentUser();
+        identity = {
+          userId: ctx.userId,
+          email: user?.email ?? "",
+          name: user?.name ?? "",
+          orgId: ctx.orgId,
+        };
+      }
     }
   } catch {
     // DB unavailable (static generation)
@@ -90,6 +104,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         authControls={<AuthControls />}
       />
       <main className="app-main">{children}</main>
+      {identity && <AnalyticsIdentify {...identity} orgName={orgName} />}
     </div>
   );
 }

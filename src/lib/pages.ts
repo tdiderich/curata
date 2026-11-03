@@ -1,4 +1,5 @@
 import yaml from "js-yaml";
+import { track } from "@/lib/analytics";
 import { createHash } from "crypto";
 import { db } from "./db";
 import type { Prisma } from "@/generated/prisma/client";
@@ -771,6 +772,10 @@ async function _writePageInternal(
 
     const created = await db.page.create({ data: createData as Parameters<typeof db.page.create>[0]["data"] });
     pageId = created.id;
+    track("page_created", orgId, createdBy, {
+      page_type: created.pageType ?? null,
+      visibility: created.visibility,
+    });
   }
 
   // Version retention prune, inline on every write so version rows never

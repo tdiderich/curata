@@ -4,6 +4,7 @@
 // tests/mcp-tool-parity.test.ts enforces that every tool listed here is
 // registered on the streamable-HTTP server.
 import { db } from "@/lib/db";
+import { track } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
 import {
   listPages,
@@ -432,6 +433,28 @@ async function trustDenialMessage(orgId: string, slug: string): Promise<string> 
 }
 
 export async function dispatch(
+  tool: string,
+  args: Record<string, string>,
+  orgId: string,
+  orgSlug: string,
+  actorId: string,
+  userId?: string
+): Promise<unknown> {
+  // One analytics event per agent tool call: the usage signal browser
+  // analytics can't see. Arguments are never sent, only the tool name.
+  const started = Date.now();
+  const name = resolveToolName(tool);
+  try {
+    const result = await dispatchTool(tool, args, orgId, orgSlug, actorId, userId);
+    track("mcp_tool_called", orgId, userId, { tool: name, ok: true, ms: Date.now() - started });
+    return result;
+  } catch (err) {
+    track("mcp_tool_called", orgId, userId, { tool: name, ok: false, ms: Date.now() - started });
+    throw err;
+  }
+}
+
+async function dispatchTool(
   tool: string,
   args: Record<string, string>,
   orgId: string,

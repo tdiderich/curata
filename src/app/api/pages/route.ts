@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { track } from "@/lib/analytics";
 import yaml from "js-yaml";
 import { resolveOrg } from "@/lib/auth";
 import { can, VALID_PAGE_VISIBILITY } from "@/lib/permissions";
@@ -225,6 +226,9 @@ export async function PATCH(request: NextRequest) {
       where: { id: pageWithAccess.id },
       data,
     });
+    if (body.visibility === "public" && pageWithAccess.visibility !== "public") {
+      track("page_published", ctx.orgId, ctx.userId, { page_type: updated.pageType ?? null });
+    }
 
     return NextResponse.json({ ok: true, slug: updated.slug });
   } catch (err) {
