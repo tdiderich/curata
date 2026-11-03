@@ -17,6 +17,8 @@ const PUBLIC_PREFIXES_BASE = [
   "/api/og/",
   "/api/public-annotations/",
   "/p/",
+  // Optional PostHog proxy (next.config.ts). Anonymous visitors send events.
+  "/ingest/",
   // Agent-discovery surfaces. These describe only public content and must stay
   // reachable without auth in every AUTH_MODE, the same way robots.txt is.
   "/robots.txt",

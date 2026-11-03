@@ -4,6 +4,7 @@ packages:
 allowBuilds:
   '@clerk/shared': true
   '@prisma/engines': true
+  core-js: false
   esbuild: true
   prisma: true
   sharp: true

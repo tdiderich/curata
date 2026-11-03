@@ -1,6 +1,22 @@
 import type { NextConfig } from "next";
 
+// Optional PostHog reverse proxy, active only when a project token is set at
+// build time. See src/instrumentation-client.ts.
+const posthogEnabled = Boolean(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN);
+const posthogHost = (process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com").replace(/\/$/, "");
+// us.i.posthog.com -> us-assets.i.posthog.com; self-hosted hosts serve both.
+const posthogAssetsHost = posthogHost.replace(/^https:\/\/(us|eu)\.i\./, "https://$1-assets.i.");
+const posthogRewrites = posthogEnabled
+  ? [
+      { source: "/ingest/static/:path*", destination: `${posthogAssetsHost}/static/:path*` },
+      { source: "/ingest/:path*", destination: `${posthogHost}/:path*` },
+    ]
+  : [];
+
 const nextConfig: NextConfig = {
+  // PostHog's API paths end in a slash; Next's trailing-slash redirect would
+  // 308 them before the /ingest rewrite runs.
+  skipTrailingSlashRedirect: posthogEnabled,
   async headers() {
     return [
       {
@@ -55,6 +71,7 @@ const nextConfig: NextConfig = {
       // path (kazam's REST fetcher calls that directly).
       { source: "/mcp", destination: "/api/mcp/stream" },
       { source: "/mcp/:path*", destination: "/api/mcp/:path*" },
+      ...posthogRewrites,
     ];
   },
 };
