@@ -4,13 +4,11 @@ import type { NextConfig } from "next";
 // build time. See src/instrumentation-client.ts.
 const posthogEnabled = Boolean(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN);
 const posthogHost = (process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com").replace(/\/$/, "");
-// us.i.posthog.com -> us-assets.i.posthog.com; self-hosted hosts serve both.
-const posthogAssetsHost = posthogHost.replace(/^https:\/\/(us|eu)\.i\./, "https://$1-assets.i.");
+// The ingest host also serves /static/*. The separate *-assets.i.posthog.com
+// host sits behind Cloudflare, which 403s (error 1000) requests proxied from
+// Railway, so recorder/surveys/web-vitals scripts go through the ingest host.
 const posthogRewrites = posthogEnabled
-  ? [
-      { source: "/ingest/static/:path*", destination: `${posthogAssetsHost}/static/:path*` },
-      { source: "/ingest/:path*", destination: `${posthogHost}/:path*` },
-    ]
+  ? [{ source: "/ingest/:path*", destination: `${posthogHost}/:path*` }]
   : [];
 
 const nextConfig: NextConfig = {
