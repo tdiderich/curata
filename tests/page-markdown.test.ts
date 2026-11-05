@@ -381,6 +381,43 @@ components:
     expect(md).toContain("- **Bare**");
   });
 
+  it("renders every call_log call newest first, ignoring limit", () => {
+    const md = pageToMarkdown(
+      page(`
+title: T
+components:
+  - type: call_log
+    limit: 1
+    items:
+      - date: 2026-10-01
+        title: Kickoff
+        components:
+          - { type: markdown, body: "Old notes" }
+      - date: "2026-11-04"
+        title: Path to production
+        summary: Agreed the rollout order
+        components:
+          - { type: markdown, body: "New notes" }
+`),
+    );
+    expect(md).toContain("## 2026-11-04 · Path to production");
+    expect(md).toContain("*Agreed the rollout order*");
+    expect(md).toContain("## 2026-10-01 · Kickoff");
+    expect(md.indexOf("Path to production")).toBeLessThan(md.indexOf("Kickoff"));
+    expect(md.indexOf("New notes")).toBeLessThan(md.indexOf("Kickoff"));
+    expect(md).toContain("Old notes");
+  });
+
+  it("says so when a call_log has no calls", () => {
+    const md = pageToMarkdown(page(`
+title: T
+components:
+  - type: call_log
+    items: []
+`));
+    expect(md).toContain("No calls yet.");
+  });
+
   it("renders next_steps as a checklist with due date, status and owner", () => {
     const md = pageToMarkdown(
       page(`

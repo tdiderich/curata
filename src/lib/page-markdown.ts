@@ -305,6 +305,27 @@ function stepLine(s: Node, opts: { stripPrefix?: string; showOwner: boolean }): 
   return `${head}${detail ? `: ${detail}` : ""}${meta.length ? ` (${meta.join(", ")})` : ""}`;
 }
 
+/**
+ * Every call, newest first like the rendered log, with nothing held back by
+ * `limit`: an agent reading the page gets the whole history. Each call is a
+ * heading (`date · title`), its summary, then its agenda and notes.
+ */
+function callLogBlocks(c: Node, depth: number): string[] {
+  const calls = arr(c.items)
+    .map((item, i) => ({ item, i, date: val(item.date) ?? "", title: str(item.title) }))
+    .filter((x) => x.title);
+  if (!calls.length) return ["No calls yet."];
+  calls.sort((x, y) => (x.date === y.date ? x.i - y.i : x.date < y.date ? 1 : -1));
+  const out: string[] = [];
+  for (const { item, date, title } of calls) {
+    out.push(heading(depth, date ? `${date} · ${title}` : title!));
+    const summary = str(item.summary);
+    if (summary) out.push(`*${summary}*`);
+    out.push(...childBlocks(arr(item.components), depth + 1));
+  }
+  return out;
+}
+
 function nextStepsBlocks(c: Node, depth: number): string[] {
   const out: string[] = [];
   const title = str(c.title);
@@ -965,6 +986,10 @@ function componentBlocks(c: Node, depth: number): string[] {
 
     case "next_steps":
       out.push(...nextStepsBlocks(c, depth));
+      break;
+
+    case "call_log":
+      out.push(...callLogBlocks(c, depth));
       break;
 
     // Presentation-only: an icon or a role_map placeholder carries no content

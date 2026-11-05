@@ -327,6 +327,21 @@ export const PALETTE: PaletteEntry[] = [
       body: "More detail."`,
   },
   {
+    type: "call_log",
+    label: "Call Log",
+    description: "Call history, newest first: each call opens to its agenda and notes",
+    group: "Structure",
+    stub: `- type: call_log
+  limit: 5
+  items:
+    - date: "2026-11-04"
+      title: Path to production
+      summary: "Agreed the rollout order"
+      components:
+        - type: markdown
+          body: "Agenda and notes here."`,
+  },
+  {
     type: "tabs",
     label: "Tabs",
     description: "Tabbed content panels for mutually exclusive views",

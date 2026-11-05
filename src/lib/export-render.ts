@@ -41,6 +41,7 @@ function measureContent(): { width: number; height: number } {
  * - tier_summary: every tier's account panel open.
  * - next_steps: every account row expanded.
  * - journey_track: the timeline, with the full Details log under it.
+ * - call_log: every call shown past the limit, every call opened.
  */
 export function expandInteractive(): void {
   const open = (el: Element) => el.removeAttribute("hidden");
@@ -65,6 +66,14 @@ export function expandInteractive(): void {
       const el = panel ? root.querySelector(`[id="${panel}"]`) : null;
       if (el) open(el);
     });
+  });
+
+  document.querySelectorAll("[data-call-log]").forEach((root) => {
+    root.querySelectorAll("[data-call-log-item]").forEach(open);
+    root.querySelectorAll("[data-call-log-body]").forEach(open);
+    root.querySelectorAll("[data-call-log-toggle]").forEach((btn) => btn.setAttribute("aria-expanded", "true"));
+    // Everything is showing, so the button has nothing left to show.
+    root.querySelectorAll("[data-call-log-more]").forEach((b) => ((b as HTMLElement).style.display = "none"));
   });
 
   document.querySelectorAll(".c-journey").forEach((root) => {

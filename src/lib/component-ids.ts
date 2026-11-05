@@ -209,6 +209,10 @@ function listLabelOf(c: Component): string | null {
     if (accounts) return `${accounts} account${accounts === 1 ? "" : "s"}, ${steps} step${steps === 1 ? "" : "s"}`;
     return steps ? `${steps} step${steps === 1 ? "" : "s"}` : null;
   }
+  if (type === "call_log") {
+    const calls = Array.isArray(c.items) ? c.items.length : 0;
+    return calls ? `${calls} call${calls === 1 ? "" : "s"}` : null;
+  }
   const key = LABEL_LISTS[type];
   const list = key ? c[key] : undefined;
   if (!Array.isArray(list)) return null;
