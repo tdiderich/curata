@@ -105,7 +105,7 @@ curl -X POST ${baseUrl}/api/mcp \\
 
 **Prefer \`patch_page\` over \`write_page\` for partial updates.** When you need to update a single section, add a component, or change the page title, use \`patch_page\` with targeted operations. Only use \`write_page\` when rewriting the majority of the page content. Every \`read_page\` response includes auto-generated \`id\` fields on top-level components — use these as patch targets.
 
-Operations: \`replace\` (swap component by ID), \`insert_before\`/\`insert_after\` (add relative to ID), \`remove\` (delete by ID), \`prepend\`/\`append\` (add to start/end), \`set_field\` (update title/subtitle/eyebrow/shell).
+Operations: \`replace\` (swap component by ID), \`insert_before\`/\`insert_after\` (add relative to ID), \`remove\` (delete by ID), \`prepend\`/\`append\` (add to start/end), \`set_field\` (update title/subtitle/eyebrow/shell), \`add_item\` (add one item to a component's list, like a call to a call_log).
 
 ## Available Data Sources (use what's connected)
 

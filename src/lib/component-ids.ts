@@ -339,7 +339,7 @@ export function locateComponent(components: Component[], id: string): Located | 
 // ── Patch operations ──────────────────────────────────
 
 export interface PatchOperation {
-  op: "replace" | "insert_before" | "insert_after" | "remove" | "prepend" | "append" | "set_field";
+  op: "replace" | "insert_before" | "insert_after" | "remove" | "prepend" | "append" | "set_field" | "add_item";
   id?: string;
   components?: Component[];
   field?: string;
@@ -413,6 +413,19 @@ export function applyPatchOperations(page: PageObject, operations: PatchOperatio
       case "append": {
         needItems();
         result.components = [...result.components, ...items];
+        break;
+      }
+      case "add_item": {
+        // One list item (a call_log call, a table row) onto a component's list
+        // field, so a caller adds an entry without re-sending the rest.
+        const loc = target();
+        const field = op.field || "items";
+        const list = loc.component[field];
+        if (!Array.isArray(list)) throw new Error(`add_item: component "${op.id}" has no list field "${field}".\n${patchOpsText()}`);
+        if (op.value == null || typeof op.value !== "object" || Array.isArray(op.value)) {
+          throw new Error(`add_item requires "value": one item object for "${field}".\n${patchOpsText()}`);
+        }
+        list.push(op.value);
         break;
       }
       case "set_field": {

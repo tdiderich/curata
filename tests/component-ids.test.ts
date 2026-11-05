@@ -123,6 +123,35 @@ describe("applyPatchOperations", () => {
     ],
   };
 
+  it("add_item pushes one call onto a nested call_log without touching the rest", () => {
+    const page = {
+      title: "P",
+      components: [
+        {
+          type: "section",
+          id: "history",
+          components: [{ type: "call_log", id: "call-log-list", items: [{ date: "2026-10-01", title: "Kickoff" }] }],
+        },
+      ],
+    };
+    const result = applyPatchOperations(page, [
+      { op: "add_item", id: "call-log-list", value: { date: "2026-11-04", title: "Path to production" } },
+    ]);
+    const log = (result.components[0].components as Record<string, unknown>[])[0];
+    expect(log.items).toEqual([
+      { date: "2026-10-01", title: "Kickoff" },
+      { date: "2026-11-04", title: "Path to production" },
+    ]);
+    expect((page.components[0].components[0].items as unknown[]).length).toBe(1);
+  });
+
+  it("add_item rejects a missing list field or a non-object value", () => {
+    expect(() => applyPatchOperations(basePage, [{ op: "add_item", id: "callout-0", value: { title: "x" } }])).toThrow(/no list field "items"/);
+    const page = { title: "P", components: [{ type: "call_log", id: "log", items: [] }] };
+    expect(() => applyPatchOperations(page, [{ op: "add_item", id: "log", value: [1] }])).toThrow(/requires "value"/);
+    expect(() => applyPatchOperations(page, [{ op: "add_item", id: "missing", value: {} }])).toThrow(/not found/);
+  });
+
   it("replaces a component by id", () => {
     const result = applyPatchOperations(basePage, [
       { op: "replace", id: "callout-0", components: [{ type: "callout", body: "replaced" }] },

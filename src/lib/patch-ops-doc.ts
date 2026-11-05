@@ -10,6 +10,7 @@ export const PATCH_OPS = [
   { op: "remove", needs: "id", does: "delete the component with id" },
   { op: "prepend", needs: "components", does: "insert at the top of the page" },
   { op: "append", needs: "components", does: "insert at the bottom of the page" },
+  { op: "add_item", needs: "id, value, field?", does: "add one item (value) to the list field (default items) of the component with id, like a call to a call_log" },
   { op: "set_field", needs: "field, value", does: "set a top-level page field: title, subtitle, eyebrow, shell" },
 ] as const;
 
