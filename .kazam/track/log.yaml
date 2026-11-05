@@ -248,3 +248,7 @@ events:
   title: 'added kz-cff8df: API key permissions inconsistency: Settings API Keys tab gated to owner/admin (key:manage) but POST /api/keys lets any non-viewer create their own key - Connect tab shows members ''ask an admin'' though the API would allow self-serve. Align gate or route. Found by kz-a23217 build'
   severity: info
   task_id: kz-cff8df
+- date: 2026-11-04T19:51:59.561403-06:00
+  title: Modified src/lib/page-markdown.ts
+  severity: info
+  source: claude-code

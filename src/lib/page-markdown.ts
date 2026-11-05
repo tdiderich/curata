@@ -312,13 +312,12 @@ function stepLine(s: Node, opts: { stripPrefix?: string; showOwner: boolean }): 
  */
 function callLogBlocks(c: Node, depth: number): string[] {
   const calls = arr(c.items)
-    .map((item, i) => ({ item, i, date: val(item.date) ?? "", title: str(item.title) }))
-    .filter((x) => x.title);
+    .map((item, i) => ({ item, i, date: val(item.date) ?? "", title: str(item.title) ?? "Call" }));
   if (!calls.length) return ["No calls yet."];
   calls.sort((x, y) => (x.date === y.date ? x.i - y.i : x.date < y.date ? 1 : -1));
   const out: string[] = [];
   for (const { item, date, title } of calls) {
-    out.push(heading(depth, date ? `${date} · ${title}` : title!));
+    out.push(heading(depth, date ? `${date} · ${title}` : title));
     const summary = str(item.summary);
     if (summary) out.push(`*${summary}*`);
     out.push(...childBlocks(arr(item.components), depth + 1));
