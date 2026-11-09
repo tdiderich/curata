@@ -1,0 +1,75 @@
+# Settings help video (public/help/settings.mp4). Storyboard and build input.
+# Screens: src/stories/demo/settings.stories.tsx, one beat per tab.
+# Slow pace: one tab per beat, a ring on the tab or control it explains.
+# Captions are final copy: no em dashes, every claim visible in its frame.
+title: Settings
+size: [1440, 900]
+target_seconds: 40
+beats:
+  - id: intro
+    story: demo-settings--settings
+    steps: [{ replaceText: ["http://localhost:6007", "https://curata.ai"] }]
+    ring: { css: ".settings-tab-bar" }
+    caption: Settings for your whole brain, one tab at a time.
+    seconds: 4
+
+  - id: admin
+    story: demo-settings--settings
+    ring: { css: "input[value='acme.com']" }
+    caption: "Admin: your brain's name, logo and auto-join domain."
+    seconds: 4.5
+
+  - id: connect
+    story: demo-settings--settings
+    steps: [{ click: "Connect" }, { replaceText: ["http://localhost:6007", "https://curata.ai"] }]
+    ring: { css: "pre.agent-prompt-pre" }
+    caption: "Connect: the URL and command that add curata to your agent."
+    seconds: 5.5
+
+  - id: members
+    story: demo-settings--settings
+    steps: [{ click: "Members" }]
+    ring: { css: "select.members-role-select" }
+    caption: "Members: who's in, and the role each person has."
+    seconds: 5
+
+  - id: groups
+    story: demo-settings--settings
+    steps: [{ click: "Groups" }]
+    ring: { text: "Create group" }
+    caption: "Groups: put people in teams, like Engineering or Customer Success."
+    seconds: 5
+
+  - id: tags
+    story: demo-settings--settings
+    steps: [{ click: "Tags" }]
+    ring: { text: "engineering" }
+    caption: "Tags: the shared vocabulary your agents tag pages with."
+    seconds: 5
+
+  - id: rules
+    story: demo-settings--settings
+    steps: [{ click: "Content Rules" }]
+    ring: { text: "Block" }
+    caption: "Content Rules: checked on every save. Block rules stop the write."
+    seconds: 5.5
+
+  - id: keys
+    story: demo-settings--settings
+    steps: [{ click: "API Keys" }]
+    ring: { text: "Create key" }
+    caption: "API Keys: for headless agents and CI."
+    seconds: 5
+
+  - id: theme
+    story: demo-settings--settings
+    steps: [{ click: "Theme" }]
+    ring: { css: ".theme-swatch--active" }
+    caption: "Theme: mode, accent color and texture to make it yours."
+    seconds: 4.5
+
+  - id: end
+    card:
+      title: Connect your agent
+      note: The setup prompt and instructions are right below this video.
+    seconds: 4

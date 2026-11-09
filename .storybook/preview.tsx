@@ -39,6 +39,14 @@ const preview: Preview = {
         d.setAttribute("data-theme", String(theme ?? "violet"));
         d.setAttribute("data-mode", String(mode ?? "dark"));
       }, [theme, mode]);
+      // Demo screens (help videos) render edge to edge like the real app.
+      if (context.parameters.demoScreen) {
+        return (
+          <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
+            <Story />
+          </div>
+        );
+      }
       return (
         <div style={{ background: "var(--bg)", padding: 24, minHeight: "100vh" }}>
           <Story />

@@ -1,0 +1,77 @@
+# Page help video (public/help/page.mp4). Opened from Help on any /pages/<slug>.
+# Slower than the welcome montage: one control per beat, ringed, with a
+# caption that says what it does. Screen: the page the starter prompt really
+# wrote (Demo/Page AgentPage). Captions are final copy: no em dashes, every
+# claim visible in its frame.
+title: Working with a page
+size: [1440, 900]
+target_seconds: 50
+beats:
+  - id: read
+    story: demo-page--agent-page
+    caption: This is a page. Your agent wrote this one.
+    seconds: 4.5
+
+  - id: sections
+    story: demo-page--agent-page
+    steps: [{ scrollTo: ".c-section:has-text('Everyday commands')" }]
+    ring: { css: ".c-section:has-text('Everyday commands') .c-code" }
+    caption: Pages are built from sections, like steps, code and lists.
+    seconds: 5
+
+  - id: comment
+    story: demo-page--agent-page
+    steps: [{ select: "Keep AUTH_MODE=none locally" }]
+    ring: { css: ".selection-popup" }
+    caption: Select any text to leave a comment on it.
+    seconds: 5
+
+  - id: edit
+    story: demo-page--agent-page
+    ring: { css: "button[aria-label='Edit page']" }
+    caption: Edit page changes it in place, right where you read it.
+    seconds: 4.5
+
+  - id: editing
+    story: demo-page--agent-page
+    steps: [{ css: "button[aria-label='Edit page']" }]
+    ring: { css: "button[aria-label='Done editing']" }
+    caption: Click any text to change it, then click Done editing.
+    seconds: 5
+
+  - id: copy
+    story: demo-page--agent-page
+    ring: { css: "button[aria-label='Copy for agent']" }
+    caption: Copy for agent hands this page to any agent as context.
+    seconds: 5
+
+  - id: present
+    story: demo-page--agent-page
+    steps: [{ css: "button[aria-label='Present']" }, { css: "button[aria-label='Next slide']" }]
+    caption: Present turns each section into a slide.
+    seconds: 5
+
+  - id: export
+    story: demo-page--agent-page
+    ring: { css: "button[aria-label='Export PDF']" }
+    caption: Export PDF gives you a clean copy to send.
+    seconds: 4.5
+
+  - id: settings
+    story: demo-page--agent-page
+    ring: { css: "button[aria-label='Page settings']" }
+    caption: Page settings is where visibility, tags and rules live.
+    seconds: 4.5
+
+  - id: labels
+    story: demo-page--agent-page
+    steps: [{ css: "button[aria-label='Hide labels']" }]
+    ring: { css: ".dock-btn--help" }
+    caption: Hide labels for a slimmer dock. Help stays right here.
+    seconds: 5
+
+  - id: end
+    card:
+      title: Hand this page to your agent
+      note: Copy it with the button below this video.
+    seconds: 4

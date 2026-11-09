@@ -1,0 +1,75 @@
+{
+    "shell": "standard",
+    "title": "Dev Setup and Daily Workflow",
+    "subtitle": "Get the curata repo running locally, plus the restarts that aren't obvious.",
+    "components": [
+        {
+            "id": "markdown-0",
+            "body": "Start here on day one. Source of truth is `CLAUDE.md`, `dev.sh`, `package.json` and `.env.example` in the repo root.\n",
+            "type": "markdown"
+        },
+        {
+            "id": "first-run",
+            "type": "section",
+            "heading": "First run",
+            "components": [
+                {
+                    "id": "steps-0",
+                    "type": "steps",
+                    "items": [
+                        {
+                            "title": "Run ./dev.sh",
+                            "detail": "Starts Postgres in Docker, creates .env from .env.example, installs deps, runs pnpm generate, pushes the Prisma schema, starts the dev server."
+                        },
+                        {
+                            "title": "Keep AUTH_MODE=none locally",
+                            "detail": "AUTH_MODE switches all auth behavior: none, tailscale, oauth, clerk. none uses the first org, no login. See src/middleware.ts."
+                        },
+                        {
+                            "title": "Connect your agent",
+                            "detail": "Point Claude Code at the local MCP endpoint under /api/mcp so you read and write pages the way users do."
+                        }
+                    ],
+                    "numbered": true
+                }
+            ]
+        },
+        {
+            "id": "everyday-commands",
+            "type": "section",
+            "heading": "Everyday commands",
+            "components": [
+                {
+                    "id": "code-0",
+                    "code": "pnpm dev          # Next.js dev server (webpack)\npnpm generate     # Prisma client + kazam SDK/renderer + generated docs\npnpm test         # Vitest, tests/*.test.ts, files run sequentially\npnpm lint         # fix before opening a PR\npnpm storybook    # needed for help-video captures\ndocker compose up # Postgres plus the app in Docker\n",
+                    "type": "code",
+                    "language": "bash"
+                }
+            ]
+        },
+        {
+            "id": "gotchas",
+            "type": "section",
+            "heading": "Gotchas",
+            "components": [
+                {
+                    "id": "markdown-0-0",
+                    "body": "- Schema change? Restart the dev server. It holds the Prisma client in memory. After editing `prisma/schema.prisma`, run `pnpm generate` and restart `pnpm dev`, or writes fail with `Unknown argument` / `PrismaClientValidationError`.\n- `.bin/kazam` is a committed binary, not a symlink. After a kazam change: `cargo build --release`, copy `target/release/kazam` to `curata/.bin/kazam`, then `pnpm generate`.\n- Don't hand-edit `src/generated/**`. It's build output and lint skips it.\n- Keep tests safe to run sequentially. `vitest.config.ts` sets `fileParallelism: false`.\n- claude.ai's MCP connector caches tool schemas. After changing MCP tools, refresh the connector in claude.ai settings or dogfood agents see stale tools.\n",
+                    "type": "markdown"
+                }
+            ]
+        },
+        {
+            "id": "task-tracking",
+            "type": "section",
+            "heading": "Task tracking",
+            "components": [
+                {
+                    "id": "markdown-0-1",
+                    "body": "The repo uses kazam for tasks and context, with state in `.kazam/`. Read `.kazam/ctx/anatomy.tsv` before exploring, run `kazam ctx bugs --file <path>` before fixing an error, close tasks as you commit. Full rules in `.claude/rules/kazam-workspace.md`.\n",
+                    "type": "markdown"
+                }
+            ]
+        }
+    ]
+}

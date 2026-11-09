@@ -1,0 +1,88 @@
+# Welcome help video (public/help/welcome.mp4). Storyboard and build input.
+# Screens: Storybook stories under src/stories/demo (story: <id>), or a
+# hand-built terminal (terminal:), since Claude Code's UI is not ours.
+# Captions are final copy: no em dashes, every claim visible in its frame.
+#
+# Shape: a fast montage of what you can do by hand, then "or have your agent
+# do it". The starter prompt in beat `setup` is the one the connect modal
+# offers to copy, and its output is what Claude Code really did with it
+# against a fresh instance on 2026-11-09 (condensed, not invented).
+title: Welcome to curata
+size: [1440, 900]
+target_seconds: 34
+beats:
+  - id: home
+    story: demo-welcome--home-fresh
+    caption: This is your company brain.
+    seconds: 3
+
+  # Montage: quick cuts, no cursor.
+  - id: m-folder
+    story: demo-welcome--home-fresh
+    steps: [{ click: "Create Folder" }, { type: "Engineering" }]
+    caption: Organize it in folders.
+    seconds: 2
+
+  - id: m-rules
+    story: demo-page--rules
+    caption: Set rules for what gets written.
+    seconds: 2.2
+
+  - id: m-newpage
+    story: demo-welcome--home-fresh
+    steps: [{ click: "New page" }]
+    caption: Write pages from templates.
+    seconds: 2
+
+  - id: m-present
+    story: demo-page--agent-page
+    steps: [{ css: "button[aria-label='Present']" }, { css: "button[aria-label='Next slide']" }]
+    caption: Present any page as slides.
+    seconds: 2
+
+  - id: m-export
+    story: demo-page--agent-page
+    ring: { css: "button[aria-label='Export PDF']" }
+    caption: Export to PDF.
+    seconds: 2
+
+  - id: twist
+    card:
+      brand: false
+      title: Or skip all that.
+      subtitle: Have your agent do it.
+    seconds: 2.6
+
+  - id: connect
+    terminal:
+      typed: claude mcp add --transport http curata https://curata.ai/api/mcp/stream
+      output: Added HTTP MCP server curata
+    caption: Connect your agent with one command.
+    seconds: 4.5
+
+  - id: setup
+    terminal:
+      paste: true
+      typed: "Set up curata from what we've been working on: make a folder for it, add a rule for pages written there, and save the 3 pages a new teammate would need. Don't ask first, just do it."
+      think: 0.9
+      output: |
+        Created folder "Curata Engineering"
+        Added 2 rules: block secrets, cite source files
+        Saved 3 pages: Dev Setup and Daily Workflow, In-App Help Videos,
+          Product Analytics (PostHog)
+    caption: Ask it to set up your brain from what you're working on.
+    seconds: 6.5
+
+  - id: landed
+    story: demo-welcome--home-after-agent
+    steps: [{ click: "Curata Engineering" }]
+    ring: { css: ".abh-folder-group:has-text('Curata Engineering')" }
+    caption: Your agent built the folder and its pages.
+    seconds: 4.5
+
+  - id: end
+    card:
+      title: Connect your agent
+      code: claude mcp add --transport http curata https://curata.ai/api/mcp/stream
+      note: The setup prompt is one click away, right below this video.
+    seconds: 4

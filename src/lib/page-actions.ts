@@ -20,7 +20,8 @@ export type PageActionIcon =
   | "broom"
   | "clock"
   | "zap"
-  | "plus";
+  | "plus"
+  | "help" | "collapse" | "expand";
 
 export interface PageAction {
   id: string;

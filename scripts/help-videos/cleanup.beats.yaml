@@ -1,0 +1,51 @@
+# Cleanup help video (public/help/cleanup.mp4). Storyboard and build input.
+# Screens: Demo/Queue stories (src/stories/demo/queue.stories.tsx).
+# Slow pace: one control per beat, a ring on it, a caption saying what it does.
+# Captions are final copy: no em dashes, every claim visible in its frame.
+title: Cleanup
+size: [1440, 900]
+target_seconds: 36
+beats:
+  - id: flagged
+    story: demo-queue--cleanup
+    ring: { css: ".cleanup-count" }
+    caption: Cleanup holds pages your agents flagged as done, stale or duplicate.
+    seconds: 5
+
+  - id: reason
+    story: demo-queue--cleanup
+    ring: { css: ".cleanup-row:has-text('Q3 Launch Plan') .cleanup-row-main" }
+    caption: Each flag says why, with the evidence and how sure the agent is.
+    seconds: 6
+
+  - id: superseded
+    story: demo-queue--cleanup
+    ring: { css: ".cleanup-cluster-label" }
+    caption: Old versions are grouped under the page that replaced them.
+    seconds: 5
+
+  - id: actions
+    story: demo-queue--cleanup
+    ring: { css: ".cleanup-row:has-text('Q3 Launch Plan') .cleanup-actions" }
+    caption: Keep it, archive it, or delete it.
+    seconds: 4.5
+
+  - id: bulk
+    story: demo-queue--cleanup
+    ring: { text: "Archive all 4" }
+    caption: Or archive them all at once.
+    seconds: 4.5
+
+  - id: archived
+    story: demo-queue--cleanup
+    steps: [{ click: "Archived (3)" }]
+    ring: { css: ".cleanup-row:has-text('Offsite 2026 Agenda') .cleanup-actions" }
+    caption: Archived pages wait here until you restore or delete them.
+    seconds: 5.5
+
+  - id: end
+    card:
+      title: Have your agent run the audit
+      subtitle: It flags what's stale or duplicated. You decide what goes.
+      note: Copy the brain health prompt right below this video.
+    seconds: 4

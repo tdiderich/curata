@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { PageAction, PageActionIcon } from "@/lib/page-actions";
+import { HelpButton, openHelp, registerDock } from "./help-center";
+
+const LS_EXPANDED = "curata:dock-expanded";
 
 /**
  * Floating page-action dock: a vertical icon stack pinned bottom-right.
@@ -14,6 +17,10 @@ import type { PageAction, PageActionIcon } from "@/lib/page-actions";
  * opens a bottom sheet with labeled rows — touch has no hover, so tooltips
  * can't carry the labels there. The primary action stays one tap away as its
  * own labeled pill above the FAB.
+ *
+ * Desktop starts expanded (labels beside the icons) so new users can read
+ * what each action does; the chevron at the bottom collapses it to icons and
+ * the choice sticks in localStorage. Help is always the last item.
  */
 
 function Icon({ name }: { name: PageActionIcon }) {
@@ -43,6 +50,12 @@ function Icon({ name }: { name: PageActionIcon }) {
       return <svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>;
     case "zap":
       return <svg {...p}><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" /></svg>;
+    case "help":
+      return <svg {...p}><circle cx="12" cy="12" r="9" /><path d="M9.6 9.2a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6" /><path d="M12 17h.01" /></svg>;
+    case "collapse":
+      return <svg {...p}><path d="m13 17 5-5-5-5" /><path d="m6 17 5-5-5-5" /></svg>;
+    case "expand":
+      return <svg {...p}><path d="m11 17-5-5 5-5" /><path d="m18 17-5-5 5-5" /></svg>;
     case "plus":
       return <svg {...p}><path d="M12 5v14" /><path d="M5 12h14" /></svg>;
     case "map":
@@ -78,6 +91,23 @@ export function PageActionDock({ actions, hidden }: { actions: PageAction[]; hid
   const [sheetOpen, setSheetOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const narrow = useIsNarrow();
+  const [expanded, setExpanded] = useState(true);
+
+  useEffect(() => registerDock(), []);
+
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (localStorage.getItem(LS_EXPANDED) === "0") setExpanded(false);
+    } catch { /* storage blocked: keep the default */ }
+  }, []);
+
+  const toggleExpanded = () => {
+    setExpanded((e) => {
+      try { localStorage.setItem(LS_EXPANDED, e ? "0" : "1"); } catch { /* ignore */ }
+      return !e;
+    });
+  };
 
   useEffect(() => {
     if (!openMenu) return;
@@ -99,7 +129,7 @@ export function PageActionDock({ actions, hidden }: { actions: PageAction[]; hid
   // viewport leaves mobile (https://react.dev/learn/you-might-not-need-an-effect).
   if ((hidden || !narrow) && sheetOpen) setSheetOpen(false);
 
-  if (hidden || actions.length === 0) return null;
+  if (hidden) return null;
 
   const primary = actions.find((a) => a.primary);
   const rest = actions.filter((a) => !a.primary);
@@ -157,6 +187,11 @@ export function PageActionDock({ actions, hidden }: { actions: PageAction[]; hid
                   </button>
                 ),
               )}
+              <button type="button" role="menuitem" className="dock-sheet-row" onClick={() => { setSheetOpen(false); openHelp("dock-mobile"); }}>
+                <span className="dock-btn-icon"><Icon name="help" /></span>
+                <span className="dock-menu-label">Help</span>
+                <span className="dock-menu-hint">Watch a quick video</span>
+              </button>
             </div>
           </div>
         )}
@@ -178,7 +213,9 @@ export function PageActionDock({ actions, hidden }: { actions: PageAction[]; hid
             aria-expanded={open}
           >
             {a.icon && <span className="dock-btn-icon"><Icon name={a.icon} /></span>}
-            {!open && <span className="dock-tooltip" role="presentation">{a.label}</span>}
+            {expanded
+              ? <span className="dock-btn-label">{a.label}</span>
+              : !open && <span className="dock-tooltip" role="presentation">{a.label}</span>}
           </button>
           {open && (
             <div className="dock-menu" role="menu" aria-label={a.label}>
@@ -205,13 +242,15 @@ export function PageActionDock({ actions, hidden }: { actions: PageAction[]; hid
         aria-label={a.label}
       >
         {a.icon && <span className="dock-btn-icon"><Icon name={a.icon} /></span>}
-        <span className="dock-tooltip" role="presentation">{a.label}</span>
+        {expanded
+          ? <span className="dock-btn-label">{a.label}</span>
+          : <span className="dock-tooltip" role="presentation">{a.label}</span>}
       </button>
     );
   };
 
   return (
-    <div ref={rootRef} className="page-dock" role="toolbar" aria-label="Page actions" aria-orientation="vertical">
+    <div ref={rootRef} className={`page-dock${expanded ? " page-dock--expanded" : ""}`} role="toolbar" aria-label="Page actions" aria-orientation="vertical">
       {primary && (
         <>
           {renderBtn(primary)}
@@ -219,6 +258,20 @@ export function PageActionDock({ actions, hidden }: { actions: PageAction[]; hid
         </>
       )}
       {rest.map(renderBtn)}
+      {actions.length > 0 && <div className="dock-sep" />}
+      <HelpButton expanded={expanded} />
+      <button
+        type="button"
+        className="dock-btn dock-btn--toggle"
+        onClick={toggleExpanded}
+        aria-label={expanded ? "Hide labels" : "Show labels"}
+        aria-pressed={expanded}
+      >
+        <span className="dock-btn-icon"><Icon name={expanded ? "collapse" : "expand"} /></span>
+        {expanded
+          ? <span className="dock-btn-label">Hide labels</span>
+          : <span className="dock-tooltip" role="presentation">Show labels</span>}
+      </button>
     </div>
   );
 }

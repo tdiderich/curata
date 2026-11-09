@@ -57,3 +57,4 @@ prisma/dev.db
 
 *storybook.log
 storybook-static
+.help-videos/

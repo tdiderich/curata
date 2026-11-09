@@ -1,0 +1,59 @@
+# Content map help video (public/help/map.mp4). Screens: src/stories/demo/map.stories.tsx.
+# Slow pace: one control per beat, ringed, with a caption that says what it does.
+title: The content map
+size: [1440, 900]
+target_seconds: 44
+beats:
+  - id: overview
+    story: demo-map--content-map
+    caption: The content map shows which pages depend on which.
+    seconds: 5
+
+  - id: card
+    story: demo-map--content-map
+    ring: { css: ".chart-card" }
+    caption: Each card is a page others depend on, and how many sit under it.
+    seconds: 5
+
+  - id: open
+    story: demo-map--content-map
+    steps: [{ css: ".chart-card-toggle" }]
+    ring: { css: ".chart-card--open .chart-leaves" }
+    caption: Open a card to see what sits under it, worst first.
+    seconds: 5
+
+  - id: colors
+    story: demo-map--content-map
+    ring: { css: ".chart-totals" }
+    caption: Red is out of date, yellow needs a look, green is checked.
+    seconds: 5
+
+  - id: tabs
+    story: demo-map--content-map
+    ring: { css: ".cmap-tabs" }
+    caption: Active is work in flight, Watching is standing pages, Done is shipped.
+    seconds: 5.5
+
+  - id: list
+    story: demo-map--list
+    ring: { css: ".cmap-views" }
+    caption: List shows every page that may have drifted, in one place.
+    seconds: 5
+
+  - id: copy
+    story: demo-map--content-map
+    ring: { css: "button:has-text('Copy prompt for all')" }
+    caption: Copy one prompt and let your agent take the first pass.
+    seconds: 5
+
+  - id: add
+    story: demo-map--content-map
+    ring: { css: "a[href$='/map/new']" }
+    caption: Add your own top level items any time.
+    seconds: 4.5
+
+  - id: end
+    card:
+      title: Have your agent work the list
+      note: The prompt is one click away, right below this video.
+    seconds: 4
