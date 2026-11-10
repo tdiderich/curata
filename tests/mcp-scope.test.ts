@@ -113,6 +113,19 @@ describe("POST /api/mcp/stream scope enforcement", () => {
     expect(res.status).toBe(403);
   });
 
+  it("rejects a batch that hides a write call behind a read call", async () => {
+    const org = await createTestOrg({ slug: "scope-org" });
+    const { key } = await createTestApiKey(org.id, { scopes: ["read"] });
+
+    const res = await streamPOST(rpc("http://localhost/api/mcp/stream", key, [
+      { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "list_folders", arguments: {} } },
+      { ...WRITE_CALL, id: 2 },
+    ]));
+    expect(res.status).toBe(403);
+    expect((await res.json()).id).toBe(2);
+    expect(await testDb.page.findFirst({ where: { orgId: org.id, slug: "scope-new" } })).toBeNull();
+  });
+
   it("lets a read-only key call read tools", async () => {
     const org = await createTestOrg({ slug: "scope-org" });
     await createTestPage(org.id, { slug: "scope-page" });

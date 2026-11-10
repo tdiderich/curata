@@ -147,7 +147,6 @@ export function deniedToolCall(
   body: unknown,
   scopes: readonly string[],
 ): { id: string | number | null; tool: string } | null {
-  if (scopes.includes("write")) return null;
   const messages = Array.isArray(body) ? body : [body];
   for (const msg of messages) {
     if (!msg || typeof msg !== "object") continue;

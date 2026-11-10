@@ -59,6 +59,15 @@ describe("auth", () => {
       expect((await resolveOrgFromApiKey(key))!.role).toBe("admin");
     });
 
+    it("drops write scope when the key's creator is now a viewer", async () => {
+      const { key } = await createTestApiKey(orgId, { createdBy: "demoted", scopes: ["read", "write"] });
+      await testDb.orgMember.update({
+        where: { orgId_userId: { orgId, userId: "demoted" } },
+        data: { role: "viewer" },
+      });
+      expect((await resolveOrgFromApiKey(key))!.scopes).toEqual(["read"]);
+    });
+
     it("still accepts system-created keys, which have no member row", async () => {
       const { key } = await createTestApiKey(orgId, { createdBy: "system" });
       const ctx = await resolveOrgFromApiKey(key);

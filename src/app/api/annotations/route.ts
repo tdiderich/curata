@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const user = await resolveCurrentUser();
     const author = user?.name || user?.email || ctx.userId;
 
-    if (visibility !== undefined && visibility !== null && visibility !== "" && !isAnnotationVisibility(visibility)) {
+    if (visibility && !isAnnotationVisibility(visibility)) {
       return NextResponse.json(
         { error: `visibility must be one of: ${ANNOTATION_VISIBILITIES.join(", ")}` },
         { status: 400 },

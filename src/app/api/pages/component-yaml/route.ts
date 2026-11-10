@@ -138,8 +138,9 @@ export async function PUT(request: NextRequest) {
 
   // The component's page must be visible to the caller before they can
   // edit it (private pages: creator or share), as in PUT /api/pages.
+  let pageMeta;
   try {
-    await getPageOrThrow(ctx.orgId, body.slug, ctx.userId, ctx.role);
+    pageMeta = await getPageOrThrow(ctx.orgId, body.slug, ctx.userId, ctx.role);
   } catch (e) {
     if (e instanceof PageAccessError) {
       return NextResponse.json({ error: e.message }, { status: e.status });
@@ -147,11 +148,7 @@ export async function PUT(request: NextRequest) {
     throw e;
   }
 
-  const pageMeta = await db.page.findUnique({
-    where: { orgId_slug: { orgId: ctx.orgId, slug: body.slug } },
-    select: { createdBy: true },
-  });
-  const isOwner = pageMeta?.createdBy === ctx.userId;
+  const isOwner = pageMeta.createdBy === ctx.userId;
   if (!can(ctx.role, "page:edit", isOwner)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }

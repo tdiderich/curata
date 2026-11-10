@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "page not found" }, { status: 404 });
     }
 
-    if (visibility !== undefined && visibility !== null && visibility !== "" && !isAnnotationVisibility(visibility)) {
+    if (visibility && !isAnnotationVisibility(visibility)) {
       return NextResponse.json(
         { error: `visibility must be one of: ${ANNOTATION_VISIBILITIES.join(", ")}` },
         { status: 400 },

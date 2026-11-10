@@ -1211,12 +1211,19 @@ export async function updateAnnotationStatus(
 
 export async function getAnnotations(
   orgId: string,
-  slug: string
+  slug: string,
+  opts: { includePresenter?: boolean } = {}
 ): Promise<AnnotationRow[]> {
+  const includePresenter = opts.includePresenter ?? true;
   const page = await db.page.findUnique({
     where: { orgId_slug: { orgId, slug } },
     include: {
-      annotations: { orderBy: { createdAt: "asc" } },
+      annotations: {
+        ...(includePresenter
+          ? {}
+          : { where: { OR: [{ visibility: null }, { visibility: { not: "presenter" } }] } }),
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 
@@ -1233,18 +1240,7 @@ export async function getPublicAnnotations(
   orgId: string,
   slug: string
 ): Promise<AnnotationRow[]> {
-  const page = await db.page.findUnique({
-    where: { orgId_slug: { orgId, slug } },
-    include: {
-      annotations: {
-        where: { OR: [{ visibility: null }, { visibility: { not: "presenter" } }] },
-        orderBy: { createdAt: "asc" },
-      },
-    },
-  });
-
-  if (!page) return [];
-  return page.annotations;
+  return getAnnotations(orgId, slug, { includePresenter: false });
 }
 
 export async function getPageSections(

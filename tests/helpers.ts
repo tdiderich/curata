@@ -60,8 +60,8 @@ export async function createTestApiKey(
   // API-key auth requires the key's creator to still be an org member, so a
   // user-created key gets a matching membership row unless the test opts out
   // (withMember: false) to model a removed member.
-  const { withMember = true, ...keyOverrides } = overrides as { withMember?: boolean; [k: string]: unknown };
-  const createdBy = (keyOverrides.createdBy as string | undefined) ?? "test-user";
+  const { withMember = true, createdBy = "test-user", ...keyOverrides } =
+    overrides as { withMember?: boolean; createdBy?: string } & Record<string, unknown>;
   if (withMember && !["system", "web", "migration"].includes(createdBy)) {
     await testDb.orgMember.upsert({
       where: { orgId_userId: { orgId, userId: createdBy } },
@@ -77,7 +77,7 @@ export async function createTestApiKey(
       keyHash: hash,
       prefix,
       scopes: ["read", "write"],
-      createdBy: "test-user",
+      createdBy,
       ...keyOverrides,
     },
   });

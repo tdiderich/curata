@@ -409,7 +409,10 @@ export async function resolveOrgFromApiKey(
     orgSlug: apiKey.org.slug,
     userId,
     role,
-    scopes: apiKey.scopes,
+    // A key never grants more than its creator's current role: a member who
+    // made a read/write key and was later demoted to viewer gets read only,
+    // the same clamp Clerk OAuth applies to viewers.
+    scopes: role === "viewer" ? apiKey.scopes.filter((s) => s !== "write") : apiKey.scopes,
     keyPrefix: apiKey.prefix,
   };
 }
