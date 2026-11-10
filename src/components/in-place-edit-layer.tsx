@@ -27,6 +27,24 @@ interface EditingState {
   block: boolean;
 }
 
+/**
+ * An element's box, cut to the nearest ancestor that scrolls sideways. A code
+ * block's <code> is as wide as its longest line while its <pre> scrolls, so an
+ * unclipped overlay would stick out and widen the page on narrow screens.
+ */
+function clipToScroller(el: Element): DOMRect {
+  const box = el.getBoundingClientRect();
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const ox = getComputedStyle(p).overflowX;
+    if (ox !== "auto" && ox !== "scroll" && ox !== "hidden") continue;
+    const c = p.getBoundingClientRect();
+    const left = Math.max(box.left, c.left);
+    const right = Math.min(box.right, c.right);
+    return new DOMRect(left, box.top, Math.max(0, right - left), box.height);
+  }
+  return box;
+}
+
 export interface InPlaceEditLayerProps {
   rootRef: RefObject<HTMLElement | null>;
   containerRef: RefObject<HTMLElement | null>;
@@ -92,7 +110,7 @@ export function InPlaceEditLayer({
       height: x.height,
     });
     setOverlays(bindings.map((b, i) => {
-      const box = b.el.getBoundingClientRect();
+      const box = clipToScroller(b.el);
       let text = box;
       if (!b.block && b.textNode) {
         const range = document.createRange();

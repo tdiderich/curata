@@ -1,5 +1,7 @@
 # Content map help video (public/help/map.mp4). Screens: src/stories/demo/map.stories.tsx.
 # Slow pace: one control per beat, ringed, with a caption that says what it does.
+# Phone cut (HELP_VIDEO_MOBILE=1): `mobile:` blocks scroll targets that sit
+# below the fold at 390x624.
 title: The content map
 size: [1440, 900]
 target_seconds: 44
@@ -19,6 +21,8 @@ beats:
     story: demo-map--content-map
     steps: [{ css: ".chart-card-toggle" }]
     ring: { css: ".chart-card--open .chart-leaves" }
+    mobile:
+      steps: [{ css: ".chart-card-toggle" }, { scrollTo: ".chart-card--open", offset: 16 }]
     caption: Open a card to see what sits under it, worst first.
     seconds: 5
 
@@ -32,6 +36,8 @@ beats:
     story: demo-map--content-map
     ring: { css: ".cmap-tabs" }
     caption: Active is work in flight, Watching is standing pages, Done is shipped.
+    mobile:
+      caption: Active is in flight, Watching is standing, Done is shipped.
     seconds: 5.5
 
   - id: list

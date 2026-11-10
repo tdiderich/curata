@@ -11,8 +11,8 @@
 // change that breaks a video breaks the build instead of shipping stale.
 import fs from "node:fs";
 import path from "node:path";
-import yaml from "js-yaml";
 import { chromium } from "playwright";
+import { MOBILE, loadBeats } from "./beats.mjs";
 
 const [beatsPath, outDir, base = "http://localhost:6006"] = process.argv.slice(2);
 if (!beatsPath || !outDir) {
@@ -20,14 +20,17 @@ if (!beatsPath || !outDir) {
   process.exit(2);
 }
 
-const spec = yaml.load(fs.readFileSync(beatsPath, "utf8"));
-const [W, H] = spec.size ?? [1440, 900];
+const spec = loadBeats(beatsPath);
+const [W, H] = spec.size;
 fs.mkdirSync(outDir, { recursive: true });
 
 const browser = await chromium.launch({ channel: "chrome" });
 const ctx = await browser.newContext({
   viewport: { width: W, height: H },
-  deviceScaleFactor: 2,
+  // Phones: 3x like a real device, plus touch so the app picks its mobile UI.
+  deviceScaleFactor: MOBILE ? 3 : 2,
+  isMobile: MOBILE,
+  hasTouch: MOBILE,
   timezoneId: "America/Chicago",
   locale: "en-US",
   reducedMotion: "reduce",

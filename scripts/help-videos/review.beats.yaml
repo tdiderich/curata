@@ -1,6 +1,7 @@
 # Review queue help video (public/help/review.mp4). Storyboard and build input.
 # Screens: Demo/Queue stories (src/stories/demo/queue.stories.tsx).
 # Slow pace: one control per beat, a ring on it, a caption saying what it does.
+# Phone cut (HELP_VIDEO_MOBILE=1): `mobile:` blocks override what differs at 390x624.
 # Captions are final copy: no em dashes, every claim visible in its frame.
 title: The review queue
 size: [1440, 900]
@@ -17,6 +18,8 @@ beats:
     ring: { css: ".cleanup-row:has-text('In-App Help Videos') .vh-list-badge" }
     caption: "Each row says why it's here: never trusted, or versions behind."
     seconds: 5.5
+    mobile:
+      caption: "Each row says why: never trusted, or versions behind."
 
   - id: filters
     story: demo-queue--review
@@ -30,6 +33,9 @@ beats:
     ring: { css: ".rq-diff-body" }
     caption: View diff shows the trusted version above the latest edit.
     seconds: 6
+    mobile:
+      ring: { css: ".cleanup-preview" }
+      caption: View diff opens the trusted version above the latest.
 
   - id: trust
     story: demo-queue--review
@@ -37,6 +43,10 @@ beats:
     ring: { css: ".cleanup-row--previewing .cleanup-btn--archive" }
     caption: Trust latest approves it. Agents read the trusted version from then on.
     seconds: 5.5
+    mobile:
+      steps: []
+      ring: { css: ".cleanup-row:has-text('Dev Setup') .cleanup-btn--archive" }
+      caption: Trust latest approves it for your agents.
 
   - id: end
     card:

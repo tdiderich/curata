@@ -1,6 +1,7 @@
 # Settings help video (public/help/settings.mp4). Storyboard and build input.
 # Screens: src/stories/demo/settings.stories.tsx, one beat per tab.
 # Slow pace: one tab per beat, a ring on the tab or control it explains.
+# Phone cut (HELP_VIDEO_MOBILE=1): `mobile:` blocks override what differs at 390x624.
 # Captions are final copy: no em dashes, every claim visible in its frame.
 title: Settings
 size: [1440, 900]
@@ -39,6 +40,8 @@ beats:
     ring: { text: "Create group" }
     caption: "Groups: put people in teams, like Engineering or Customer Success."
     seconds: 5
+    mobile:
+      caption: "Groups: teams like Engineering or Customer Success."
 
   - id: tags
     story: demo-settings--settings
@@ -53,6 +56,8 @@ beats:
     ring: { text: "Block" }
     caption: "Content Rules: checked on every save. Block rules stop the write."
     seconds: 5.5
+    mobile:
+      caption: "Content Rules: checked on every save. Block stops the write."
 
   - id: keys
     story: demo-settings--settings

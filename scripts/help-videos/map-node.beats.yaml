@@ -1,4 +1,6 @@
 # Map node help video (public/help/map-node.mp4). Screens: src/stories/demo/map.stories.tsx.
+# Phone cut (HELP_VIDEO_MOBILE=1): `mobile:` blocks scroll targets that sit
+# below the fold at 390x624.
 title: A map node
 size: [1440, 900]
 target_seconds: 34
@@ -17,18 +19,25 @@ beats:
   - id: why
     story: demo-map--node
     ring: { css: ".chart-row:has-text('Enterprise Proposal Template') .chart-row-line" }
+    mobile:
+      steps: [{ scrollTo: ".chart-row:has-text('Enterprise Proposal Template')", offset: 140 }]
+      caption: "Each row says why: past due, changed, or never checked."
     caption: "Each row says why: past due, changed since, or never checked."
     seconds: 5.5
 
   - id: copy
     story: demo-map--node
     ring: { css: ".chart-toolbar .btn--primary" }
+    mobile:
+      steps: [{ scrollTo: ".chart-toolbar", offset: 120 }]
     caption: Red and yellow rows start queued. Copy a prompt for your agent.
     seconds: 5.5
 
   - id: complete
     story: demo-map--node
     ring: { css: ".chart-toolbar .btn--ghost" }
+    mobile:
+      steps: [{ scrollTo: ".chart-toolbar", offset: 120 }]
     caption: Checked them yourself? Mark them complete.
     seconds: 4.5
 
