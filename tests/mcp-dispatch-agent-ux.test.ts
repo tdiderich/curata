@@ -57,7 +57,7 @@ describe("create_page / write_page teach the YAML format on a raw parse error", 
         "apikey-1",
         "user-1"
       )
-    ).rejects.toThrow(/content must be curata page YAML.*invalid type: string, expected struct Page/s);
+    ).rejects.toThrow(/content must be curata page YAML[\s\S]*invalid type: string, expected struct Page/);
   });
 
   it("write_page wraps a raw kazam parse error with the teaching sentence", async () => {
@@ -73,7 +73,7 @@ describe("create_page / write_page teach the YAML format on a raw parse error", 
         "apikey-1",
         "user-1"
       )
-    ).rejects.toThrow(/content must be curata page YAML.*invalid type: string, expected struct Page/s);
+    ).rejects.toThrow(/content must be curata page YAML[\s\S]*invalid type: string, expected struct Page/);
   });
 });
 
