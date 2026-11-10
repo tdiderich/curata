@@ -1,0 +1,15 @@
+# Security updates only. Routine version bumps stay manual (batched with
+# releases), so open-pull-requests-limit: 0 turns version updates off;
+# security updates ignore that limit. Security fixes for npm are grouped
+# into one PR instead of one per package.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
