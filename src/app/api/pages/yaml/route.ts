@@ -4,6 +4,7 @@ import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { readPageYaml, writePage, markTrusted } from "@/lib/pages";
 import { db } from "@/lib/db";
+import { getPageOrThrow, PageAccessError } from "@/lib/access";
 import { resolveEffectiveTrustMode, canApprove } from "@/lib/approval";
 
 export async function GET(request: NextRequest) {
@@ -15,6 +16,17 @@ export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("slug");
   if (!slug) {
     return NextResponse.json({ error: "slug is required" }, { status: 400 });
+  }
+
+  // Org membership alone isn't page access: a private page needs its creator
+  // or a share, same as every other page read (see /api/pages/markdown).
+  try {
+    await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+  } catch (e) {
+    if (e instanceof PageAccessError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
+    throw e;
   }
 
   const page = await readPageYaml(ctx.orgId, slug);
@@ -57,6 +69,20 @@ export async function PUT(request: NextRequest) {
       where: { orgId_slug: { orgId: ctx.orgId, slug: body.slug } },
       select: { createdBy: true },
     });
+
+    // An existing page must be visible to the caller before they can
+    // overwrite it (private pages: creator or share), as in PUT /api/pages.
+    // A missing page falls through to writePage, which creates it.
+    if (page) {
+      try {
+        await getPageOrThrow(ctx.orgId, body.slug, ctx.userId, ctx.role);
+      } catch (e) {
+        if (e instanceof PageAccessError) {
+          return NextResponse.json({ error: e.message }, { status: e.status });
+        }
+        throw e;
+      }
+    }
 
     const isOwner = page?.createdBy === ctx.userId;
     if (!can(ctx.role, "page:edit", isOwner)) {

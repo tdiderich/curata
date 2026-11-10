@@ -35,7 +35,7 @@ import { backfillScan } from "@/lib/scan";
 import { readVersion } from "@/lib/versions";
 import { patchOpsText } from "@/lib/patch-ops-doc";
 import { ensureComponentIds, buildOutline, formatOutline } from "@/lib/component-ids";
-import { dispatch } from "@/lib/mcp-dispatch";
+import { dispatch, deniedToolCall } from "@/lib/mcp-dispatch";
 import { toolDescription } from "@/lib/mcp-guidance";
 import { formatWarningsBlock, type ShapeWarning } from "@/lib/kazam";
 import { ensureSeedPages } from "@/lib/seed";
@@ -49,11 +49,16 @@ function validateSlug(slug: string | undefined): string {
   return slug;
 }
 
-async function resolveAuth(request: Request) {
+// Scopes travel with the identity so POST can enforce them before the MCP
+// server runs a tool, matching the plain /api/mcp route. Modes with no
+// per-credential scopes (none, tailscale) get full access, as they do there.
+const FULL_SCOPES: string[] = ["read", "write"];
+
+async function resolveAuth(request: Request): Promise<{ orgId: string; orgSlug: string; actorId: string; userId?: string; scopes: string[] } | null> {
   if ((process.env.AUTH_MODE ?? "none") === "none") {
     const org = await db.organization.findFirst({ orderBy: { createdAt: "asc" } });
     if (!org) return null;
-    return { orgId: org.id, orgSlug: org.slug, actorId: "noauth", userId: "default" };
+    return { orgId: org.id, orgSlug: org.slug, actorId: "noauth", userId: "default", scopes: FULL_SCOPES };
   }
 
   if (process.env.AUTH_MODE === "tailscale") {
@@ -63,7 +68,7 @@ async function resolveAuth(request: Request) {
       const { resolveOrg } = await import("@/lib/auth");
       const orgCtx = await resolveOrg();
       if (orgCtx) {
-        return { orgId: orgCtx.orgId, orgSlug: orgCtx.orgSlug, actorId: `ts:${tsLogin || devUser}`, userId: orgCtx.userId };
+        return { orgId: orgCtx.orgId, orgSlug: orgCtx.orgSlug, actorId: `ts:${tsLogin || devUser}`, userId: orgCtx.userId, scopes: FULL_SCOPES };
       }
     }
   }
@@ -79,12 +84,12 @@ async function resolveAuth(request: Request) {
     const { resolveOrgFromClerkOAuth } = await import("@/lib/auth");
     const oauth = await resolveOrgFromClerkOAuth(token);
     if (!oauth) return null;
-    return { orgId: oauth.orgId, orgSlug: oauth.orgSlug, actorId: oauth.keyPrefix, userId: oauth.userId };
+    return { orgId: oauth.orgId, orgSlug: oauth.orgSlug, actorId: oauth.keyPrefix, userId: oauth.userId, scopes: oauth.scopes };
   }
 
   const result = await resolveOrgFromApiKey(token);
   if (!result) return null;
-  return { orgId: result.orgId, orgSlug: result.orgSlug, actorId: result.keyPrefix || "apikey", userId: result.userId };
+  return { orgId: result.orgId, orgSlug: result.orgSlug, actorId: result.keyPrefix || "apikey", userId: result.userId, scopes: result.scopes };
 }
 
 /**
@@ -721,10 +726,36 @@ export async function POST(request: Request) {
     });
   }
 
+  const denied = await deniedCall(request, ctx.scopes);
+  if (denied) return denied;
+
   const server = createMcpServer(ctx.orgId, ctx.orgSlug, ctx.actorId, ctx.userId, await serverInstructions(request, ctx.orgId, ctx.orgSlug));
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   await server.connect(transport);
   return transport.handleRequest(request);
+}
+
+/**
+ * Reject a tools/call the credential's scopes don't cover (a read-only API
+ * key or a Clerk viewer calling write_page, say) before the request reaches
+ * the MCP server. The tool handlers below don't see scopes, so this is the
+ * one gate for every tool on this transport.
+ */
+async function deniedCall(request: Request, scopes: string[]): Promise<Response | null> {
+  if (scopes.includes("write")) return null;
+  let body: unknown;
+  try {
+    body = await request.clone().json();
+  } catch {
+    return null; // not JSON: the transport rejects it with its own parse error
+  }
+  const hit = deniedToolCall(body, scopes);
+  if (!hit) return null;
+  return new Response(JSON.stringify({
+    jsonrpc: "2.0",
+    error: { code: -32000, message: `insufficient scope: ${hit.tool || "this tool"} needs a credential with write scope` },
+    id: hit.id,
+  }), { status: 403, headers: { "Content-Type": "application/json" } });
 }
 
 export async function GET(request: Request) {

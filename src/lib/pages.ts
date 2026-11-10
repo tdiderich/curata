@@ -1136,6 +1136,14 @@ export async function getReviewQueue(orgId: string, userId?: string): Promise<Re
   return rows;
 }
 
+export const ANNOTATION_VISIBILITIES = ["visible", "presenter"] as const;
+export type AnnotationVisibility = (typeof ANNOTATION_VISIBILITIES)[number];
+
+/** Runtime check for request bodies: only the two known visibility values. */
+export function isAnnotationVisibility(v: unknown): v is AnnotationVisibility {
+  return typeof v === "string" && (ANNOTATION_VISIBILITIES as readonly string[]).includes(v);
+}
+
 export async function saveAnnotation(
   orgId: string,
   orgSlug: string,
@@ -1148,7 +1156,7 @@ export async function saveAnnotation(
   replacement?: string,
   source: "web" | "agent" | "cli" | "prescreen" = "web",
   slide?: string,
-  visibility?: "visible" | "presenter",
+  visibility?: AnnotationVisibility,
 ): Promise<AnnotationRow> {
   const page = await db.page.findUnique({
     where: { orgId_slug: { orgId, slug } },
@@ -1209,6 +1217,29 @@ export async function getAnnotations(
     where: { orgId_slug: { orgId, slug } },
     include: {
       annotations: { orderBy: { createdAt: "asc" } },
+    },
+  });
+
+  if (!page) return [];
+  return page.annotations;
+}
+
+/**
+ * Annotations safe to send to a public or share-link viewer: everything except
+ * presenter-only notes. Filtered in the query so presenter rows never reach
+ * the public page's server-rendered props, not just hidden in the client.
+ */
+export async function getPublicAnnotations(
+  orgId: string,
+  slug: string
+): Promise<AnnotationRow[]> {
+  const page = await db.page.findUnique({
+    where: { orgId_slug: { orgId, slug } },
+    include: {
+      annotations: {
+        where: { OR: [{ visibility: null }, { visibility: { not: "presenter" } }] },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 

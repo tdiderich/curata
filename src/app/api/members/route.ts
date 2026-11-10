@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AUTH_MODE, resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
+import { logAudit } from "@/lib/audit";
 
 export async function GET() {
   const ctx = await resolveOrg();
@@ -147,7 +148,31 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "cannot remove yourself" }, { status: 400 });
     }
 
-    await db.orgMember.delete({ where: { id: body.memberId } });
+    // Removing someone must also end their API access: revoke every live key
+    // they created in this org in the same transaction as the delete, and log
+    // each one the way a manual revoke is logged.
+    const keys = await db.apiKey.findMany({
+      where: { orgId: ctx.orgId, createdBy: member.userId, revokedAt: null },
+      select: { id: true, prefix: true, name: true },
+    });
+    await db.$transaction([
+      db.orgMember.delete({ where: { id: body.memberId } }),
+      db.apiKey.updateMany({
+        where: { orgId: ctx.orgId, createdBy: member.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+    for (const key of keys) {
+      logAudit({
+        orgId: ctx.orgId,
+        action: "apikey.revoke",
+        resourceType: "apikey",
+        resourceId: key.prefix,
+        actorType: "user",
+        actorId: ctx.userId,
+        metadata: { keyId: key.id, prefix: key.prefix, name: key.name, reason: "member_removed" },
+      });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
