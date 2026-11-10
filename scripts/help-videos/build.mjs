@@ -21,11 +21,12 @@ const spec = yaml.load(fs.readFileSync(beatsPath, "utf8"));
 const targets = JSON.parse(fs.readFileSync(path.join(capDir, "targets.json"), "utf8"));
 const [SW, SH] = spec.size ?? [1440, 900];
 
-// Canvas and window geometry (1080p, window centered with a caption band).
+// Canvas and window geometry (1080p). The caption sits above the window so
+// it's the first thing a viewer reads; the window fills the rest.
 const CW = 1920, CH = 1080;
 const BAR = 34;
-const WX = (CW - SW) / 2, WY = 36;
-const CAP_Y = WY + BAR + SH + 26;
+const CAP_Y = 34;
+const WX = (CW - SW) / 2, WY = CH - 36 - (SH + BAR);
 const XF = 0.35; // crossfade seconds
 const INTRO = 1.8;
 
@@ -167,7 +168,7 @@ for (const b of beats) {
   }
   if (b.caption) {
     body.push(`<div class="caption h" id="${b.id}-cap" data-layout-allow-overlap>${esc(b.caption)}</div>`);
-    a(`tl.fromTo("#${b.id}-cap", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: E }, ${(b.at + 0.15).toFixed(2)});`);
+    a(`tl.fromTo("#${b.id}-cap", { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.35, ease: E }, ${(b.at + 0.15).toFixed(2)});`);
     a(`tl.to("#${b.id}-cap", { opacity: 0, duration: 0.2, ease: "none" }, ${(b.end - 0.22).toFixed(2)});`);
   }
 }
