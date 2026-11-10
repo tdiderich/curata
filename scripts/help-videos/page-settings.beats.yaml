@@ -1,0 +1,60 @@
+# Page settings help video (public/help/page-settings.mp4). Opened from Help
+# on /pages/<slug>/settings. One control per beat, ringed. Screen: the four
+# settings tabs (Demo/PageSettings Tabs) for the page the starter prompt
+# wrote. Captions are final copy: no em dashes, every claim visible.
+title: Page settings
+size: [1440, 900]
+target_seconds: 40
+beats:
+  - id: visibility
+    story: demo-pagesettings--tabs
+    ring: { css: ".stg-seg" }
+    caption: Every page has settings. Visibility says who can see it.
+    seconds: 5
+
+  - id: folder
+    story: demo-pagesettings--tabs
+    ring: { css: "select" }
+    caption: Folder says where it lives.
+    seconds: 4
+
+  - id: tags
+    story: demo-pagesettings--tabs
+    steps: [{ click: "Tags" }]
+    ring: { css: "tr:has-text('prisma')" }
+    caption: Tags say what it covers. Depends means it goes stale when that changes.
+    seconds: 5.5
+
+  - id: map
+    story: demo-pagesettings--tabs
+    steps: [{ click: "Content map" }]
+    ring: { css: ".chart-row:has-text('source changed since last check')" }
+    caption: Content map shows its sources. This one changed, so the page needs a look.
+    seconds: 5.5
+
+  - id: map-copy
+    story: demo-pagesettings--tabs
+    steps: [{ click: "Content map" }]
+    ring: { css: ".chart-bulk-copy" }
+    caption: Copy prompt hands that review to your agent.
+    seconds: 4.5
+
+  - id: rules
+    story: demo-pagesettings--tabs
+    steps: [{ click: "Rules" }]
+    ring: { css: ".stg-table" }
+    caption: Rules are checked on every save. Block stops the write.
+    seconds: 5.5
+
+  - id: trust
+    story: demo-pagesettings--tabs
+    steps: [{ click: "Rules" }]
+    ring: { css: ".stg-seg" }
+    caption: Locked means new edits wait for your approval.
+    seconds: 5
+
+  - id: end
+    card:
+      title: Let your agent tidy it
+      note: Copy the prompt with the button below this video.
+    seconds: 4

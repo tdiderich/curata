@@ -1,0 +1,45 @@
+# Map node help video (public/help/map-node.mp4). Screens: src/stories/demo/map.stories.tsx.
+title: A map node
+size: [1440, 900]
+target_seconds: 34
+beats:
+  - id: overview
+    story: demo-map--node
+    caption: A node is one source page and everything that depends on it.
+    seconds: 5
+
+  - id: source
+    story: demo-map--node
+    ring: { css: ".cmap-stat:nth-child(3)" }
+    caption: When the source changes, everything under it needs a look.
+    seconds: 5
+
+  - id: why
+    story: demo-map--node
+    ring: { css: ".chart-row:has-text('Enterprise Proposal Template') .chart-row-line" }
+    caption: "Each row says why: past due, changed since, or never checked."
+    seconds: 5.5
+
+  - id: copy
+    story: demo-map--node
+    ring: { css: ".chart-toolbar .btn--primary" }
+    caption: Red and yellow rows start queued. Copy a prompt for your agent.
+    seconds: 5.5
+
+  - id: complete
+    story: demo-map--node
+    ring: { css: ".chart-toolbar .btn--ghost" }
+    caption: Checked them yourself? Mark them complete.
+    seconds: 4.5
+
+  - id: add
+    story: demo-map--node
+    ring: { css: "button:has-text('+ Add related content')" }
+    caption: Add pages or links that should follow this source.
+    seconds: 4.5
+
+  - id: end
+    card:
+      title: Have your agent check them all
+      note: The prompt is one click away, right below this video.
+    seconds: 4

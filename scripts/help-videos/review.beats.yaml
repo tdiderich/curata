@@ -1,0 +1,46 @@
+# Review queue help video (public/help/review.mp4). Storyboard and build input.
+# Screens: Demo/Queue stories (src/stories/demo/queue.stories.tsx).
+# Slow pace: one control per beat, a ring on it, a caption saying what it does.
+# Captions are final copy: no em dashes, every claim visible in its frame.
+title: The review queue
+size: [1440, 900]
+target_seconds: 32
+beats:
+  - id: queue
+    story: demo-queue--review
+    ring: { css: ".cleanup-count" }
+    caption: The review queue lists agent edits waiting on a person.
+    seconds: 5
+
+  - id: why
+    story: demo-queue--review
+    ring: { css: ".cleanup-row:has-text('In-App Help Videos') .vh-list-badge" }
+    caption: "Each row says why it's here: never trusted, or versions behind."
+    seconds: 5.5
+
+  - id: filters
+    story: demo-queue--review
+    ring: { css: ".rq-filters" }
+    caption: Filter by folder or concept, or to pages you created.
+    seconds: 4.5
+
+  - id: diff
+    story: demo-queue--review
+    steps: [{ click: "View diff" }]
+    ring: { css: ".rq-diff-body" }
+    caption: View diff shows the trusted version above the latest edit.
+    seconds: 6
+
+  - id: trust
+    story: demo-queue--review
+    steps: [{ click: "View diff" }]
+    ring: { css: ".cleanup-row--previewing .cleanup-btn--archive" }
+    caption: Trust latest approves it. Agents read the trusted version from then on.
+    seconds: 5.5
+
+  - id: end
+    card:
+      title: Let your agent read it first
+      subtitle: It summarizes what changed. You decide what to trust.
+      note: Copy the prompt right below this video.
+    seconds: 4

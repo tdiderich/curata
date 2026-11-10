@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { basePath } from "@/lib/api-fetch";
 import { ActionBar } from "@/components/action-bar";
 import { AnalyticsIdentify } from "@/components/analytics-identify";
+import { HelpCenter } from "@/components/help-center";
 import type { ActionBarPage } from "@/components/action-bar-types";
 
 function UserAvatar({ name, email }: { name: string; email: string }) {
@@ -104,6 +105,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         authControls={<AuthControls />}
       />
       <main className="app-main">{children}</main>
+      <HelpCenter authMode={AUTH_MODE} />
       {identity && <AnalyticsIdentify {...identity} orgName={orgName} />}
     </div>
   );

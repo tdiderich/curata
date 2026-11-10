@@ -1,0 +1,115 @@
+{
+  "welcome": "welcome",
+  "videos": [
+    {
+      "id": "welcome",
+      "title": "Welcome to curata",
+      "src": "/help/welcome.mp4",
+      "poster": "/help/welcome.jpg",
+      "blurb": "Have your agent set up your brain from what you're working on.",
+      "actions": [
+        { "label": "Copy setup prompt for agent", "kind": "copy-setup" },
+        { "label": "Agent setup instructions", "kind": "link", "href": "/pages/connecting-your-agent" }
+      ]
+    },
+    {
+      "id": "page",
+      "title": "Working with a page",
+      "src": "/help/page.mp4",
+      "poster": "/help/page.jpg",
+      "blurb": "Read, comment, edit, present and export any page your agents write.",
+      "actions": [
+        { "label": "Copy this page for your agent", "kind": "copy-page" },
+        { "label": "How pages work", "kind": "link", "href": "/pages/page-structure" }
+      ]
+    },
+    {
+      "id": "page-settings",
+      "title": "Page settings",
+      "src": "/help/page-settings.mp4",
+      "poster": "/help/page-settings.jpg",
+      "blurb": "Visibility, folder, tags, content map and rules for one page.",
+      "actions": [
+        { "label": "Copy prompt: tidy this page's settings", "kind": "copy-prompt", "prompt": "Using curata's tools, read the curata page \"{slug}\" and tidy its settings: tag it with the concepts it covers (reuse existing tags from the brain map), add it to the content map under anything it depends on, and tell me if any folder rule (list_rules) would flag it. Show me what you changed." },
+        { "label": "Using curata", "kind": "link", "href": "/pages/using-curata" }
+      ]
+    },
+    {
+      "id": "map",
+      "title": "The content map",
+      "src": "/help/map.mp4",
+      "poster": "/help/map.jpg",
+      "blurb": "See what depends on what, and what needs a look after a change.",
+      "actions": [
+        { "label": "Copy prompt: work the needs-a-look list", "kind": "copy-prompt", "prompt": "Using curata's tools, call get_needs_look and work through it: for each page, read it next to its source page, fix anything that no longer matches, and mark it checked. Stop and ask me about anything you're unsure of." },
+        { "label": "Using curata", "kind": "link", "href": "/pages/using-curata" }
+      ]
+    },
+    {
+      "id": "map-node",
+      "title": "A map node",
+      "src": "/help/map-node.mp4",
+      "poster": "/help/map-node.jpg",
+      "blurb": "One source page and everything that depends on it.",
+      "actions": [
+        { "label": "Copy prompt: check this node's pages", "kind": "copy-prompt", "prompt": "Using curata's tools, open the content map node I'm looking at (get_chart with its term), read its source page, then check every red or yellow page under it against the source. Fix what no longer matches and mark each one checked." },
+        { "label": "Using curata", "kind": "link", "href": "/pages/using-curata" }
+      ]
+    },
+    {
+      "id": "map-new",
+      "title": "Add to the map",
+      "src": "/help/map-new.mp4",
+      "poster": "/help/map-new.jpg",
+      "blurb": "Name a source of truth and list what depends on it.",
+      "actions": [
+        { "label": "Copy prompt: map my key pages", "kind": "copy-prompt", "prompt": "Using curata's tools, find the 3 curata pages other pages depend on most (pricing, policies, templates, product facts). For each, add it to the content map as a top-level item with add_to_chart and put the pages that depend on it underneath. Show me the map when you're done." },
+        { "label": "Using curata", "kind": "link", "href": "/pages/using-curata" }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "The review queue",
+      "src": "/help/review.mp4",
+      "poster": "/help/review.jpg",
+      "blurb": "Agent edits waiting on a person. Trust what's right.",
+      "actions": [
+        { "label": "Copy prompt: summarize my queue", "kind": "copy-prompt", "prompt": "Using curata's tools, call get_review_queue and summarize each page in it for me: what changed since the last approved version, and anything that looks wrong. Don't approve anything; I'll do that." },
+        { "label": "Using curata", "kind": "link", "href": "/pages/using-curata" }
+      ]
+    },
+    {
+      "id": "cleanup",
+      "title": "Cleanup",
+      "src": "/help/cleanup.mp4",
+      "poster": "/help/cleanup.jpg",
+      "blurb": "Flagged and archived pages: keep, archive, restore or delete.",
+      "actions": [
+        { "label": "Copy prompt: brain health pass", "kind": "copy-prompt", "prompt": "Using curata's tools, run a brain health pass: call audit and list_flags, then tell me which pages are stale, duplicated or orphaned and what you'd do with each. Flag the ones that need a person with flag_page. Don't delete anything." },
+        { "label": "Brain health workflow", "kind": "link", "href": "/pages/curata-brain-health" }
+      ]
+    },
+    {
+      "id": "settings",
+      "title": "Settings",
+      "src": "/help/settings.mp4",
+      "poster": "/help/settings.jpg",
+      "blurb": "Connect agents, manage people, and set rules for the whole brain.",
+      "actions": [
+        { "label": "Copy setup prompt for agent", "kind": "copy-setup" },
+        { "label": "Agent setup instructions", "kind": "link", "href": "/pages/connecting-your-agent" }
+      ]
+    }
+  ],
+  "routes": [
+    { "match": "/dashboard", "video": "welcome", "nudge": true },
+    { "match": "/pages/*/settings", "video": "page-settings" },
+    { "match": "/pages/*", "video": "page" },
+    { "match": "/map/new", "video": "map-new" },
+    { "match": "/map/*", "video": "map-node" },
+    { "match": "/map", "video": "map", "nudge": true },
+    { "match": "/review", "video": "review", "nudge": true },
+    { "match": "/cleanup", "video": "cleanup" },
+    { "match": "/settings", "video": "settings" }
+  ]
+}

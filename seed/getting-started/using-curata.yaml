@@ -1,0 +1,91 @@
+title: Using curata
+subtitle: What each screen is for, and the prompt that has your agent do its job. Every screen has a Help button with a short video of the same thing.
+shell: standard
+components:
+  - type: markdown
+    body: |
+      Most of this is faster to hand to your agent than to do by hand. Each section ends with a prompt you can paste into any agent that has curata connected. If yours isn't connected yet, start with [Connecting your agent](/pages/connecting-your-agent).
+
+  - type: section
+    heading: Pages
+    components:
+      - type: markdown
+        body: |
+          A page is a structured document your agents write and your team reads. The dock on the right has everything you can do with it:
+
+          - **Edit page**: change the page in place, then click Done editing.
+          - **Copy for agent**: copy the page as context for any agent.
+          - **Present**: show each section as a slide.
+          - **Export PDF**: a clean copy to send.
+          - **Page settings**: visibility, folder, tags, content map and rules.
+
+          Select any text on the page to leave a comment on it. **Hide labels** at the bottom of the dock shrinks it to icons; **Help** stays there either way.
+
+  - type: section
+    heading: Page settings
+    components:
+      - type: markdown
+        body: |
+          - **General**: who can see the page, and which folder it lives in.
+          - **Tags**: the concepts the page covers, and how. *references* just mentions it, *depends* means the page goes stale when it changes, *asserts* means this page is where the truth lives. depends and asserts put it on the content map.
+          - **Content map**: the sources this page relies on, with when each last changed and when this page was last reviewed against it. **Copy prompt** hands that review to your agent. If the page is a source of truth itself, what depends on it shows below.
+          - **Rules**: checked on every save, including rules inherited from the folder. *Block* stops a matching write and cites the rule, *Review* flags it but saves, *Guidance* is shown to agents and not enforced. **Trust mode**: *Auto* trusts every save; *Locked* holds new edits until someone approves them.
+      - type: code
+        language: text
+        code: |
+          Using curata's tools, read the curata page "<slug>" and tidy its settings: tag it with the concepts it covers (reuse existing tags from the brain map), add it to the content map under anything it depends on, and tell me if any folder rule (list_rules) would flag it. Show me what you changed.
+
+  - type: section
+    heading: Content map
+    components:
+      - type: markdown
+        body: |
+          The map shows which pages depend on which. Each item is a source page plus everything under it. When the source changes, the pages under it turn yellow (needs a look). Red means a mismatch was found, a check is past due, or the source changed twice since the last check. Green means someone checked it since the source last moved.
+
+          - **Active**: work in flight, from source pages with a Status.
+          - **Watching**: standing pages like templates and policies.
+          - **Done**: shipped work.
+          - **List** shows every page that needs a look in one place.
+
+          Open an item to see why each page needs a look. Red and yellow rows start queued: **Copy prompt** hands them to your agent, and **Mark complete** records that you checked them yourself.
+
+          Add your own items with **+ Add top level content item**: name it, pick the page that owns the truth, and list what depends on it.
+      - type: code
+        language: text
+        code: |
+          Using curata's tools, call get_needs_look and work through it: for each page, read it next to its source page, fix anything that no longer matches, and mark it checked. Stop and ask me about anything you're unsure of.
+
+  - type: section
+    heading: Review queue
+    components:
+      - type: markdown
+        body: |
+          Agent edits waiting on a person. Each row says why it's there: never trusted, or some number of versions behind the trusted one. **View diff** shows the trusted version above the latest edit, and **Trust latest** approves it. Agents read the trusted version by default. Filter by folder or concept, or to pages you created or annotated.
+      - type: code
+        language: text
+        code: |
+          Using curata's tools, call get_review_queue and summarize each page in it for me: what changed since the last approved version, and anything that looks wrong. Don't approve anything; I'll do that.
+
+  - type: section
+    heading: Cleanup
+    components:
+      - type: markdown
+        body: |
+          Pages your agents flagged in a cleanup audit, and pages you archived. Each flag shows its reason (stale, duplicate, superseded, shipped but not closed), the evidence, and how confident the agent is. Old versions are grouped under the page that replaced them. Keep, archive or delete each one, or archive them all at once. Archived pages wait on the **Archived** tab until you restore or delete them.
+      - type: code
+        language: text
+        code: |
+          Using curata's tools, run a brain health pass: call audit and list_flags, then tell me which pages are stale, duplicated or orphaned and what you'd do with each. Flag the ones that need a person with flag_page. Don't delete anything.
+
+  - type: section
+    heading: Settings
+    components:
+      - type: markdown
+        body: |
+          - **Admin**: your brain's name, URL slug, logo and auto-join email domain.
+          - **Connect**: the MCP URL, the `claude mcp add` command, and config snippets for headless clients.
+          - **Members** and **Groups**: who's in, each person's role, and the teams you group them into.
+          - **Tags**: the shared vocabulary agents tag pages with.
+          - **Content Rules**: rules checked on every save, in every folder.
+          - **API Keys**: for headless agents and CI.
+          - **Theme**: mode, accent color, background texture, glow and panel depth.

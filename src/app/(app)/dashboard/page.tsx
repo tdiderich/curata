@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getVocabulary } from "@/lib/concepts";
 import { basePath } from "@/lib/api-fetch";
 import { ActionBarHome } from "@/components/action-bar-home";
+import { WelcomeAutoOpen } from "@/components/help-center";
 import type { ActionBarFolder, ActionBarPage } from "@/components/action-bar-types";
 
 export const dynamic = "force-dynamic";
@@ -26,13 +27,10 @@ export default async function DashboardPage() {
   const humanPages = await db.page.count({
     where: { orgId: ctx.orgId, createdBy: { not: "system" } },
   });
-  if (humanPages === 0) {
-    const gettingStarted = await db.page.findUnique({
-      where: { orgId_slug: { orgId: ctx.orgId, slug: "getting-started" } },
-      select: { id: true },
-    });
-    if (gettingStarted) redirect("/pages/getting-started");
-  }
+  // A brand-new org gets the welcome video once (browser-local), not a
+  // redirect: redirecting here trapped new users, since Home itself is this
+  // route and the redirect held until they had written a page.
+  const isNewOrg = humanPages === 0;
 
   const folderVisFilter = AUTH_MODE === "none"
     ? { orgId: ctx.orgId }
@@ -97,6 +95,8 @@ export default async function DashboardPage() {
     : (org?.logoUrl ?? null);
 
   return (
+    <>
+    {isNewOrg && <WelcomeAutoOpen />}
     <ActionBarHome
       vocabulary={vocab}
       folders={rawFolders as ActionBarFolder[]}
@@ -105,5 +105,6 @@ export default async function DashboardPage() {
       logoUrl={logoUrl}
       quickRefs={quickRefs}
     />
+    </>
   );
 }
