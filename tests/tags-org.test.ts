@@ -171,11 +171,12 @@ describe("/api/tags/org", () => {
       const originalFindUnique = testDb.concept.findUnique.bind(testDb.concept);
       const spy = vi
         .spyOn(testDb.concept, "findUnique")
+        // Prisma types findUnique as its own promise class; a plain async mock is fine at runtime.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .mockImplementation(async (args: any) => {
+        .mockImplementation((async (args: any) => {
           if (args?.where?.normalizedName === "raced-term") return null;
           return originalFindUnique(args);
-        });
+        }) as never);
 
       try {
         const res = await PATCH(req("PATCH", "http://localhost/api/tags/org", { conceptId: concept.id, term: "raced-term" }));
