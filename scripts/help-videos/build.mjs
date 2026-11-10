@@ -9,7 +9,7 @@
 // and the C-and-dot mark. Beats are data; edit the YAML, not the output.
 import fs from "node:fs";
 import path from "node:path";
-import yaml from "js-yaml";
+import { MOBILE, loadBeats } from "./beats.mjs";
 
 const [beatsPath, capDir, projDir] = process.argv.slice(2);
 if (!beatsPath || !capDir || !projDir) {
@@ -17,16 +17,21 @@ if (!beatsPath || !capDir || !projDir) {
   process.exit(2);
 }
 
-const spec = yaml.load(fs.readFileSync(beatsPath, "utf8"));
+const spec = loadBeats(beatsPath);
 const targets = JSON.parse(fs.readFileSync(path.join(capDir, "targets.json"), "utf8"));
-const [SW, SH] = spec.size ?? [1440, 900];
+const [SW, SH] = spec.size;
 
-// Canvas and window geometry (1080p). The caption sits above the window so
-// it's the first thing a viewer reads; the window fills the rest.
-const CW = 1920, CH = 1080;
-const BAR = 34;
-const CAP_Y = 34;
-const WX = (CW - SW) / 2, WY = CH - 36 - (SH + BAR);
+// Canvas and window geometry. The caption sits above the window so it's the
+// first thing a viewer reads; the window fills the rest.
+//   desktop: 1920x1080, a 1:1 browser window with a title bar
+//   mobile:  1080x1920, the phone screen full-bleed (no frame) under a caption
+//            band, so on a real phone the UI plays at close to its real size
+const CW = MOBILE ? 1080 : 1920, CH = MOBILE ? 1920 : 1080;
+const S = MOBILE ? CW / SW : 1;
+const BAR = MOBILE ? 0 : 34;
+const CAP_Y = MOBILE ? 40 : 34;
+const WW = SW * S, WH = SH * S + BAR;
+const WX = (CW - WW) / 2, WY = CH - (MOBILE ? 0 : 36) - WH;
 const XF = 0.35; // crossfade seconds
 const INTRO = 1.8;
 
@@ -54,18 +59,18 @@ ${FONT_FACES.map(([fam, w, file]) => `  @font-face { font-family: "${fam}"; font
   .mono { font-family: "JetBrains Mono", monospace; font-weight: 400; }
   #stage { position: absolute; inset: 0; }
   .glow { position: absolute; border-radius: 50%; pointer-events: none; filter: blur(10px); }
-  .glow.a { width: 1300px; height: 760px; left: 310px; top: -420px; background: radial-gradient(ellipse at center, rgba(var(--accent-rgb),0.16) 0%, transparent 65%); }
+  .glow.a { width: 1300px; height: 760px; left: ${(CW - 1300) / 2}px; top: -420px; background: radial-gradient(ellipse at center, rgba(var(--accent-rgb),0.16) 0%, transparent 65%); }
   .glow.b { width: 900px; height: 700px; right: -300px; bottom: -380px; background: radial-gradient(ellipse at center, rgba(var(--accent-rgb),0.10) 0%, transparent 65%); }
-  .win { position: absolute; left: ${WX}px; top: ${WY}px; width: ${SW}px; height: ${SH + BAR}px; border-radius: 14px; overflow: hidden;
+  .win { position: absolute; left: ${WX}px; top: ${WY}px; width: ${WW}px; height: ${WH}px; border-radius: ${MOBILE ? "36px 36px 0 0" : "14px"}; overflow: hidden;
          border: 1px solid rgba(var(--text-rgb),0.12); background: var(--bg); box-shadow: 0 30px 80px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.3); }
   .bar { height: ${BAR}px; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: #1a191b; border-bottom: 1px solid rgba(var(--text-rgb),0.08); }
   .dot { width: 11px; height: 11px; border-radius: 50%; background: rgba(var(--text-rgb),0.16); }
   .bar-title { flex: 1; text-align: center; margin-right: 52px; font-size: 13px; color: var(--light); font-weight: 500; }
-  .content { position: relative; width: ${SW}px; height: ${SH}px; }
+  .content { position: relative; width: ${SW}px; height: ${SH}px; transform: scale(${S}); transform-origin: 0 0; }
   .shot { position: absolute; left: 0; top: 0; width: ${SW}px; height: ${SH}px; }
   .ring { position: absolute; border: 2px solid rgba(var(--accent-rgb),0.95); border-radius: 10px;
           box-shadow: 0 0 0 6px rgba(var(--accent-rgb),0.16), 0 0 28px rgba(var(--accent-rgb),0.35); }
-  .term { position: absolute; inset: 0; background: #0e0d0f; padding: 60px 64px; font-size: 27px; line-height: 1.8; }
+  .term { position: absolute; inset: 0; background: #0e0d0f; padding: ${MOBILE ? "56px 22px" : "60px 64px"}; font-size: ${MOBILE ? 14 : 27}px; line-height: ${MOBILE ? 1.6 : 1.8}; }
   .line { white-space: pre; }
   .prompt { color: #C9A6D6; }
   .typed { display: inline-block; vertical-align: bottom; overflow: hidden; white-space: pre; color: var(--snow); }
@@ -74,12 +79,12 @@ ${FONT_FACES.map(([fam, w, file]) => `  @font-face { font-family: "${fam}"; font
   .line.wrap { white-space: normal; display: flex; gap: 0; }
   .line.wrap .prompt { flex-shrink: 0; white-space: pre; }
   .pasted { color: var(--snow); }
-  .card .note { font-size: 24px; color: var(--light); max-width: 1100px; text-align: center; line-height: 1.45; }
-  .caption { position: absolute; left: 0; width: ${CW}px; top: ${CAP_Y}px; text-align: center; font-size: 32px; font-weight: 600; letter-spacing: -0.01em; color: var(--snow); }
-  .card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; }
-  .card h1 { font-size: 64px; font-weight: 700; letter-spacing: -0.02em; }
-  .card p { font-size: 28px; color: var(--light); }
-  .code { padding: 20px 30px; border-radius: 12px; background: var(--surface); border: 1px solid rgba(var(--accent-rgb),0.45); font-size: 25px; color: var(--snow); }
+  .card .note { font-size: ${MOBILE ? 34 : 24}px; color: var(--light); max-width: ${MOBILE ? 860 : 1100}px; text-align: center; line-height: 1.45; }
+  .caption { position: absolute; left: ${MOBILE ? 70 : 0}px; width: ${MOBILE ? CW - 140 : CW}px; top: ${CAP_Y}px; text-align: center; font-size: ${MOBILE ? 46 : 32}px; line-height: 1.25; font-weight: 600; letter-spacing: -0.01em; color: var(--snow); }
+  .card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; padding: 0 ${MOBILE ? 80 : 0}px; text-align: center; }
+  .card h1 { font-size: ${MOBILE ? 72 : 64}px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .card p { font-size: ${MOBILE ? 38 : 28}px; color: var(--light); }
+  .code { padding: 20px 30px; border-radius: 12px; background: var(--surface); border: 1px solid rgba(var(--accent-rgb),0.45); font-size: ${MOBILE ? 30 : 25}px; color: var(--snow); ${MOBILE ? "max-width: 900px; white-space: pre-wrap; word-break: break-all; text-align: left;" : ""} }
   .brand { display: flex; align-items: center; gap: 14px; font-size: 40px; font-weight: 600; letter-spacing: -0.01em; }
 `;
 
@@ -123,7 +128,8 @@ if (termBeats.length) {
     }
     const n = b.terminal.typed.length;
     // `paste: true` drops long prompts in at once (wrapped) instead of typing.
-    const paste = !!b.terminal.paste;
+    // Phones are too narrow for a one-line typed command, so wrap everything.
+    const paste = !!b.terminal.paste || MOBILE;
     const inner = paste
       ? `<span class="pasted" id="${b.id}-typed">${esc(b.terminal.typed)}</span>`
       : `<span class="typed" id="${b.id}-typed" style="width:0ch">${esc(b.terminal.typed)}</span>`;
@@ -142,7 +148,7 @@ if (termBeats.length) {
     const outAt = typeStart + typeDur + (b.terminal.think ?? 0.45);
     a(`tl.fromTo("#${b.id}-out", { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.35, ease: E }, ${outAt.toFixed(2)});`);
   });
-  body.push(`<div class="win h" id="win-term" data-layout-allow-overlap><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="bar-title">Terminal</span></div>
+  body.push(`<div class="win h" id="win-term" data-layout-allow-overlap>${BAR ? '<div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="bar-title">Terminal</span></div>' : ""}
   <div class="content"><div class="term mono">${lines.join("\n")}</div></div></div>`);
   a(`tl.to("#win-term", { opacity: 1, duration: ${XF}, ease: "none" }, ${(termOpenAt - XF / 2).toFixed(2)});`);
 }
@@ -150,10 +156,15 @@ if (termBeats.length) {
 for (const b of beats) {
   if (b.story) {
     const ring = targets[b.id];
-    const ringHtml = ring
-      ? `<div class="ring h" id="${b.id}-ring" style="left:${ring.x - 12}px;top:${ring.y - 5}px;width:${ring.w + 24}px;height:${ring.h + 10}px"></div>`
-      : "";
-    body.push(`<div class="win h" id="win-${b.id}" data-layout-allow-overlap><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="bar-title">curata</span></div>
+    // Pad the ring around its target, but keep it inside the screen so a
+    // full-width target (a phone sheet row) isn't cut off at the edges.
+    let ringHtml = "";
+    if (ring) {
+      const x0 = Math.max(4, ring.x - 12), y0 = Math.max(4, ring.y - 5);
+      const x1 = Math.min(SW - 4, ring.x + ring.w + 12), y1 = Math.min(SH - 4, ring.y + ring.h + 5);
+      ringHtml = `<div class="ring h" id="${b.id}-ring" style="left:${x0}px;top:${y0}px;width:${x1 - x0}px;height:${y1 - y0}px"></div>`;
+    }
+    body.push(`<div class="win h" id="win-${b.id}" data-layout-allow-overlap>${BAR ? '<div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="bar-title">curata</span></div>' : ""}
   <div class="content"><img class="shot" src="assets/shots/${b.id}.png" alt="" />${ringHtml}</div></div>`);
     a(`tl.to("#win-${b.id}", { opacity: 1, duration: ${XF}, ease: "none" }, ${(b.at - XF / 2).toFixed(2)});`);
     a(`tl.to("#win-${b.id}", { opacity: 0, duration: ${XF}, ease: "none" }, ${(b.end - XF / 2).toFixed(2)});`);

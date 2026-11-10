@@ -27,6 +27,9 @@ export interface HelpVideo {
   title: string;
   src: string;
   poster?: string;
+  /** Portrait 1080x1920 cut, played on phone-width screens (PHONE_QUERY). */
+  mobileSrc?: string;
+  mobilePoster?: string;
   /** One-line summary shown under the player. */
   blurb?: string;
   /** First is the primary button. */
@@ -75,6 +78,9 @@ export function resolveHelpVideo(pathname: string, manifest: HelpManifest): Help
   const id = route?.video ?? manifest.welcome;
   return manifest.videos.find((v) => v.id === id) ?? manifest.videos.find((v) => v.id === manifest.welcome) ?? null;
 }
+
+/** Screens that get a video's portrait cut. Matches the app's mobile dock breakpoint. */
+export const PHONE_QUERY = "(max-width: 640px)";
 
 // Nudge rules: idle pulses are easy to make annoying, so they are capped.
 export const NUDGE_IDLE_MS = 30_000;

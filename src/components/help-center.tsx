@@ -6,6 +6,7 @@ import { basePath } from "@/lib/api-fetch";
 import { trackClient } from "@/lib/analytics-client";
 import {
   NUDGE_IDLE_MS,
+  PHONE_QUERY,
   fillPrompt,
   resolveHelpVideo,
   shouldNudge,
@@ -132,6 +133,8 @@ export function HelpCenter({ authMode }: { authMode?: string }) {
   const [video, setVideo] = useState<HelpVideo | null>(null);
   const [source, setSource] = useState("dock");
   const [videoFailed, setVideoFailed] = useState(false);
+  // Phone-width screens get the portrait cut when the video has one.
+  const [phone, setPhone] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
   const [hasDock, setHasDock] = useState(dockCount > 0);
   const openedDuringNudge = useRef(false);
@@ -165,10 +168,12 @@ export function HelpCenter({ authMode }: { authMode?: string }) {
       const v = (videoId && manifest.videos.find((x) => x.id === videoId)) || resolveHelpVideo(window.location.pathname.slice(basePath.length) || "/", manifest);
       if (!v) return;
       if (nudging) { openedDuringNudge.current = true; setNudge(false); }
+      const isPhone = window.matchMedia(PHONE_QUERY).matches;
       setVideoFailed(false);
       setSource(src ?? "dock");
+      setPhone(isPhone);
       setVideo(v);
-      trackClient("help_open", { video: v.id, source: src, path: window.location.pathname });
+      trackClient("help_open", { video: v.id, source: src, path: window.location.pathname, cut: isPhone && v.mobileSrc ? "mobile" : "desktop" });
     };
     window.addEventListener(OPEN_EVENT, onOpen);
     return () => window.removeEventListener(OPEN_EVENT, onOpen);
@@ -284,6 +289,8 @@ export function HelpCenter({ authMode }: { authMode?: string }) {
 
   const connectSlug = pathname.startsWith("/pages/") ? pathname.slice("/pages/".length) : "home";
 
+  const portrait = phone && !!video?.mobileSrc;
+
   return (
     <>
       {!hasDock && manifest && !video && (
@@ -293,7 +300,7 @@ export function HelpCenter({ authMode }: { authMode?: string }) {
       )}
       {video && (
         <div className="agent-overlay help-overlay" onClick={close}>
-          <div className="agent-modal help-modal" role="dialog" aria-modal="true" aria-label={video.title} onClick={(e) => e.stopPropagation()}>
+          <div className={`agent-modal help-modal${portrait ? " help-modal--portrait" : ""}`} role="dialog" aria-modal="true" aria-label={video.title} onClick={(e) => e.stopPropagation()}>
             <div className="agent-modal-header">
               <span className="agent-modal-title">{video.title}</span>
               <button className="agent-modal-close" onClick={close} aria-label="Close">&#x2715;</button>
@@ -303,9 +310,9 @@ export function HelpCenter({ authMode }: { authMode?: string }) {
                 <div className="help-player-missing">This video is on its way. Check back soon.</div>
               ) : (
                 <video
-                  key={video.id}
-                  src={`${basePath}${video.src}`}
-                  poster={video.poster ? `${basePath}${video.poster}` : undefined}
+                  key={`${video.id}-${portrait ? "m" : "d"}`}
+                  src={`${basePath}${portrait ? video.mobileSrc : video.src}`}
+                  poster={(portrait ? video.mobilePoster : video.poster) ? `${basePath}${portrait ? video.mobilePoster : video.poster}` : undefined}
                   controls
                   autoPlay
                   playsInline

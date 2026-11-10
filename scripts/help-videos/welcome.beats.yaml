@@ -1,6 +1,8 @@
 # Welcome help video (public/help/welcome.mp4). Storyboard and build input.
 # Screens: Storybook stories under src/stories/demo (story: <id>), or a
 # hand-built terminal (terminal:), since Claude Code's UI is not ours.
+# Phone cut (HELP_VIDEO_MOBILE=1): same beats at 390x844; `mobile:` blocks
+# override what differs, mostly the dock, which is a ⋯ sheet on phones.
 # Captions are final copy: no em dashes, every claim visible in its frame.
 #
 # Shape: a fast montage of what you can do by hand, then "or have your agent
@@ -20,6 +22,8 @@ beats:
   - id: m-folder
     story: demo-welcome--home-fresh
     steps: [{ click: "Create Folder" }, { type: "Engineering" }]
+    mobile:
+      steps: [{ css: ".dock-fab" }, { css: ".dock-sheet-row:has-text('Create Folder')" }, { type: "Engineering" }]
     caption: Organize it in folders.
     seconds: 2
 
@@ -31,18 +35,25 @@ beats:
   - id: m-newpage
     story: demo-welcome--home-fresh
     steps: [{ click: "New page" }]
+    mobile:
+      steps: [{ css: ".dock-fab" }, { css: ".dock-sheet-row:has-text('New page')" }]
     caption: Write pages from templates.
     seconds: 2
 
   - id: m-present
     story: demo-page--agent-page
     steps: [{ css: "button[aria-label='Present']" }, { css: "button[aria-label='Next slide']" }]
+    mobile:
+      steps: [{ css: ".dock-fab" }, { css: ".dock-sheet-row:has-text('Present')" }, { css: "button[aria-label='Next slide']" }]
     caption: Present any page as slides.
     seconds: 2
 
   - id: m-export
     story: demo-page--agent-page
     ring: { css: "button[aria-label='Export PDF']" }
+    mobile:
+      steps: [{ css: ".dock-fab" }]
+      ring: { css: ".dock-sheet-row:has-text('Export PDF')" }
     caption: Export to PDF.
     seconds: 2
 

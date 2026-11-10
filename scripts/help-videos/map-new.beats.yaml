@@ -1,4 +1,6 @@
 # New map item help video (public/help/map-new.mp4). Screens: src/stories/demo/map.stories.tsx.
+# Phone cut (HELP_VIDEO_MOBILE=1): `mobile:` blocks scroll targets that sit
+# below the fold at 390x624.
 title: Add to the map
 size: [1440, 900]
 target_seconds: 28
@@ -23,6 +25,13 @@ beats:
       - { css: "input[placeholder='Search pages']" }
       - { type: "retention" }
     ring: { css: ".nmf-step:nth-child(2)" }
+    mobile:
+      steps:
+        - { css: "#nn-title" }
+        - { type: "Data retention" }
+        - { css: "input[placeholder='Search pages']" }
+        - { type: "retention" }
+        - { scrollTo: ".nmf-step:nth-child(2)", offset: 16 }
     caption: Point at the page that owns the truth for it.
     seconds: 5
 
@@ -59,6 +68,20 @@ beats:
       - { type: "self-host" }
       - { css: ".nn-hit" }
     ring: { css: ".nmf-footer" }
+    mobile:
+      steps:
+        - { css: "#nn-title" }
+        - { type: "Data retention" }
+        - { css: "input[placeholder='Search pages']" }
+        - { type: "retention" }
+        - { css: ".nn-hit" }
+        - { css: "input[placeholder='Search pages, or paste a URL']" }
+        - { type: "privacy" }
+        - { css: ".nn-hit" }
+        - { css: "input[placeholder='Search pages, or paste a URL']" }
+        - { type: "self-host" }
+        - { css: ".nn-hit" }
+        - { scrollTo: ".nn-related", offset: 60 }
     caption: Create it. When the source changes, those pages turn yellow.
     seconds: 5.5
 

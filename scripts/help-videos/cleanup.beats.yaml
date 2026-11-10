@@ -1,6 +1,7 @@
 # Cleanup help video (public/help/cleanup.mp4). Storyboard and build input.
 # Screens: Demo/Queue stories (src/stories/demo/queue.stories.tsx).
 # Slow pace: one control per beat, a ring on it, a caption saying what it does.
+# Phone cut (HELP_VIDEO_MOBILE=1): `mobile:` blocks override what differs at 390x624.
 # Captions are final copy: no em dashes, every claim visible in its frame.
 title: Cleanup
 size: [1440, 900]
@@ -11,12 +12,17 @@ beats:
     ring: { css: ".cleanup-count" }
     caption: Cleanup holds pages your agents flagged as done, stale or duplicate.
     seconds: 5
+    mobile:
+      caption: Pages your agents flagged as done, stale or duplicate.
 
   - id: reason
     story: demo-queue--cleanup
     ring: { css: ".cleanup-row:has-text('Q3 Launch Plan') .cleanup-row-main" }
     caption: Each flag says why, with the evidence and how sure the agent is.
     seconds: 6
+    mobile:
+      steps: [{ scrollTo: ".cleanup-row:has-text('Q3 Launch Plan')", offset: 120 }]
+      caption: Each flag says why, with evidence and how sure the agent is.
 
   - id: superseded
     story: demo-queue--cleanup
@@ -29,6 +35,8 @@ beats:
     ring: { css: ".cleanup-row:has-text('Q3 Launch Plan') .cleanup-actions" }
     caption: Keep it, archive it, or delete it.
     seconds: 4.5
+    mobile:
+      steps: [{ scrollTo: ".cleanup-row:has-text('Q3 Launch Plan')", offset: 120 }]
 
   - id: bulk
     story: demo-queue--cleanup

@@ -2,7 +2,8 @@
 # Slower than the welcome montage: one control per beat, ringed, with a
 # caption that says what it does. Screen: the page the starter prompt really
 # wrote (Demo/Page AgentPage). Captions are final copy: no em dashes, every
-# claim visible in its frame.
+# claim visible in its frame. Phone cut: `mobile:` blocks route dock beats
+# through the ⋯ sheet (.dock-fab, then .dock-sheet-row).
 title: Working with a page
 size: [1440, 900]
 target_seconds: 50
@@ -31,6 +32,10 @@ beats:
     ring: { css: "button[aria-label='Edit page']" }
     caption: Edit page changes it in place, right where you read it.
     seconds: 4.5
+    mobile:
+      steps: [{ css: ".dock-fab" }]
+      ring: { css: ".dock-sheet-row:has-text('Edit page')" }
+      caption: Edit page changes it in place, right where you read it.
 
   - id: editing
     story: demo-page--agent-page
@@ -38,30 +43,45 @@ beats:
     ring: { css: "button[aria-label='Done editing']" }
     caption: Click any text to change it, then click Done editing.
     seconds: 5
+    mobile:
+      steps: [{ css: ".dock-fab" }, { css: ".dock-sheet-row:has-text('Edit page')" }]
+      ring: { css: ".dock-fab-primary" }
+      caption: Tap any text to change it, then tap Done editing.
 
   - id: copy
     story: demo-page--agent-page
     ring: { css: "button[aria-label='Copy for agent']" }
     caption: Copy for agent hands this page to any agent as context.
     seconds: 5
+    mobile:
+      steps: [{ css: ".dock-fab" }]
+      ring: { css: ".dock-sheet-row:has-text('Copy for agent')" }
 
   - id: present
     story: demo-page--agent-page
     steps: [{ css: "button[aria-label='Present']" }, { css: "button[aria-label='Next slide']" }]
     caption: Present turns each section into a slide.
     seconds: 5
+    mobile:
+      steps: [{ css: ".dock-fab" }, { css: ".dock-sheet-row:has-text('Present')" }, { css: "button[aria-label='Next slide']" }]
 
   - id: export
     story: demo-page--agent-page
     ring: { css: "button[aria-label='Export PDF']" }
     caption: Export PDF gives you a clean copy to send.
     seconds: 4.5
+    mobile:
+      steps: [{ css: ".dock-fab" }]
+      ring: { css: ".dock-sheet-row:has-text('Export PDF')" }
 
   - id: settings
     story: demo-page--agent-page
     ring: { css: "button[aria-label='Page settings']" }
     caption: Page settings is where visibility, tags and rules live.
     seconds: 4.5
+    mobile:
+      steps: [{ css: ".dock-fab" }]
+      ring: { css: ".dock-sheet-row:has-text('Page settings')" }
 
   - id: labels
     story: demo-page--agent-page
@@ -69,6 +89,10 @@ beats:
     ring: { css: ".dock-btn--help" }
     caption: Hide labels for a slimmer dock. Help stays right here.
     seconds: 5
+    mobile:
+      steps: [{ css: ".dock-fab" }]
+      ring: { css: ".dock-sheet-row:has-text('Help')" }
+      caption: Help is always in this menu, on every screen.
 
   - id: end
     card:

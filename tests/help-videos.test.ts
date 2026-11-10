@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync } from "fs";
+import { existsSync, readFileSync, readdirSync } from "fs";
 import path from "path";
 import yaml from "js-yaml";
 import { STARTER_PROMPT } from "@/lib/starter-prompt";
@@ -101,6 +101,16 @@ describe("shipped manifest", () => {
       "/settings": "settings",
     };
     for (const [p, id] of Object.entries(want)) expect(resolveHelpVideo(p, shipped)?.id, p).toBe(id);
+  });
+
+  it("every video and its phone cut exist on disk", () => {
+    const pub = (src: string) => path.join(process.cwd(), "public", src);
+    for (const v of shipped.videos) {
+      for (const src of [v.src, v.poster, v.mobileSrc, v.mobilePoster]) {
+        expect(src, `${v.id} is missing a desktop or phone file`).toBeTruthy();
+        expect(existsSync(pub(src!)), src).toBe(true);
+      }
+    }
   });
 
   it("every copy-prompt action carries a prompt", () => {
