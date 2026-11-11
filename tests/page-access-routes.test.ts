@@ -48,9 +48,12 @@ import { POST as bulkPOST } from "@/app/api/pages/bulk/route";
 import { GET as exportGET, POST as exportPOST } from "@/app/api/export/route";
 import { PATCH as pagesPATCH } from "@/app/api/pages/route";
 import { PUT as yamlPUT } from "@/app/api/pages/yaml/route";
+import { GET as rulesGET, POST as rulesPOST } from "@/app/api/rules/route";
+import { POST as annotationsPOST } from "@/app/api/annotations/route";
 import { POST as mcpPOST } from "@/app/api/mcp/route";
 import { POST as streamPOST } from "@/app/api/mcp/stream/route";
-import { mcpPageDenial } from "@/lib/mcp-page-access";
+import { mcpPageDenial, PAGE_ARGS } from "@/lib/mcp-page-access";
+import { TOOL_PARAMS } from "@/lib/mcp-dispatch";
 
 const PAGE_YAML = `title: Secret plan
 shell: document
@@ -96,6 +99,27 @@ describe("web routes hide private pages from non-members of the page", () => {
     expect((await exportGET(get("/api/export?slug=acc-page"))).status).toBe(404);
     expect((await exportPOST(json("POST", "/api/export", { slugs: ["acc-page"] }))).status).toBe(404);
     expect(await versionCount(page.id)).toBe(1);
+  });
+
+  it("page-scope rules and annotations answer 404", async () => {
+    const { org, page } = await setup();
+    as(org.id, "outsider");
+
+    expect((await rulesGET(get("/api/rules?scope=page:acc-page"))).status).toBe(404);
+    const rule = { id: "r1", kind: "content", text: "no", mode: "block", pattern: "x" };
+    expect((await rulesPOST(json("POST", "/api/rules?scope=page:acc-page", rule))).status).toBe(404);
+    expect((await annotationsPOST(json("POST", "/api/annotations", { slug: "acc-page", text: "hi" }))).status).toBe(404);
+    expect((await annotationsPOST(json("POST", "/api/annotations", { slug: "no-such-page", text: "hi" }))).status).toBe(404);
+
+    expect(await testDb.annotation.count()).toBe(0);
+    expect((await testDb.page.findUniqueOrThrow({ where: { id: page.id } })).rules).toBeNull();
+  });
+
+  it("export ignores a hub page that doesn't exist, as before", async () => {
+    const { org } = await setup("org");
+    as(org.id, "outsider");
+    // Past the access check, the mocked browser launch fails with 501.
+    expect((await exportGET(get("/api/export?slug=acc-page&hub=no-such-hub"))).status).toBe(501);
   });
 
   it("export also refuses a hidden hub page", async () => {
@@ -171,12 +195,24 @@ describe("MCP page access", () => {
     expect(await mcpPageDenial("export_report", { slugs: JSON.stringify(["acc-page"]) }, org.id, "outsider")).toBe("page not found: acc-page");
     expect(await mcpPageDenial("create_from_template", { template_slug: "acc-page", target_slug: "new" }, org.id, "outsider")).toBe("page not found: acc-page");
     expect(await mcpPageDenial("write_page", { slug: "brand-new" }, org.id, "outsider")).toBeNull();
+    // camelCase aliases and slug lists are checked like the canonical args
+    expect(await mcpPageDenial("create_from_template", { templateSlug: "acc-page", target_slug: "new" }, org.id, "outsider")).toBe("page not found: acc-page");
+    expect(await mcpPageDenial("flag_page", { slug: "other", action: "supersede", supersededBy: "acc-page" }, org.id, "outsider")).toBe("page not found: acc-page");
+    expect(await mcpPageDenial("map_dependencies", { term: "t", asserts: "other, acc-page" }, org.id, "outsider")).toBe("page not found: acc-page");
+    expect(await mcpPageDenial("map_dependencies", { term: "t", depends: ["acc-page"] }, org.id, "outsider")).toBe("page not found: acc-page");
 
     expect(await mcpPageDenial("read_page", { slug: "acc-page" }, org.id, "viewer-user")).toBeNull();
     expect(await mcpPageDenial("patch_page", { slug: "acc-page" }, org.id, "viewer-user")).toContain("view-only");
     expect(await mcpPageDenial("set_rules", { scope: "page", scope_id: "acc-page" }, org.id, "viewer-user")).toContain("view-only");
 
     expect(await mcpPageDenial("patch_page", { slug: "acc-page" }, org.id, "author")).toBeNull();
+  });
+
+  it("covers every page-naming param a tool accepts", () => {
+    const pageish = /slug|superseded_by|scope_id|asserts|depends|references/;
+    const missed = Object.entries(TOOL_PARAMS).flatMap(([tool, spec]) =>
+      [...spec.known].filter((p) => pageish.test(p) && !(PAGE_ARGS as readonly string[]).includes(p)).map((p) => `${tool}.${p}`));
+    expect(missed).toEqual([]);
   });
 
   it("POST /api/mcp answers a hidden page like a missing one", async () => {

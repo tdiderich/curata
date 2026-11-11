@@ -134,20 +134,27 @@ function unauthorizedHeaders(request: Request): Record<string, string> {
  * runs. One wrapper instead of a check in each of the handlers below.
  */
 function guardPageArgs(server: McpServer, orgId: string, userId: string | undefined): void {
-  const register = server.tool.bind(server) as (...a: unknown[]) => unknown;
   type Handler = (...a: unknown[]) => unknown;
-  (server as unknown as { tool: (...a: unknown[]) => unknown }).tool = (name: unknown, ...rest: unknown[]) => {
-    const handler = rest[rest.length - 1] as Handler;
-    // Only tools declared with a params schema receive args first.
-    const takesArgs = rest.slice(0, -1).some((x) => x !== null && typeof x === "object");
-    if (!takesArgs || typeof handler !== "function") return register(name, ...rest);
-    const guarded: Handler = async (args, ...more) => {
-      const denial = await mcpPageDenial(String(name), args as Record<string, unknown>, orgId, userId);
-      if (denial) return { content: [{ type: "text" as const, text: `Error: ${denial}` }], isError: true };
-      return handler(args, ...more);
+  // The handler is always the last registration argument, for tool() and
+  // registerTool() alike. A tool without a params schema gets the request
+  // extra as its first argument; that object never carries page args, so
+  // checking it is a harmless no-op rather than a skipped check.
+  const guard = (method: "tool" | "registerTool") => {
+    const target = server as unknown as Record<string, (...a: unknown[]) => unknown>;
+    const register = target[method].bind(server);
+    target[method] = (name: unknown, ...rest: unknown[]) => {
+      const handler = rest[rest.length - 1] as Handler;
+      if (typeof handler !== "function") return register(name, ...rest);
+      const guarded: Handler = async (args, ...more) => {
+        const denial = await mcpPageDenial(String(name), args as Record<string, unknown>, orgId, userId);
+        if (denial) return { content: [{ type: "text" as const, text: `Error: ${denial}` }], isError: true };
+        return handler(args, ...more);
+      };
+      return register(name, ...rest.slice(0, -1), guarded);
     };
-    return register(name, ...rest.slice(0, -1), guarded);
   };
+  guard("tool");
+  guard("registerTool");
 }
 
 function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId?: string, instructions?: string): McpServer {

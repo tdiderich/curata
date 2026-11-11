@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg, type OrgContext } from "@/lib/auth";
 import { readPage } from "@/lib/pages";
 import { getPageOrThrow, PageAccessError } from "@/lib/access";
+import { db } from "@/lib/db";
 import { getOrgTheme } from "@/lib/theme";
 import { buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
 import {
@@ -27,18 +28,21 @@ async function addPngPage(doc: any, pngBuffer: Buffer) {
   page.drawImage(img, { x: 0, y: 0, width: targetWidth, height: targetHeight });
 }
 
-/// Every slug, and the hub page whose nav the render borrows, must be a page
-/// this caller can see; the error names the first one that isn't, with the
-/// same 404 a missing page gets.
-async function accessDenied(ctx: OrgContext, slugs: string[]): Promise<NextResponse | null> {
-  for (const slug of slugs) {
+/// Every slug must be a page this caller can see; the error names the first
+/// one that isn't, with the same 404 a missing page gets. The hub only lends
+/// its nav, and a missing hub was always ignored, so it is checked only when
+/// it exists.
+async function accessDenied(ctx: OrgContext, slugs: string[], hub?: string): Promise<NextResponse | null> {
+  for (const slug of hub ? [...slugs, hub] : slugs) {
     try {
       await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
     } catch (e) {
-      if (e instanceof PageAccessError) {
-        return NextResponse.json({ error: `page not found: ${slug}` }, { status: e.status });
+      if (!(e instanceof PageAccessError)) throw e;
+      if (slug === hub && !slugs.includes(hub)) {
+        const exists = await db.page.findUnique({ where: { orgId_slug: { orgId: ctx.orgId, slug } }, select: { id: true } });
+        if (!exists) continue;
       }
-      throw e;
+      return NextResponse.json({ error: `page not found: ${slug}` }, { status: e.status });
     }
   }
   return null;
@@ -57,11 +61,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "format must be png or pdf" }, { status: 400 });
   }
 
-  const denied = await accessDenied(ctx, hub ? [slug, hub] : [slug]);
+  const denied = await accessDenied(ctx, [slug], hub);
   if (denied) return denied;
 
   const pageData = await readPage(ctx.orgId, slug);
-  if (!pageData) return NextResponse.json({ error: "page not found" }, { status: 404 });
+  if (!pageData) return NextResponse.json({ error: `page not found: ${slug}` }, { status: 404 });
 
   const pageTitle = (pageData.json as { title?: string }).title || slug;
 
@@ -125,7 +129,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "slugs must be a non-empty array" }, { status: 400 });
   }
 
-  const denied = await accessDenied(ctx, hub ? [...slugs, hub] : slugs);
+  const denied = await accessDenied(ctx, slugs, hub);
   if (denied) return denied;
 
   let chromium;

@@ -211,7 +211,7 @@ export function describeToolParams(tool: string): string[] | null {
   return spec ? [...spec.known] : null;
 }
 
-const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string, string> }> = {
+export const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string, string> }> = {
   list_pages: { known: new Set(["channel"]) },
   read_page: { known: new Set(["slug", "channel"]) },
   read_component: { known: new Set(["slug", "id", "channel"]) },
