@@ -13,6 +13,11 @@ const PAGE_EDIT_TOOLS = new Set([
   "move_page",
 ]);
 
+/// Tools that answer a missing page with a fallback instead of an error.
+/// They filter hidden pages themselves (visiblePageRow in mcp-dispatch.ts),
+/// since a "page not found" here would differ from that fallback.
+const SELF_FILTERING_TOOLS = new Set(["list_rules", "validate_page"]);
+
 /// Every argument that names a page, across both MCP transports. A new
 /// page-naming param in TOOL_PARAMS (mcp-dispatch.ts) must be added here;
 /// tests/page-access-routes.test.ts fails if one is missed.
@@ -80,6 +85,7 @@ export async function mcpPageDenial(
 ): Promise<string | null> {
   if (!args || !userId) return null;
   const name = resolveToolName(tool);
+  if (SELF_FILTERING_TOOLS.has(name)) return null;
   const { view, edit } = pageSlugs(name, canonicalArgs(name, args));
   const slugs = [...new Set([...view, ...edit])];
   if (slugs.length === 0) return null;

@@ -122,14 +122,22 @@ describe("web routes hide private pages from non-members of the page", () => {
     expect((await exportGET(get("/api/export?slug=acc-page&hub=no-such-hub"))).status).toBe(501);
   });
 
-  it("export also refuses a hidden hub page", async () => {
+  it("export treats a hidden hub like a missing one and drops it", async () => {
     const { org } = await setup();
     await createTestPage(org.id, { slug: "open-page", createdBy: "author", visibility: "org" });
     as(org.id, "outsider");
 
-    const res = await exportGET(get("/api/export?slug=open-page&hub=acc-page"));
-    expect(res.status).toBe(404);
-    expect((await res.json()).error).toBe("page not found: acc-page");
+    const { previewUrl, getChromium } = await import("@/lib/export-render");
+    const hidden = await exportGET(get("/api/export?slug=open-page&hub=acc-page"));
+    const missing = await exportGET(get("/api/export?slug=open-page&hub=no-such-hub"));
+    expect(hidden.status).toBe(missing.status);
+    expect(await hidden.json()).toEqual(await missing.json());
+
+    // With a browser, the render gets no hub.
+    vi.mocked(getChromium).mockResolvedValueOnce({ launch: async () => ({ close: async () => {} }) } as never);
+    vi.mocked(previewUrl).mockRejectedValueOnce(new Error("stop"));
+    await exportGET(get("/api/export?slug=open-page&hub=acc-page"));
+    expect(vi.mocked(previewUrl)).toHaveBeenLastCalledWith("open-page", org.id, undefined);
   });
 
   it("bulk treats hidden pages as not matching", async () => {
@@ -206,6 +214,23 @@ describe("MCP page access", () => {
     expect(await mcpPageDenial("set_rules", { scope: "page", scope_id: "acc-page" }, org.id, "viewer-user")).toContain("view-only");
 
     expect(await mcpPageDenial("patch_page", { slug: "acc-page" }, org.id, "author")).toBeNull();
+  });
+
+  it("list_rules and validate_page answer a hidden slug like a missing one", async () => {
+    await setup();
+    const { key } = await createTestApiKey((await testDb.organization.findFirstOrThrow({ where: { slug: "acc-org" } })).id, { createdBy: "outsider" });
+    const call = async (tool: string, args: Record<string, string>) => {
+      const res = await mcpPOST(new NextRequest("http://localhost/api/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ tool, args }),
+      }));
+      const body = await res.json();
+      return { status: res.status, body: JSON.stringify(body).replaceAll("acc-page", "X").replaceAll("no-such-page", "X") };
+    };
+    expect(await call("list_rules", { slug: "acc-page" })).toEqual(await call("list_rules", { slug: "no-such-page" }));
+    const yaml = "title: T\nshell: document\ncomponents: []\n";
+    expect(await call("validate_page", { slug: "acc-page", content: yaml })).toEqual(await call("validate_page", { slug: "no-such-page", content: yaml }));
   });
 
   it("covers every page-naming param a tool accepts", () => {
