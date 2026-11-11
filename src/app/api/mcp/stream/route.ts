@@ -36,6 +36,7 @@ import { readVersion } from "@/lib/versions";
 import { patchOpsText } from "@/lib/patch-ops-doc";
 import { ensureComponentIds, buildOutline, formatOutline } from "@/lib/component-ids";
 import { dispatch, deniedToolCall } from "@/lib/mcp-dispatch";
+import { mcpPageDenial } from "@/lib/mcp-page-access";
 import { toolDescription } from "@/lib/mcp-guidance";
 import { formatWarningsBlock, type ShapeWarning } from "@/lib/kazam";
 import { ensureSeedPages } from "@/lib/seed";
@@ -126,8 +127,32 @@ function unauthorizedHeaders(request: Request): Record<string, string> {
   return headers;
 }
 
+/**
+ * Wrap every tool registered on this server so a call naming a page the
+ * caller can't see (or a private page it may only view, for edit tools) gets
+ * the same "page not found" result a missing page gets, before the handler
+ * runs. One wrapper instead of a check in each of the handlers below.
+ */
+function guardPageArgs(server: McpServer, orgId: string, userId: string | undefined): void {
+  const register = server.tool.bind(server) as (...a: unknown[]) => unknown;
+  type Handler = (...a: unknown[]) => unknown;
+  (server as unknown as { tool: (...a: unknown[]) => unknown }).tool = (name: unknown, ...rest: unknown[]) => {
+    const handler = rest[rest.length - 1] as Handler;
+    // Only tools declared with a params schema receive args first.
+    const takesArgs = rest.slice(0, -1).some((x) => x !== null && typeof x === "object");
+    if (!takesArgs || typeof handler !== "function") return register(name, ...rest);
+    const guarded: Handler = async (args, ...more) => {
+      const denial = await mcpPageDenial(String(name), args as Record<string, unknown>, orgId, userId);
+      if (denial) return { content: [{ type: "text" as const, text: `Error: ${denial}` }], isError: true };
+      return handler(args, ...more);
+    };
+    return register(name, ...rest.slice(0, -1), guarded);
+  };
+}
+
 function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId?: string, instructions?: string): McpServer {
   const server = new McpServer({ name: "curata", version: "0.1.0" }, instructions ? { instructions } : undefined);
+  guardPageArgs(server, orgId, userId);
 
   // Tools below that have no bespoke streaming handler delegate to the shared
   // dispatch registry so this transport stays at parity with /api/mcp.

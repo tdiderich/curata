@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveOrg } from "@/lib/auth";
+import { resolveOrg, type OrgContext } from "@/lib/auth";
 import { readPage } from "@/lib/pages";
+import { getPageOrThrow, PageAccessError } from "@/lib/access";
 import { getOrgTheme } from "@/lib/theme";
 import { buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
 import {
@@ -26,6 +27,23 @@ async function addPngPage(doc: any, pngBuffer: Buffer) {
   page.drawImage(img, { x: 0, y: 0, width: targetWidth, height: targetHeight });
 }
 
+/// Every slug, and the hub page whose nav the render borrows, must be a page
+/// this caller can see; the error names the first one that isn't, with the
+/// same 404 a missing page gets.
+async function accessDenied(ctx: OrgContext, slugs: string[]): Promise<NextResponse | null> {
+  for (const slug of slugs) {
+    try {
+      await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+    } catch (e) {
+      if (e instanceof PageAccessError) {
+        return NextResponse.json({ error: `page not found: ${slug}` }, { status: e.status });
+      }
+      throw e;
+    }
+  }
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   const ctx = await resolveOrg();
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -38,6 +56,9 @@ export async function GET(request: NextRequest) {
   if (format !== "png" && format !== "pdf") {
     return NextResponse.json({ error: "format must be png or pdf" }, { status: 400 });
   }
+
+  const denied = await accessDenied(ctx, hub ? [slug, hub] : [slug]);
+  if (denied) return denied;
 
   const pageData = await readPage(ctx.orgId, slug);
   if (!pageData) return NextResponse.json({ error: "page not found" }, { status: 404 });
@@ -103,6 +124,9 @@ export async function POST(request: NextRequest) {
   if (!Array.isArray(slugs) || slugs.length === 0) {
     return NextResponse.json({ error: "slugs must be a non-empty array" }, { status: 400 });
   }
+
+  const denied = await accessDenied(ctx, hub ? [...slugs, hub] : slugs);
+  if (denied) return denied;
 
   let chromium;
   try {

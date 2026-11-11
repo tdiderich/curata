@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
+import { getPageOrThrow, assertPageEditable, PageAccessError } from "@/lib/access";
 
 export async function GET(request: NextRequest) {
   const ctx = await resolveOrg();
@@ -20,12 +21,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const page = await db.page.findUnique({
-      where: { orgId_slug: { orgId: ctx.orgId, slug } },
-    });
-
-    if (!page) {
-      return NextResponse.json({ error: "page not found" }, { status: 404 });
+    let page;
+    try {
+      const { id } = await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+      page = await db.page.findUniqueOrThrow({ where: { id } });
+    } catch (e) {
+      if (e instanceof PageAccessError) {
+        return NextResponse.json({ error: e.message }, { status: e.status });
+      }
+      throw e;
     }
 
     const versions = await db.pageVersion.findMany({
@@ -68,12 +72,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const page = await db.page.findUnique({
-      where: { orgId_slug: { orgId: ctx.orgId, slug } },
-    });
-
-    if (!page) {
-      return NextResponse.json({ error: "page not found" }, { status: 404 });
+    let page;
+    try {
+      page = await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+      assertPageEditable(page);
+    } catch (e) {
+      if (e instanceof PageAccessError) {
+        return NextResponse.json({ error: e.message }, { status: e.status });
+      }
+      throw e;
     }
 
     const targetVersion = await db.pageVersion.findFirst({

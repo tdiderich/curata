@@ -95,19 +95,42 @@ export async function getPageOrThrow(
     throw new PageAccessError(404, "not found");
   }
 
-  if (AUTH_MODE === "none") {
-    return {
-      ...page,
-      access: { allowed: true, pageId: page.id, role: "owner", via: "creator" },
-    };
-  }
-
-  const access = await resolvePageAccess(page, userId, orgMemberRole, shareToken);
+  const access = await pageAccessFor(page, userId, orgMemberRole, shareToken);
   if (!access) {
     throw new PageAccessError(404, "not found");
   }
 
   return { ...page, access };
+}
+
+/// resolvePageAccess plus the AUTH_MODE=none shortcut (every caller is the
+/// single default owner). Use this when you already hold the page row, e.g.
+/// filtering a batch of pages; getPageOrThrow wraps it for a single slug.
+export async function pageAccessFor(
+  page: PageRow,
+  userId: string | null,
+  orgMemberRole: string | null,
+  shareToken?: string
+): Promise<PageAccess | null> {
+  if (AUTH_MODE === "none") {
+    return { allowed: true, pageId: page.id, role: "owner", via: "creator" };
+  }
+  return resolvePageAccess(page, userId, orgMemberRole, shareToken);
+}
+
+/// Page-level half of an edit check; the org-role half stays with
+/// can(role, "page:edit"). A private page is only reachable through its
+/// creator or a share, so the share role decides: a viewer share can read it
+/// but not change it. Org, shared and public pages are reachable by org
+/// membership, where the org role already decides.
+export function pageEditable(page: { visibility: string | null }, access: PageAccess): boolean {
+  return canEditPage(access) || (page.visibility ?? "org") !== "private";
+}
+
+export function assertPageEditable(page: { visibility: string | null; access: PageAccess }): void {
+  if (!pageEditable(page, page.access)) {
+    throw new PageAccessError(403, "forbidden: you have view-only access to this page");
+  }
 }
 
 export function listPagesWhere(

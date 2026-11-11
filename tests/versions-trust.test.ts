@@ -11,7 +11,10 @@ vi.mock("@/lib/db", async () => {
 
 // resolveOrg is swapped per-test to simulate whichever user/role is "logged in".
 const resolveOrgMock = vi.fn();
-vi.mock("@/lib/auth", () => ({ resolveOrg: () => resolveOrgMock() }));
+vi.mock("@/lib/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/auth")>()),
+  resolveOrg: () => resolveOrgMock(),
+}));
 
 import { POST, DELETE } from "@/app/api/versions/trust/route";
 

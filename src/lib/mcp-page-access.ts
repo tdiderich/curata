@@ -1,0 +1,79 @@
+import { db } from "./db";
+import { pageAccessFor, pageEditable } from "./access";
+import { resolveToolName } from "./mcp-dispatch";
+
+/// Tools that change an existing page's content or placement. On a private
+/// page these need the creator or an editor share, not just a view.
+const PAGE_EDIT_TOOLS = new Set([
+  "write_page",
+  "patch_page",
+  "write_component",
+  "replace_in_page",
+  "restore_page_version",
+  "move_page",
+]);
+
+/// Every argument that names a page, across both MCP transports. Each slug a
+/// call names must be a page the caller can see, the same rule list_pages
+/// and search_pages already apply (listPagesWhere).
+function pageSlugs(tool: string, args: Record<string, unknown>): { view: string[]; edit: string[] } {
+  const str = (v: unknown) => (typeof v === "string" && v ? v : null);
+  const view = [args.slug, args.template_slug, args.target_slug, args.superseded_by].map(str);
+  const edit: (string | null)[] = [];
+
+  if (tool === "set_rules" && args.scope === "page") edit.push(str(args.scope_id));
+  if (PAGE_EDIT_TOOLS.has(tool)) edit.push(str(args.slug));
+
+  if (typeof args.slugs === "string") {
+    try {
+      const list: unknown = JSON.parse(args.slugs);
+      if (Array.isArray(list)) view.push(...list.map(str));
+    } catch {
+      // the tool reports its own parse error
+    }
+  } else if (Array.isArray(args.slugs)) {
+    view.push(...args.slugs.map(str));
+  }
+
+  const clean = (xs: (string | null)[]) => [...new Set(xs.filter((x): x is string => x !== null))];
+  return { view: clean(view), edit: clean(edit) };
+}
+
+/**
+ * Returns an error message when a tool call names a page the caller can't
+ * see, or wants to change a private page it only holds a viewer share on;
+ * null when the call may proceed. A slug with no page behind it passes:
+ * creating tools need that, and the rest already answer "page not found".
+ * The message for a hidden page matches the not-found one, so a caller
+ * can't probe which private slugs exist.
+ *
+ * userId undefined means an internal caller, which listPagesWhere also
+ * leaves unfiltered.
+ */
+export async function mcpPageDenial(
+  tool: string,
+  args: Record<string, unknown> | undefined,
+  orgId: string,
+  userId: string | undefined
+): Promise<string | null> {
+  if (!args || !userId) return null;
+  const name = resolveToolName(tool);
+  const { view, edit } = pageSlugs(name, args);
+  const slugs = [...new Set([...view, ...edit])];
+  if (slugs.length === 0) return null;
+
+  const pages = await db.page.findMany({
+    where: { orgId, slug: { in: slugs } },
+    select: { id: true, orgId: true, slug: true, visibility: true, createdBy: true },
+  });
+
+  for (const page of pages) {
+    // Any org role grants org-level visibility; MCP callers are org members.
+    const access = await pageAccessFor(page, userId, "member");
+    if (!access) return `page not found: ${page.slug}`;
+    if (edit.includes(page.slug) && !pageEditable(page, access)) {
+      return `forbidden: you have view-only access to page ${page.slug}`;
+    }
+  }
+  return null;
+}

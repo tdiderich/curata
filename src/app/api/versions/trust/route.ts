@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveOrg } from "@/lib/auth";
+import { resolveOrg, type OrgContext } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { markTrusted, clearTrusted } from "@/lib/pages";
 import { canApprove, getApprovers, describeApprovalRule, resolveEffectiveTrustMode } from "@/lib/approval";
 import { db } from "@/lib/db";
+import { getPageOrThrow, PageAccessError } from "@/lib/access";
 
 /// markTrusted/clearTrusted stay dumb pointer-movers (see pages.ts) —
 /// approval-eligibility enforcement lives here at the route layer, matching
@@ -13,6 +14,20 @@ async function approvalDenialMessage(orgId: string, slug: string): Promise<strin
   if (!resolved) return "forbidden";
   const note = await describeApprovalRule(orgId, resolved.rule);
   return `forbidden: ${note}`;
+}
+
+/// Approval rules decide who may pin; this only keeps a page the caller
+/// can't see from being pinned or unpinned by slug.
+async function pageHidden(ctx: OrgContext, slug: string): Promise<NextResponse | null> {
+  try {
+    await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+    return null;
+  } catch (e) {
+    if (e instanceof PageAccessError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
+    throw e;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -35,6 +50,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const denied = await pageHidden(ctx, slug);
+    if (denied) return denied;
 
     const pageRow = await db.page.findUnique({
       where: { orgId_slug: { orgId: ctx.orgId, slug } },
@@ -81,6 +99,9 @@ export async function DELETE(request: NextRequest) {
     if (!slug) {
       return NextResponse.json({ error: "slug is required" }, { status: 400 });
     }
+
+    const denied = await pageHidden(ctx, slug);
+    if (denied) return denied;
 
     const eligible = await canApprove(ctx.orgId, ctx.userId, ctx.role, slug);
     if (!eligible) {
