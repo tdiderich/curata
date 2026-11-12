@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { ownerActionAllowed, pageAccessFor, pageEditable } from "./access";
+import { OWNER_ONLY_MESSAGE, ownerActionAllowed, pageAccessFor, pageEditable, VIEW_ONLY_MESSAGE } from "./access";
 import { resolveToolName, TOOL_PARAMS } from "./mcp-dispatch";
 
 /// Tools that change an existing page's content or placement. On a private
@@ -14,10 +14,9 @@ const PAGE_EDIT_TOOLS = new Set([
 ]);
 
 /// Tools whose own answer to a missing page differs from "page not found:
-/// X" (a fallback, an empty result, a `missing` list, a longer message).
-/// They check visibility themselves with the caller's userId, so a hidden
-/// page gets exactly the missing-page answer: list_rules and validate_page
-/// via visiblePageRow in mcp-dispatch.ts, the graph tools in concepts.ts.
+/// X" (a fallback, an empty result, a `missing` list). They check visibility
+/// themselves with the caller's userId, so a hidden page gets exactly the
+/// missing-page answer.
 const SELF_FILTERING_TOOLS = new Set(["list_rules", "validate_page", "get_related", "get_dependents", "map_dependencies"]);
 
 /// Tools that create a page at a new slug, and the arg naming it. A slug held
@@ -98,30 +97,41 @@ export async function mcpPageDenial(
   if (!args || !userId) return null;
   const name = resolveToolName(tool);
   if (SELF_FILTERING_TOOLS.has(name)) return null;
-  const { view, edit } = pageSlugs(name, canonicalArgs(name, args));
+  const canon = canonicalArgs(name, args);
+  const { view, edit } = pageSlugs(name, canon);
   const slugs = [...new Set([...view, ...edit])];
   if (slugs.length === 0) return null;
 
-  const pages = await db.page.findMany({
+  const rows = await db.page.findMany({
     where: { orgId, slug: { in: slugs } },
     select: { id: true, orgId: true, slug: true, visibility: true, createdBy: true },
   });
-
+  const bySlug = new Map(rows.map((p) => [p.slug, p]));
   const createArg = CREATE_SLUG_ARG[name];
-  const createSlug = createArg ? canonicalArgs(name, args)[createArg] : undefined;
-  for (const page of pages) {
+  const createSlug = createArg ? canon[createArg] : undefined;
+
+  // Visibility for every named page first, in argument order, so a call that
+  // names both a hidden page and a view-only one always gets the hidden
+  // page's answer, whatever order the rows come back in.
+  const checked = [];
+  for (const slug of slugs) {
+    const page = bySlug.get(slug);
+    if (!page) continue;
     // Any org role grants org-level visibility; MCP callers are org members.
     const access = await pageAccessFor(page, userId, "member");
-    if (!access) return page.slug === createSlug ? `page already exists: ${page.slug}` : `page not found: ${page.slug}`;
-    if (edit.includes(page.slug) && !pageEditable(page, access)) {
-      return `forbidden: you have view-only access to page ${page.slug}`;
-    }
-    // write_page's visibility arg on an existing private page is owner-only,
-    // like PATCH /api/pages.
-    const vis = canonicalArgs(name, args).visibility;
-    if (name === "write_page" && page.slug === createSlug && typeof vis === "string" && vis && vis !== page.visibility && !ownerActionAllowed(page, access)) {
-      return `forbidden: only the page owner can change visibility of or delete a private page`;
-    }
+    if (!access) return slug === createSlug ? `page already exists: ${slug}` : `page not found: ${slug}`;
+    checked.push({ page, access });
+  }
+  for (const { page, access } of checked) {
+    if (edit.includes(page.slug) && !pageEditable(page, access)) return `${VIEW_ONLY_MESSAGE}: ${page.slug}`;
+    if (changesVisibility(name, canon, page, createSlug) && !ownerActionAllowed(page, access)) return OWNER_ONLY_MESSAGE;
   }
   return null;
+}
+
+/// write_page's visibility arg on an existing page; owner-only on a private
+/// page, like PATCH /api/pages.
+function changesVisibility(tool: string, args: Record<string, unknown>, page: { slug: string; visibility: string }, createSlug: unknown): boolean {
+  const vis = args.visibility;
+  return tool === "write_page" && page.slug === createSlug && typeof vis === "string" && vis !== "" && vis !== page.visibility;
 }

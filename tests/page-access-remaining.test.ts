@@ -39,10 +39,13 @@ import { GET as impactGET } from "@/app/api/chart/impact/route";
 import { POST as depMapPOST } from "@/app/api/dependents/map/route";
 import { POST as depVerifyPOST } from "@/app/api/dependents/verify/route";
 import { PATCH as pagesPATCH, DELETE as pagesDELETE } from "@/app/api/pages/route";
+import { DELETE as foldersDELETE } from "@/app/api/folders/route";
+import { DELETE as qaDELETE } from "@/app/api/quick-actions/route";
 import { POST as bulkPOST } from "@/app/api/pages/bulk/route";
 import { POST as mcpPOST } from "@/app/api/mcp/route";
 import { mcpPageDenial } from "@/lib/mcp-page-access";
-import { getChart, getChartNode, getNeedsLook, promotePageToNode } from "@/lib/chart";
+import { getChart, getChartNode, getNeedsLook, promotePageToNode, setChartNode } from "@/lib/chart";
+import { addScopeItem } from "@/lib/scope";
 import { upsertConcepts } from "@/lib/concepts";
 
 let orgId: string;
@@ -131,6 +134,34 @@ describe("content chart hides private pages", () => {
     expect(await testDb.pageConcept.count({ where: { page: { slug: "c1", orgId } } })).toBe(1);
   });
 
+  it("a term only on a hidden page, or only in another org, is unknown before any write", async () => {
+    const lone = await page("lone", "bob", "private");
+    await upsertConcepts(lone.id, [{ term: "bob-only-term", rel: "depends" }], "bob");
+    const otherOrg = await createTestOrg({ slug: "rest-other" });
+    const foreign = await createTestPage(otherOrg.id, { slug: "foreign", visibility: "org" });
+    await upsertConcepts(foreign.id, [{ term: "foreign-term", rel: "depends" }], "x");
+
+    for (const term of ["bob-only-term", "foreign-term"]) {
+      const msg = (t: string) => `concept not found: ${t}. get_chart lists every node.`;
+      await expect(getChartNode(orgId, term, "alice")).rejects.toThrow(msg(term));
+      await expect(setChartNode(orgId, term, { hidden: true }, "alice")).rejects.toThrow(msg(term));
+      await expect(setChartNode(orgId, "never-used", { hidden: true }, "alice")).rejects.toThrow(msg("never-used"));
+      const add = (t: string) => addScopeItem(orgId, t, { slug: "c1" }, "alice", "alice").catch((e: Error) => e.message.replaceAll(t, "X"));
+      expect(await add(term)).toBe(await add("never-used"));
+    }
+    expect(await testDb.chartNodeSetting.count({ where: { orgId, concept: { normalizedName: { in: ["bob-only-term", "foreign-term", "never-used"] } } } })).toBe(0);
+    expect(await testDb.pageConcept.count({ where: { page: { slug: "c1", orgId } } })).toBe(1);
+    // Bob still has his own node.
+    expect((await getChartNode(orgId, "bob-only-term", "bob")).term).toBe("bob-only-term");
+  });
+
+  it("re-pointing a source leaves pages the caller can't edit alone", async () => {
+    const priv = await page("priv-src", "bob", "private");
+    await upsertConcepts(priv.id, [{ term: "topic-x", rel: "asserts" }], "bob");
+    await setChartNode(orgId, "topic-x", { sourceSlug: "c1" }, "alice");
+    expect(await testDb.pageConcept.count({ where: { pageId: priv.id, rel: "asserts" } })).toBe(1);
+  });
+
   it("dependency map and verify answer a hidden slug like a missing one", async () => {
     as("alice");
     const map = async (slug: string) => JSON.stringify(await (await depMapPOST(req("POST", "/api/dependents/map", { term: "topic-y", depends: [slug] }))).json()).replaceAll(slug, "X");
@@ -190,8 +221,26 @@ describe("tags, flags and quick actions", () => {
     const added = await qaPOST(req("POST", "/api/quick-actions", { slug: "org-skill" }));
     expect((await added.json()).refs).toEqual(["gone", "org-skill"]);
 
+    // Removing a hidden ref answers as if it weren't there and changes nothing.
+    expect((await (await qaDELETE(req("DELETE", "/api/quick-actions", { slug: "bob-skill" }))).json()).refs).toEqual(["gone", "org-skill"]);
+
     as("bob");
     expect((await (await qaGET()).json()).refs).toEqual(["bob-skill", "gone", "org-skill"]);
+  });
+});
+
+describe("folder delete", () => {
+  it("won't cascade over someone else's private page", async () => {
+    const folder = await testDb.folder.create({ data: { orgId, name: "Shared", visibility: "org", createdBy: "alice" } });
+    const priv = await page("in-folder", "bob", "private", { folderId: folder.id });
+    as("alice", "admin");
+    const res = await foldersDELETE(req("DELETE", "/api/folders", { id: folder.id }));
+    expect(res.status).toBe(403);
+    expect(JSON.stringify(await res.json())).not.toContain("in-folder");
+    expect(await testDb.page.count({ where: { id: priv.id } })).toBe(1);
+
+    await testDb.page.update({ where: { id: priv.id }, data: { createdBy: "alice" } });
+    expect((await foldersDELETE(req("DELETE", "/api/folders", { id: folder.id }))).status).toBe(200);
   });
 });
 
@@ -258,5 +307,14 @@ describe("MCP", () => {
     expect(await mcpPageDenial("write_page", { slug: "priv", content: "x", visibility: "org" }, orgId, "alice")).toMatch(/only the page owner/);
     expect(await mcpPageDenial("write_page", { slug: "priv", content: "x" }, orgId, "alice")).toBeNull();
     expect(await mcpPageDenial("write_page", { slug: "priv", content: "x", visibility: "org" }, orgId, "bob")).toBeNull();
+  });
+
+  it("a call naming a hidden and a view-only page always gets the hidden answer", async () => {
+    await page("aaa-hidden", "bob", "private");
+    const viewOnly = await page("zzz-view", "bob", "private");
+    await share(viewOnly.id, "alice", "viewer");
+    for (const slugs of [["zzz-view", "aaa-hidden"], ["aaa-hidden", "zzz-view"]]) {
+      expect(await mcpPageDenial("patch_page", { slug: slugs[0], template_slug: slugs[1] }, orgId, "alice")).toBe("page not found: aaa-hidden");
+    }
   });
 });

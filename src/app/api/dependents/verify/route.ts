@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { verifyDependent } from "@/lib/concepts";
 import { logAudit } from "@/lib/audit";
-import { PageAccessError } from "@/lib/access";
 
 /**
  * "Looked at it, still right." Backs the Verify button on the Dependencies
@@ -41,7 +40,6 @@ export async function POST(request: NextRequest) {
     }).catch(() => {});
     return NextResponse.json(result);
   } catch (err) {
-    if (err instanceof PageAccessError) return NextResponse.json({ error: err.message }, { status: err.status });
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: /not found|no external asset tracked/.test(message) ? 404 : 400 });
   }

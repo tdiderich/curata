@@ -2,16 +2,32 @@ import { db } from "./db";
 import yaml from "js-yaml";
 import { readPageYaml, writePage } from "./pages";
 import { findConceptForTerm, normalizeTerm, UNREACHABLE_PREFIX } from "./concepts";
-import { findPageFor, listPagesWhere } from "./access";
+import { editablePagesWhere, findPageFor, listPagesWhere } from "./access";
 import type { Prisma } from "@/generated/prisma/client";
 
 /// Pages a chart read may show: the org's live pages, narrowed to what the
 /// caller can see when a userId is given (listPagesWhere). Every page edge,
 /// source and count goes through this, so a private page never surfaces as a
 /// child, a source, or in a fan-out count for someone who can't open it.
-function chartPages(orgId: string, userId?: string | null): Prisma.PageWhereInput {
-  return listPagesWhere(orgId, userId ?? null) as Prisma.PageWhereInput;
+function chartPages(orgId: string, userId: string | null): Prisma.PageWhereInput {
+  return listPagesWhere(orgId, userId) as Prisma.PageWhereInput;
 }
+
+/// Concepts are global rows. A term counts as known here only when a page
+/// this caller can see in this org, or an external asset of this org, sits
+/// on it; anything else answers exactly like a term nobody ever used, before
+/// any read or write. Otherwise another org's tags, or a term only on
+/// someone's private page, would show through.
+export async function visibleConcept(orgId: string, term: string, userId: string | null) {
+  const concept = await findConceptForTerm(term, normalizeTerm(term));
+  if (!concept) return null;
+  const used = await db.concept.count({
+    where: { id: concept.id, OR: [{ pages: { some: { page: chartPages(orgId, userId) } } }, { externalEdges: { some: { asset: { orgId } } } }] },
+  });
+  return used > 0 ? concept : null;
+}
+
+const notFoundNode = (term: string) => new Error(`concept not found: ${normalizeTerm(term)}. get_chart lists every node.`);
 
 /**
  * The content map. Nodes are concepts with fan-out: a template
@@ -138,7 +154,7 @@ function hostOf(url: string): string | null {
 interface SourceRow { pageId: string; slug: string; title: string; updatedAt: Date; updatedBy: string | null; status: string | null }
 
 /** Source page per concept: the asserter, else the page named by a template/ or component/ term. */
-async function resolveSources(orgId: string, concepts: Array<{ id: string; normalizedName: string }>, scope: Prisma.PageWhereInput = chartPages(orgId)): Promise<Map<string, SourceRow>> {
+async function resolveSources(orgId: string, concepts: Array<{ id: string; normalizedName: string }>, scope: Prisma.PageWhereInput): Promise<Map<string, SourceRow>> {
   const out = new Map<string, SourceRow>();
   if (concepts.length === 0) return out;
   const ids = concepts.map((c) => c.id);
@@ -211,7 +227,7 @@ function colorFor(
   return { color: "yellow", reason: verifiedAt ? "not checked since the change" : "never checked" };
 }
 
-interface BuildOpts { conceptId?: string; includeHidden?: boolean; allFanOut?: boolean; userId?: string | null }
+interface BuildOpts { conceptId?: string; includeHidden?: boolean; allFanOut?: boolean; userId: string | null }
 
 async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]> {
   const now = new Date();
@@ -269,7 +285,7 @@ async function build(orgId: string, opts: BuildOpts): Promise<ChartNodeDetail[]>
   // a node doesn't show its name on someone else's map.
   const hiddenSource = new Set<string>();
   if (opts.userId) {
-    const all = await resolveSources(orgId, nodeIds.filter((id) => !sources.has(id)).map((id) => concepts.get(id)!));
+    const all = await resolveSources(orgId, nodeIds.filter((id) => !sources.has(id)).map((id) => concepts.get(id)!), chartPages(orgId, null));
     for (const id of all.keys()) hiddenSource.add(id);
   }
   const sourcePageIds = [...new Set([...sources.values()].map((s) => s.pageId))];
@@ -364,40 +380,40 @@ function stripChildren(n: ChartNodeDetail): ChartNode {
   return { term, kind, title, source, fanOut, color, counts, hidden, promoted, instructions, group };
 }
 
-export async function getChart(orgId: string, opts: { includeHidden?: boolean; userId?: string | null } = {}): Promise<Chart> {
+export async function getChart(orgId: string, opts: { includeHidden?: boolean; userId: string | null }): Promise<Chart> {
   const nodes = await build(orgId, { includeHidden: opts.includeHidden, userId: opts.userId });
   const totals: Record<ChartColor, number> = { green: 0, yellow: 0, red: 0 };
   for (const n of nodes) for (const k of WORST) totals[k] += n.counts[k];
   return { nodes: nodes.map(stripChildren), totals };
 }
 
-export async function getChartNode(orgId: string, term: string, userId?: string | null): Promise<ChartNodeDetail> {
-  const normalized = normalizeTerm(term);
-  const concept = await findConceptForTerm(term, normalized);
-  if (!concept) throw new Error(`concept not found: ${normalized}. get_chart lists every node.`);
+export async function getChartNode(orgId: string, term: string, userId: string | null): Promise<ChartNodeDetail> {
+  const concept = await visibleConcept(orgId, term, userId);
+  if (!concept) throw notFoundNode(term);
   const [node] = await build(orgId, { conceptId: concept.id, includeHidden: true, userId });
-  if (!node) throw new Error(`concept not found: ${normalized}. get_chart lists every node.`);
+  if (!node) throw notFoundNode(term);
   return node;
 }
 
 /** Everything yellow or red, grouped by node. The chart as a list. */
-export async function getNeedsLook(orgId: string, userId?: string | null): Promise<Array<ChartNodeDetail>> {
+export async function getNeedsLook(orgId: string, userId: string | null): Promise<Array<ChartNodeDetail>> {
   const nodes = await build(orgId, { userId });
   return nodes
     .map((n) => ({ ...n, children: n.children.filter((c) => c.color !== "green") }))
     .filter((n) => n.children.length > 0);
 }
 
-export async function setChartNode(orgId: string, term: string, patch: { hidden?: boolean; promoted?: boolean; sourceSlug?: string; instructions?: string | null }, userId?: string | null): Promise<ChartNode> {
-  const normalized = normalizeTerm(term);
-  const concept = await findConceptForTerm(term, normalized);
-  if (!concept) throw new Error(`concept not found: ${normalized}`);
+export async function setChartNode(orgId: string, term: string, patch: { hidden?: boolean; promoted?: boolean; sourceSlug?: string; instructions?: string | null }, userId: string | null): Promise<ChartNode> {
+  const concept = await visibleConcept(orgId, term, userId);
+  if (!concept) throw notFoundNode(term);
   if (patch.sourceSlug) {
     // Re-point the source of truth: the named page asserts this concept, any other asserter stops.
     const { upsertConcepts } = await import("./concepts");
     const page = await findPageFor(orgId, patch.sourceSlug, userId, "edit");
     if (!page) throw new Error(`page not found: ${patch.sourceSlug}`);
-    await db.pageConcept.deleteMany({ where: { conceptId: concept.id, rel: "asserts", pageId: { not: page.id }, page: { orgId } } });
+    // Only from pages the caller could edit: someone else's private page
+    // keeps its own tags.
+    await db.pageConcept.deleteMany({ where: { conceptId: concept.id, rel: "asserts", pageId: { not: page.id }, page: editablePagesWhere(orgId, userId) as Prisma.PageWhereInput } });
     await upsertConcepts(page.id, [{ term, rel: "asserts" }], "system");
   }
   const flags = {
@@ -430,7 +446,7 @@ export interface PageImpact {
  * and the count of children under each. Echoed in write responses and
  * toasted after a human save so awareness lands when it's cheap to act.
  */
-export async function getPageImpact(orgId: string, slug: string, userId?: string | null): Promise<PageImpact> {
+export async function getPageImpact(orgId: string, slug: string, userId: string | null): Promise<PageImpact> {
   const page = await findPageFor(orgId, slug, userId);
   const empty: PageImpact = { nodes: [], pages: 0, external: 0, text: null };
   if (!page) return empty;
@@ -461,7 +477,7 @@ export async function getPageImpact(orgId: string, slug: string, userId?: string
  * after its slug (or keeps the one it already asserts), and that concept is
  * promoted so it shows on the map before anything sits under it.
  */
-export async function promotePageToNode(orgId: string, slug: string, createdBy: string, userId?: string | null): Promise<ChartNode> {
+export async function promotePageToNode(orgId: string, slug: string, createdBy: string, userId: string | null): Promise<ChartNode> {
   const { upsertConcepts, normalizeTerm: norm } = await import("./concepts");
   const page = await findPageFor(orgId, slug, userId, "edit");
   if (!page) throw new Error(`page not found: ${slug}`);
@@ -485,7 +501,7 @@ export interface CreateNodeInput {
  * truth (or create that page now, as a stub with the name as its title),
  * then put the related content under it. One call from the form.
  */
-export async function createNode(orgId: string, orgSlug: string, input: CreateNodeInput, createdBy: string, userId?: string | null): Promise<ChartNodeDetail> {
+export async function createNode(orgId: string, orgSlug: string, input: CreateNodeInput, createdBy: string, userId: string | null): Promise<ChartNodeDetail> {
   const title = input.title.trim();
   if (!title) throw new Error("title is required");
   const { normalizeTerm: norm } = await import("./concepts");
@@ -520,7 +536,7 @@ export interface PageMapView {
 }
 
 /** The map from one page's point of view. Backs the page's Content map settings tab. */
-export async function getPageMapView(orgId: string, slug: string, userId?: string | null): Promise<PageMapView> {
+export async function getPageMapView(orgId: string, slug: string, userId: string | null): Promise<PageMapView> {
   const page = await findPageFor(orgId, slug, userId);
   if (!page) return { under: [], asNode: null };
   const edges = await db.pageConcept.findMany({
@@ -549,7 +565,7 @@ export async function getPageMapView(orgId: string, slug: string, userId?: strin
  * node back on Watching. Adds a meta component when the page has none.
  * Returns the page's new content hash, or throws when the node has no source.
  */
-export async function setSourceStatus(orgId: string, orgSlug: string, term: string, status: string | null, createdBy: string, userId?: string | null): Promise<{ status: string | null }> {
+export async function setSourceStatus(orgId: string, orgSlug: string, term: string, status: string | null, createdBy: string, userId: string | null): Promise<{ status: string | null }> {
   const node = await getChartNode(orgId, term, userId);
   if (!node.source) throw new Error("this node has no source page; give it one before setting a status");
   // Writes the source page's content, so it needs edit access to that page.

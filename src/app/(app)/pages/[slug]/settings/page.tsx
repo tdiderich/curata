@@ -17,7 +17,7 @@ import { PageSettingsGeneral } from "@/components/page-settings-general";
 import { PageSettingsTags } from "@/components/page-settings-tags";
 import { PageSettingsMap } from "@/components/page-settings-map";
 import { getChart, getPageMapView } from "@/lib/chart";
-import { getPageOrThrow, PageAccessError } from "@/lib/access";
+import { canOpenPage } from "@/lib/access";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
 
 export async function generateMetadata({
@@ -43,12 +43,7 @@ export default async function PageSettingsView({
 
   const { slug } = await params;
 
-  try {
-    await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
-  } catch (e) {
-    if (e instanceof PageAccessError) notFound();
-    throw e;
-  }
+  if (!(await canOpenPage(ctx, slug))) notFound();
   const pageData = await readPage(ctx.orgId, slug, "latest");
   if (!pageData) notFound();
 

@@ -70,8 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // A quick action must reference an existing page in the Skills folder.
-    const found = await findPageFor(ctx.orgId, body.slug, ctx.userId);
-    const page = found && (await db.page.findUnique({ where: { id: found.id }, select: { folderId: true, status: true } }));
+    const page = await findPageFor(ctx.orgId, body.slug, ctx.userId);
     if (!page || page.status === "archived") {
       return NextResponse.json({ error: "page not found" }, { status: 404 });
     }
@@ -121,6 +120,13 @@ export async function DELETE(request: NextRequest) {
     const qa = await getQaFolder(ctx.orgId);
     if (!qa) {
       return NextResponse.json({ error: "Quick Actions folder not found" }, { status: 404 });
+    }
+
+    // A ref naming a page this caller can't see isn't theirs to remove; answer
+    // as if it weren't in the list.
+    const exists = await db.page.findUnique({ where: { orgId_slug: { orgId: ctx.orgId, slug: body.slug } }, select: { id: true } });
+    if (exists && !(await findPageFor(ctx.orgId, body.slug, ctx.userId))) {
+      return NextResponse.json({ refs: await visibleRefs(ctx.orgId, ctx.userId, readRefs(qa.rules)) });
     }
 
     const refs = readRefs(qa.rules).filter((s) => s !== body.slug);

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
-import { checkFolderBoundary } from "@/lib/access";
+import { checkFolderBoundary, ownerActionAllowed, pageAccessFor } from "@/lib/access";
 
 export async function POST(request: NextRequest) {
   const ctx = await resolveOrg();
@@ -226,6 +226,24 @@ export async function DELETE(request: NextRequest) {
           folderIds.add(f.id);
           grew = true;
         }
+      }
+    }
+
+    // The cascade deletes pages, so it follows the page rules: every private
+    // page in the subtree must be one the caller owns. Someone else's private
+    // page (hidden, or held through a share) blocks the delete; its owner
+    // has to move or delete it first. The message names no page.
+    const nested = await db.page.findMany({
+      where: { folderId: { in: [...folderIds] }, visibility: "private" },
+      select: { id: true, orgId: true, slug: true, visibility: true, createdBy: true },
+    });
+    for (const p of nested) {
+      const access = await pageAccessFor(p, ctx.userId, ctx.role);
+      if (!access || !ownerActionAllowed(p, access)) {
+        return NextResponse.json(
+          { error: "forbidden: this folder holds private pages owned by someone else; they must move or delete them first" },
+          { status: 403 }
+        );
       }
     }
 

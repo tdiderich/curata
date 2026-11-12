@@ -293,7 +293,7 @@ describe("verifiedAt and staleAgainstSource", () => {
     expect(r.dependents[0].staleAgainstSource).toBe(true);
     expect(r.asserters[0].staleAgainstSource).toBe(false);
 
-    const v = await verifyDependent(orgId, { slug: "deck-notes", note: "does not mention grouping" });
+    const v = await verifyDependent(orgId, { slug: "deck-notes", note: "does not mention grouping" }, null);
     expect(v.kind).toBe("page");
     r = await getDependents(orgId, { term: T("feat/grouping") });
     expect(r.dependents[0].staleAgainstSource).toBe(false);
@@ -336,14 +336,14 @@ describe("verifiedAt and staleAgainstSource", () => {
     const onePager = await createTestPage(orgId, { slug: "one-pager-x" });
     await upsertConcepts(pricing.id, [{ term: T("edge/pricing"), rel: "asserts" }], "agent");
     await upsertConcepts(tagline.id, [{ term: T("edge/tagline"), rel: "asserts" }], "agent");
-    await mapDependencies(orgId, { term: T("edge/pricing"), depends: ["one-pager-x"] }, "agent");
-    await mapDependencies(orgId, { term: T("edge/tagline"), depends: ["one-pager-x"] }, "agent");
+    await mapDependencies(orgId, { term: T("edge/pricing"), depends: ["one-pager-x"] }, "agent", null);
+    await mapDependencies(orgId, { term: T("edge/tagline"), depends: ["one-pager-x"] }, "agent", null);
 
     let byTagline = await getDependents(orgId, { term: T("edge/tagline") });
     expect(byTagline.dependents[0].verifiedAt).toBeNull();
     expect(byTagline.summary.pages.neverVerified).toBe(1);
 
-    const v = await verifyDependent(orgId, { slug: "one-pager-x", term: T("edge/pricing"), note: "does not quote the price" });
+    const v = await verifyDependent(orgId, { slug: "one-pager-x", term: T("edge/pricing"), note: "does not quote the price" }, null);
     expect(v.count).toBe(1);
     expect(v.term).toBe(T("edge/pricing"));
 
@@ -355,9 +355,9 @@ describe("verifiedAt and staleAgainstSource", () => {
     expect(byTagline.dependents[0].verifiedNote).toBeNull();
 
     // slug alone covers every edge; a term the page is not tagged with errors.
-    const all = await verifyDependent(orgId, { slug: "one-pager-x" });
+    const all = await verifyDependent(orgId, { slug: "one-pager-x" }, null);
     expect(all.count).toBe(2);
-    await expect(verifyDependent(orgId, { slug: "one-pager-x", term: T("edge/nope") })).rejects.toThrow(/concept not found/);
+    await expect(verifyDependent(orgId, { slug: "one-pager-x", term: T("edge/nope") }, null)).rejects.toThrow(/concept not found/);
   });
 
   it("needs_change reads as needs update until a holds or a write", async () => {
@@ -365,13 +365,13 @@ describe("verifiedAt and staleAgainstSource", () => {
     const dep = await createTestPage(orgId, { slug: "nc-dep" });
     await upsertConcepts(src.id, [{ term: T("nc/term"), rel: "asserts" }], "agent");
     await upsertConcepts(dep.id, [{ term: T("nc/term"), rel: "depends" }], "agent");
-    await verifyDependent(orgId, { slug: "nc-dep", term: T("nc/term"), status: "needs_change", note: "still says the old thing" });
+    await verifyDependent(orgId, { slug: "nc-dep", term: T("nc/term"), status: "needs_change", note: "still says the old thing" }, null);
     let r = await getDependents(orgId, { term: T("nc/term") });
     expect(r.dependents[0].needsChange).toBe(true);
     expect(r.dependents[0].staleAgainstSource).toBe(true);
     expect(r.summary.pages.needsChange).toBe(1);
     expect(r.summary.text).toBe("1 of 1 need a look: 1 needs an update.");
-    await verifyDependent(orgId, { slug: "nc-dep", term: T("nc/term"), status: "holds" });
+    await verifyDependent(orgId, { slug: "nc-dep", term: T("nc/term"), status: "holds" }, null);
     r = await getDependents(orgId, { term: T("nc/term") });
     expect(r.dependents[0].needsChange).toBe(false);
     expect(r.dependents[0].staleAgainstSource).toBe(false);
@@ -449,7 +449,7 @@ describe("external dependents", () => {
     expect(await testDb.externalAsset.count({ where: { orgId, url: "https://example.com/shared" } })).toBe(1);
     expect(await testDb.externalEdge.count({ where: { asset: { orgId, url: "https://example.com/shared" } } })).toBe(2);
 
-    const v = await verifyDependent(orgId, { url: "https://example.com/shared", term: T("ext/a"), note: "a is fine" });
+    const v = await verifyDependent(orgId, { url: "https://example.com/shared", term: T("ext/a"), note: "a is fine" }, null);
     expect(v.count).toBe(1);
     const a = await getDependents(orgId, { term: T("ext/a") });
     const b = await getDependents(orgId, { term: T("ext/b") });
@@ -461,9 +461,9 @@ describe("external dependents", () => {
     expect(b.external[0].alsoDependsOn).toEqual([T("ext/a")]);
 
     // url alone covers every edge on the asset.
-    expect((await verifyDependent(orgId, { url: "https://example.com/shared" })).count).toBe(2);
+    expect((await verifyDependent(orgId, { url: "https://example.com/shared" }, null)).count).toBe(2);
     // needs_change on an external counts separately.
-    await verifyDependent(orgId, { url: "https://example.com/shared", term: T("ext/b"), status: "needs_change", note: "old tagline" });
+    await verifyDependent(orgId, { url: "https://example.com/shared", term: T("ext/b"), status: "needs_change", note: "old tagline" }, null);
     const b2 = await getDependents(orgId, { term: T("ext/b") });
     expect(b2.external[0].needsChange).toBe(true);
     expect(b2.summary.text).toBe("1 of 1 need a look: 1 needs an update.");
@@ -494,7 +494,7 @@ describe("map_dependencies", () => {
       asserts: ["launch-brief"],
       depends: ["release-notes", "one-pager", "does-not-exist"],
       external: [{ url: "https://docs.google.com/document/d/X/edit", label: "PR draft" }],
-    }, "agent");
+    }, "agent", null);
     expect(out.term).toBe(T("map/launch"));
     expect(out.tagged).toEqual([
       { slug: "launch-brief", rel: "asserts" },

@@ -914,7 +914,7 @@ export type VerifyStatus = (typeof VERIFY_STATUSES)[number];
 export async function verifyDependent(
   orgId: string,
   target: { slug?: string; url?: string; term?: string; note?: string; status?: VerifyStatus },
-  userId?: string | null
+  userId: string | null
 ): Promise<{ kind: "page" | "external"; id: string; term: string | null; status: VerifyStatus; verifiedAt: string; note: string | null; count: number }> {
   const now = new Date();
   const note = target.note?.trim() || null;
@@ -985,7 +985,7 @@ export async function mapDependencies(
   orgId: string,
   input: MapDependenciesInput,
   createdBy: string,
-  userId?: string | null
+  userId: string | null
 ): Promise<{ term: string; tagged: Array<{ slug: string; rel: ConceptRel }>; external: ExternalDependentRow[]; missing: string[] }> {
   const normalized = normalizeTerm(input.term);
   if (!normalized) throw new Error("term is required");

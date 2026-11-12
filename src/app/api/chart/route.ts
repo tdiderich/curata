@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { PageAccessError } from "@/lib/access";
+import { pageAccessErrorResponse } from "@/lib/access-response";
 import { createNode, getChart, getChartNode, getNeedsLook, promotePageToNode, setChartNode, setSourceStatus } from "@/lib/chart";
 
 /** GET ?term= for one node, ?view=list for needs-look, else the whole chart. PATCH {term, hidden|promoted|instructions}. */
+/// Access errors keep their status; otherwise notFound decides 404 vs 400.
+function fail(err: unknown, notFound: RegExp) {
+  const denied = pageAccessErrorResponse(err);
+  if (denied) return denied;
+  const msg = err instanceof Error ? err.message : String(err);
+  return NextResponse.json({ error: msg }, { status: notFound.test(msg) ? 404 : 400 });
+}
+
 export async function GET(request: NextRequest) {
   const ctx = await resolveOrg();
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -54,11 +62,4 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     return fail(err, /not found/);
   }
-}
-
-/** Access errors keep their status; otherwise notFound decides 404 vs 400. */
-function fail(err: unknown, notFound: RegExp) {
-  if (err instanceof PageAccessError) return NextResponse.json({ error: err.message }, { status: err.status });
-  const msg = err instanceof Error ? err.message : String(err);
-  return NextResponse.json({ error: msg }, { status: notFound.test(msg) ? 404 : 400 });
 }

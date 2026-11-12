@@ -3,7 +3,7 @@ import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
-import { ownerActionAllowed, pageAccessFor, pageEditable, pageVisibilityWhere } from "@/lib/access";
+import { OWNER_ONLY_MESSAGE, ownerActionAllowed, pageAccessFor, pageEditable, pageVisibilityWhere, VIEW_ONLY_MESSAGE } from "@/lib/access";
 
 // Cleanup queue: agents file flags via MCP flag_page; humans disposition them
 // here. GET returns the pending queue with page context; PATCH executes one
@@ -103,10 +103,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "flag not found" }, { status: 404 });
     }
     if (!pageEditable(flag.page, access)) {
-      return NextResponse.json({ error: "forbidden: you have view-only access to this page" }, { status: 403 });
+      return NextResponse.json({ error: VIEW_ONLY_MESSAGE }, { status: 403 });
     }
     if (body.disposition === "delete" && !ownerActionAllowed(flag.page, access)) {
-      return NextResponse.json({ error: "forbidden: only the page owner can change visibility of or delete a private page" }, { status: 403 });
+      return NextResponse.json({ error: OWNER_ONLY_MESSAGE }, { status: 403 });
     }
 
     const resolution = { resolvedBy: ctx.userId, resolvedAt: new Date() };

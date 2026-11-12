@@ -3,7 +3,8 @@ import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { mapDependencies, normalizeTerm, upsertConcepts, upsertExternalDependents } from "@/lib/concepts";
 import { logAudit } from "@/lib/audit";
-import { findPageFor, PageAccessError } from "@/lib/access";
+import { findPageFor } from "@/lib/access";
+import { pageAccessErrorResponse } from "@/lib/access-response";
 
 /**
  * Backs the chart's dependency-editing surfaces. Same lib call as the
@@ -41,9 +42,10 @@ export async function POST(request: NextRequest) {
   try {
     // Removals first so a page moved from depends to source in the same
     // submit ends up with one edge, not two.
-    // Check every page first so a view-only one fails the submit before any
-    // edge changes. Hidden pages are skipped, as missing ones always were.
-    const removals = [];
+    // Check every page, removals and adds, before any edge changes, so a
+    // view-only page fails the whole submit. Hidden pages are skipped on
+    // removal and reported missing on add, as missing ones always were.
+    const removals: Array<{ id: string }> = [];
     for (const slug of slugs(body.removePages)) {
       const page = await findPageFor(ctx.orgId, slug, ctx.userId, "edit");
       if (page) removals.push(page);
@@ -75,7 +77,8 @@ export async function POST(request: NextRequest) {
     }).catch(() => {});
     return NextResponse.json(result);
   } catch (err) {
-    if (err instanceof PageAccessError) return NextResponse.json({ error: err.message }, { status: err.status });
+    const denied = pageAccessErrorResponse(err);
+    if (denied) return denied;
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: 400 });
   }

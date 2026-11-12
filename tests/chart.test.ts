@@ -35,7 +35,7 @@ describe("chart", () => {
     const small = await createTestPage(org.id, { slug: "small-dep" });
     await upsertConcepts(small.id, [{ term: "chart/small", rel: "depends" }], "tester");
 
-    let chart = await getChart(org.id);
+    let chart = await getChart(org.id, { userId: null });
     expect(chart.nodes.map((n) => n.term)).toEqual(["chart/pricing"]);
     const node = chart.nodes[0];
     expect(node.fanOut).toBe(4);
@@ -47,19 +47,19 @@ describe("chart", () => {
 
     // Source moves once: every page child goes yellow.
     await bumpSource(pricing.id, 1);
-    let detail = await getChartNode(org.id, "chart/pricing");
+    let detail = await getChartNode(org.id, "chart/pricing", null);
     expect(detail.children.filter((c) => c.kind === "page").every((c) => c.color === "yellow")).toBe(true);
     expect(detail.children.find((c) => c.slug === "battle-card")?.reason).toBe("not checked since the change");
 
     // Checking one page under this node turns it green; the rest stay yellow.
-    await verifyDependent(org.id, { slug: "battle-card", term: "chart/pricing" });
-    detail = await getChartNode(org.id, "chart/pricing");
+    await verifyDependent(org.id, { slug: "battle-card", term: "chart/pricing" }, null);
+    detail = await getChartNode(org.id, "chart/pricing", null);
     expect(detail.children.find((c) => c.slug === "battle-card")?.color).toBe("green");
     expect(detail.children.find((c) => c.slug === "talk-track")?.color).toBe("yellow");
 
     // Source moves again with no check: talk-track has now seen two moves, red.
     await bumpSource(pricing.id, 1);
-    detail = await getChartNode(org.id, "chart/pricing");
+    detail = await getChartNode(org.id, "chart/pricing", null);
     expect(detail.children.find((c) => c.slug === "talk-track")?.color).toBe("red");
     expect(detail.children.find((c) => c.slug === "talk-track")?.reason).toMatch(/moved 2 times/);
     // battle-card was checked between the two moves, so only one move since: yellow.
@@ -67,30 +67,30 @@ describe("chart", () => {
 
     // Past due external goes red.
     await testDb.externalEdge.updateMany({ where: { asset: { url: "https://hubspot.com/pricing" } }, data: { dueAt: new Date(Date.now() - 86400000) } });
-    detail = await getChartNode(org.id, "chart/pricing");
+    detail = await getChartNode(org.id, "chart/pricing", null);
     const ext = detail.children.find((c) => c.kind === "external")!;
     expect(ext.color).toBe("red");
     expect(ext.reason).toBe("past due");
     expect(detail.color).toBe("red");
 
     // needs_change outranks "nobody looked": mismatch is red even with no due date and one move.
-    await verifyDependent(org.id, { slug: "battle-card", term: "chart/pricing", status: "needs_change", note: "still says $12" });
-    detail = await getChartNode(org.id, "chart/pricing");
+    await verifyDependent(org.id, { slug: "battle-card", term: "chart/pricing", status: "needs_change", note: "still says $12" }, null);
+    detail = await getChartNode(org.id, "chart/pricing", null);
     expect(detail.children.find((c) => c.slug === "battle-card")?.color).toBe("red");
     expect(detail.children.find((c) => c.slug === "battle-card")?.reason).toBe("mismatch: still says $12");
 
     // Needs-look list is the same rows, greens dropped, grouped by node.
-    const list = await getNeedsLook(org.id);
+    const list = await getNeedsLook(org.id, null);
     expect(list).toHaveLength(1);
     expect(list[0].children.every((c) => c.color !== "green")).toBe(true);
     expect(list[0].children.length).toBe(4);
 
     // Promote the small one and it appears; hide pricing and it goes.
-    await setChartNode(org.id, "chart/small", { promoted: true });
-    await setChartNode(org.id, "chart/pricing", { hidden: true });
-    chart = await getChart(org.id);
+    await setChartNode(org.id, "chart/small", { promoted: true }, null);
+    await setChartNode(org.id, "chart/pricing", { hidden: true }, null);
+    chart = await getChart(org.id, { userId: null });
     expect(chart.nodes.map((n) => n.term)).toEqual(["chart/small"]);
-    expect((await getChart(org.id, { includeHidden: true })).nodes.map((n) => n.term).sort()).toEqual(["chart/pricing", "chart/small"]);
+    expect((await getChart(org.id, { includeHidden: true, userId: null })).nodes.map((n) => n.term).sort()).toEqual(["chart/pricing", "chart/small"]);
     expect(NODE_FANOUT_THRESHOLD).toBe(3);
   });
 
@@ -102,7 +102,7 @@ describe("chart", () => {
       const p = await createTestPage(org.id, { slug: `one-pager-${slug}` });
       await upsertConcepts(p.id, [{ term: "template/one-pager", kind: "template", rel: "instantiates" }, { term: "component/pricing-table", kind: "component", rel: "embeds" }], "tester");
     }
-    const chart = await getChart(org.id);
+    const chart = await getChart(org.id, { userId: null });
     const terms = chart.nodes.map((n) => n.term).sort();
     expect(terms).toEqual(["component/pricing-table", "template/one-pager"]);
     const t = chart.nodes.find((n) => n.term === "template/one-pager")!;
@@ -110,13 +110,13 @@ describe("chart", () => {
     expect(t.title).toBe("One-pager template");
     expect(t.kind).toBe("template");
 
-    const detail = await getChartNode(org.id, "component/pricing-table");
+    const detail = await getChartNode(org.id, "component/pricing-table", null);
     expect(detail.source?.slug).toBe("pricing-table");
     expect(detail.children[0].alsoUnder).toEqual(["template/one-pager"]);
 
     // Component page changes: every embedding page goes yellow.
     await bumpSource(comp.id, 1);
-    const after = await getChartNode(org.id, "component/pricing-table");
+    const after = await getChartNode(org.id, "component/pricing-table", null);
     expect(after.counts.yellow).toBe(3);
     expect(tmpl.id).toBeTruthy();
   });
@@ -133,10 +133,10 @@ describe("page impact", () => {
       await upsertConcepts(p.id, [{ term: "impact/x", rel: "depends" }], "tester");
     }
     await upsertExternalDependents(org.id, "impact/x", [{ url: "https://hubspot.com/x" }], "tester");
-    const impact = await getPageImpact(org.id, "impact-src");
+    const impact = await getPageImpact(org.id, "impact-src", null);
     expect(impact.nodes).toEqual([{ term: "impact/x", pages: 2, external: 1 }]);
     expect(impact.text).toBe("2 pages and 1 external under impact/x need a look now. Agents can clear the pages; someone owns each external.");
-    expect((await getPageImpact(org.id, "i1")).text).toBeNull();
+    expect((await getPageImpact(org.id, "i1", null)).text).toBeNull();
   });
 });
 
@@ -145,12 +145,12 @@ describe("promote a page to a node", () => {
     const { promotePageToNode } = await import("@/lib/chart");
     const org = await createTestOrg({ name: "Promote Org", slug: "promote-org" });
     await createTestPage(org.id, { slug: "security-faq", title: "Security FAQ" });
-    const node = await promotePageToNode(org.id, "security-faq", "tester");
+    const node = await promotePageToNode(org.id, "security-faq", "tester", null);
     expect(node.term).toBe("security-faq");
     expect(node.promoted).toBe(true);
     expect(node.source?.slug).toBe("security-faq");
-    expect((await getChart(org.id)).nodes.map((n) => n.term)).toEqual(["security-faq"]);
-    await expect(promotePageToNode(org.id, "nope", "tester")).rejects.toThrow(/page not found/);
+    expect((await getChart(org.id, { userId: null })).nodes.map((n) => n.term)).toEqual(["security-faq"]);
+    await expect(promotePageToNode(org.id, "nope", "tester", null)).rejects.toThrow(/page not found/);
   });
 });
 
@@ -162,15 +162,15 @@ describe("createNode: the New top level content form", () => {
     const node = await createNode(org.id, org.slug, {
       title: "Renewal pricing",
       related: [{ slug: "renewal-email" }, { url: "https://app.hubspot.com/quotes/1", label: "Quote template" }],
-    }, "tester");
+    }, "tester", null);
     expect(node.term).toBe("renewal-pricing");
     expect(node.source?.slug).toBe("renewal-pricing");
     expect(node.promoted).toBe(true);
     expect(node.children.map((c) => c.slug ?? c.url).sort()).toEqual(["https://app.hubspot.com/quotes/1", "renewal-email"]);
     expect(await testDb.page.count({ where: { orgId: org.id, slug: "renewal-pricing" } })).toBe(1);
-    await expect(createNode(org.id, org.slug, { title: "Renewal pricing" }, "tester")).rejects.toThrow(/already exists/);
+    await expect(createNode(org.id, org.slug, { title: "Renewal pricing" }, "tester", null)).rejects.toThrow(/already exists/);
     // Existing page as the source: nothing new is created.
-    const n2 = await createNode(org.id, org.slug, { title: "Renewal email", slug: "renewal-email" }, "tester");
+    const n2 = await createNode(org.id, org.slug, { title: "Renewal email", slug: "renewal-email" }, "tester", null);
     expect(n2.source?.slug).toBe("renewal-email");
     expect(dep.id).toBeTruthy();
   });
@@ -188,24 +188,24 @@ describe("cold agent pass 2 fixes", () => {
       const p = await createTestPage(org.id, { slug: s });
       await upsertConcepts(p.id, [{ term: "cold2/x", rel: "depends" }], "tester");
     }
-    const node = await setChartNode(org.id, "cold2/x", { sourceSlug: "new-src" });
+    const node = await setChartNode(org.id, "cold2/x", { sourceSlug: "new-src" }, null);
     expect(node.source?.slug).toBe("new-src");
     expect(node.title).toBe("New source");
     expect(await testDb.pageConcept.count({ where: { pageId: oldSrc.id, rel: "asserts" } })).toBe(0);
 
-    await expect(addScopeItem(org.id, "cold2/nope", { slug: "c1" }, "tester")).rejects.toThrow(/concept not found: cold2\/nope/);
+    await expect(addScopeItem(org.id, "cold2/nope", { slug: "c1" }, "tester", null)).rejects.toThrow(/concept not found: cold2\/nope/);
 
     // Edit then revert the source: content is back where it was at the last check, so children stay green.
-    const before = await getChartNode(org.id, "cold2/x");
+    const before = await getChartNode(org.id, "cold2/x", null);
     expect(before.children.every((c) => c.color === "green")).toBe(true);
     const v0 = await testDb.pageVersion.findFirst({ where: { pageId: newSrc.id }, orderBy: { createdAt: "asc" } });
     await bumpSource(newSrc.id, 1);
-    const mid = await getChartNode(org.id, "cold2/x");
+    const mid = await getChartNode(org.id, "cold2/x", null);
     expect(mid.children.filter((c) => c.slug).every((c) => c.color === "yellow")).toBe(true);
     await new Promise((r) => setTimeout(r, 5));
     await testDb.pageVersion.create({ data: { pageId: newSrc.id, yamlContent: v0!.yamlContent, contentHash: v0!.contentHash, createdBy: "tester" } });
     await testDb.page.update({ where: { id: newSrc.id }, data: { updatedAt: new Date() } });
-    const after = await getChartNode(org.id, "cold2/x");
+    const after = await getChartNode(org.id, "cold2/x", null);
     expect(after.children.filter((c) => c.slug).every((c) => c.color === "green")).toBe(true);
   });
 });
@@ -222,13 +222,13 @@ describe("verify outcomes on the chart", () => {
 
     await bumpSource(src.id, 1);
     await verifyAllEdgesForPage(dep.id);
-    let node = await getChartNode(org.id, "verify/x");
+    let node = await getChartNode(org.id, "verify/x", null);
     const page = node.children.find((c) => c.slug === "v-dep")!;
     expect(page.color).toBe("green");
     expect(page.note).toBe("edited");
 
-    await verifyDependent(org.id, { url: "https://docs.google.com/document/d/v1", term: "verify/x", status: "unreachable", note: "no google-drive MCP this session" });
-    node = await getChartNode(org.id, "verify/x");
+    await verifyDependent(org.id, { url: "https://docs.google.com/document/d/v1", term: "verify/x", status: "unreachable", note: "no google-drive MCP this session" }, null);
+    node = await getChartNode(org.id, "verify/x", null);
     let ext = node.children.find((c) => c.kind === "external")!;
     expect(ext.color).toBe("yellow");
     expect(ext.reason).toBe("couldn't check · no google-drive MCP this session");
@@ -236,14 +236,14 @@ describe("verify outcomes on the chart", () => {
 
     // Two more source moves would make an unchecked row red; an unreachable one stays yellow.
     await bumpSource(src.id, 2);
-    node = await getChartNode(org.id, "verify/x");
+    node = await getChartNode(org.id, "verify/x", null);
     ext = node.children.find((c) => c.kind === "external")!;
     expect(ext.color).toBe("yellow");
     expect(node.children.find((c) => c.slug === "v-dep")?.color).toBe("red");
 
     // A real check clears it.
-    await verifyDependent(org.id, { url: "https://docs.google.com/document/d/v1", term: "verify/x" });
-    node = await getChartNode(org.id, "verify/x");
+    await verifyDependent(org.id, { url: "https://docs.google.com/document/d/v1", term: "verify/x" }, null);
+    node = await getChartNode(org.id, "verify/x", null);
     expect(node.children.find((c) => c.kind === "external")?.color).toBe("green");
   });
 });
@@ -255,10 +255,10 @@ describe("per-node instructions", () => {
     const org = await createTestOrg({ name: "Instr Org", slug: "instr-org" });
     const src = await createTestPage(org.id, { slug: "instr-src" });
     await upsertConcepts(src.id, [{ term: "instr/launch", rel: "asserts" }], "system");
-    let node = await setChartNode(org.id, "instr/launch", { promoted: true, instructions: "  Decide if this matters to the customer. Add an agenda item.  " });
+    let node = await setChartNode(org.id, "instr/launch", { promoted: true, instructions: "  Decide if this matters to the customer. Add an agenda item.  " }, null);
     expect(node.instructions).toBe("Decide if this matters to the customer. Add an agenda item.");
-    expect((await getChartNode(org.id, "instr/launch")).instructions).toBe("Decide if this matters to the customer. Add an agenda item.");
-    node = await setChartNode(org.id, "instr/launch", { instructions: "" });
+    expect((await getChartNode(org.id, "instr/launch", null)).instructions).toBe("Decide if this matters to the customer. Add an agenda item.");
+    node = await setChartNode(org.id, "instr/launch", { instructions: "" }, null);
     expect(node.instructions).toBeNull();
     expect(node.promoted).toBe(true);
   });
@@ -283,8 +283,8 @@ describe("node groups from the source page's Status", () => {
     const org = await createTestOrg({ name: "Grp Org", slug: "grp-org" });
     const src = await createTestPage(org.id, { slug: "grp-launch", yamlContent: "title: L\ncomponents:\n  - id: m\n    type: meta\n    fields:\n      - key: Status\n        value: Planned\n" });
     await upsertConcepts(src.id, [{ term: "grp/launch", rel: "asserts" }], "system");
-    await setChartNode(org.id, "grp/launch", { promoted: true });
-    const node = await getChartNode(org.id, "grp/launch");
+    await setChartNode(org.id, "grp/launch", { promoted: true }, null);
+    const node = await getChartNode(org.id, "grp/launch", null);
     expect(node.source?.status).toBe("Planned");
     expect(node.group).toBe("active");
   });
@@ -297,15 +297,15 @@ describe("setSourceStatus", () => {
     const org = await createTestOrg({ name: "Stat Org", slug: "stat-org" });
     const src = await createTestPage(org.id, { slug: "stat-src", yamlContent: "title: S\ncomponents:\n  - id: h\n    type: header\n    title: S\n  - id: b\n    type: markdown\n    body: hi\n" });
     await upsertConcepts(src.id, [{ term: "stat/node", rel: "asserts" }], "system");
-    await setChartNode(org.id, "stat/node", { promoted: true });
-    expect((await getChartNode(org.id, "stat/node")).group).toBe("watching");
-    await setSourceStatus(org.id, org.slug, "stat/node", "Planned", "tester");
-    let node = await getChartNode(org.id, "stat/node");
+    await setChartNode(org.id, "stat/node", { promoted: true }, null);
+    expect((await getChartNode(org.id, "stat/node", null)).group).toBe("watching");
+    await setSourceStatus(org.id, org.slug, "stat/node", "Planned", "tester", null);
+    let node = await getChartNode(org.id, "stat/node", null);
     expect(node.source?.status).toBe("Planned"); expect(node.group).toBe("active");
-    await setSourceStatus(org.id, org.slug, "stat/node", "Shipped", "tester");
-    expect((await getChartNode(org.id, "stat/node")).group).toBe("completed");
-    await setSourceStatus(org.id, org.slug, "stat/node", null, "tester");
-    node = await getChartNode(org.id, "stat/node");
+    await setSourceStatus(org.id, org.slug, "stat/node", "Shipped", "tester", null);
+    expect((await getChartNode(org.id, "stat/node", null)).group).toBe("completed");
+    await setSourceStatus(org.id, org.slug, "stat/node", null, "tester", null);
+    node = await getChartNode(org.id, "stat/node", null);
     expect(node.source?.status).toBeNull(); expect(node.group).toBe("watching");
   });
 });

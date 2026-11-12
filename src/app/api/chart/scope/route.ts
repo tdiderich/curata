@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { PageAccessError } from "@/lib/access";
+import { pageAccessErrorResponse } from "@/lib/access-response";
 import { addScopeItem, getPageSuggestions, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
 
 function fail(err: unknown) {
-  if (err instanceof PageAccessError) return NextResponse.json({ error: err.message }, { status: err.status });
+  const denied = pageAccessErrorResponse(err);
+  if (denied) return denied;
   const msg = err instanceof Error ? err.message : String(err);
   return NextResponse.json({ error: msg }, { status: /not found/.test(msg) ? 404 : 400 });
 }

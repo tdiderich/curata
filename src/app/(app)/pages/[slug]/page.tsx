@@ -16,19 +16,7 @@ import { getPageConcepts, normalizeTerm } from "@/lib/concepts";
 import { DEFAULT_TAGS } from "@/lib/default-tags";
 import { expandComponentRefs, expandSlideRefs, renderedRefWrap } from "@/lib/component-refs";
 import type { RefExpansionContext } from "@/lib/component-refs";
-import { getPageOrThrow, PageAccessError } from "@/lib/access";
-
-/// A private page the viewer can't open renders as not found, the same as
-/// the API routes, so the URL doesn't confirm it exists.
-async function canView(ctx: { orgId: string; userId: string; role: string }, slug: string): Promise<boolean> {
-  try {
-    await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
-    return true;
-  } catch (e) {
-    if (e instanceof PageAccessError) return false;
-    throw e;
-  }
-}
+import { canOpenPage } from "@/lib/access";
 
 export async function generateMetadata({
   params,
@@ -38,7 +26,7 @@ export async function generateMetadata({
   const ctx = await resolveOrg();
   if (!ctx) return { title: "curata" };
   const { slug } = await params;
-  if (!(await canView(ctx, slug))) return { title: "curata" };
+  if (!(await canOpenPage(ctx, slug))) return { title: "curata" };
   const pageData = await readPage(ctx.orgId, slug);
   const pageTitle = pageData ? (pageData.json.title as string) || slug : slug;
   return { title: pageTitle };
@@ -62,7 +50,7 @@ export default async function PageDetailView({
   const previewingLatest = latestParam === "1";
   const channel: Channel = previewingLatest ? "latest" : "trusted";
 
-  if (!(await canView(ctx, slug))) notFound();
+  if (!(await canOpenPage(ctx, slug))) notFound();
   const pageData = await readPage(ctx.orgId, slug, channel);
   if (!pageData) notFound();
 

@@ -10,7 +10,7 @@ import {
 import { defaultAssetLabel } from "./scan";
 import { parseCheckRecipe, suggestCheck, type CheckRecipe } from "./check-recipes";
 export { parseCheckRecipe, suggestCheck, type CheckRecipe } from "./check-recipes";
-import { getChartNode, type ChartChild } from "./chart";
+import { getChartNode, visibleConcept, type ChartChild } from "./chart";
 import { findPageFor, listPagesWhere } from "./access";
 
 /**
@@ -52,7 +52,7 @@ function hostOf(url: string): string | null {
  * every page is noise, "pricing" matching every page is the point.
  */
 const STRUCTURAL_NAMESPACES = new Set(["feature", "features", "product", "products", "launch", "group", "template", "component", "messaging", "process", "api", "doc", "docs", "page", "pages", "project", "topic", "team", "internal"]);
-export async function getPageSuggestions(orgId: string, term: string, userId?: string | null): Promise<PageSuggestion[]> {
+export async function getPageSuggestions(orgId: string, term: string, userId: string | null): Promise<PageSuggestion[]> {
   const node = await getChartNode(orgId, term, userId);
   const under = new Set(node.children.filter((c) => c.slug).map((c) => c.slug!));
   if (node.source) under.add(node.source.slug);
@@ -61,7 +61,7 @@ export async function getPageSuggestions(orgId: string, term: string, userId?: s
   const needles = [...new Set([node.source?.title ?? "", ...parts].map((s) => s.trim()).filter((s) => s.length >= 4))];
   if (needles.length === 0) return [];
   const pages = await db.page.findMany({
-    where: { AND: [listPagesWhere(orgId, userId ?? null) as Prisma.PageWhereInput, { slug: { notIn: [...under] } }] },
+    where: { AND: [listPagesWhere(orgId, userId) as Prisma.PageWhereInput, { slug: { notIn: [...under] } }] },
     select: { slug: true, title: true, versions: { orderBy: { createdAt: "desc" }, take: 1, select: { yamlContent: true } } },
   });
   const out: PageSuggestion[] = [];
@@ -74,7 +74,7 @@ export async function getPageSuggestions(orgId: string, term: string, userId?: s
 }
 
 /** External URLs that probably belong under this node but aren't declared yet. */
-export async function getScopeSuggestions(orgId: string, term: string, userId?: string | null): Promise<ScopeSuggestion[]> {
+export async function getScopeSuggestions(orgId: string, term: string, userId: string | null): Promise<ScopeSuggestion[]> {
   const node = await getChartNode(orgId, term, userId);
   const declared = new Set(node.children.filter((c) => c.kind === "external").map((c) => c.url));
   const out = new Map<string, ScopeSuggestion>();
@@ -135,10 +135,12 @@ function parseDue(raw: string | null | undefined): Date | null | undefined {
 }
 
 /** Put a page or an external URL under a node. Same edges map_dependencies writes. */
-export async function addScopeItem(orgId: string, term: string, input: AddScopeInput, createdBy: string, userId?: string | null): Promise<ChartChild> {
+export async function addScopeItem(orgId: string, term: string, input: AddScopeInput, createdBy: string, userId: string | null): Promise<ChartChild> {
   if (!input.slug && !input.url) throw new Error("slug or url is required");
   const normalized = normalizeTerm(term);
-  if (!(await findConceptForTerm(term, normalized))) {
+  // A term nothing visible here sits on answers like an unknown one, before
+  // any edge is written.
+  if (!(await visibleConcept(orgId, term, userId))) {
     throw new Error(`concept not found: ${normalized}. add_to_chart only adds under an existing top level item; make one with set_chart_node slug=<source page> (or map_dependencies for bulk), then add.`);
   }
   if (input.slug) {
@@ -201,9 +203,9 @@ export async function updateScopeItem(orgId: string, input: UpdateScopeInput): P
   return { url: updated.url, owner: updated.owner, label: updated.label, check: (updated.check as CheckRecipe | null) ?? null, dueAt: edgeDue?.toISOString() ?? null };
 }
 
-export async function removeScopeItem(orgId: string, term: string, input: { slug?: string; url?: string }, createdBy: string, userId?: string | null): Promise<{ removed: boolean }> {
+export async function removeScopeItem(orgId: string, term: string, input: { slug?: string; url?: string }, createdBy: string, userId: string | null): Promise<{ removed: boolean }> {
   if (!input.slug && !input.url) throw new Error("slug or url is required");
-  const concept = await findConceptForTerm(term, normalizeTerm(term));
+  const concept = await visibleConcept(orgId, term, userId);
   if (!concept) throw new Error(`concept not found: ${normalizeTerm(term)}`);
   if (input.slug) {
     const page = await findPageFor(orgId, input.slug, userId, "edit");
@@ -238,7 +240,7 @@ export interface AuditItem {
  * mark_verified url=... (holds, or needs_change with a note). Items with no
  * recipe are the human's list.
  */
-export async function getAuditList(orgId: string, userId?: string | null): Promise<{ withRecipe: AuditItem[]; humanOnly: AuditItem[] }> {
+export async function getAuditList(orgId: string, userId: string | null): Promise<{ withRecipe: AuditItem[]; humanOnly: AuditItem[] }> {
   const { getNeedsLook } = await import("./chart");
   const nodes = await getNeedsLook(orgId, userId);
   const withRecipe: AuditItem[] = [];
