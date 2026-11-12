@@ -125,6 +125,42 @@ export function resolveToolName(tool: string): string {
   return TOOL_ALIASES[tool] ?? tool;
 }
 
+/**
+ * Whether a caller holding `scopes` may call `tool`. Read-only callers are
+ * held to an explicit READ_TOOLS allowlist rather than a WRITE_TOOLS
+ * blocklist, so a tool that only exists on one transport (the stream server
+ * registers restore_page_version and replace_in_page directly) or a tool
+ * added later without being classified fails closed instead of open.
+ */
+export function toolAllowedForScopes(tool: string, scopes: readonly string[]): boolean {
+  if (scopes.includes("write")) return true;
+  return READ_TOOLS.includes(resolveToolName(tool));
+}
+
+/**
+ * Scan a streamable-HTTP MCP request body (one JSON-RPC message or a batch)
+ * for a tools/call the caller's scopes don't allow. Returns the first
+ * offending call so the transport can reject the whole request before any
+ * tool runs, or null when every call is allowed.
+ */
+export function deniedToolCall(
+  body: unknown,
+  scopes: readonly string[],
+): { id: string | number | null; tool: string } | null {
+  const messages = Array.isArray(body) ? body : [body];
+  for (const msg of messages) {
+    if (!msg || typeof msg !== "object") continue;
+    const m = msg as { method?: unknown; id?: unknown; params?: { name?: unknown } };
+    if (m.method !== "tools/call") continue;
+    const tool = typeof m.params?.name === "string" ? m.params.name : "";
+    if (!toolAllowedForScopes(tool, scopes)) {
+      const id = typeof m.id === "string" || typeof m.id === "number" ? m.id : null;
+      return { id, tool };
+    }
+  }
+  return null;
+}
+
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 
 

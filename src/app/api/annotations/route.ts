@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg, resolveCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { saveAnnotation, updateAnnotationStatus } from "@/lib/pages";
+import { saveAnnotation, updateAnnotationStatus, isAnnotationVisibility, ANNOTATION_VISIBILITIES } from "@/lib/pages";
 import { logAudit } from "@/lib/audit";
 
 export async function POST(request: NextRequest) {
@@ -27,6 +27,13 @@ export async function POST(request: NextRequest) {
 
     const user = await resolveCurrentUser();
     const author = user?.name || user?.email || ctx.userId;
+
+    if (visibility && !isAnnotationVisibility(visibility)) {
+      return NextResponse.json(
+        { error: `visibility must be one of: ${ANNOTATION_VISIBILITIES.join(", ")}` },
+        { status: 400 },
+      );
+    }
 
     const ann = await saveAnnotation(
       ctx.orgId,

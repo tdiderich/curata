@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrgFromApiKey } from "@/lib/auth";
 import { requestOrigin } from "@/lib/request-origin";
 import { db } from "@/lib/db";
-import { dispatch, WRITE_TOOLS, ALL_TOOLS, TOOL_ALIASES, resolveToolName, describeToolParams } from "@/lib/mcp-dispatch";
+import { dispatch, toolAllowedForScopes, ALL_TOOLS, TOOL_ALIASES, resolveToolName, describeToolParams } from "@/lib/mcp-dispatch";
 
 async function resolveAuth(request: NextRequest) {
   if (process.env.CURATA_DEV === "1" && process.env.NODE_ENV === "development") {
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (WRITE_TOOLS.includes(tool) && !ctx.scopes.includes("write")) {
+  if (!toolAllowedForScopes(tool, ctx.scopes)) {
     return NextResponse.json({ error: "insufficient scope" }, { status: 403 });
   }
 
@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     tools: ALL_TOOLS.map((t) => ({
       name: t,
-      type: WRITE_TOOLS.includes(t) ? "write" : "read",
+      type: toolAllowedForScopes(t, ["read"]) ? "read" : "write",
       params: describeToolParams(t) ?? [],
       ...(Object.entries(TOOL_ALIASES).some(([, v]) => v === t)
         ? { aliases: Object.entries(TOOL_ALIASES).filter(([, v]) => v === t).map(([k]) => k) }

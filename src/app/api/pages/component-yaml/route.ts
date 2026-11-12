@@ -4,6 +4,7 @@ import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { readPage, writePageJson, markTrusted } from "@/lib/pages";
 import { db } from "@/lib/db";
+import { getPageOrThrow, PageAccessError } from "@/lib/access";
 import { resolveEffectiveTrustMode, canApprove } from "@/lib/approval";
 
 type Comp = Record<string, unknown>;
@@ -53,6 +54,17 @@ export async function GET(request: NextRequest) {
   const componentId = request.nextUrl.searchParams.get("id");
   if (!slug || !componentId) {
     return NextResponse.json({ error: "slug and id are required" }, { status: 400 });
+  }
+
+  // Org membership alone isn't page access: check the page's visibility and
+  // shares before returning any of its content (see /api/pages/markdown).
+  try {
+    await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+  } catch (e) {
+    if (e instanceof PageAccessError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
+    throw e;
   }
 
   const page = await readPage(ctx.orgId, slug);
@@ -124,11 +136,19 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: `YAML parse error: ${msg}` }, { status: 400 });
   }
 
-  const pageMeta = await db.page.findUnique({
-    where: { orgId_slug: { orgId: ctx.orgId, slug: body.slug } },
-    select: { createdBy: true },
-  });
-  const isOwner = pageMeta?.createdBy === ctx.userId;
+  // The component's page must be visible to the caller before they can
+  // edit it (private pages: creator or share), as in PUT /api/pages.
+  let pageMeta;
+  try {
+    pageMeta = await getPageOrThrow(ctx.orgId, body.slug, ctx.userId, ctx.role);
+  } catch (e) {
+    if (e instanceof PageAccessError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
+    throw e;
+  }
+
+  const isOwner = pageMeta.createdBy === ctx.userId;
   if (!can(ctx.role, "page:edit", isOwner)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }

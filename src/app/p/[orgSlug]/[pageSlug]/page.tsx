@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { resolveCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { readPage, getAnnotations, bumpViewCount } from "@/lib/pages";
+import { readPage, getPublicAnnotations, bumpViewCount } from "@/lib/pages";
 import { PageRenderer } from "@/generated/kazam-renderer";
 import { ThemeScript } from "@/components/theme-script";
 import PublicAnnotationClient from "@/components/public-annotation-client";
@@ -93,7 +93,8 @@ export default async function PublicPageView({ params, searchParams }: Props & {
     orgMemberRole = membership?.role ?? null;
   }
 
-  const rawAnnotations = await getAnnotations(org.id, pageSlug);
+  // Presenter-only notes stay out of the public payload entirely.
+  const rawAnnotations = await getPublicAnnotations(org.id, pageSlug);
   const annotations = rawAnnotations.map((a) => ({
     id: a.id,
     text: a.text,

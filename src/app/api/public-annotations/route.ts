@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { saveAnnotation } from "@/lib/pages";
+import { saveAnnotation, isAnnotationVisibility, ANNOTATION_VISIBILITIES } from "@/lib/pages";
 
 export async function POST(request: NextRequest) {
   const user = await resolveCurrentUser();
@@ -40,6 +40,13 @@ export async function POST(request: NextRequest) {
     });
     if (!page || page.visibility !== "public") {
       return NextResponse.json({ error: "page not found" }, { status: 404 });
+    }
+
+    if (visibility && !isAnnotationVisibility(visibility)) {
+      return NextResponse.json(
+        { error: `visibility must be one of: ${ANNOTATION_VISIBILITIES.join(", ")}` },
+        { status: 400 },
+      );
     }
 
     const ann = await saveAnnotation(

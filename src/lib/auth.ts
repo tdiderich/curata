@@ -394,9 +394,12 @@ export async function resolveOrgFromApiKey(
     const member = await db.orgMember.findUnique({
       where: { orgId_userId: { orgId: apiKey.orgId, userId } },
     });
-    if (member) {
-      role = member.role as Role;
-    }
+    // No membership row means the key's creator was removed from the org
+    // (or never belonged to it). Member removal also revokes their keys, but
+    // keys issued before that existed, or a removal done straight in the DB,
+    // must not keep working: fail closed instead of defaulting to "member".
+    if (!member) return null;
+    role = member.role as Role;
   } else {
     role = "owner";
   }
@@ -406,7 +409,10 @@ export async function resolveOrgFromApiKey(
     orgSlug: apiKey.org.slug,
     userId,
     role,
-    scopes: apiKey.scopes,
+    // A key never grants more than its creator's current role: a member who
+    // made a read/write key and was later demoted to viewer gets read only,
+    // the same clamp Clerk OAuth applies to viewers.
+    scopes: role === "viewer" ? apiKey.scopes.filter((s) => s !== "write") : apiKey.scopes,
     keyPrefix: apiKey.prefix,
   };
 }

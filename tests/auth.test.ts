@@ -44,6 +44,36 @@ describe("auth", () => {
       const ctx = await resolveOrgFromApiKey(key);
       expect(ctx).toBeNull();
     });
+
+    it("returns null when the key's creator is no longer an org member", async () => {
+      const { key } = await createTestApiKey(orgId, { createdBy: "former-member", withMember: false });
+      expect(await resolveOrgFromApiKey(key)).toBeNull();
+    });
+
+    it("returns the creator's current role, not a default", async () => {
+      const { key } = await createTestApiKey(orgId, { createdBy: "an-admin" });
+      await testDb.orgMember.update({
+        where: { orgId_userId: { orgId, userId: "an-admin" } },
+        data: { role: "admin" },
+      });
+      expect((await resolveOrgFromApiKey(key))!.role).toBe("admin");
+    });
+
+    it("drops write scope when the key's creator is now a viewer", async () => {
+      const { key } = await createTestApiKey(orgId, { createdBy: "demoted", scopes: ["read", "write"] });
+      await testDb.orgMember.update({
+        where: { orgId_userId: { orgId, userId: "demoted" } },
+        data: { role: "viewer" },
+      });
+      expect((await resolveOrgFromApiKey(key))!.scopes).toEqual(["read"]);
+    });
+
+    it("still accepts system-created keys, which have no member row", async () => {
+      const { key } = await createTestApiKey(orgId, { createdBy: "system" });
+      const ctx = await resolveOrgFromApiKey(key);
+      expect(ctx).not.toBeNull();
+      expect(ctx!.role).toBe("owner");
+    });
   });
 });
 
