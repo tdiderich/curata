@@ -25,7 +25,7 @@ export async function visibleConcept(orgId: string, term: string, userId: string
   const used = await db.concept.count({
     // Archived pages count: their terms aren't secret, and promoting an
     // archived page must still find the concept it just tagged.
-    where: { id: concept.id, OR: [{ pages: { some: { page: { orgId, ...pageVisibilityWhere(userId) } } } }, { externalEdges: { some: {} } }] },
+    where: { id: concept.id, OR: [{ pages: { some: { page: { orgId, ...pageVisibilityWhere(userId) } } } }, { externalEdges: { some: { asset: { orgId } } } }] },
   });
   return used > 0 ? concept : null;
 }

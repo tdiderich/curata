@@ -47,7 +47,7 @@ SELECT co.concept_id,
 
 -- (c) A copy for every org that is not the keeper.
 CREATE TEMP TABLE _concept_copies AS
-SELECT concept_id, org_id, gen_random_uuid()::text AS new_id
+SELECT concept_id, org_id, md5(concept_id || ':' || org_id || ':' || random()::text || clock_timestamp()::text) AS new_id
   FROM _concept_org_rank WHERE rn > 1;
 
 INSERT INTO concepts (id, normalized_name, display_name, kind, usage_count, org_id, is_recommended, created_at, updated_at)

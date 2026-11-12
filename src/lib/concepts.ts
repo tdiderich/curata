@@ -1077,7 +1077,7 @@ export async function getDependents(
     // A concept nothing the caller can see carries reads as unknown, so a tag
     // that only lives on private pages doesn't show through.
     const concept = found && (await db.concept.count({
-      where: { id: found.id, OR: [{ pages: { some: { page: pageScope } } }, { externalEdges: { some: {} } }] },
+      where: { id: found.id, OR: [{ pages: { some: { page: pageScope } } }, { externalEdges: { some: { asset: { orgId } } } }] },
     })) > 0 ? found : null;
     if (!concept) {
       // An invented term used to come back as an empty graph, indistinguishable
