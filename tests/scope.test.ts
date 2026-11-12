@@ -25,7 +25,7 @@ describe("scope", () => {
       await upsertConcepts(p!.id, [{ term: "scope/pricing", rel: "depends" }], "tester");
     }
 
-    const sug = await getScopeSuggestions(org.id, "scope/pricing");
+    const sug = await getScopeSuggestions(org.id, "scope/pricing", null);
     const byUrl = new Map(sug.map((s) => [s.url, s]));
     expect(byUrl.get("https://app.hubspot.com/pages/123")?.why).toBe("in source body");
     expect(byUrl.get("https://app.hubspot.com/pages/123")?.suggestedCheck?.via).toBe("hubspot");
@@ -38,7 +38,7 @@ describe("scope", () => {
       url: "https://docs.google.com/presentation/d/deck1/edit?usp=sharing",
       label: "Sales deck", owner: "Tyler", dueAt: "2020-01-01",
       check: suggestCheck("https://docs.google.com/presentation/d/deck1"),
-    }, "tester");
+    }, "tester", null);
     expect(child.kind).toBe("external");
     expect(child.url).toBe("https://docs.google.com/presentation/d/deck1");
     expect(child.owner).toBe("Tyler");
@@ -47,19 +47,19 @@ describe("scope", () => {
     expect((child.check as { via: string }).via).toBe("google-drive");
 
     // Suggestion list no longer offers what's declared.
-    expect((await getScopeSuggestions(org.id, "scope/pricing")).some((s) => s.url === child.url)).toBe(false);
+    expect((await getScopeSuggestions(org.id, "scope/pricing", null)).some((s) => s.url === child.url)).toBe(false);
 
     // Add a second external with no recipe: it lands in the human bucket of the audit.
-    await addScopeItem(org.id, "scope/pricing", { url: "https://dashboard.stripe.com/prices/p1", owner: "Finance" }, "tester");
-    const audit = await getAuditList(org.id);
+    await addScopeItem(org.id, "scope/pricing", { url: "https://dashboard.stripe.com/prices/p1", owner: "Finance" }, "tester", null);
+    const audit = await getAuditList(org.id, null);
     expect(audit.withRecipe.map((a) => a.url)).toEqual(["https://docs.google.com/presentation/d/deck1"]);
     expect(audit.humanOnly.map((a) => a.url)).toEqual(["https://dashboard.stripe.com/prices/p1"]);
     expect(audit.humanOnly[0].suggestedCheck).toBeNull();
 
     // Clearing the due date and checking it turns the deck green.
     await updateScopeItem(org.id, { url: child.url!, term: "scope/pricing", dueAt: null, owner: "Sam" });
-    await verifyDependent(org.id, { url: child.url!, term: "scope/pricing" });
-    let node = await getChartNode(org.id, "scope/pricing");
+    await verifyDependent(org.id, { url: child.url!, term: "scope/pricing" }, null);
+    let node = await getChartNode(org.id, "scope/pricing", null);
     const deck = node.children.find((c) => c.url === child.url)!;
     expect(deck.color).toBe("green");
     expect(deck.owner).toBe("Sam");
@@ -71,20 +71,20 @@ describe("scope", () => {
 
     // Adding a page by slug and removing both kinds.
     const extra = await createTestPage(org.id, { slug: "extra-page", title: "Extra" });
-    const added = await addScopeItem(org.id, "scope/pricing", { slug: "extra-page" }, "tester");
+    const added = await addScopeItem(org.id, "scope/pricing", { slug: "extra-page" }, "tester", null);
     expect(added.kind).toBe("page");
     expect(added.color).toBe("yellow");
-    expect(await removeScopeItem(org.id, "scope/pricing", { slug: "extra-page" }, "tester")).toEqual({ removed: true });
-    expect(await removeScopeItem(org.id, "scope/pricing", { slug: "extra-page" }, "tester")).toEqual({ removed: false });
-    expect(await removeScopeItem(org.id, "scope/pricing", { url: child.url! }, "tester")).toEqual({ removed: true });
-    expect(await removeScopeItem(org.id, "scope/pricing", { url: child.url! }, "tester")).toEqual({ removed: false });
+    expect(await removeScopeItem(org.id, "scope/pricing", { slug: "extra-page" }, "tester", null)).toEqual({ removed: true });
+    expect(await removeScopeItem(org.id, "scope/pricing", { slug: "extra-page" }, "tester", null)).toEqual({ removed: false });
+    expect(await removeScopeItem(org.id, "scope/pricing", { url: child.url! }, "tester", null)).toEqual({ removed: true });
+    expect(await removeScopeItem(org.id, "scope/pricing", { url: child.url! }, "tester", null)).toEqual({ removed: false });
 
     // Pages that mention the node by name but aren't under it.
     await writePage(org.id, org.slug, "unmapped-mention", `title: Enterprise policy\ncomponents:\n  - type: markdown\n    content: Our Pricing tiers differ from the public list.\n`, "tester");
-    const pageSugs = await getPageSuggestions(org.id, "scope/pricing");
+    const pageSugs = await getPageSuggestions(org.id, "scope/pricing", null);
     expect(pageSugs.map((s) => s.slug)).toContain("unmapped-mention");
     expect(pageSugs.some((s) => s.slug === "dep-a")).toBe(false);
-    node = await getChartNode(org.id, "scope/pricing");
+    node = await getChartNode(org.id, "scope/pricing", null);
     expect(node.children.some((c) => c.slug === "extra-page" || c.url === child.url)).toBe(false);
     expect(extra.id).toBeTruthy();
   });

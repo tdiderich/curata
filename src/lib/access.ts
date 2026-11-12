@@ -1,6 +1,5 @@
 import { db } from "./db";
 import { AUTH_MODE } from "./auth";
-import type { OrgContext } from "./auth";
 
 export type PageRole = "owner" | "editor" | "viewer";
 
@@ -127,29 +126,134 @@ export function pageEditable(page: { visibility: string | null }, access: PageAc
   return canEditPage(access) || (page.visibility ?? "org") !== "private";
 }
 
+/// Denial messages, shared by every route and MCP tool so the wording
+/// doesn't drift.
+export const VIEW_ONLY_MESSAGE = "forbidden: you have view-only access to this page";
+export const OWNER_ONLY_MESSAGE = "forbidden: only the page owner can change visibility of or delete a private page";
+
 export function assertPageEditable(page: { visibility: string | null; access: PageAccess }): void {
   if (!pageEditable(page, page.access)) {
-    throw new PageAccessError(403, "forbidden: you have view-only access to this page");
+    throw new PageAccessError(403, VIEW_ONLY_MESSAGE);
   }
+}
+
+/// Owner-only actions on a private page: changing its visibility, deleting
+/// it. An editor share lets someone change a private page's content, not
+/// widen who can see it or remove it. Org, shared and public pages keep the
+/// org-role rule.
+export function ownerActionAllowed(page: { visibility: string | null }, access: PageAccess): boolean {
+  return (page.visibility ?? "org") !== "private" || access.role === "owner";
+}
+
+export function assertOwnerAction(page: { visibility: string | null; access: PageAccess }): void {
+  if (!ownerActionAllowed(page, page.access)) {
+    throw new PageAccessError(403, OWNER_ONLY_MESSAGE);
+  }
+}
+
+/// Page lookup for lib code that knows the caller by user id (chart, scope,
+/// dependency tools). Returns null when the page is missing or hidden from
+/// the caller, so the caller's existing "page not found" path handles both
+/// alike; mode "view" never throws. mode "edit" throws a 403 when the caller
+/// holds only a viewer share on a private page. The org-role half of an edit
+/// check (can(role, "page:edit")) stays with the route. userId null means an
+/// internal caller: unfiltered, as in listPagesWhere.
+export async function findPageFor(
+  orgId: string,
+  slug: string,
+  userId: string | null,
+  mode: "view" | "edit" = "view",
+  orgRole = "member"
+): Promise<(PageRow & { title: string; folderId: string | null; status: string }) | null> {
+  const page = await db.page.findUnique({
+    where: { orgId_slug: { orgId, slug } },
+    select: { id: true, orgId: true, slug: true, title: true, folderId: true, status: true, visibility: true, createdBy: true },
+  });
+  if (!page || !userId) return page;
+  const access = await pageAccessFor(page, userId, orgRole);
+  if (!access) return null;
+  if (mode === "edit" && !pageEditable(page, access)) {
+    throw new PageAccessError(403, VIEW_ONLY_MESSAGE);
+  }
+  return page;
+}
+
+/// Why a folder can't take a visibility: pages inside below the new minimum.
+/// Names only the pages the caller can see; someone else's private page is
+/// mentioned without slug or count, so the message doesn't reveal it. Null
+/// when nothing blocks the change.
+export async function folderVisibilityBlocker(
+  folderId: string,
+  target: string,
+  userId: string | null,
+  orgRole = "member"
+): Promise<string | null> {
+  const pages = await db.page.findMany({
+    where: { folderId },
+    select: { id: true, orgId: true, slug: true, visibility: true, createdBy: true },
+  });
+  const below = pages.filter((p) => {
+    try { checkFolderBoundary(p.visibility ?? "org", target); return false; } catch { return true; }
+  });
+  if (below.length === 0) return null;
+  const named: string[] = [];
+  let hidden = false;
+  for (const p of below) {
+    if (!userId || (await pageAccessFor(p, userId, orgRole))) named.push(p.slug);
+    else hidden = true;
+  }
+  const parts = [
+    named.length > 0 ? `${named.length} page(s) have lower visibility: ${named.join(", ")}` : null,
+    hidden ? "it holds private pages owned by someone else" : null,
+  ].filter(Boolean);
+  return `cannot set folder to "${target}" — ${parts.join("; ")}`;
+}
+
+/// For server components: true when the caller may open the page. A hidden
+/// page renders as not found, like the API.
+export async function canOpenPage(ctx: { orgId: string; userId: string; role: string }, slug: string): Promise<boolean> {
+  try {
+    await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+    return true;
+  } catch (e) {
+    if (e instanceof PageAccessError) return false;
+    throw e;
+  }
+}
+
+/// The visibility half of listPagesWhere, without the archived filter: for
+/// queues that also list archived pages (flags) or that join pages by slug.
+export function pageVisibilityWhere(userId: string | null): Record<string, unknown> {
+  if (AUTH_MODE === "none" || !userId) return {};
+  return {
+    OR: [
+      { createdBy: userId },
+      // Same gate as resolvePageAccess: share rows count only where shares exist.
+      ...(isShareFeatureEnabled() ? [{ shares: { some: { userId } } }] : []),
+      { visibility: { in: ["org", "public", "shared"] } },
+    ],
+  };
+}
+
+/// Pages the caller may change, as a where clause: everything visible minus
+/// private pages held through a viewer share (pageEditable as a query).
+export function editablePagesWhere(orgId: string, userId: string | null): Record<string, unknown> {
+  if (AUTH_MODE === "none" || !userId) return { orgId };
+  return {
+    orgId,
+    OR: [
+      { createdBy: userId },
+      ...(isShareFeatureEnabled() ? [{ shares: { some: { userId, role: "editor" } } }] : []),
+      { visibility: { in: ["org", "public", "shared"] } },
+    ],
+  };
 }
 
 export function listPagesWhere(
   orgId: string,
   userId: string | null
 ): Record<string, unknown> {
-  if (AUTH_MODE === "none" || !userId) {
-    return { orgId, status: { not: "archived" } };
-  }
-
-  return {
-    orgId,
-    status: { not: "archived" },
-    OR: [
-      { createdBy: userId },
-      { shares: { some: { userId } } },
-      { visibility: { in: ["org", "public", "shared"] } },
-    ],
-  };
+  return { orgId, status: { not: "archived" }, ...pageVisibilityWhere(userId) };
 }
 
 export function canEditPage(access: PageAccess): boolean {

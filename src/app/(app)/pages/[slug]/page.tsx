@@ -16,6 +16,7 @@ import { getPageConcepts, normalizeTerm } from "@/lib/concepts";
 import { DEFAULT_TAGS } from "@/lib/default-tags";
 import { expandComponentRefs, expandSlideRefs, renderedRefWrap } from "@/lib/component-refs";
 import type { RefExpansionContext } from "@/lib/component-refs";
+import { canOpenPage } from "@/lib/access";
 
 export async function generateMetadata({
   params,
@@ -25,6 +26,7 @@ export async function generateMetadata({
   const ctx = await resolveOrg();
   if (!ctx) return { title: "curata" };
   const { slug } = await params;
+  if (!(await canOpenPage(ctx, slug))) return { title: "curata" };
   const pageData = await readPage(ctx.orgId, slug);
   const pageTitle = pageData ? (pageData.json.title as string) || slug : slug;
   return { title: pageTitle };
@@ -48,6 +50,7 @@ export default async function PageDetailView({
   const previewingLatest = latestParam === "1";
   const channel: Channel = previewingLatest ? "latest" : "trusted";
 
+  if (!(await canOpenPage(ctx, slug))) notFound();
   const pageData = await readPage(ctx.orgId, slug, channel);
   if (!pageData) notFound();
 

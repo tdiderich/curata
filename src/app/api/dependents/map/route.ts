@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { mapDependencies, normalizeTerm, upsertConcepts, upsertExternalDependents } from "@/lib/concepts";
-import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
+import { findPageFor } from "@/lib/access";
+import { pageAccessErrorResponse } from "@/lib/access-response";
 
 /**
  * Backs the chart's dependency-editing surfaces. Same lib call as the
@@ -41,10 +42,16 @@ export async function POST(request: NextRequest) {
   try {
     // Removals first so a page moved from depends to source in the same
     // submit ends up with one edge, not two.
+    // Check every page, removals and adds, before any edge changes, so a
+    // view-only page fails the whole submit. Hidden pages are skipped on
+    // removal and reported missing on add, as missing ones always were.
+    const removals: Array<{ id: string }> = [];
     for (const slug of slugs(body.removePages)) {
-      const page = await db.page.findUnique({ where: { orgId_slug: { orgId: ctx.orgId, slug } }, select: { id: true } });
-      if (page) await upsertConcepts(page.id, [{ term, remove: true }], ctx.userId);
+      const page = await findPageFor(ctx.orgId, slug, ctx.userId, "edit");
+      if (page) removals.push(page);
     }
+    for (const slug of [...slugs(body.asserts), ...slugs(body.depends)]) await findPageFor(ctx.orgId, slug, ctx.userId, "edit");
+    for (const page of removals) await upsertConcepts(page.id, [{ term, remove: true }], ctx.userId);
     const removeExternal = slugs(body.removeExternal);
     if (removeExternal.length > 0) {
       await upsertExternalDependents(ctx.orgId, term, removeExternal.map((url) => ({ url, remove: true })), ctx.userId);
@@ -59,7 +66,7 @@ export async function POST(request: NextRequest) {
       asserts: slugs(body.asserts),
       depends: slugs(body.depends),
       external,
-    }, ctx.userId);
+    }, ctx.userId, ctx.userId);
     logAudit({
       orgId: ctx.orgId,
       action: "dependencies.map",
@@ -70,6 +77,8 @@ export async function POST(request: NextRequest) {
     }).catch(() => {});
     return NextResponse.json(result);
   } catch (err) {
+    const denied = pageAccessErrorResponse(err);
+    if (denied) return denied;
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: 400 });
   }

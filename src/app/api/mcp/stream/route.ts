@@ -4,6 +4,8 @@ import { z } from "zod";
 import { resolveOrgFromApiKey } from "@/lib/auth";
 import { requestOrigin } from "@/lib/request-origin";
 import { db } from "@/lib/db";
+import { folderUpdateDenial } from "@/lib/folder-access";
+import { isOrgManager } from "@/lib/groups";
 import { logAudit } from "@/lib/audit";
 import {
   listPages,
@@ -18,7 +20,7 @@ import {
   restorePageVersion,
 } from "@/lib/pages";
 import { checkFolderBoundary } from "@/lib/access";
-import { resolveRules, detectFolderCycle } from "@/lib/content-rules";
+import { resolveRules } from "@/lib/content-rules";
 import {
   getPageConcepts,
   getPageLinks,
@@ -325,26 +327,9 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   server.tool("update_folder", "Rename, reparent, or change visibility of a folder",
     { id: z.string(), name: z.string().optional(), parent_id: z.string().nullable().optional(), visibility: z.enum(["org", "private"]).optional() },
     async ({ id, name, parent_id, visibility }) => {
-      const folder = await db.folder.findFirst({ where: { id, orgId } });
-      if (!folder) return { content: [{ type: "text", text: `Error: folder not found: ${id}` }], isError: true };
-      if (parent_id) {
-        const parent = await db.folder.findFirst({ where: { id: parent_id, orgId } });
-        if (!parent) return { content: [{ type: "text", text: `Error: parent folder not found: ${parent_id}` }], isError: true };
-        const wouldCycle = await detectFolderCycle(orgId, id, parent_id);
-        if (wouldCycle) return { content: [{ type: "text", text: "Error: cannot reparent: would create a cycle" }], isError: true };
-      }
-      if (visibility) {
-        const pagesInFolder = await db.page.findMany({
-          where: { folderId: id },
-          select: { slug: true, visibility: true },
-        });
-        const violating = pagesInFolder.filter((p) => {
-          try { checkFolderBoundary(p.visibility ?? "org", visibility); return false; } catch { return true; }
-        });
-        if (violating.length > 0) {
-          return { content: [{ type: "text", text: `Error: cannot set folder to "${visibility}" — ${violating.length} page(s) have lower visibility: ${violating.map((p) => p.slug).join(", ")}` }], isError: true };
-        }
-      }
+      const denied = await folderUpdateDenial(orgId, id, userId ?? null, await isOrgManager(orgId, userId), { parentId: parent_id, visibility });
+      if (denied) return { content: [{ type: "text", text: `Error: ${denied.error}` }], isError: true };
+      const folder = (await db.folder.findFirst({ where: { id, orgId }, select: { name: true } }))!;
       const data: Record<string, unknown> = {};
       if (name !== undefined) data.name = name;
       if (parent_id !== undefined) data.parentId = parent_id;
@@ -516,15 +501,15 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     { term: z.string().optional().describe("Node term to expand. Omit for the whole chart"), include_hidden: z.boolean().optional().describe("Whole-chart mode: include nodes someone hid") },
     async ({ term, include_hidden }) => {
       const result = term
-        ? { ...(await getChartNode(orgId, term)), suggestions: await getScopeSuggestions(orgId, term), pageSuggestions: await getPageSuggestions(orgId, term) }
-        : await getChart(orgId, { includeHidden: include_hidden });
+        ? { ...(await getChartNode(orgId, term, userId ?? null)), suggestions: await getScopeSuggestions(orgId, term, userId ?? null), pageSuggestions: await getPageSuggestions(orgId, term, userId ?? null) }
+        : await getChart(orgId, { includeHidden: include_hidden, userId: userId ?? null });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
   server.tool("audit", "Your worklist for external drift. Every yellow or red external asset, split into withRecipe (each carries check: {via, tool, locator, ask}; run it through that MCP in your session, compare to the node's source page, then mark_verified url=... status=holds, or status=needs_change with a note saying what's off, or status=unreachable with a note when you have no access to that system) and humanOnly (no recipe yet; suggestedCheck is a starting point you can save with set_scope_item). Curata never calls an MCP itself. Report both buckets back to the human, the second one is theirs.",
     {},
     async () => {
-      const result = await getAuditList(orgId);
+      const result = await getAuditList(orgId, userId ?? null);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
@@ -539,14 +524,14 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       check: z.object({ via: z.string(), tool: z.string().optional(), locator: z.string().optional(), ask: z.string().optional() }).optional().describe("How an agent checks it: via = MCP server name"),
     },
     async ({ term, slug, url, label, owner, due_at, check }) => {
-      const result = await addScopeItem(orgId, term, { slug, url, label, owner, dueAt: due_at, check }, userId || "agent");
+      const result = await addScopeItem(orgId, term, { slug, url, label, owner, dueAt: due_at, check }, userId || "agent", userId ?? null);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
   server.tool("remove_from_chart", "Take a page or external URL out from under a node. The page and the asset stay; only this edge goes.",
     { term: z.string(), slug: z.string().optional(), url: z.string().optional() },
     async ({ term, slug, url }) => {
-      const result = await removeScopeItem(orgId, term, { slug, url }, userId || "agent");
+      const result = await removeScopeItem(orgId, term, { slug, url }, userId || "agent", userId ?? null);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
@@ -574,7 +559,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   server.tool("get_needs_look", "The chart as a list: every yellow and red child, grouped by the node whose source moved. This is the review queue for drift. Clear a page child by rewriting the page or calling mark_verified; clear an external child by running its check recipe (get_chart term=... shows it) and calling mark_verified with url.",
     {},
     async () => {
-      const result = await getNeedsLook(orgId);
+      const result = await getNeedsLook(orgId, userId ?? null);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
@@ -582,7 +567,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     { term: z.string().optional().describe("Concept term"), slug: z.string().optional().describe("Alone: page to make a node. With term: page to make this node's source of truth"), hidden: z.boolean().optional(), promoted: z.boolean().optional(), instructions: z.string().optional().describe("Per-node note for agents, appended to copied prompts. Empty string clears"), status: z.string().optional().describe("Sets the Status field on the node's source page: Planned / In progress puts the node on the Active tab, Shipped / Done on Completed, empty string clears it back to Watching") },
     async ({ term, slug, hidden, promoted, instructions, status }) => {
       if (slug && !term) {
-        const result = await promotePageToNode(orgId, slug, userId || "agent");
+        const result = await promotePageToNode(orgId, slug, userId || "agent", userId ?? null);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
       if (!term) throw new Error("term or slug is required");
@@ -591,8 +576,8 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       if (hidden !== undefined) patch.hidden = hidden;
       if (promoted !== undefined) patch.promoted = promoted;
       if (instructions !== undefined) patch.instructions = instructions;
-      if (status !== undefined) await setSourceStatus(orgId, orgSlug, term, status || null, userId || "agent");
-      const result = Object.keys(patch).length === 0 ? await getChartNode(orgId, term) : await setChartNode(orgId, term, patch);
+      if (status !== undefined) await setSourceStatus(orgId, orgSlug, term, status || null, userId || "agent", userId ?? null);
+      const result = Object.keys(patch).length === 0 ? await getChartNode(orgId, term, userId ?? null) : await setChartNode(orgId, term, patch, userId ?? null);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 

@@ -3,6 +3,7 @@ import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
+import { findPageFor, pageVisibilityWhere } from "@/lib/access";
 
 // Quick actions are references to pages in the Skills folder, stored as a
 // non-rule entry ({ id: "quick-refs", refs: [...] }) inside the Quick Actions
@@ -28,6 +29,18 @@ function writeRefs(rules: unknown, refs: string[]): RulesEntry[] {
   return [...rest, { id: REFS_ID, refs }];
 }
 
+/// Refs are shared org-wide; drop the ones naming a page this caller can't
+/// see. Refs to deleted pages stay, as before.
+async function visibleRefs(orgId: string, userId: string, refs: string[]): Promise<string[]> {
+  const [existing, visible] = await Promise.all([
+    db.page.findMany({ where: { orgId, slug: { in: refs } }, select: { slug: true } }),
+    db.page.findMany({ where: { orgId, slug: { in: refs }, ...pageVisibilityWhere(userId) }, select: { slug: true } }),
+  ]);
+  const seen = new Set(visible.map((p) => p.slug));
+  const hidden = new Set(existing.map((p) => p.slug).filter((s) => !seen.has(s)));
+  return refs.filter((s) => !hidden.has(s));
+}
+
 async function getQaFolder(orgId: string) {
   return db.folder.findFirst({
     where: { orgId, name: "Quick Actions", locked: true },
@@ -40,7 +53,7 @@ export async function GET() {
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const qa = await getQaFolder(ctx.orgId);
-  return NextResponse.json({ refs: qa ? readRefs(qa.rules) : [] });
+  return NextResponse.json({ refs: await visibleRefs(ctx.orgId, ctx.userId, qa ? readRefs(qa.rules) : []) });
 }
 
 export async function POST(request: NextRequest) {
@@ -57,10 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // A quick action must reference an existing page in the Skills folder.
-    const page = await db.page.findUnique({
-      where: { orgId_slug: { orgId: ctx.orgId, slug: body.slug } },
-      select: { folderId: true, status: true },
-    });
+    const page = await findPageFor(ctx.orgId, body.slug, ctx.userId);
     if (!page || page.status === "archived") {
       return NextResponse.json({ error: "page not found" }, { status: 404 });
     }
@@ -87,7 +97,7 @@ export async function POST(request: NextRequest) {
       data: { rules: writeRefs(qa.rules, refs) as unknown as Prisma.InputJsonValue },
     });
 
-    return NextResponse.json({ refs });
+    return NextResponse.json({ refs: await visibleRefs(ctx.orgId, ctx.userId, refs) });
   } catch (err) {
     console.error("quick-actions error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -112,13 +122,20 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Quick Actions folder not found" }, { status: 404 });
     }
 
+    // A ref naming a page this caller can't see isn't theirs to remove; answer
+    // as if it weren't in the list.
+    const exists = await db.page.findUnique({ where: { orgId_slug: { orgId: ctx.orgId, slug: body.slug } }, select: { id: true } });
+    if (exists && !(await findPageFor(ctx.orgId, body.slug, ctx.userId))) {
+      return NextResponse.json({ refs: await visibleRefs(ctx.orgId, ctx.userId, readRefs(qa.rules)) });
+    }
+
     const refs = readRefs(qa.rules).filter((s) => s !== body.slug);
     await db.folder.update({
       where: { id: qa.id },
       data: { rules: writeRefs(qa.rules, refs) as unknown as Prisma.InputJsonValue },
     });
 
-    return NextResponse.json({ refs });
+    return NextResponse.json({ refs: await visibleRefs(ctx.orgId, ctx.userId, refs) });
   } catch (err) {
     console.error("quick-actions error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

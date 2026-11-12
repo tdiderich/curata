@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
-import { checkFolderBoundary, pageAccessFor, pageEditable } from "@/lib/access";
+import { checkFolderBoundary, ownerActionAllowed, pageAccessFor, pageEditable } from "@/lib/access";
 
 export async function POST(request: NextRequest) {
   const ctx = await resolveOrg();
@@ -32,10 +32,15 @@ export async function POST(request: NextRequest) {
   // Pages the caller can't see count as not matching. Every action here
   // changes the page, so a private page held only through a viewer share is
   // dropped too (same rule as the single-page routes).
+  // The count in every response covers only these pages, so a hidden slug
+  // in the batch reads exactly like a missing one.
   const pages = [];
+  const ownerOk = new Set<string>();
   for (const p of matched) {
     const access = await pageAccessFor(p, ctx.userId, ctx.role);
-    if (access && pageEditable(p, access)) pages.push(p);
+    if (!access || !pageEditable(p, access)) continue;
+    pages.push(p);
+    if (ownerActionAllowed(p, access)) ownerOk.add(p.id);
   }
 
   if (pages.length === 0) {
@@ -44,7 +49,9 @@ export async function POST(request: NextRequest) {
 
   switch (body.action) {
     case "delete": {
+      // Deleting a private page is owner-only, even for an editor share.
       const deletable = pages.filter((p) =>
+        ownerOk.has(p.id) &&
         can(ctx.role, "page:delete", p.createdBy === ctx.userId || p.createdBy === "default")
       );
       if (deletable.length === 0) {
@@ -104,8 +111,9 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+      // Changing a private page's visibility is owner-only.
       const editable = pages.filter((p) =>
-        can(ctx.role, "page:edit", p.createdBy === ctx.userId)
+        ownerOk.has(p.id) && can(ctx.role, "page:edit", p.createdBy === ctx.userId)
       );
       if (editable.length === 0) {
         return NextResponse.json({ error: "forbidden" }, { status: 403 });

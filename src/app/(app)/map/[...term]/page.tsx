@@ -17,7 +17,7 @@ export default async function ChartNodePage({ params }: { params: Promise<{ term
   let node: Awaited<ReturnType<typeof getChartNode>> | null = null;
   let error: string | null = null;
   try {
-    node = await getChartNode(ctx.orgId, term);
+    node = await getChartNode(ctx.orgId, term, ctx.userId);
   } catch (err) {
     error = err instanceof Error ? err.message : String(err);
   }

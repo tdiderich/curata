@@ -4,6 +4,8 @@
 // tests/mcp-tool-parity.test.ts enforces that every tool listed here is
 // registered on the streamable-HTTP server.
 import { db } from "@/lib/db";
+import { folderUpdateDenial } from "@/lib/folder-access";
+import { slugInUseMessage } from "@/lib/slug-in-use";
 import { track } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
 import {
@@ -30,7 +32,7 @@ import { validateContent, validateContentSplit, checkUnsupportedComponents, inva
 import { resolveShapeRules, toKazamShapeRules, validateShapeRule } from "@/lib/shape-rules";
 import { renderComponentSlice, guidedComponents } from "@/lib/mcp-guidance";
 import { checkFolderBoundary, mcpDefaultVisibility, listPagesWhere, pageAccessFor } from "@/lib/access";
-import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
+import { resolveRules, validateContentRules } from "@/lib/content-rules";
 import { validateApprovalRule, canApprove, getApprovers, describeApprovalRule, makeApprovalRuleResolver, resolveEffectiveTrustMode } from "@/lib/approval";
 import type { Role } from "@/lib/permissions";
 import { resolveRequiredComponentsRules, validateRequiredComponents, validateRequiredComponentsRule, ensureDefaultRequiredComponentsRules } from "@/lib/required-components";
@@ -992,31 +994,12 @@ async function dispatchTool(
 
     case "update_folder": {
       if (!args.id) throw new Error("id is required");
-      const ufFolder = await db.folder.findFirst({ where: { id: args.id, orgId } });
-      if (!ufFolder) throw new Error(`folder not found: ${args.id}`);
-      if (args.parent_id) {
-        const parent = await db.folder.findFirst({ where: { id: args.parent_id, orgId } });
-        if (!parent) throw new Error(`parent folder not found: ${args.parent_id}`);
-        const wouldCycle = await detectFolderCycle(orgId, args.id, args.parent_id);
-        if (wouldCycle) throw new Error("cannot reparent: would create a cycle");
-      }
-      if (args.visibility && args.visibility !== "private" && args.visibility !== "org") {
-        throw new Error("visibility must be 'private' or 'org'");
-      }
-      if (args.visibility) {
-        const pagesInFolder = await db.page.findMany({
-          where: { folderId: args.id },
-          select: { slug: true, visibility: true },
-        });
-        const violating = pagesInFolder.filter((p) => {
-          try { checkFolderBoundary(p.visibility ?? "org", args.visibility); return false; } catch { return true; }
-        });
-        if (violating.length > 0) {
-          throw new Error(
-            `cannot set folder to "${args.visibility}" — ${violating.length} page(s) have lower visibility: ${violating.map((p) => p.slug).join(", ")}`
-          );
-        }
-      }
+      const ufDenied = await folderUpdateDenial(orgId, args.id, userId ?? null, await isOrgManager(orgId, userId), {
+        parentId: args.parent_id || undefined,
+        visibility: args.visibility || undefined,
+        rules: args.rules !== undefined,
+      });
+      if (ufDenied) throw new Error(ufDenied.error);
       let ufRulesParsed: Prisma.InputJsonValue | undefined;
       if (args.rules !== undefined) {
         try { ufRulesParsed = JSON.parse(args.rules) as Prisma.InputJsonValue; } catch { throw new Error("rules must be valid JSON"); }
@@ -1078,7 +1061,7 @@ async function dispatchTool(
       const existing = await db.page.findUnique({
         where: { orgId_slug: { orgId, slug: args.slug } },
       });
-      if (existing) throw new Error(`page already exists: ${args.slug}`);
+      if (existing) throw new Error(await slugInUseMessage(orgId, args.slug));
       let cpPageRulesEarly: unknown;
       if (args.rules) {
         try { cpPageRulesEarly = JSON.parse(args.rules); } catch { throw new Error("rules must be valid JSON"); }
@@ -1168,7 +1151,7 @@ async function dispatchTool(
         actorId,
         metadata: { slug: args.slug, folderId: args.folder_id },
       });
-      const cpImpact = await getPageImpact(orgId, args.slug);
+      const cpImpact = await getPageImpact(orgId, args.slug, userId ?? null);
       if (cpImpact.text) cpResult.impact = cpImpact;
       cpResult.trust = await trustSummary(orgId, args.slug);
       return cpResult;
@@ -1356,7 +1339,7 @@ async function dispatchTool(
           matches: w.matches,
         }));
       }
-      const wpImpact = await getPageImpact(orgId, args.slug);
+      const wpImpact = await getPageImpact(orgId, args.slug, userId ?? null);
       if (wpImpact.text) wpResult.impact = wpImpact;
       wpResult.trust = await trustSummary(orgId, args.slug);
       return wpResult;
@@ -1566,7 +1549,7 @@ async function dispatchTool(
         metadata: { slug: args.slug, operationCount: operations.length },
       });
       const ppResult: Record<string, unknown> = withShapeWarnings({ ...patchResult }, patchValidation.warnings);
-      const ppImpact = await getPageImpact(orgId, args.slug);
+      const ppImpact = await getPageImpact(orgId, args.slug, userId ?? null);
       if (ppImpact.text) ppResult.impact = ppImpact;
       ppResult.trust = await trustSummary(orgId, args.slug);
       if (ppRuleCheck.warnings.length > 0) {
@@ -1690,7 +1673,7 @@ async function dispatchTool(
       }
 
       const existing = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: args.target_slug } } });
-      if (existing) throw new Error(`page already exists: ${args.target_slug}`);
+      if (existing) throw new Error(await slugInUseMessage(orgId, args.target_slug));
 
       const cftResult = await writePage(orgId, orgSlug, args.target_slug, interpolated, "agent");
       if (!cftResult.ok) throw new Error(cftResult.error);
@@ -1836,7 +1819,7 @@ async function dispatchTool(
         depends: slugList("depends"),
         references: slugList("references"),
         external,
-      }, userId || "agent");
+      }, userId || "agent", userId ?? null);
       logAudit({ orgId, action: "dependencies.map", resourceType: "concept", resourceId: mapped.term, actorType: "apikey", actorId, metadata: { tagged: mapped.tagged.length, external: mapped.external.length, missing: mapped.missing } });
       return mapped;
     }
@@ -1845,26 +1828,26 @@ async function dispatchTool(
       if (!args.slug && !args.url) throw new Error("slug or url is required");
       if (args.slug && !SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       if (args.status && !VERIFY_STATUSES.includes(args.status as VerifyStatus)) throw new Error(`status must be one of ${VERIFY_STATUSES.join("|")}`);
-      const verified = await verifyDependent(orgId, { slug: args.slug || undefined, url: args.url || undefined, term: args.term || undefined, note: args.note || undefined, status: (args.status as VerifyStatus) || undefined });
+      const verified = await verifyDependent(orgId, { slug: args.slug || undefined, url: args.url || undefined, term: args.term || undefined, note: args.note || undefined, status: (args.status as VerifyStatus) || undefined }, userId ?? null);
       logAudit({ orgId, action: "page.verify", resourceType: verified.kind, resourceId: verified.id, actorType: "apikey", actorId, metadata: { term: verified.term } });
       return { ok: true, ...verified };
     }
 
     case "get_chart": {
       if (args.term) {
-        const node = await getChartNode(orgId, args.term);
-        const [suggestions, pageSuggestions] = await Promise.all([getScopeSuggestions(orgId, args.term), getPageSuggestions(orgId, args.term)]);
+        const node = await getChartNode(orgId, args.term, userId ?? null);
+        const [suggestions, pageSuggestions] = await Promise.all([getScopeSuggestions(orgId, args.term, userId ?? null), getPageSuggestions(orgId, args.term, userId ?? null)]);
         return { ...node, suggestions, pageSuggestions };
       }
-      return getChart(orgId, { includeHidden: args.include_hidden === "true" });
+      return getChart(orgId, { includeHidden: args.include_hidden === "true", userId: userId ?? null });
     }
 
     case "get_needs_look": {
-      return getNeedsLook(orgId);
+      return getNeedsLook(orgId, userId ?? null);
     }
 
     case "audit": {
-      return getAuditList(orgId);
+      return getAuditList(orgId, userId ?? null);
     }
 
     case "add_to_chart": {
@@ -1872,7 +1855,7 @@ async function dispatchTool(
       if (!args.slug && !args.url) throw new Error("slug or url is required");
       let check: unknown;
       if (args.check) { try { check = JSON.parse(args.check); } catch { throw new Error("check must be JSON like {\"via\":\"hubspot\",\"tool\":\"render_asset\",\"locator\":\"...\",\"ask\":\"...\"}"); } }
-      const child = await addScopeItem(orgId, args.term, { slug: args.slug || undefined, url: args.url || undefined, label: args.label || undefined, owner: args.owner || undefined, dueAt: args.due_at, check }, userId || "agent");
+      const child = await addScopeItem(orgId, args.term, { slug: args.slug || undefined, url: args.url || undefined, label: args.label || undefined, owner: args.owner || undefined, dueAt: args.due_at, check }, userId || "agent", userId ?? null);
       logAudit({ orgId, action: "dependencies.map", resourceType: "concept", resourceId: args.term, actorType: "apikey", actorId, metadata: { added: child.slug ?? child.url } });
       return child;
     }
@@ -1880,7 +1863,7 @@ async function dispatchTool(
     case "remove_from_chart": {
       if (!args.term) throw new Error("term is required");
       if (!args.slug && !args.url) throw new Error("slug or url is required");
-      return removeScopeItem(orgId, args.term, { slug: args.slug || undefined, url: args.url || undefined }, userId || "agent");
+      return removeScopeItem(orgId, args.term, { slug: args.slug || undefined, url: args.url || undefined }, userId || "agent", userId ?? null);
     }
 
     case "rescan_inventory": {
@@ -1895,7 +1878,7 @@ async function dispatchTool(
     }
 
     case "set_chart_node": {
-      if (args.slug && !args.term) return promotePageToNode(orgId, args.slug, userId || "agent");
+      if (args.slug && !args.term) return promotePageToNode(orgId, args.slug, userId || "agent", userId ?? null);
       if (!args.term) throw new Error("term or slug is required");
       const patch: { hidden?: boolean; promoted?: boolean; sourceSlug?: string; instructions?: string | null } = {};
       for (const k of ["hidden", "promoted"] as const) {
@@ -1905,9 +1888,9 @@ async function dispatchTool(
       if (args.instructions !== undefined) patch.instructions = args.instructions;
       const hasStatus = args.status !== undefined;
       if (Object.keys(patch).length === 0 && !hasStatus) throw new Error("give at least one of slug (source page), hidden, promoted, instructions, status");
-      if (hasStatus) await setSourceStatus(orgId, orgSlug, args.term, args.status || null, userId || "agent");
-      if (Object.keys(patch).length === 0) return getChartNode(orgId, args.term);
-      return setChartNode(orgId, args.term, patch);
+      if (hasStatus) await setSourceStatus(orgId, orgSlug, args.term, args.status || null, userId || "agent", userId ?? null);
+      if (Object.keys(patch).length === 0) return getChartNode(orgId, args.term, userId ?? null);
+      return setChartNode(orgId, args.term, patch, userId ?? null);
     }
 
     case "get_dependents": {

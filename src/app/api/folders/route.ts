@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
-import { checkFolderBoundary } from "@/lib/access";
+import { ownerActionAllowed, pageAccessFor } from "@/lib/access";
+import { folderUpdateDenial } from "@/lib/folder-access";
 
 export async function POST(request: NextRequest) {
   const ctx = await resolveOrg();
@@ -108,49 +109,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
-    const folder = await db.folder.findFirst({
-      where: { id: body.id, orgId: ctx.orgId },
+    const denied = await folderUpdateDenial(ctx.orgId, body.id, ctx.userId, ctx.role === "owner" || ctx.role === "admin", {
+      parentId: body.parentId,
+      visibility: body.visibility,
     });
-
-    if (!folder) {
-      return NextResponse.json({ error: "folder not found" }, { status: 404 });
-    }
-
-    if (folder.locked) {
-      return NextResponse.json({ error: "stock folders cannot be modified" }, { status: 403 });
-    }
-
-    const isCreator = folder.createdBy === ctx.userId;
-    const isPrivileged =
-      ctx.role === "owner" || ctx.role === "admin";
-
-    if (body.visibility !== undefined) {
-      if (!isPrivileged && !isCreator) {
-        return NextResponse.json(
-          { error: "forbidden: only owner/admin or creator can change visibility" },
-          { status: 403 }
-        );
-      }
-      if (body.visibility !== "private" && body.visibility !== "org") {
-        return NextResponse.json(
-          { error: "visibility must be 'private' or 'org'" },
-          { status: 400 }
-        );
-      }
-      const pagesInFolder = await db.page.findMany({
-        where: { folderId: body.id },
-        select: { slug: true, visibility: true },
-      });
-      const violating = pagesInFolder.filter((p) => {
-        try { checkFolderBoundary(p.visibility ?? "org", body.visibility!); return false; } catch { return true; }
-      });
-      if (violating.length > 0) {
-        return NextResponse.json(
-          { error: `cannot set folder to "${body.visibility}" — ${violating.length} page(s) have lower visibility: ${violating.map((p) => p.slug).join(", ")}` },
-          { status: 400 }
-        );
-      }
-    }
+    if (denied) return NextResponse.json({ error: denied.error }, { status: denied.status });
 
     const data: Record<string, unknown> = {};
     if (body.name !== undefined) data.name = body.name;
@@ -226,6 +189,24 @@ export async function DELETE(request: NextRequest) {
           folderIds.add(f.id);
           grew = true;
         }
+      }
+    }
+
+    // The cascade deletes pages, so it follows the page rules: every private
+    // page in the subtree must be one the caller owns. Someone else's private
+    // page (hidden, or held through a share) blocks the delete; its owner
+    // has to move or delete it first. The message names no page.
+    const nested = await db.page.findMany({
+      where: { folderId: { in: [...folderIds] }, visibility: "private" },
+      select: { id: true, orgId: true, slug: true, visibility: true, createdBy: true },
+    });
+    for (const p of nested) {
+      const access = await pageAccessFor(p, ctx.userId, ctx.role);
+      if (!access || !ownerActionAllowed(p, access)) {
+        return NextResponse.json(
+          { error: "forbidden: this folder holds private pages owned by someone else; they must move or delete them first" },
+          { status: 403 }
+        );
       }
     }
 

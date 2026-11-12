@@ -4,6 +4,20 @@ import { db } from "@/lib/db";
 import { normalizeTerm, upsertConcepts, isConceptRel, CONCEPT_RELS } from "@/lib/concepts";
 import { logAudit } from "@/lib/audit";
 import { DEFAULT_KIND } from "@/lib/concept-kinds";
+import { pageAccessFor, pageEditable, VIEW_ONLY_MESSAGE } from "@/lib/access";
+
+/// A page the caller can't see answers like a missing one. Tags change the
+/// page, so a private page held through a viewer share can't be tagged.
+async function taggablePage(ctx: { orgId: string; userId: string; role: string }, pageId: string): Promise<{ page: { id: string; slug: string } } | { denied: NextResponse }> {
+  const page = await db.page.findFirst({
+    where: { id: pageId, orgId: ctx.orgId },
+    select: { id: true, orgId: true, slug: true, visibility: true, createdBy: true },
+  });
+  const access = page ? await pageAccessFor(page, ctx.userId, ctx.role) : null;
+  if (!page || !access) return { denied: NextResponse.json({ error: "page not found" }, { status: 404 }) };
+  if (!pageEditable(page, access)) return { denied: NextResponse.json({ error: VIEW_ONLY_MESSAGE }, { status: 403 }) };
+  return { page };
+}
 
 /**
  * Adds or re-kinds concept tags on a page — the dashboard untagged queue's
@@ -47,13 +61,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `rel must be one of ${CONCEPT_RELS.join(", ")}` }, { status: 400 });
   }
 
-  const page = await db.page.findFirst({
-    where: { id: pageId, orgId: ctx.orgId },
-    select: { id: true, slug: true },
-  });
-  if (!page) {
-    return NextResponse.json({ error: "page not found" }, { status: 404 });
-  }
+  const found = await taggablePage(ctx, pageId);
+  if ("denied" in found) return found.denied;
+  const { page } = found;
 
   await upsertConcepts(page.id, cleaned.map((t) => ({ term: t.term, kind: t.kind, rel: t.rel as import("@/lib/concepts").ConceptRel | undefined })), ctx.userId);
   logAudit({
@@ -86,13 +96,9 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "pageId and tag required" }, { status: 400 });
   }
 
-  const page = await db.page.findFirst({
-    where: { id: pageId, orgId: ctx.orgId },
-    select: { id: true, slug: true },
-  });
-  if (!page) {
-    return NextResponse.json({ error: "page not found" }, { status: 404 });
-  }
+  const found = await taggablePage(ctx, pageId);
+  if ("denied" in found) return found.denied;
+  const { page } = found;
 
   const normalized = normalizeTerm(tag);
   // Route through upsertConcepts' remove path so usage_count is recounted.

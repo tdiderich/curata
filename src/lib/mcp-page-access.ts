@@ -1,5 +1,6 @@
 import { db } from "./db";
-import { pageAccessFor, pageEditable } from "./access";
+import { slugInUseMessage } from "./slug-in-use";
+import { OWNER_ONLY_MESSAGE, ownerActionAllowed, pageAccessFor, pageEditable, VIEW_ONLY_MESSAGE } from "./access";
 import { resolveToolName, TOOL_PARAMS } from "./mcp-dispatch";
 
 /// Tools that change an existing page's content or placement. On a private
@@ -13,10 +14,21 @@ const PAGE_EDIT_TOOLS = new Set([
   "move_page",
 ]);
 
-/// Tools that answer a missing page with a fallback instead of an error.
-/// They filter hidden pages themselves (visiblePageRow in mcp-dispatch.ts),
-/// since a "page not found" here would differ from that fallback.
-const SELF_FILTERING_TOOLS = new Set(["list_rules", "validate_page"]);
+/// Tools whose own answer to a missing page differs from "page not found:
+/// X" (a fallback, an empty result, a `missing` list). They check visibility
+/// themselves with the caller's userId, so a hidden page gets exactly the
+/// missing-page answer.
+const SELF_FILTERING_TOOLS = new Set(["list_rules", "validate_page", "get_related", "get_dependents", "map_dependencies"]);
+
+/// Tools that create a page at a new slug, and the arg naming it. A slug held
+/// by a page the caller can't see answers with slugInUseMessage, the same
+/// words the tool gives for a visible one. The failure itself can't be hidden, since
+/// slugs are unique per org, but the message doesn't single out hidden pages.
+const CREATE_SLUG_ARG: Record<string, string> = {
+  create_page: "slug",
+  write_page: "slug",
+  create_from_template: "target_slug",
+};
 
 /// Every argument that names a page, across both MCP transports. A new
 /// page-naming param in TOOL_PARAMS (mcp-dispatch.ts) must be added here;
@@ -50,7 +62,9 @@ function canonicalArgs(tool: string, args: Record<string, unknown>): Record<stri
 
 function pageSlugs(tool: string, args: Record<string, unknown>): { view: string[]; edit: string[] } {
   const str = (v: unknown) => (typeof v === "string" && v ? v : null);
-  const view = [args.slug, args.template_slug, args.target_slug, args.superseded_by].map(str);
+  // superseded_by is stored as a plain slug and never looked up, so a
+  // missing one is accepted; a hidden one must be too.
+  const view = [args.slug, args.template_slug, args.target_slug].map(str);
   const edit: (string | null)[] = [];
 
   if (tool === "set_rules" && args.scope === "page") edit.push(str(args.scope_id));
@@ -86,22 +100,49 @@ export async function mcpPageDenial(
   if (!args || !userId) return null;
   const name = resolveToolName(tool);
   if (SELF_FILTERING_TOOLS.has(name)) return null;
-  const { view, edit } = pageSlugs(name, canonicalArgs(name, args));
+  const canon = canonicalArgs(name, args);
+  const { view, edit } = pageSlugs(name, canon);
   const slugs = [...new Set([...view, ...edit])];
   if (slugs.length === 0) return null;
 
-  const pages = await db.page.findMany({
+  const rows = await db.page.findMany({
     where: { orgId, slug: { in: slugs } },
     select: { id: true, orgId: true, slug: true, visibility: true, createdBy: true },
   });
+  const bySlug = new Map(rows.map((p) => [p.slug, p]));
+  const createArg = CREATE_SLUG_ARG[name];
+  const createSlug = createArg ? canon[createArg] : undefined;
 
-  for (const page of pages) {
+  // Visibility for every named page first, in argument order, so a call that
+  // names both a hidden page and a view-only one always gets the hidden
+  // page's answer, whatever order the rows come back in.
+  const checked = [];
+  for (const slug of slugs) {
+    const page = bySlug.get(slug);
+    if (!page) continue;
     // Any org role grants org-level visibility; MCP callers are org members.
     const access = await pageAccessFor(page, userId, "member");
-    if (!access) return `page not found: ${page.slug}`;
-    if (edit.includes(page.slug) && !pageEditable(page, access)) {
-      return `forbidden: you have view-only access to page ${page.slug}`;
-    }
+    if (!access) return hiddenAnswer(orgId, name, canon, slug, createSlug);
+    checked.push({ page, access });
+  }
+  for (const { page, access } of checked) {
+    if (edit.includes(page.slug) && !pageEditable(page, access)) return `${VIEW_ONLY_MESSAGE}: ${page.slug}`;
+    if (changesVisibility(name, canon, page, createSlug) && !ownerActionAllowed(page, access)) return OWNER_ONLY_MESSAGE;
   }
   return null;
+}
+
+/// What the tool itself says when the slug has no page, so a hidden page
+/// gets the same words.
+async function hiddenAnswer(orgId: string, tool: string, args: Record<string, unknown>, slug: string, createSlug: unknown): Promise<string> {
+  if (slug === createSlug) return slugInUseMessage(orgId, slug);
+  if (tool === "create_from_template" && slug === args.template_slug) return `template not found: ${slug}`;
+  return `page not found: ${slug}`;
+}
+
+/// write_page's visibility arg on an existing page; owner-only on a private
+/// page, like PATCH /api/pages.
+function changesVisibility(tool: string, args: Record<string, unknown>, page: { slug: string; visibility: string }, createSlug: unknown): boolean {
+  const vis = args.visibility;
+  return tool === "write_page" && page.slug === createSlug && typeof vis === "string" && vis !== "" && vis !== page.visibility;
 }

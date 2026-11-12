@@ -17,6 +17,7 @@ import { PageSettingsGeneral } from "@/components/page-settings-general";
 import { PageSettingsTags } from "@/components/page-settings-tags";
 import { PageSettingsMap } from "@/components/page-settings-map";
 import { getChart, getPageMapView } from "@/lib/chart";
+import { canOpenPage } from "@/lib/access";
 import { ContentRulesEditor } from "@/components/content-rules-editor";
 
 export async function generateMetadata({
@@ -42,6 +43,7 @@ export default async function PageSettingsView({
 
   const { slug } = await params;
 
+  if (!(await canOpenPage(ctx, slug))) notFound();
   const pageData = await readPage(ctx.orgId, slug, "latest");
   if (!pageData) notFound();
 
@@ -79,8 +81,8 @@ export default async function PageSettingsView({
   const pageTags: Array<{ term: string; kind: string; rel: string }> = [];
   const [concepts, mapView, chart, orgConcepts] = await Promise.all([
     getPageConcepts(pageRow.id),
-    getPageMapView(ctx.orgId, slug),
-    getChart(ctx.orgId, { includeHidden: true }),
+    getPageMapView(ctx.orgId, slug, ctx.userId),
+    getChart(ctx.orgId, { includeHidden: true, userId: ctx.userId }),
     db.concept.findMany({
       where: { pages: { some: { page: { orgId: ctx.orgId, status: "active" } } } },
       select: { displayName: true, kind: true },
