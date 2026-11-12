@@ -168,7 +168,7 @@ describe("createNode: the New top level content form", () => {
     expect(node.promoted).toBe(true);
     expect(node.children.map((c) => c.slug ?? c.url).sort()).toEqual(["https://app.hubspot.com/quotes/1", "renewal-email"]);
     expect(await testDb.page.count({ where: { orgId: org.id, slug: "renewal-pricing" } })).toBe(1);
-    await expect(createNode(org.id, org.slug, { title: "Renewal pricing" }, "tester", null)).rejects.toThrow(/already exists/);
+    await expect(createNode(org.id, org.slug, { title: "Renewal pricing" }, "tester", null)).rejects.toThrow(/is already in use; pick another/);
     // Existing page as the source: nothing new is created.
     const n2 = await createNode(org.id, org.slug, { title: "Renewal email", slug: "renewal-email" }, "tester", null);
     expect(n2.source?.slug).toBe("renewal-email");

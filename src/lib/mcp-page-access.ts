@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { slugInUseMessage } from "./slug-in-use";
 import { OWNER_ONLY_MESSAGE, ownerActionAllowed, pageAccessFor, pageEditable, VIEW_ONLY_MESSAGE } from "./access";
 import { resolveToolName, TOOL_PARAMS } from "./mcp-dispatch";
 
@@ -20,8 +21,8 @@ const PAGE_EDIT_TOOLS = new Set([
 const SELF_FILTERING_TOOLS = new Set(["list_rules", "validate_page", "get_related", "get_dependents", "map_dependencies"]);
 
 /// Tools that create a page at a new slug, and the arg naming it. A slug held
-/// by a page the caller can't see answers the same "page already exists" the
-/// tool gives for a visible one. The failure itself can't be hidden, since
+/// by a page the caller can't see answers with slugInUseMessage, the same
+/// words the tool gives for a visible one. The failure itself can't be hidden, since
 /// slugs are unique per org, but the message doesn't single out hidden pages.
 const CREATE_SLUG_ARG: Record<string, string> = {
   create_page: "slug",
@@ -121,7 +122,7 @@ export async function mcpPageDenial(
     if (!page) continue;
     // Any org role grants org-level visibility; MCP callers are org members.
     const access = await pageAccessFor(page, userId, "member");
-    if (!access) return hiddenAnswer(name, canon, slug, createSlug);
+    if (!access) return hiddenAnswer(orgId, name, canon, slug, createSlug);
     checked.push({ page, access });
   }
   for (const { page, access } of checked) {
@@ -133,8 +134,8 @@ export async function mcpPageDenial(
 
 /// What the tool itself says when the slug has no page, so a hidden page
 /// gets the same words.
-function hiddenAnswer(tool: string, args: Record<string, unknown>, slug: string, createSlug: unknown): string {
-  if (slug === createSlug) return `page already exists: ${slug}`;
+async function hiddenAnswer(orgId: string, tool: string, args: Record<string, unknown>, slug: string, createSlug: unknown): Promise<string> {
+  if (slug === createSlug) return slugInUseMessage(orgId, slug);
   if (tool === "create_from_template" && slug === args.template_slug) return `template not found: ${slug}`;
   return `page not found: ${slug}`;
 }

@@ -5,6 +5,7 @@
 // registered on the streamable-HTTP server.
 import { db } from "@/lib/db";
 import { folderUpdateDenial } from "@/lib/folder-access";
+import { slugInUseMessage } from "@/lib/slug-in-use";
 import { track } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
 import {
@@ -1060,7 +1061,7 @@ async function dispatchTool(
       const existing = await db.page.findUnique({
         where: { orgId_slug: { orgId, slug: args.slug } },
       });
-      if (existing) throw new Error(`page already exists: ${args.slug}`);
+      if (existing) throw new Error(await slugInUseMessage(orgId, args.slug));
       let cpPageRulesEarly: unknown;
       if (args.rules) {
         try { cpPageRulesEarly = JSON.parse(args.rules); } catch { throw new Error("rules must be valid JSON"); }
@@ -1672,7 +1673,7 @@ async function dispatchTool(
       }
 
       const existing = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: args.target_slug } } });
-      if (existing) throw new Error(`page already exists: ${args.target_slug}`);
+      if (existing) throw new Error(await slugInUseMessage(orgId, args.target_slug));
 
       const cftResult = await writePage(orgId, orgSlug, args.target_slug, interpolated, "agent");
       if (!cftResult.ok) throw new Error(cftResult.error);
