@@ -2,7 +2,7 @@ import { db } from "./db";
 import yaml from "js-yaml";
 import { readPageYaml, writePage } from "./pages";
 import { findConceptForTerm, normalizeTerm, UNREACHABLE_PREFIX } from "./concepts";
-import { editablePagesWhere, findPageFor, listPagesWhere } from "./access";
+import { editablePagesWhere, findPageFor, listPagesWhere, pageVisibilityWhere } from "./access";
 import type { Prisma } from "@/generated/prisma/client";
 
 /// Pages a chart read may show: the org's live pages, narrowed to what the
@@ -22,7 +22,9 @@ export async function visibleConcept(orgId: string, term: string, userId: string
   const concept = await findConceptForTerm(term, normalizeTerm(term));
   if (!concept) return null;
   const used = await db.concept.count({
-    where: { id: concept.id, OR: [{ pages: { some: { page: chartPages(orgId, userId) } } }, { externalEdges: { some: { asset: { orgId } } } }] },
+    // Archived pages count: their terms aren't secret, and promoting an
+    // archived page must still find the concept it just tagged.
+    where: { id: concept.id, OR: [{ pages: { some: { page: { orgId, ...pageVisibilityWhere(userId) } } } }, { externalEdges: { some: { asset: { orgId } } } }] },
   });
   return used > 0 ? concept : null;
 }

@@ -61,7 +61,9 @@ function canonicalArgs(tool: string, args: Record<string, unknown>): Record<stri
 
 function pageSlugs(tool: string, args: Record<string, unknown>): { view: string[]; edit: string[] } {
   const str = (v: unknown) => (typeof v === "string" && v ? v : null);
-  const view = [args.slug, args.template_slug, args.target_slug, args.superseded_by].map(str);
+  // superseded_by is stored as a plain slug and never looked up, so a
+  // missing one is accepted; a hidden one must be too.
+  const view = [args.slug, args.template_slug, args.target_slug].map(str);
   const edit: (string | null)[] = [];
 
   if (tool === "set_rules" && args.scope === "page") edit.push(str(args.scope_id));
@@ -119,7 +121,7 @@ export async function mcpPageDenial(
     if (!page) continue;
     // Any org role grants org-level visibility; MCP callers are org members.
     const access = await pageAccessFor(page, userId, "member");
-    if (!access) return slug === createSlug ? `page already exists: ${slug}` : `page not found: ${slug}`;
+    if (!access) return hiddenAnswer(name, canon, slug, createSlug);
     checked.push({ page, access });
   }
   for (const { page, access } of checked) {
@@ -127,6 +129,14 @@ export async function mcpPageDenial(
     if (changesVisibility(name, canon, page, createSlug) && !ownerActionAllowed(page, access)) return OWNER_ONLY_MESSAGE;
   }
   return null;
+}
+
+/// What the tool itself says when the slug has no page, so a hidden page
+/// gets the same words.
+function hiddenAnswer(tool: string, args: Record<string, unknown>, slug: string, createSlug: unknown): string {
+  if (slug === createSlug) return `page already exists: ${slug}`;
+  if (tool === "create_from_template" && slug === args.template_slug) return `template not found: ${slug}`;
+  return `page not found: ${slug}`;
 }
 
 /// write_page's visibility arg on an existing page; owner-only on a private

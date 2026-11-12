@@ -17,7 +17,7 @@ import {
   bumpViewCount,
   restorePageVersion,
 } from "@/lib/pages";
-import { checkFolderBoundary } from "@/lib/access";
+import { checkFolderBoundary, folderVisibilityBlocker } from "@/lib/access";
 import { resolveRules, detectFolderCycle } from "@/lib/content-rules";
 import {
   getPageConcepts,
@@ -334,16 +334,8 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
         if (wouldCycle) return { content: [{ type: "text", text: "Error: cannot reparent: would create a cycle" }], isError: true };
       }
       if (visibility) {
-        const pagesInFolder = await db.page.findMany({
-          where: { folderId: id },
-          select: { slug: true, visibility: true },
-        });
-        const violating = pagesInFolder.filter((p) => {
-          try { checkFolderBoundary(p.visibility ?? "org", visibility); return false; } catch { return true; }
-        });
-        if (violating.length > 0) {
-          return { content: [{ type: "text", text: `Error: cannot set folder to "${visibility}" — ${violating.length} page(s) have lower visibility: ${violating.map((p) => p.slug).join(", ")}` }], isError: true };
-        }
+        const blocker = await folderVisibilityBlocker(id, visibility, userId ?? null);
+        if (blocker) return { content: [{ type: "text", text: `Error: ${blocker}` }], isError: true };
       }
       const data: Record<string, unknown> = {};
       if (name !== undefined) data.name = name;

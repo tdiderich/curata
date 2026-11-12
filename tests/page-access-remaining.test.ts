@@ -39,7 +39,7 @@ import { GET as impactGET } from "@/app/api/chart/impact/route";
 import { POST as depMapPOST } from "@/app/api/dependents/map/route";
 import { POST as depVerifyPOST } from "@/app/api/dependents/verify/route";
 import { PATCH as pagesPATCH, DELETE as pagesDELETE } from "@/app/api/pages/route";
-import { DELETE as foldersDELETE } from "@/app/api/folders/route";
+import { DELETE as foldersDELETE, PATCH as foldersPATCH } from "@/app/api/folders/route";
 import { DELETE as qaDELETE } from "@/app/api/quick-actions/route";
 import { POST as bulkPOST } from "@/app/api/pages/bulk/route";
 import { POST as mcpPOST } from "@/app/api/mcp/route";
@@ -155,6 +155,11 @@ describe("content chart hides private pages", () => {
     expect((await getChartNode(orgId, "bob-only-term", "bob")).term).toBe("bob-only-term");
   });
 
+  it("promoting an archived page still works", async () => {
+    await page("old", "alice", "org", { status: "archived" });
+    expect((await promotePageToNode(orgId, "old", "alice", "alice")).term).toBe("old");
+  });
+
   it("re-pointing a source leaves pages the caller can't edit alone", async () => {
     const priv = await page("priv-src", "bob", "private");
     await upsertConcepts(priv.id, [{ term: "topic-x", rel: "asserts" }], "bob");
@@ -244,6 +249,23 @@ describe("folder delete", () => {
   });
 });
 
+describe("folder visibility change", () => {
+  it("names only the blocking pages the caller can see", async () => {
+    const folder = await testDb.folder.create({ data: { orgId, name: "Mine", visibility: "private", createdBy: "alice" } });
+    await page("bob-secret", "bob", "private", { folderId: folder.id });
+    as("alice", "member");
+    const res = await foldersPATCH(req("PATCH", "/api/folders", { id: folder.id, visibility: "org" }));
+    expect(res.status).toBe(400);
+    const { error } = await res.json();
+    expect(error).not.toContain("bob-secret");
+    expect(error).not.toMatch(/\d+ page/);
+    await page("alice-draft", "alice", "private", { folderId: folder.id });
+    const both = (await (await foldersPATCH(req("PATCH", "/api/folders", { id: folder.id, visibility: "org" }))).json()).error;
+    expect(both).toContain("1 page(s) have lower visibility: alice-draft");
+    expect(both).not.toContain("bob-secret");
+  });
+});
+
 describe("owner-only actions on private pages", () => {
   it("an editor share can edit, but not change visibility or delete", async () => {
     const priv = await page("priv", "bob", "private");
@@ -313,6 +335,9 @@ describe("MCP", () => {
     await page("aaa-hidden", "bob", "private");
     const viewOnly = await page("zzz-view", "bob", "private");
     await share(viewOnly.id, "alice", "viewer");
+    // Secondary page args answer in the tool's own words.
+    expect(await mcpPageDenial("create_from_template", { template_slug: "aaa-hidden", target_slug: "new-one" }, orgId, "alice")).toBe("template not found: aaa-hidden");
+    expect(await mcpPageDenial("flag_page", { slug: "zzz-view", action: "supersede", superseded_by: "aaa-hidden" }, orgId, "alice")).toBeNull();
     for (const slugs of [["zzz-view", "aaa-hidden"], ["aaa-hidden", "zzz-view"]]) {
       expect(await mcpPageDenial("patch_page", { slug: slugs[0], template_slug: slugs[1] }, orgId, "alice")).toBe("page not found: aaa-hidden");
     }

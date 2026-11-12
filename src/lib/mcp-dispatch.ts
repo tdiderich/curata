@@ -29,7 +29,7 @@ import { getChromium, previewUrl, screenshotPage, renderHtmlToPng } from "@/lib/
 import { validateContent, validateContentSplit, checkUnsupportedComponents, invalidContentMessage, type ShapeWarning } from "@/lib/kazam";
 import { resolveShapeRules, toKazamShapeRules, validateShapeRule } from "@/lib/shape-rules";
 import { renderComponentSlice, guidedComponents } from "@/lib/mcp-guidance";
-import { checkFolderBoundary, mcpDefaultVisibility, listPagesWhere, pageAccessFor } from "@/lib/access";
+import { checkFolderBoundary, mcpDefaultVisibility, listPagesWhere, pageAccessFor, folderVisibilityBlocker } from "@/lib/access";
 import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
 import { validateApprovalRule, canApprove, getApprovers, describeApprovalRule, makeApprovalRuleResolver, resolveEffectiveTrustMode } from "@/lib/approval";
 import type { Role } from "@/lib/permissions";
@@ -1004,18 +1004,8 @@ async function dispatchTool(
         throw new Error("visibility must be 'private' or 'org'");
       }
       if (args.visibility) {
-        const pagesInFolder = await db.page.findMany({
-          where: { folderId: args.id },
-          select: { slug: true, visibility: true },
-        });
-        const violating = pagesInFolder.filter((p) => {
-          try { checkFolderBoundary(p.visibility ?? "org", args.visibility); return false; } catch { return true; }
-        });
-        if (violating.length > 0) {
-          throw new Error(
-            `cannot set folder to "${args.visibility}" — ${violating.length} page(s) have lower visibility: ${violating.map((p) => p.slug).join(", ")}`
-          );
-        }
+        const blocker = await folderVisibilityBlocker(args.id, args.visibility, userId ?? null);
+        if (blocker) throw new Error(blocker);
       }
       let ufRulesParsed: Prisma.InputJsonValue | undefined;
       if (args.rules !== undefined) {

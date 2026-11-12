@@ -178,6 +178,37 @@ export async function findPageFor(
   return page;
 }
 
+/// Why a folder can't take a visibility: pages inside below the new minimum.
+/// Names only the pages the caller can see; someone else's private page is
+/// mentioned without slug or count, so the message doesn't reveal it. Null
+/// when nothing blocks the change.
+export async function folderVisibilityBlocker(
+  folderId: string,
+  target: string,
+  userId: string | null,
+  orgRole = "member"
+): Promise<string | null> {
+  const pages = await db.page.findMany({
+    where: { folderId },
+    select: { id: true, orgId: true, slug: true, visibility: true, createdBy: true },
+  });
+  const below = pages.filter((p) => {
+    try { checkFolderBoundary(p.visibility ?? "org", target); return false; } catch { return true; }
+  });
+  if (below.length === 0) return null;
+  const named: string[] = [];
+  let hidden = false;
+  for (const p of below) {
+    if (!userId || (await pageAccessFor(p, userId, orgRole))) named.push(p.slug);
+    else hidden = true;
+  }
+  const parts = [
+    named.length > 0 ? `${named.length} page(s) have lower visibility: ${named.join(", ")}` : null,
+    hidden ? "it holds private pages owned by someone else" : null,
+  ].filter(Boolean);
+  return `cannot set folder to "${target}" — ${parts.join("; ")}`;
+}
+
 /// For server components: true when the caller may open the page. A hidden
 /// page renders as not found, like the API.
 export async function canOpenPage(ctx: { orgId: string; userId: string; role: string }, slug: string): Promise<boolean> {

@@ -201,11 +201,12 @@ describe("MCP page access", () => {
 
     expect(await mcpPageDenial("read_page", { slug: "acc-page" }, org.id, "outsider")).toBe("page not found: acc-page");
     expect(await mcpPageDenial("export_report", { slugs: JSON.stringify(["acc-page"]) }, org.id, "outsider")).toBe("page not found: acc-page");
-    expect(await mcpPageDenial("create_from_template", { template_slug: "acc-page", target_slug: "new" }, org.id, "outsider")).toBe("page not found: acc-page");
+    expect(await mcpPageDenial("create_from_template", { template_slug: "acc-page", target_slug: "new" }, org.id, "outsider")).toBe("template not found: acc-page");
     expect(await mcpPageDenial("write_page", { slug: "brand-new" }, org.id, "outsider")).toBeNull();
     // camelCase aliases and slug lists are checked like the canonical args
-    expect(await mcpPageDenial("create_from_template", { templateSlug: "acc-page", target_slug: "new" }, org.id, "outsider")).toBe("page not found: acc-page");
-    expect(await mcpPageDenial("flag_page", { slug: "other", action: "supersede", supersededBy: "acc-page" }, org.id, "outsider")).toBe("page not found: acc-page");
+    expect(await mcpPageDenial("create_from_template", { templateSlug: "acc-page", target_slug: "new" }, org.id, "outsider")).toBe("template not found: acc-page");
+    // superseded_by is stored, never looked up: hidden passes like missing.
+    expect(await mcpPageDenial("flag_page", { slug: "other", action: "supersede", supersededBy: "acc-page" }, org.id, "outsider")).toBeNull();
     // map_dependencies reports a hidden slug under `missing`, like a typo, so
     // the transport check leaves it to the tool (see semantic-map-scope tests).
     expect(await mcpPageDenial("map_dependencies", { term: "t", asserts: "other, acc-page" }, org.id, "outsider")).toBeNull();
