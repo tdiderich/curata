@@ -2,6 +2,7 @@ import { db } from "./db";
 import yaml from "js-yaml";
 import { readPageYaml, writePage } from "./pages";
 import { findConceptForTerm, normalizeTerm, UNREACHABLE_PREFIX } from "./concepts";
+import { slugInUseMessage } from "./slug-in-use";
 import { editablePagesWhere, findPageFor, listPagesWhere, pageVisibilityWhere } from "./access";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -513,7 +514,7 @@ export async function createNode(orgId: string, orgSlug: string, input: CreateNo
     slug = norm(title).replace(/\//g, "-");
     if (!slug) throw new Error("title needs at least one letter or digit");
     const exists = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } }, select: { id: true } });
-    if (exists) throw new Error(`a page with slug ${slug} already exists; pick it as the source instead of creating a new one`);
+    if (exists) throw new Error(await slugInUseMessage(orgId, slug));
     const yaml = `title: ${JSON.stringify(title)}\nshell: document\ncomponents:\n  - type: markdown\n    body: |\n      Source of truth for ${title}. Everything under it on the content chart needs a look when this page changes.\n`;
     const res = await writePage(orgId, orgSlug, slug, yaml, createdBy);
     if (!res.ok) throw new Error(res.error);

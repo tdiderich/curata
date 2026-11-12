@@ -369,6 +369,7 @@ describe("MCP", () => {
 
     const content = "title: T\nshell: document\ncomponents: []\n";
     expect(await call("create_page", { slug: "priv", content }, "priv")).toEqual(await call("create_page", { slug: "visible", content }, "visible"));
+    expect((await call("create_page", { slug: "priv", content }, "priv"))[1]).toContain('slug \\"X\\" is already in use; pick another (e.g. \\"X-2\\")');
   });
 
   it("write_page can't change a private page's visibility through an editor share", async () => {

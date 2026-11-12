@@ -4,6 +4,7 @@ import yaml from "js-yaml";
 import { resolveOrg } from "@/lib/auth";
 import { can, VALID_PAGE_VISIBILITY } from "@/lib/permissions";
 import { db } from "@/lib/db";
+import { slugInUseMessage } from "@/lib/slug-in-use";
 import { writePageJson } from "@/lib/pages";
 import { getTemplateContent } from "@/lib/templates-server";
 import { PageAccessError, assertOwnerAction, assertPageEditable, checkFolderBoundary, getPageOrThrow } from "@/lib/access";
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
     });
     if (existing) {
       return NextResponse.json(
-        { error: "a page with this slug already exists" },
+        { error: await slugInUseMessage(ctx.orgId, slug) },
         { status: 409 }
       );
     }

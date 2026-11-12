@@ -211,8 +211,8 @@ describe("MCP page access", () => {
     // the transport check leaves it to the tool (see semantic-map-scope tests).
     expect(await mcpPageDenial("map_dependencies", { term: "t", asserts: "other, acc-page" }, org.id, "outsider")).toBeNull();
     // Creating at a hidden slug answers like creating at a visible one.
-    expect(await mcpPageDenial("create_page", { slug: "acc-page", content: "x" }, org.id, "outsider")).toBe("page already exists: acc-page");
-    expect(await mcpPageDenial("create_from_template", { template_slug: "missing-template", target_slug: "acc-page" }, org.id, "outsider")).toBe("page already exists: acc-page");
+    expect(await mcpPageDenial("create_page", { slug: "acc-page", content: "x" }, org.id, "outsider")).toBe('slug "acc-page" is already in use; pick another (e.g. "acc-page-2")');
+    expect(await mcpPageDenial("create_from_template", { template_slug: "missing-template", target_slug: "acc-page" }, org.id, "outsider")).toBe('slug "acc-page" is already in use; pick another (e.g. "acc-page-2")');
 
     expect(await mcpPageDenial("read_page", { slug: "acc-page" }, org.id, "viewer-user")).toBeNull();
     expect(await mcpPageDenial("patch_page", { slug: "acc-page" }, org.id, "viewer-user")).toContain("view-only");
