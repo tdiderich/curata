@@ -147,7 +147,7 @@ describe("concepts", () => {
       const page = await createTestPage(orgId, { slug: "vocab-page" });
       await upsertConcepts(page.id, [{ term: "acme", kind: "custom-kind" }], "agent");
 
-      const vocab = await getVocabulary();
+      const vocab = await getVocabulary(orgId);
       expect(vocab.kinds.slice(0, CONCEPT_KINDS.length)).toEqual([...CONCEPT_KINDS]);
       expect(vocab.kinds).toContain("custom-kind");
     });

@@ -2,6 +2,7 @@ import { db } from "./db";
 import { CONCEPT_KINDS } from "./concept-kinds";
 import { Prisma } from "@/generated/prisma/client";
 import { makeTrustModeResolver, type TrustMode } from "./approval";
+import { listPagesWhere } from "./access";
 
 /**
  * How a page relates to a concept. `references` is the untyped default and
@@ -311,19 +312,27 @@ export async function getPageLinks(
   }));
 }
 
+/**
+ * Concepts are global rows shared by every org, so vocabulary is scoped by
+ * the pages that carry them: only terms on pages this caller can see in this
+ * org, with usageCount counted over those pages. Without the scope this
+ * listed every org's tags.
+ */
 export async function getVocabulary(
-  kind?: string,
-  query?: string
+  orgId: string,
+  opts: { kind?: string; query?: string; userId?: string | null } = {}
 ): Promise<{
   concepts: Array<{ term: string; kind: string; usageCount: number }>;
   kinds: string[];
 }> {
-  const where: Record<string, unknown> = {};
-  if (kind) where.kind = kind;
-  if (query) where.normalizedName = { startsWith: normalizeTerm(query) };
+  const visible = { page: listPagesWhere(orgId, opts.userId ?? null) as Prisma.PageWhereInput };
+  const where: Prisma.ConceptWhereInput = { pages: { some: visible } };
+  if (opts.kind) where.kind = opts.kind;
+  if (opts.query) where.normalizedName = { startsWith: normalizeTerm(opts.query) };
 
   const concepts = await db.concept.findMany({
     where,
+    select: { displayName: true, kind: true, _count: { select: { pages: { where: visible } } } },
     orderBy: { usageCount: "desc" },
     take: 200,
   });
@@ -331,15 +340,13 @@ export async function getVocabulary(
   const allKinds = await db.concept.findMany({
     select: { kind: true },
     distinct: ["kind"],
-    where: { kind: { not: "" } },
+    where: { kind: { not: "" }, pages: { some: visible } },
   });
 
   return {
-    concepts: concepts.map((c) => ({
-      term: c.displayName,
-      kind: c.kind,
-      usageCount: c.usageCount,
-    })),
+    concepts: concepts
+      .map((c) => ({ term: c.displayName, kind: c.kind, usageCount: c._count.pages }))
+      .sort((a, b) => b.usageCount - a.usageCount),
     // Curated kinds first so agents converge on them; in-use extras follow.
     kinds: [...new Set([...CONCEPT_KINDS, ...allKinds.map((k) => k.kind)])],
   };
@@ -451,7 +458,15 @@ export async function getRelated(
   return { concepts: [], pages: [], links: [] };
 }
 
-export async function getSemanticMap(kind?: string): Promise<{
+/**
+ * Concept graph topology for one org, limited to pages this caller can see.
+ * Concepts and links are global tables, so every page edge is filtered by
+ * org and visibility here; without that this returned every org's pages.
+ */
+export async function getSemanticMap(
+  orgId: string,
+  opts: { kind?: string; userId?: string | null } = {}
+): Promise<{
   concepts: Array<{
     term: string;
     kind: string;
@@ -466,18 +481,20 @@ export async function getSemanticMap(kind?: string): Promise<{
     pagesWithoutConcepts: number;
   };
 }> {
-  const conceptWhere: Record<string, unknown> = {};
-  if (kind) conceptWhere.kind = kind;
+  const pageWhere = listPagesWhere(orgId, opts.userId ?? null) as Prisma.PageWhereInput;
+  const conceptWhere: Prisma.ConceptWhereInput = { pages: { some: { page: pageWhere } } };
+  if (opts.kind) conceptWhere.kind = opts.kind;
 
   const concepts = await db.concept.findMany({
     where: conceptWhere,
     include: {
-      pages: { include: { page: { select: { slug: true, title: true } } } },
+      pages: { where: { page: pageWhere }, include: { page: { select: { slug: true, title: true } } } },
     },
     orderBy: { usageCount: "desc" },
   });
 
   const allLinks = await db.pageLink.findMany({
+    where: { fromPage: pageWhere, toPage: pageWhere },
     include: {
       fromPage: { select: { slug: true } },
       toPage: { select: { slug: true } },
@@ -488,14 +505,13 @@ export async function getSemanticMap(kind?: string): Promise<{
     concepts.flatMap((c) => c.pages.map((pc) => pc.page.slug))
   ).size;
 
-
-  const totalPages = await db.page.count();
+  const totalPages = await db.page.count({ where: pageWhere });
 
   return {
     concepts: concepts.map((c) => ({
       term: c.displayName,
       kind: c.kind,
-      usageCount: c.usageCount,
+      usageCount: c.pages.length,
       pages: c.pages.map((pc) => ({ slug: pc.page.slug, title: pc.page.title, rel: pc.rel })),
     })),
     links: allLinks.map((l) => ({

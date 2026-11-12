@@ -212,7 +212,7 @@ export async function findCaptureDedupCandidates(
   }
 
   try {
-    const { concepts } = await getVocabulary();
+    const { concepts } = await getVocabulary(orgId, { userId });
     const matchedTerms = concepts.filter((c) => wordMatch(content, c.term)).slice(0, MAX_CONCEPT_TERMS);
     for (const c of matchedTerms) {
       const related = await getRelated(orgId, { term: c.term });

@@ -1799,7 +1799,7 @@ async function dispatchTool(
     }
 
     case "get_vocabulary": {
-      return getVocabulary(args.kind || undefined, args.query || undefined);
+      return getVocabulary(orgId, { kind: args.kind || undefined, query: args.query || undefined, userId });
     }
 
     case "get_related": {
@@ -1920,7 +1920,7 @@ async function dispatchTool(
     }
 
     case "get_semantic_map": {
-      return getSemanticMap(args.kind || undefined);
+      return getSemanticMap(orgId, { kind: args.kind || undefined, userId });
     }
 
     case "export_page": {

@@ -457,7 +457,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   server.tool("get_vocabulary", "Get all concept terms in the knowledge graph, optionally filtered by kind or search query",
     { kind: z.string().optional(), query: z.string().optional() },
     async ({ kind, query }) => {
-      const result = await getVocabulary(kind, query);
+      const result = await getVocabulary(orgId, { kind, query, userId });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
@@ -599,7 +599,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   server.tool("get_semantic_map", "Get full knowledge graph topology — all concepts with their pages and all cross-page links",
     { kind: z.string().optional() },
     async ({ kind }) => {
-      const result = await getSemanticMap(kind);
+      const result = await getSemanticMap(orgId, { kind, userId });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
