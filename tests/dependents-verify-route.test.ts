@@ -9,7 +9,10 @@ vi.mock("@/lib/db", async () => {
 });
 
 const resolveOrgMock = vi.fn();
-vi.mock("@/lib/auth", () => ({ resolveOrg: () => resolveOrgMock() }));
+vi.mock("@/lib/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/auth")>()),
+  resolveOrg: () => resolveOrgMock(),
+}));
 
 import { POST } from "@/app/api/dependents/verify/route";
 import { upsertConcepts, upsertExternalDependents, getDependents } from "@/lib/concepts";

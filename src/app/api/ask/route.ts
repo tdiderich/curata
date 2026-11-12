@@ -14,13 +14,13 @@ export async function GET(req: NextRequest) {
   if (action === "vocabulary") {
     const kind = searchParams.get("kind") ?? undefined;
     const q = searchParams.get("q") ?? undefined;
-    const result = await getVocabulary(kind, q);
+    const result = await getVocabulary(ctx.orgId, { kind, query: q, userId: ctx.userId });
     return NextResponse.json(result);
   }
 
   const term = searchParams.get("term");
   if (!term) return NextResponse.json({ error: "term required" }, { status: 400 });
 
-  const result = await getRelated(ctx.orgId, { term });
+  const result = await getRelated(ctx.orgId, { term, userId: ctx.userId });
   return NextResponse.json(result);
 }

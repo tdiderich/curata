@@ -2,6 +2,23 @@ import { db } from "./db";
 import { CONCEPT_KINDS } from "./concept-kinds";
 import { Prisma } from "@/generated/prisma/client";
 import { makeTrustModeResolver, type TrustMode } from "./approval";
+import { listPagesWhere, pageAccessFor } from "./access";
+
+/// Scope for every page edge a graph read returns: the caller's org, not
+/// archived, and visible to the caller (listPagesWhere). Concept and PageLink
+/// rows are global, so any read that skips this leaks other orgs' pages.
+function visiblePages(orgId: string, userId?: string | null): Prisma.PageWhereInput {
+  return listPagesWhere(orgId, userId ?? null) as Prisma.PageWhereInput;
+}
+
+/// A page row the caller named directly: hidden reads the same as missing.
+async function canSeePage(
+  page: { id: string; orgId: string; slug: string; visibility: string; createdBy: string },
+  userId?: string | null
+): Promise<boolean> {
+  if (!userId) return true;
+  return (await pageAccessFor(page, userId, "member")) !== null;
+}
 
 /**
  * How a page relates to a concept. `references` is the untyped default and
@@ -311,35 +328,41 @@ export async function getPageLinks(
   }));
 }
 
+/**
+ * Concepts are global rows shared by every org, so vocabulary is scoped by
+ * the pages that carry them: only terms on pages this caller can see in this
+ * org, with usageCount counted over those pages. Without the scope this
+ * listed every org's tags.
+ */
 export async function getVocabulary(
-  kind?: string,
-  query?: string
+  orgId: string,
+  opts: { kind?: string; query?: string; userId?: string | null } = {}
 ): Promise<{
   concepts: Array<{ term: string; kind: string; usageCount: number }>;
   kinds: string[];
 }> {
-  const where: Record<string, unknown> = {};
-  if (kind) where.kind = kind;
-  if (query) where.normalizedName = { startsWith: normalizeTerm(query) };
+  const visible = { page: visiblePages(orgId, opts.userId) };
+  const where: Prisma.ConceptWhereInput = { pages: { some: visible } };
+  if (opts.kind) where.kind = opts.kind;
+  if (opts.query) where.normalizedName = { startsWith: normalizeTerm(opts.query) };
 
   const concepts = await db.concept.findMany({
     where,
-    orderBy: { usageCount: "desc" },
-    take: 200,
+    select: { displayName: true, kind: true, _count: { select: { pages: { where: visible } } } },
   });
 
   const allKinds = await db.concept.findMany({
     select: { kind: true },
     distinct: ["kind"],
-    where: { kind: { not: "" } },
+    where: { kind: { not: "" }, pages: { some: visible } },
   });
 
   return {
-    concepts: concepts.map((c) => ({
-      term: c.displayName,
-      kind: c.kind,
-      usageCount: c.usageCount,
-    })),
+    concepts: concepts
+      .map((c) => ({ term: c.displayName, kind: c.kind, usageCount: c._count.pages }))
+      // Sort by this org's count, not the global one, then cap.
+      .sort((a, b) => b.usageCount - a.usageCount)
+      .slice(0, 200),
     // Curated kinds first so agents converge on them; in-use extras follow.
     kinds: [...new Set([...CONCEPT_KINDS, ...allKinds.map((k) => k.kind)])],
   };
@@ -347,31 +370,32 @@ export async function getVocabulary(
 
 export async function getRelated(
   orgId: string,
-  opts: { term?: string; slug?: string }
+  opts: { term?: string; slug?: string; userId?: string | null }
 ): Promise<{
   concepts: Array<{ term: string; kind: string; usageCount: number; rel?: string }>;
   pages: Array<{ slug: string; title: string; sharedConcepts: string[]; rel?: string }>;
   links: Array<{ from: string; to: string; rel: string }>;
 }> {
+  const empty = { concepts: [], pages: [], links: [] };
+  const pageWhere = visiblePages(orgId, opts.userId);
+
   if (opts.term) {
     const normalized = normalizeTerm(opts.term);
     const concept = await db.concept.findUnique({
       where: { normalizedName: normalized },
       include: {
-        // Concepts are global, so scope the page fan-out to the caller's org
-        // and drop archived pages.
-        pages: {
-          where: { page: { orgId, status: { not: "archived" } } },
-          include: { page: true },
-        },
+        // Concepts are global: only this org's pages the caller can see.
+        pages: { where: { page: pageWhere }, include: { page: true } },
       },
     });
 
-    if (!concept) return { concepts: [], pages: [], links: [] };
+    // A concept no visible page here carries reads as unknown, so another
+    // org's tag names don't show through.
+    if (!concept || concept.pages.length === 0) return empty;
 
     return {
       concepts: [
-        { term: concept.displayName, kind: concept.kind, usageCount: concept.usageCount },
+        { term: concept.displayName, kind: concept.kind, usageCount: concept.pages.length },
       ],
       pages: concept.pages.map((pc) => ({
         slug: pc.page.slug,
@@ -387,7 +411,7 @@ export async function getRelated(
     const page = await db.page.findUnique({
       where: { orgId_slug: { orgId, slug: opts.slug } },
     });
-    if (!page) return { concepts: [], pages: [], links: [] };
+    if (!page || !(await canSeePage(page, opts.userId))) return empty;
 
     const pageConcepts = await db.pageConcept.findMany({
       where: { pageId: page.id },
@@ -396,17 +420,21 @@ export async function getRelated(
 
     const conceptIds = pageConcepts.map((pc) => pc.conceptId);
 
-    const relatedPageConcepts =
+    const [relatedPageConcepts, counts] =
       conceptIds.length > 0
-        ? await db.pageConcept.findMany({
-            where: {
-              conceptId: { in: conceptIds },
-              pageId: { not: page.id },
-              page: { orgId, status: { not: "archived" } },
-            },
-            include: { page: true, concept: true },
-          })
-        : [];
+        ? await Promise.all([
+            db.pageConcept.findMany({
+              where: { conceptId: { in: conceptIds }, pageId: { not: page.id }, page: pageWhere },
+              include: { page: true, concept: true },
+            }),
+            db.pageConcept.groupBy({
+              by: ["conceptId"],
+              where: { conceptId: { in: conceptIds }, page: pageWhere },
+              _count: { _all: true },
+            }),
+          ])
+        : [[], []];
+    const countBy = new Map(counts.map((c) => [c.conceptId, c._count._all]));
 
     const pageMap = new Map<string, { slug: string; title: string; concepts: Set<string> }>();
     for (const rpc of relatedPageConcepts) {
@@ -420,8 +448,8 @@ export async function getRelated(
     const pageLinks = await db.pageLink.findMany({
       where: {
         OR: [{ fromPageId: page.id }, { toPageId: page.id }],
-        fromPage: { status: { not: "archived" } },
-        toPage: { status: { not: "archived" } },
+        fromPage: pageWhere,
+        toPage: pageWhere,
       },
       include: { fromPage: true, toPage: true },
     });
@@ -430,7 +458,7 @@ export async function getRelated(
       concepts: pageConcepts.map((pc) => ({
         term: pc.concept.displayName,
         kind: pc.concept.kind,
-        usageCount: pc.concept.usageCount,
+        usageCount: countBy.get(pc.conceptId) ?? 0,
         rel: pc.rel,
       })),
       pages: Array.from(pageMap.values())
@@ -448,10 +476,18 @@ export async function getRelated(
     };
   }
 
-  return { concepts: [], pages: [], links: [] };
+  return empty;
 }
 
-export async function getSemanticMap(kind?: string): Promise<{
+/**
+ * Concept graph topology for one org, limited to pages this caller can see.
+ * Concepts and links are global tables, so every page edge is filtered by
+ * org and visibility here; without that this returned every org's pages.
+ */
+export async function getSemanticMap(
+  orgId: string,
+  opts: { kind?: string; userId?: string | null } = {}
+): Promise<{
   concepts: Array<{
     term: string;
     kind: string;
@@ -466,18 +502,20 @@ export async function getSemanticMap(kind?: string): Promise<{
     pagesWithoutConcepts: number;
   };
 }> {
-  const conceptWhere: Record<string, unknown> = {};
-  if (kind) conceptWhere.kind = kind;
+  const pageWhere = visiblePages(orgId, opts.userId);
+  const conceptWhere: Prisma.ConceptWhereInput = { pages: { some: { page: pageWhere } } };
+  if (opts.kind) conceptWhere.kind = opts.kind;
 
   const concepts = await db.concept.findMany({
     where: conceptWhere,
     include: {
-      pages: { include: { page: { select: { slug: true, title: true } } } },
+      pages: { where: { page: pageWhere }, include: { page: { select: { slug: true, title: true } } } },
     },
     orderBy: { usageCount: "desc" },
   });
 
   const allLinks = await db.pageLink.findMany({
+    where: { fromPage: pageWhere, toPage: pageWhere },
     include: {
       fromPage: { select: { slug: true } },
       toPage: { select: { slug: true } },
@@ -488,14 +526,13 @@ export async function getSemanticMap(kind?: string): Promise<{
     concepts.flatMap((c) => c.pages.map((pc) => pc.page.slug))
   ).size;
 
-
-  const totalPages = await db.page.count();
+  const totalPages = await db.page.count({ where: pageWhere });
 
   return {
     concepts: concepts.map((c) => ({
       term: c.displayName,
       kind: c.kind,
-      usageCount: c.usageCount,
+      usageCount: c.pages.length,
       pages: c.pages.map((pc) => ({ slug: pc.page.slug, title: pc.page.title, rel: pc.rel })),
     })),
     links: allLinks.map((l) => ({
@@ -980,10 +1017,10 @@ export async function mapDependencies(
  */
 export async function getDependents(
   orgId: string,
-  opts: { slug?: string; term?: string; rel?: ConceptRel }
+  opts: { slug?: string; term?: string; rel?: ConceptRel; userId?: string | null }
 ): Promise<DependentsResult> {
   const empty: DependentsResult = { concepts: [], asserters: [], dependents: [], instances: [], asserterGaps: [], external: [], summary: summarize([], []) };
-  const pageScope = { orgId, status: { not: "archived" } };
+  const pageScope = visiblePages(orgId, opts.userId);
 
   const [trustFolders, trustOrg] = await Promise.all([
     db.folder.findMany({ where: { orgId }, select: { id: true, parentId: true, name: true, rules: true } }),
@@ -1022,7 +1059,12 @@ export async function getDependents(
 
   if (opts.term) {
     const normalized = normalizeTerm(opts.term);
-    const concept = await findConceptForTerm(opts.term, normalized);
+    const found = await findConceptForTerm(opts.term, normalized);
+    // Concepts are global. One that nothing in this org (that the caller can
+    // see) carries reads as unknown, so other orgs' tag names don't show.
+    const concept = found && (await db.concept.count({
+      where: { id: found.id, OR: [{ pages: { some: { page: pageScope } } }, { externalEdges: { some: { asset: { orgId } } } }] },
+    })) > 0 ? found : null;
     if (!concept) {
       // An invented term used to come back as an empty graph, indistinguishable
       // from "nothing depends on this". Fail loudly and point at what exists.
@@ -1031,7 +1073,7 @@ export async function getDependents(
       const near = tokens.length === 0 ? [] : await db.concept.findMany({
         where: {
           OR: tokens.map((t) => ({ normalizedName: { contains: t } })),
-          pages: { some: { page: { orgId } } },
+          pages: { some: { page: pageScope } },
         },
         select: { normalizedName: true },
         orderBy: { usageCount: "desc" },
@@ -1055,7 +1097,7 @@ export async function getDependents(
     ]);
 
     return {
-      concept: { term: concept.displayName, kind: concept.kind, usageCount: concept.usageCount },
+      concept: { term: concept.displayName, kind: concept.kind, usageCount: await db.pageConcept.count({ where: { conceptId: concept.id, page: pageScope } }) },
       concepts: [],
       asserters,
       dependents,
@@ -1069,9 +1111,9 @@ export async function getDependents(
   if (opts.slug) {
     const page = await db.page.findUnique({
       where: { orgId_slug: { orgId, slug: opts.slug } },
-      select: { id: true, slug: true, title: true },
+      select: { id: true, orgId: true, slug: true, title: true, visibility: true, createdBy: true },
     });
-    if (!page) throw new Error(`page not found: ${opts.slug}. list_pages or search_pages to find the slug.`);
+    if (!page || !(await canSeePage(page, opts.userId))) throw new Error(`page not found: ${opts.slug}. list_pages or search_pages to find the slug.`);
 
     const own = await db.pageConcept.findMany({
       where: { pageId: page.id },

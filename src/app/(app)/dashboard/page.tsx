@@ -55,7 +55,7 @@ export default async function DashboardPage() {
       };
 
   const [vocab, rawFolders, rawPages, org, qaFolder] = await Promise.all([
-    getVocabulary(),
+    getVocabulary(ctx.orgId, { userId: ctx.userId }),
     db.folder.findMany({
       where: folderVisFilter,
       orderBy: { name: "asc" },

@@ -457,14 +457,14 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   server.tool("get_vocabulary", "Get all concept terms in the knowledge graph, optionally filtered by kind or search query",
     { kind: z.string().optional(), query: z.string().optional() },
     async ({ kind, query }) => {
-      const result = await getVocabulary(kind, query);
+      const result = await getVocabulary(orgId, { kind, query, userId });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
   server.tool("get_related", "Get pages and concepts related to a term, tag, or page slug. Use to pull everything under a brain-map tag, or to check for existing coverage before creating a page",
     { term: z.string().optional(), slug: z.string().optional() },
     async ({ term, slug }) => {
-      const result = await getRelated(orgId, { term, slug });
+      const result = await getRelated(orgId, { term, slug, userId });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
@@ -508,7 +508,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     { slug: z.string().optional().describe("Page slug. Returns what this page depends on (asserters), what depends on it, and its template instances"), term: z.string().optional().describe("Concept term, like pricing/tier-2. Returns asserters, dependents, and instances of the concept"), rel: z.enum(CONCEPT_RELS).optional().describe("Term mode only: restrict to one relation") },
     async ({ slug, term, rel }) => {
       if (!slug && !term) throw new Error("slug or term is required");
-      const result = await getDependents(orgId, { slug, term, rel });
+      const result = await getDependents(orgId, { slug, term, rel, userId });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
@@ -599,7 +599,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   server.tool("get_semantic_map", "Get full knowledge graph topology — all concepts with their pages and all cross-page links",
     { kind: z.string().optional() },
     async ({ kind }) => {
-      const result = await getSemanticMap(kind);
+      const result = await getSemanticMap(orgId, { kind, userId });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 

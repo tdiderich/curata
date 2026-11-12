@@ -1799,13 +1799,14 @@ async function dispatchTool(
     }
 
     case "get_vocabulary": {
-      return getVocabulary(args.kind || undefined, args.query || undefined);
+      return getVocabulary(orgId, { kind: args.kind || undefined, query: args.query || undefined, userId });
     }
 
     case "get_related": {
       return getRelated(orgId, {
         term: args.term || undefined,
         slug: args.slug || undefined,
+        userId,
       });
     }
 
@@ -1916,11 +1917,12 @@ async function dispatchTool(
         slug: args.slug || undefined,
         term: args.term || undefined,
         rel: args.rel ? (args.rel as ConceptRel) : undefined,
+        userId,
       });
     }
 
     case "get_semantic_map": {
-      return getSemanticMap(args.kind || undefined);
+      return getSemanticMap(orgId, { kind: args.kind || undefined, userId });
     }
 
     case "export_page": {
