@@ -4,6 +4,8 @@ import { z } from "zod";
 import { resolveOrgFromApiKey } from "@/lib/auth";
 import { requestOrigin } from "@/lib/request-origin";
 import { db } from "@/lib/db";
+import { folderUpdateDenial } from "@/lib/folder-access";
+import { isOrgManager } from "@/lib/groups";
 import { logAudit } from "@/lib/audit";
 import {
   listPages,
@@ -17,8 +19,8 @@ import {
   bumpViewCount,
   restorePageVersion,
 } from "@/lib/pages";
-import { checkFolderBoundary, folderVisibilityBlocker } from "@/lib/access";
-import { resolveRules, detectFolderCycle } from "@/lib/content-rules";
+import { checkFolderBoundary } from "@/lib/access";
+import { resolveRules } from "@/lib/content-rules";
 import {
   getPageConcepts,
   getPageLinks,
@@ -325,18 +327,9 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   server.tool("update_folder", "Rename, reparent, or change visibility of a folder",
     { id: z.string(), name: z.string().optional(), parent_id: z.string().nullable().optional(), visibility: z.enum(["org", "private"]).optional() },
     async ({ id, name, parent_id, visibility }) => {
-      const folder = await db.folder.findFirst({ where: { id, orgId } });
-      if (!folder) return { content: [{ type: "text", text: `Error: folder not found: ${id}` }], isError: true };
-      if (parent_id) {
-        const parent = await db.folder.findFirst({ where: { id: parent_id, orgId } });
-        if (!parent) return { content: [{ type: "text", text: `Error: parent folder not found: ${parent_id}` }], isError: true };
-        const wouldCycle = await detectFolderCycle(orgId, id, parent_id);
-        if (wouldCycle) return { content: [{ type: "text", text: "Error: cannot reparent: would create a cycle" }], isError: true };
-      }
-      if (visibility) {
-        const blocker = await folderVisibilityBlocker(id, visibility, userId ?? null);
-        if (blocker) return { content: [{ type: "text", text: `Error: ${blocker}` }], isError: true };
-      }
+      const denied = await folderUpdateDenial(orgId, id, userId ?? null, await isOrgManager(orgId, userId), { parentId: parent_id, visibility });
+      if (denied) return { content: [{ type: "text", text: `Error: ${denied.error}` }], isError: true };
+      const folder = (await db.folder.findFirst({ where: { id, orgId }, select: { name: true } }))!;
       const data: Record<string, unknown> = {};
       if (name !== undefined) data.name = name;
       if (parent_id !== undefined) data.parentId = parent_id;

@@ -4,6 +4,7 @@
 // tests/mcp-tool-parity.test.ts enforces that every tool listed here is
 // registered on the streamable-HTTP server.
 import { db } from "@/lib/db";
+import { folderUpdateDenial } from "@/lib/folder-access";
 import { track } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
 import {
@@ -29,8 +30,8 @@ import { getChromium, previewUrl, screenshotPage, renderHtmlToPng } from "@/lib/
 import { validateContent, validateContentSplit, checkUnsupportedComponents, invalidContentMessage, type ShapeWarning } from "@/lib/kazam";
 import { resolveShapeRules, toKazamShapeRules, validateShapeRule } from "@/lib/shape-rules";
 import { renderComponentSlice, guidedComponents } from "@/lib/mcp-guidance";
-import { checkFolderBoundary, mcpDefaultVisibility, listPagesWhere, pageAccessFor, folderVisibilityBlocker } from "@/lib/access";
-import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
+import { checkFolderBoundary, mcpDefaultVisibility, listPagesWhere, pageAccessFor } from "@/lib/access";
+import { resolveRules, validateContentRules } from "@/lib/content-rules";
 import { validateApprovalRule, canApprove, getApprovers, describeApprovalRule, makeApprovalRuleResolver, resolveEffectiveTrustMode } from "@/lib/approval";
 import type { Role } from "@/lib/permissions";
 import { resolveRequiredComponentsRules, validateRequiredComponents, validateRequiredComponentsRule, ensureDefaultRequiredComponentsRules } from "@/lib/required-components";
@@ -992,21 +993,12 @@ async function dispatchTool(
 
     case "update_folder": {
       if (!args.id) throw new Error("id is required");
-      const ufFolder = await db.folder.findFirst({ where: { id: args.id, orgId } });
-      if (!ufFolder) throw new Error(`folder not found: ${args.id}`);
-      if (args.parent_id) {
-        const parent = await db.folder.findFirst({ where: { id: args.parent_id, orgId } });
-        if (!parent) throw new Error(`parent folder not found: ${args.parent_id}`);
-        const wouldCycle = await detectFolderCycle(orgId, args.id, args.parent_id);
-        if (wouldCycle) throw new Error("cannot reparent: would create a cycle");
-      }
-      if (args.visibility && args.visibility !== "private" && args.visibility !== "org") {
-        throw new Error("visibility must be 'private' or 'org'");
-      }
-      if (args.visibility) {
-        const blocker = await folderVisibilityBlocker(args.id, args.visibility, userId ?? null);
-        if (blocker) throw new Error(blocker);
-      }
+      const ufDenied = await folderUpdateDenial(orgId, args.id, userId ?? null, await isOrgManager(orgId, userId), {
+        parentId: args.parent_id || undefined,
+        visibility: args.visibility || undefined,
+        rules: args.rules !== undefined,
+      });
+      if (ufDenied) throw new Error(ufDenied.error);
       let ufRulesParsed: Prisma.InputJsonValue | undefined;
       if (args.rules !== undefined) {
         try { ufRulesParsed = JSON.parse(args.rules) as Prisma.InputJsonValue; } catch { throw new Error("rules must be valid JSON"); }

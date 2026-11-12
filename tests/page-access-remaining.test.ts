@@ -44,6 +44,7 @@ import { DELETE as qaDELETE } from "@/app/api/quick-actions/route";
 import { POST as bulkPOST } from "@/app/api/pages/bulk/route";
 import { POST as mcpPOST } from "@/app/api/mcp/route";
 import { mcpPageDenial } from "@/lib/mcp-page-access";
+import { dispatch } from "@/lib/mcp-dispatch";
 import { getChart, getChartNode, getNeedsLook, promotePageToNode, setChartNode } from "@/lib/chart";
 import { addScopeItem } from "@/lib/scope";
 import { upsertConcepts } from "@/lib/concepts";
@@ -263,6 +264,53 @@ describe("folder visibility change", () => {
     const both = (await (await foldersPATCH(req("PATCH", "/api/folders", { id: folder.id, visibility: "org" }))).json()).error;
     expect(both).toContain("1 page(s) have lower visibility: alice-draft");
     expect(both).not.toContain("bob-secret");
+  });
+});
+
+describe("folder updates: web and MCP share one check", () => {
+  async function folders() {
+    const bobs = await testDb.folder.create({ data: { orgId, name: "Bob private", visibility: "private", createdBy: "bob" } });
+    const shared = await testDb.folder.create({ data: { orgId, name: "Team", visibility: "org", createdBy: "bob" } });
+    const stock = await testDb.folder.create({ data: { orgId, name: "Skills", visibility: "org", createdBy: "system", locked: true } });
+    const other = await createTestOrg({ slug: "rest-folder-other" });
+    const foreign = await testDb.folder.create({ data: { orgId: other.id, name: "Elsewhere", visibility: "org", createdBy: "x" } });
+    await testDb.orgMember.create({ data: { orgId, userId: "boss", role: "admin" } });
+    return { bobs, shared, stock, foreign };
+  }
+  const mcp = (args: Record<string, string>, userId: string) =>
+    dispatch("update_folder", args, orgId, "rest-org", userId, userId).then(() => "ok", (e: Error) => e.message);
+
+  it("MCP update_folder: hidden, locked, visibility, rules and parent", async () => {
+    const { bobs, shared, stock, foreign } = await folders();
+    // Someone else's private folder reads as missing, for members and admins.
+    expect(await mcp({ id: bobs.id, name: "pwned" }, "alice")).toBe(`folder not found: ${bobs.id}`);
+    expect(await mcp({ id: "nope", name: "x" }, "alice")).toBe("folder not found: nope");
+    expect(await mcp({ id: bobs.id, name: "pwned" }, "boss")).toBe(`folder not found: ${bobs.id}`);
+    expect(await mcp({ id: stock.id, name: "x" }, "boss")).toBe("stock folders cannot be modified");
+    expect(await mcp({ id: shared.id, visibility: "private" }, "alice")).toMatch(/only owner\/admin or creator/);
+    expect(await mcp({ id: shared.id, rules: "[]" }, "alice")).toMatch(/only owner\/admin can set folder rules/);
+    expect(await mcp({ id: shared.id, parent_id: bobs.id }, "alice")).toBe(`parent folder not found: ${bobs.id}`);
+    expect(await mcp({ id: shared.id, parent_id: foreign.id }, "alice")).toBe(`parent folder not found: ${foreign.id}`);
+    expect((await testDb.folder.findUniqueOrThrow({ where: { id: bobs.id } })).name).toBe("Bob private");
+
+    // What's allowed still works.
+    expect(await mcp({ id: shared.id, name: "Team 2" }, "alice")).toBe("ok");
+    expect(await mcp({ id: shared.id, visibility: "private" }, "bob")).toBe("ok");
+    expect(await mcp({ id: bobs.id, name: "Mine" }, "bob")).toBe("ok");
+  });
+
+  it("PATCH /api/folders gets the same answers", async () => {
+    const { bobs, stock, foreign, shared } = await folders();
+    as("alice", "member");
+    const patch = async (body: Record<string, unknown>) => {
+      const res = await foldersPATCH(req("PATCH", "/api/folders", body));
+      return [res.status, (await res.json()).error];
+    };
+    expect(await patch({ id: bobs.id, name: "pwned" })).toEqual([404, `folder not found: ${bobs.id}`]);
+    expect(await patch({ id: stock.id, name: "x" })).toEqual([403, "stock folders cannot be modified"]);
+    expect(await patch({ id: shared.id, parentId: foreign.id })).toEqual([404, `parent folder not found: ${foreign.id}`]);
+    expect(await patch({ id: shared.id, parentId: bobs.id })).toEqual([404, `parent folder not found: ${bobs.id}`]);
+    expect((await foldersPATCH(req("PATCH", "/api/folders", { id: shared.id, name: "Renamed" }))).status).toBe(200);
   });
 });
 
