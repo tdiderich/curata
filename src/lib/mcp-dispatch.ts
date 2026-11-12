@@ -1168,7 +1168,7 @@ async function dispatchTool(
         actorId,
         metadata: { slug: args.slug, folderId: args.folder_id },
       });
-      const cpImpact = await getPageImpact(orgId, args.slug);
+      const cpImpact = await getPageImpact(orgId, args.slug, userId);
       if (cpImpact.text) cpResult.impact = cpImpact;
       cpResult.trust = await trustSummary(orgId, args.slug);
       return cpResult;
@@ -1356,7 +1356,7 @@ async function dispatchTool(
           matches: w.matches,
         }));
       }
-      const wpImpact = await getPageImpact(orgId, args.slug);
+      const wpImpact = await getPageImpact(orgId, args.slug, userId);
       if (wpImpact.text) wpResult.impact = wpImpact;
       wpResult.trust = await trustSummary(orgId, args.slug);
       return wpResult;
@@ -1566,7 +1566,7 @@ async function dispatchTool(
         metadata: { slug: args.slug, operationCount: operations.length },
       });
       const ppResult: Record<string, unknown> = withShapeWarnings({ ...patchResult }, patchValidation.warnings);
-      const ppImpact = await getPageImpact(orgId, args.slug);
+      const ppImpact = await getPageImpact(orgId, args.slug, userId);
       if (ppImpact.text) ppResult.impact = ppImpact;
       ppResult.trust = await trustSummary(orgId, args.slug);
       if (ppRuleCheck.warnings.length > 0) {
@@ -1836,7 +1836,7 @@ async function dispatchTool(
         depends: slugList("depends"),
         references: slugList("references"),
         external,
-      }, userId || "agent");
+      }, userId || "agent", userId);
       logAudit({ orgId, action: "dependencies.map", resourceType: "concept", resourceId: mapped.term, actorType: "apikey", actorId, metadata: { tagged: mapped.tagged.length, external: mapped.external.length, missing: mapped.missing } });
       return mapped;
     }
@@ -1845,26 +1845,26 @@ async function dispatchTool(
       if (!args.slug && !args.url) throw new Error("slug or url is required");
       if (args.slug && !SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       if (args.status && !VERIFY_STATUSES.includes(args.status as VerifyStatus)) throw new Error(`status must be one of ${VERIFY_STATUSES.join("|")}`);
-      const verified = await verifyDependent(orgId, { slug: args.slug || undefined, url: args.url || undefined, term: args.term || undefined, note: args.note || undefined, status: (args.status as VerifyStatus) || undefined });
+      const verified = await verifyDependent(orgId, { slug: args.slug || undefined, url: args.url || undefined, term: args.term || undefined, note: args.note || undefined, status: (args.status as VerifyStatus) || undefined }, userId);
       logAudit({ orgId, action: "page.verify", resourceType: verified.kind, resourceId: verified.id, actorType: "apikey", actorId, metadata: { term: verified.term } });
       return { ok: true, ...verified };
     }
 
     case "get_chart": {
       if (args.term) {
-        const node = await getChartNode(orgId, args.term);
-        const [suggestions, pageSuggestions] = await Promise.all([getScopeSuggestions(orgId, args.term), getPageSuggestions(orgId, args.term)]);
+        const node = await getChartNode(orgId, args.term, userId);
+        const [suggestions, pageSuggestions] = await Promise.all([getScopeSuggestions(orgId, args.term, userId), getPageSuggestions(orgId, args.term, userId)]);
         return { ...node, suggestions, pageSuggestions };
       }
-      return getChart(orgId, { includeHidden: args.include_hidden === "true" });
+      return getChart(orgId, { includeHidden: args.include_hidden === "true", userId });
     }
 
     case "get_needs_look": {
-      return getNeedsLook(orgId);
+      return getNeedsLook(orgId, userId);
     }
 
     case "audit": {
-      return getAuditList(orgId);
+      return getAuditList(orgId, userId);
     }
 
     case "add_to_chart": {
@@ -1872,7 +1872,7 @@ async function dispatchTool(
       if (!args.slug && !args.url) throw new Error("slug or url is required");
       let check: unknown;
       if (args.check) { try { check = JSON.parse(args.check); } catch { throw new Error("check must be JSON like {\"via\":\"hubspot\",\"tool\":\"render_asset\",\"locator\":\"...\",\"ask\":\"...\"}"); } }
-      const child = await addScopeItem(orgId, args.term, { slug: args.slug || undefined, url: args.url || undefined, label: args.label || undefined, owner: args.owner || undefined, dueAt: args.due_at, check }, userId || "agent");
+      const child = await addScopeItem(orgId, args.term, { slug: args.slug || undefined, url: args.url || undefined, label: args.label || undefined, owner: args.owner || undefined, dueAt: args.due_at, check }, userId || "agent", userId);
       logAudit({ orgId, action: "dependencies.map", resourceType: "concept", resourceId: args.term, actorType: "apikey", actorId, metadata: { added: child.slug ?? child.url } });
       return child;
     }
@@ -1880,7 +1880,7 @@ async function dispatchTool(
     case "remove_from_chart": {
       if (!args.term) throw new Error("term is required");
       if (!args.slug && !args.url) throw new Error("slug or url is required");
-      return removeScopeItem(orgId, args.term, { slug: args.slug || undefined, url: args.url || undefined }, userId || "agent");
+      return removeScopeItem(orgId, args.term, { slug: args.slug || undefined, url: args.url || undefined }, userId || "agent", userId);
     }
 
     case "rescan_inventory": {
@@ -1895,7 +1895,7 @@ async function dispatchTool(
     }
 
     case "set_chart_node": {
-      if (args.slug && !args.term) return promotePageToNode(orgId, args.slug, userId || "agent");
+      if (args.slug && !args.term) return promotePageToNode(orgId, args.slug, userId || "agent", userId);
       if (!args.term) throw new Error("term or slug is required");
       const patch: { hidden?: boolean; promoted?: boolean; sourceSlug?: string; instructions?: string | null } = {};
       for (const k of ["hidden", "promoted"] as const) {
@@ -1905,9 +1905,9 @@ async function dispatchTool(
       if (args.instructions !== undefined) patch.instructions = args.instructions;
       const hasStatus = args.status !== undefined;
       if (Object.keys(patch).length === 0 && !hasStatus) throw new Error("give at least one of slug (source page), hidden, promoted, instructions, status");
-      if (hasStatus) await setSourceStatus(orgId, orgSlug, args.term, args.status || null, userId || "agent");
-      if (Object.keys(patch).length === 0) return getChartNode(orgId, args.term);
-      return setChartNode(orgId, args.term, patch);
+      if (hasStatus) await setSourceStatus(orgId, orgSlug, args.term, args.status || null, userId || "agent", userId);
+      if (Object.keys(patch).length === 0) return getChartNode(orgId, args.term, userId);
+      return setChartNode(orgId, args.term, patch, userId);
     }
 
     case "get_dependents": {

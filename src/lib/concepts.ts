@@ -2,7 +2,7 @@ import { db } from "./db";
 import { CONCEPT_KINDS } from "./concept-kinds";
 import { Prisma } from "@/generated/prisma/client";
 import { makeTrustModeResolver, type TrustMode } from "./approval";
-import { listPagesWhere, pageAccessFor } from "./access";
+import { findPageFor, listPagesWhere, pageAccessFor } from "./access";
 
 /// Scope for every page edge a graph read returns: the caller's org, not
 /// archived, and visible to the caller (listPagesWhere). Concept and PageLink
@@ -913,7 +913,8 @@ export type VerifyStatus = (typeof VERIFY_STATUSES)[number];
  */
 export async function verifyDependent(
   orgId: string,
-  target: { slug?: string; url?: string; term?: string; note?: string; status?: VerifyStatus }
+  target: { slug?: string; url?: string; term?: string; note?: string; status?: VerifyStatus },
+  userId?: string | null
 ): Promise<{ kind: "page" | "external"; id: string; term: string | null; status: VerifyStatus; verifiedAt: string; note: string | null; count: number }> {
   const now = new Date();
   const note = target.note?.trim() || null;
@@ -937,7 +938,8 @@ export async function verifyDependent(
     : { verifiedAt: now, verifiedNote: note, needsChange: status === "needs_change" };
 
   if (target.slug) {
-    const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: target.slug } }, select: { id: true } });
+    // Recording a check is like annotating: visibility is enough.
+    const page = await findPageFor(orgId, target.slug, userId);
     if (!page) throw new Error(`page not found: ${target.slug}`);
     const rows = await db.pageConcept.findMany({ where: { pageId: page.id, ...(conceptId ? { conceptId } : {}) }, select: { id: true } });
     if (rows.length === 0) {
@@ -982,7 +984,8 @@ export interface MapDependenciesInput {
 export async function mapDependencies(
   orgId: string,
   input: MapDependenciesInput,
-  createdBy: string
+  createdBy: string,
+  userId?: string | null
 ): Promise<{ term: string; tagged: Array<{ slug: string; rel: ConceptRel }>; external: ExternalDependentRow[]; missing: string[] }> {
   const normalized = normalizeTerm(input.term);
   if (!normalized) throw new Error("term is required");
@@ -993,13 +996,21 @@ export async function mapDependencies(
     ["depends", input.depends],
     ["references", input.references],
   ];
+  // Resolve every slug before writing any edge, so a view-only page fails
+  // the whole call instead of leaving it half applied. Tagging changes the
+  // page, so a private page needs edit access; a page the caller can't see
+  // is reported missing, like a typo.
+  const plan: Array<{ pageId: string; slug: string; rel: ConceptRel }> = [];
   for (const [rel, slugs] of groups) {
     for (const slug of slugs ?? []) {
-      const page = await db.page.findUnique({ where: { orgId_slug: { orgId, slug } }, select: { id: true } });
+      const page = await findPageFor(orgId, slug, userId, "edit");
       if (!page) { missing.push(slug); continue; }
-      await upsertConcepts(page.id, [{ term: input.term, kind: input.kind, rel }], createdBy, { verified: false });
-      tagged.push({ slug, rel });
+      plan.push({ pageId: page.id, slug, rel });
     }
+  }
+  for (const { pageId, slug, rel } of plan) {
+    await upsertConcepts(pageId, [{ term: input.term, kind: input.kind, rel }], createdBy, { verified: false });
+    tagged.push({ slug, rel });
   }
   const external = input.external?.length
     ? await upsertExternalDependents(orgId, input.term, input.external, createdBy)

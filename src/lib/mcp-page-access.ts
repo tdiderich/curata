@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { pageAccessFor, pageEditable } from "./access";
+import { ownerActionAllowed, pageAccessFor, pageEditable } from "./access";
 import { resolveToolName, TOOL_PARAMS } from "./mcp-dispatch";
 
 /// Tools that change an existing page's content or placement. On a private
@@ -13,10 +13,22 @@ const PAGE_EDIT_TOOLS = new Set([
   "move_page",
 ]);
 
-/// Tools that answer a missing page with a fallback instead of an error.
-/// They filter hidden pages themselves (visiblePageRow in mcp-dispatch.ts),
-/// since a "page not found" here would differ from that fallback.
-const SELF_FILTERING_TOOLS = new Set(["list_rules", "validate_page"]);
+/// Tools whose own answer to a missing page differs from "page not found:
+/// X" (a fallback, an empty result, a `missing` list, a longer message).
+/// They check visibility themselves with the caller's userId, so a hidden
+/// page gets exactly the missing-page answer: list_rules and validate_page
+/// via visiblePageRow in mcp-dispatch.ts, the graph tools in concepts.ts.
+const SELF_FILTERING_TOOLS = new Set(["list_rules", "validate_page", "get_related", "get_dependents", "map_dependencies"]);
+
+/// Tools that create a page at a new slug, and the arg naming it. A slug held
+/// by a page the caller can't see answers the same "page already exists" the
+/// tool gives for a visible one. The failure itself can't be hidden, since
+/// slugs are unique per org, but the message doesn't single out hidden pages.
+const CREATE_SLUG_ARG: Record<string, string> = {
+  create_page: "slug",
+  write_page: "slug",
+  create_from_template: "target_slug",
+};
 
 /// Every argument that names a page, across both MCP transports. A new
 /// page-naming param in TOOL_PARAMS (mcp-dispatch.ts) must be added here;
@@ -95,12 +107,20 @@ export async function mcpPageDenial(
     select: { id: true, orgId: true, slug: true, visibility: true, createdBy: true },
   });
 
+  const createArg = CREATE_SLUG_ARG[name];
+  const createSlug = createArg ? canonicalArgs(name, args)[createArg] : undefined;
   for (const page of pages) {
     // Any org role grants org-level visibility; MCP callers are org members.
     const access = await pageAccessFor(page, userId, "member");
-    if (!access) return `page not found: ${page.slug}`;
+    if (!access) return page.slug === createSlug ? `page already exists: ${page.slug}` : `page not found: ${page.slug}`;
     if (edit.includes(page.slug) && !pageEditable(page, access)) {
       return `forbidden: you have view-only access to page ${page.slug}`;
+    }
+    // write_page's visibility arg on an existing private page is owner-only,
+    // like PATCH /api/pages.
+    const vis = canonicalArgs(name, args).visibility;
+    if (name === "write_page" && page.slug === createSlug && typeof vis === "string" && vis && vis !== page.visibility && !ownerActionAllowed(page, access)) {
+      return `forbidden: only the page owner can change visibility of or delete a private page`;
     }
   }
   return null;

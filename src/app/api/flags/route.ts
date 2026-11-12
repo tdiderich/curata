@@ -3,6 +3,7 @@ import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
+import { ownerActionAllowed, pageAccessFor, pageEditable, pageVisibilityWhere } from "@/lib/access";
 
 // Cleanup queue: agents file flags via MCP flag_page; humans disposition them
 // here. GET returns the pending queue with page context; PATCH executes one
@@ -17,7 +18,8 @@ export async function GET() {
   const now = new Date();
   const flags = await db.pageFlag.findMany({
     where: {
-      page: { orgId: ctx.orgId },
+      // Flags on pages the caller can't see stay out of their queue.
+      page: { orgId: ctx.orgId, ...pageVisibilityWhere(ctx.userId) },
       OR: [
         { status: "pending" },
         // Snoozes that have lapsed come back to the queue.
@@ -92,10 +94,19 @@ export async function PATCH(request: NextRequest) {
 
     const flag = await db.pageFlag.findFirst({
       where: { id: body.flagId, page: { orgId: ctx.orgId } },
-      include: { page: { select: { id: true, slug: true } } },
+      include: { page: { select: { id: true, orgId: true, slug: true, visibility: true, createdBy: true } } },
     });
-    if (!flag) {
+    // A flag on a page the caller can't see reads as missing. Every
+    // disposition changes the page; delete is owner-only on a private page.
+    const access = flag ? await pageAccessFor(flag.page, ctx.userId, ctx.role) : null;
+    if (!flag || !access) {
       return NextResponse.json({ error: "flag not found" }, { status: 404 });
+    }
+    if (!pageEditable(flag.page, access)) {
+      return NextResponse.json({ error: "forbidden: you have view-only access to this page" }, { status: 403 });
+    }
+    if (body.disposition === "delete" && !ownerActionAllowed(flag.page, access)) {
+      return NextResponse.json({ error: "forbidden: only the page owner can change visibility of or delete a private page" }, { status: 403 });
     }
 
     const resolution = { resolvedBy: ctx.userId, resolvedAt: new Date() };

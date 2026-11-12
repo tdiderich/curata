@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { verifyDependent } from "@/lib/concepts";
 import { logAudit } from "@/lib/audit";
+import { PageAccessError } from "@/lib/access";
 
 /**
  * "Looked at it, still right." Backs the Verify button on the Dependencies
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
       term: body.term || undefined,
       note: typeof body.note === "string" ? body.note.slice(0, 500) : undefined,
       status: body.status === "needs_change" ? "needs_change" : body.status === "unreachable" ? "unreachable" : "holds",
-    });
+    }, ctx.userId);
     logAudit({
       orgId: ctx.orgId,
       action: "page.verify",
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
     }).catch(() => {});
     return NextResponse.json(result);
   } catch (err) {
+    if (err instanceof PageAccessError) return NextResponse.json({ error: err.message }, { status: err.status });
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: /not found|no external asset tracked/.test(message) ? 404 : 400 });
   }

@@ -6,7 +6,7 @@ import { can, VALID_PAGE_VISIBILITY } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { writePageJson } from "@/lib/pages";
 import { getTemplateContent } from "@/lib/templates-server";
-import { getPageOrThrow, assertPageEditable, PageAccessError, checkFolderBoundary } from "@/lib/access";
+import { PageAccessError, assertOwnerAction, assertPageEditable, checkFolderBoundary, getPageOrThrow } from "@/lib/access";
 
 export async function POST(request: NextRequest) {
   const ctx = await resolveOrg();
@@ -101,6 +101,7 @@ export async function DELETE(request: NextRequest) {
     try {
       pageWithAccess = await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
       assertPageEditable(pageWithAccess);
+      assertOwnerAction(pageWithAccess);
     } catch (e) {
       if (e instanceof PageAccessError) {
         return NextResponse.json({ error: e.message }, { status: e.status });
@@ -156,6 +157,9 @@ export async function PATCH(request: NextRequest) {
     try {
       pageWithAccess = await getPageOrThrow(ctx.orgId, body.slug, ctx.userId, ctx.role);
       assertPageEditable(pageWithAccess);
+      if (body.visibility !== undefined && body.visibility !== pageWithAccess.visibility) {
+        assertOwnerAction(pageWithAccess);
+      }
     } catch (e) {
       if (e instanceof PageAccessError) {
         return NextResponse.json({ error: e.message }, { status: e.status });

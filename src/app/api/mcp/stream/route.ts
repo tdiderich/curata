@@ -516,15 +516,15 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     { term: z.string().optional().describe("Node term to expand. Omit for the whole chart"), include_hidden: z.boolean().optional().describe("Whole-chart mode: include nodes someone hid") },
     async ({ term, include_hidden }) => {
       const result = term
-        ? { ...(await getChartNode(orgId, term)), suggestions: await getScopeSuggestions(orgId, term), pageSuggestions: await getPageSuggestions(orgId, term) }
-        : await getChart(orgId, { includeHidden: include_hidden });
+        ? { ...(await getChartNode(orgId, term, userId)), suggestions: await getScopeSuggestions(orgId, term, userId), pageSuggestions: await getPageSuggestions(orgId, term, userId) }
+        : await getChart(orgId, { includeHidden: include_hidden, userId });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
   server.tool("audit", "Your worklist for external drift. Every yellow or red external asset, split into withRecipe (each carries check: {via, tool, locator, ask}; run it through that MCP in your session, compare to the node's source page, then mark_verified url=... status=holds, or status=needs_change with a note saying what's off, or status=unreachable with a note when you have no access to that system) and humanOnly (no recipe yet; suggestedCheck is a starting point you can save with set_scope_item). Curata never calls an MCP itself. Report both buckets back to the human, the second one is theirs.",
     {},
     async () => {
-      const result = await getAuditList(orgId);
+      const result = await getAuditList(orgId, userId);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
@@ -539,14 +539,14 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       check: z.object({ via: z.string(), tool: z.string().optional(), locator: z.string().optional(), ask: z.string().optional() }).optional().describe("How an agent checks it: via = MCP server name"),
     },
     async ({ term, slug, url, label, owner, due_at, check }) => {
-      const result = await addScopeItem(orgId, term, { slug, url, label, owner, dueAt: due_at, check }, userId || "agent");
+      const result = await addScopeItem(orgId, term, { slug, url, label, owner, dueAt: due_at, check }, userId || "agent", userId);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
   server.tool("remove_from_chart", "Take a page or external URL out from under a node. The page and the asset stay; only this edge goes.",
     { term: z.string(), slug: z.string().optional(), url: z.string().optional() },
     async ({ term, slug, url }) => {
-      const result = await removeScopeItem(orgId, term, { slug, url }, userId || "agent");
+      const result = await removeScopeItem(orgId, term, { slug, url }, userId || "agent", userId);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
@@ -574,7 +574,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
   server.tool("get_needs_look", "The chart as a list: every yellow and red child, grouped by the node whose source moved. This is the review queue for drift. Clear a page child by rewriting the page or calling mark_verified; clear an external child by running its check recipe (get_chart term=... shows it) and calling mark_verified with url.",
     {},
     async () => {
-      const result = await getNeedsLook(orgId);
+      const result = await getNeedsLook(orgId, userId);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 
@@ -582,7 +582,7 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
     { term: z.string().optional().describe("Concept term"), slug: z.string().optional().describe("Alone: page to make a node. With term: page to make this node's source of truth"), hidden: z.boolean().optional(), promoted: z.boolean().optional(), instructions: z.string().optional().describe("Per-node note for agents, appended to copied prompts. Empty string clears"), status: z.string().optional().describe("Sets the Status field on the node's source page: Planned / In progress puts the node on the Active tab, Shipped / Done on Completed, empty string clears it back to Watching") },
     async ({ term, slug, hidden, promoted, instructions, status }) => {
       if (slug && !term) {
-        const result = await promotePageToNode(orgId, slug, userId || "agent");
+        const result = await promotePageToNode(orgId, slug, userId || "agent", userId);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
       if (!term) throw new Error("term or slug is required");
@@ -591,8 +591,8 @@ function createMcpServer(orgId: string, orgSlug: string, actorId: string, userId
       if (hidden !== undefined) patch.hidden = hidden;
       if (promoted !== undefined) patch.promoted = promoted;
       if (instructions !== undefined) patch.instructions = instructions;
-      if (status !== undefined) await setSourceStatus(orgId, orgSlug, term, status || null, userId || "agent");
-      const result = Object.keys(patch).length === 0 ? await getChartNode(orgId, term) : await setChartNode(orgId, term, patch);
+      if (status !== undefined) await setSourceStatus(orgId, orgSlug, term, status || null, userId || "agent", userId);
+      const result = Object.keys(patch).length === 0 ? await getChartNode(orgId, term, userId) : await setChartNode(orgId, term, patch, userId);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     });
 

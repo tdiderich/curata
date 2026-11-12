@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { PageAccessError } from "@/lib/access";
 import { createNode, getChart, getChartNode, getNeedsLook, promotePageToNode, setChartNode, setSourceStatus } from "@/lib/chart";
 
 /** GET ?term= for one node, ?view=list for needs-look, else the whole chart. PATCH {term, hidden|promoted|instructions}. */
@@ -10,12 +11,11 @@ export async function GET(request: NextRequest) {
   const term = request.nextUrl.searchParams.get("term");
   const view = request.nextUrl.searchParams.get("view");
   try {
-    if (term) return NextResponse.json(await getChartNode(ctx.orgId, term));
-    if (view === "list") return NextResponse.json(await getNeedsLook(ctx.orgId));
-    return NextResponse.json(await getChart(ctx.orgId, { includeHidden: request.nextUrl.searchParams.get("includeHidden") === "true" }));
+    if (term) return NextResponse.json(await getChartNode(ctx.orgId, term, ctx.userId));
+    if (view === "list") return NextResponse.json(await getNeedsLook(ctx.orgId, ctx.userId));
+    return NextResponse.json(await getChart(ctx.orgId, { includeHidden: request.nextUrl.searchParams.get("includeHidden") === "true", userId: ctx.userId }));
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: msg.startsWith("concept not found") ? 404 : 400 });
+    return fail(err, /^concept not found/);
   }
 }
 
@@ -32,12 +32,11 @@ export async function PATCH(request: NextRequest) {
   const hasStatus = typeof body.status === "string" || body.status === null;
   if (Object.keys(patch).length === 0 && !hasStatus) return NextResponse.json({ error: "give at least one of hidden, promoted, instructions, status" }, { status: 400 });
   try {
-    if (hasStatus) await setSourceStatus(ctx.orgId, ctx.orgSlug, body.term, body.status ?? null, ctx.userId);
-    if (Object.keys(patch).length === 0) return NextResponse.json(await getChartNode(ctx.orgId, body.term));
-    return NextResponse.json(await setChartNode(ctx.orgId, body.term, patch));
+    if (hasStatus) await setSourceStatus(ctx.orgId, ctx.orgSlug, body.term, body.status ?? null, ctx.userId, ctx.userId);
+    if (Object.keys(patch).length === 0) return NextResponse.json(await getChartNode(ctx.orgId, body.term, ctx.userId));
+    return NextResponse.json(await setChartNode(ctx.orgId, body.term, patch, ctx.userId));
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: msg.startsWith("concept not found") ? 404 : 400 });
+    return fail(err, /^concept not found/);
   }
 }
 
@@ -50,10 +49,16 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid JSON body" }, { status: 400 }); }
   if (!body.slug && !body.title) return NextResponse.json({ error: "title or slug required" }, { status: 400 });
   try {
-    if (body.title) return NextResponse.json(await createNode(ctx.orgId, ctx.orgSlug, { title: body.title, slug: body.slug, related: body.related }, ctx.userId));
-    return NextResponse.json(await promotePageToNode(ctx.orgId, body.slug!, ctx.userId));
+    if (body.title) return NextResponse.json(await createNode(ctx.orgId, ctx.orgSlug, { title: body.title, slug: body.slug, related: body.related }, ctx.userId, ctx.userId));
+    return NextResponse.json(await promotePageToNode(ctx.orgId, body.slug!, ctx.userId, ctx.userId));
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: /not found/.test(msg) ? 404 : 400 });
+    return fail(err, /not found/);
   }
+}
+
+/** Access errors keep their status; otherwise notFound decides 404 vs 400. */
+function fail(err: unknown, notFound: RegExp) {
+  if (err instanceof PageAccessError) return NextResponse.json({ error: err.message }, { status: err.status });
+  const msg = err instanceof Error ? err.message : String(err);
+  return NextResponse.json({ error: msg }, { status: notFound.test(msg) ? 404 : 400 });
 }

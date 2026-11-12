@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { PageAccessError } from "@/lib/access";
 import { addScopeItem, getPageSuggestions, getScopeSuggestions, removeScopeItem, updateScopeItem } from "@/lib/scope";
 
 function fail(err: unknown) {
+  if (err instanceof PageAccessError) return NextResponse.json({ error: err.message }, { status: err.status });
   const msg = err instanceof Error ? err.message : String(err);
   return NextResponse.json({ error: msg }, { status: /not found/.test(msg) ? 404 : 400 });
 }
@@ -15,8 +17,8 @@ export async function GET(request: NextRequest) {
   const term = request.nextUrl.searchParams.get("term");
   if (!term) return NextResponse.json({ error: "term required" }, { status: 400 });
   try {
-    if (request.nextUrl.searchParams.get("kind") === "pages") return NextResponse.json(await getPageSuggestions(ctx.orgId, term));
-    return NextResponse.json(await getScopeSuggestions(ctx.orgId, term));
+    if (request.nextUrl.searchParams.get("kind") === "pages") return NextResponse.json(await getPageSuggestions(ctx.orgId, term, ctx.userId));
+    return NextResponse.json(await getScopeSuggestions(ctx.orgId, term, ctx.userId));
   } catch (err) { return fail(err); }
 }
 
@@ -32,7 +34,7 @@ export async function POST(request: NextRequest) {
   let body: { term?: string; slug?: string; url?: string; label?: string; owner?: string; dueAt?: string | null; check?: unknown };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid JSON body" }, { status: 400 }); }
   if (!body.term) return NextResponse.json({ error: "term required" }, { status: 400 });
-  try { return NextResponse.json(await addScopeItem(g.ctx.orgId, body.term, body, g.ctx.userId)); } catch (err) { return fail(err); }
+  try { return NextResponse.json(await addScopeItem(g.ctx.orgId, body.term, body, g.ctx.userId, g.ctx.userId)); } catch (err) { return fail(err); }
 }
 
 export async function PATCH(request: NextRequest) {
@@ -48,5 +50,5 @@ export async function DELETE(request: NextRequest) {
   let body: { term?: string; slug?: string; url?: string };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid JSON body" }, { status: 400 }); }
   if (!body.term) return NextResponse.json({ error: "term required" }, { status: 400 });
-  try { return NextResponse.json(await removeScopeItem(g.ctx.orgId, body.term, body, g.ctx.userId)); } catch (err) { return fail(err); }
+  try { return NextResponse.json(await removeScopeItem(g.ctx.orgId, body.term, body, g.ctx.userId, g.ctx.userId)); } catch (err) { return fail(err); }
 }

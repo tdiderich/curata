@@ -4,6 +4,22 @@ import { db } from "@/lib/db";
 import { normalizeTerm, upsertConcepts, isConceptRel, CONCEPT_RELS } from "@/lib/concepts";
 import { logAudit } from "@/lib/audit";
 import { DEFAULT_KIND } from "@/lib/concept-kinds";
+import { pageAccessFor, pageEditable } from "@/lib/access";
+
+/// A page the caller can't see answers like a missing one. Tags change the
+/// page, so a private page held through a viewer share can't be tagged.
+async function tagAccessDenied(ctx: { orgId: string; userId: string; role: string }, pageId: string): Promise<NextResponse | null> {
+  const page = await db.page.findFirst({
+    where: { id: pageId, orgId: ctx.orgId },
+    select: { id: true, orgId: true, slug: true, visibility: true, createdBy: true },
+  });
+  const access = page ? await pageAccessFor(page, ctx.userId, ctx.role) : null;
+  if (!page || !access) return NextResponse.json({ error: "page not found" }, { status: 404 });
+  if (!pageEditable(page, access)) {
+    return NextResponse.json({ error: "forbidden: you have view-only access to this page" }, { status: 403 });
+  }
+  return null;
+}
 
 /**
  * Adds or re-kinds concept tags on a page — the dashboard untagged queue's
@@ -47,13 +63,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `rel must be one of ${CONCEPT_RELS.join(", ")}` }, { status: 400 });
   }
 
-  const page = await db.page.findFirst({
-    where: { id: pageId, orgId: ctx.orgId },
-    select: { id: true, slug: true },
-  });
-  if (!page) {
-    return NextResponse.json({ error: "page not found" }, { status: 404 });
-  }
+  const denied = await tagAccessDenied(ctx, pageId);
+  if (denied) return denied;
+  const page = (await db.page.findFirst({ where: { id: pageId, orgId: ctx.orgId }, select: { id: true, slug: true } }))!;
 
   await upsertConcepts(page.id, cleaned.map((t) => ({ term: t.term, kind: t.kind, rel: t.rel as import("@/lib/concepts").ConceptRel | undefined })), ctx.userId);
   logAudit({
@@ -86,13 +98,9 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "pageId and tag required" }, { status: 400 });
   }
 
-  const page = await db.page.findFirst({
-    where: { id: pageId, orgId: ctx.orgId },
-    select: { id: true, slug: true },
-  });
-  if (!page) {
-    return NextResponse.json({ error: "page not found" }, { status: 404 });
-  }
+  const denied = await tagAccessDenied(ctx, pageId);
+  if (denied) return denied;
+  const page = (await db.page.findFirst({ where: { id: pageId, orgId: ctx.orgId }, select: { id: true, slug: true } }))!;
 
   const normalized = normalizeTerm(tag);
   // Route through upsertConcepts' remove path so usage_count is recounted.

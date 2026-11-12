@@ -32,7 +32,7 @@ export default async function ChartPage({ searchParams }: { searchParams: Promis
   const list = view === "list";
   const canEdit = can(ctx.role, "page:edit");
 
-  const full = await getChart(ctx.orgId, { includeHidden: true });
+  const full = await getChart(ctx.orgId, { includeHidden: true, userId: ctx.userId });
   const byTab: Record<Tab, typeof full.nodes> = { active: [], watching: [], completed: [], hidden: [] };
   for (const n of full.nodes) byTab[n.hidden ? "hidden" : n.group].push(n);
   const tab: Tab = (["active", "watching", "completed", "hidden"] as Tab[]).includes(tabParam as Tab)
@@ -40,8 +40,8 @@ export default async function ChartPage({ searchParams }: { searchParams: Promis
     : byTab.active.length > 0 ? "active" : "watching";
   const attention = (t: Tab) => byTab[t].reduce((s, n) => s + n.counts.red + n.counts.yellow, 0);
 
-  const columns = list ? [] : await Promise.all(byTab[tab].map((n) => getChartNode(ctx.orgId, n.term)));
-  const needs = list ? await getNeedsLook(ctx.orgId) : [];
+  const columns = list ? [] : await Promise.all(byTab[tab].map((n) => getChartNode(ctx.orgId, n.term, ctx.userId)));
+  const needs = list ? await getNeedsLook(ctx.orgId, ctx.userId) : [];
   const visible = full.nodes.filter((n) => !n.hidden);
   const totals = { red: 0, yellow: 0, green: 0 };
   for (const n of visible) { totals.red += n.counts.red; totals.yellow += n.counts.yellow; totals.green += n.counts.green; }

@@ -8,5 +8,5 @@ export async function GET(request: NextRequest) {
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const slug = request.nextUrl.searchParams.get("slug");
   if (!slug) return NextResponse.json({ error: "slug required" }, { status: 400 });
-  return NextResponse.json(await getPageImpact(ctx.orgId, slug));
+  return NextResponse.json(await getPageImpact(ctx.orgId, slug, ctx.userId));
 }

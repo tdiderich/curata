@@ -1,6 +1,5 @@
 import { db } from "./db";
 import { AUTH_MODE } from "./auth";
-import type { OrgContext } from "./auth";
 
 export type PageRole = "owner" | "editor" | "viewer";
 
@@ -133,23 +132,63 @@ export function assertPageEditable(page: { visibility: string | null; access: Pa
   }
 }
 
-export function listPagesWhere(
-  orgId: string,
-  userId: string | null
-): Record<string, unknown> {
-  if (AUTH_MODE === "none" || !userId) {
-    return { orgId, status: { not: "archived" } };
-  }
+/// Owner-only actions on a private page: changing its visibility, deleting
+/// it. An editor share lets someone change a private page's content, not
+/// widen who can see it or remove it. Org, shared and public pages keep the
+/// org-role rule.
+export function ownerActionAllowed(page: { visibility: string | null }, access: PageAccess): boolean {
+  return (page.visibility ?? "org") !== "private" || access.role === "owner";
+}
 
+export function assertOwnerAction(page: { visibility: string | null; access: PageAccess }): void {
+  if (!ownerActionAllowed(page, page.access)) {
+    throw new PageAccessError(403, "forbidden: only the page owner can change visibility of or delete a private page");
+  }
+}
+
+/// Page lookup for lib code that knows the caller only by user id (chart,
+/// scope, dependency tools). Returns null when the page is missing or the
+/// caller can't see it, so the caller's existing "page not found" path
+/// handles both alike. mode "edit" throws a 403 when the caller holds only a
+/// viewer share on a private page. No userId means an internal caller:
+/// unfiltered, as in listPagesWhere.
+export async function findPageFor(
+  orgId: string,
+  slug: string,
+  userId: string | null | undefined,
+  mode: "view" | "edit" = "view"
+): Promise<(PageRow & { title: string; folderId: string | null }) | null> {
+  const page = await db.page.findUnique({
+    where: { orgId_slug: { orgId, slug } },
+    select: { id: true, orgId: true, slug: true, title: true, folderId: true, visibility: true, createdBy: true },
+  });
+  if (!page || !userId) return page;
+  const access = await pageAccessFor(page, userId, "member");
+  if (!access) return null;
+  if (mode === "edit" && !pageEditable(page, access)) {
+    throw new PageAccessError(403, `forbidden: you have view-only access to page ${slug}`);
+  }
+  return page;
+}
+
+/// The visibility half of listPagesWhere, without the archived filter: for
+/// queues that also list archived pages (flags) or that join pages by slug.
+export function pageVisibilityWhere(userId: string | null): Record<string, unknown> {
+  if (AUTH_MODE === "none" || !userId) return {};
   return {
-    orgId,
-    status: { not: "archived" },
     OR: [
       { createdBy: userId },
       { shares: { some: { userId } } },
       { visibility: { in: ["org", "public", "shared"] } },
     ],
   };
+}
+
+export function listPagesWhere(
+  orgId: string,
+  userId: string | null
+): Record<string, unknown> {
+  return { orgId, status: { not: "archived" }, ...pageVisibilityWhere(userId) };
 }
 
 export function canEditPage(access: PageAccess): boolean {
