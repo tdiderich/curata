@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveOrg } from "@/lib/auth";
+import { resolveOrg, type OrgContext } from "@/lib/auth";
 import { readPage } from "@/lib/pages";
+import { getPageOrThrow, PageAccessError } from "@/lib/access";
 import { getOrgTheme } from "@/lib/theme";
 import { buildTitlePageHtml, buildAppendixHtml } from "@/lib/export";
 import {
@@ -26,21 +27,54 @@ async function addPngPage(doc: any, pngBuffer: Buffer) {
   page.drawImage(img, { x: 0, y: 0, width: targetWidth, height: targetHeight });
 }
 
+/// Every slug must be a page this caller can see; the error names the first
+/// one that isn't, with the same 404 a missing page gets.
+async function accessDenied(ctx: OrgContext, slugs: string[]): Promise<NextResponse | null> {
+  for (const slug of slugs) {
+    try {
+      await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+    } catch (e) {
+      if (e instanceof PageAccessError) {
+        return NextResponse.json({ error: `page not found: ${slug}` }, { status: e.status });
+      }
+      throw e;
+    }
+  }
+  return null;
+}
+
+/// The hub only lends its nav to the render. A missing hub was always
+/// ignored, so a hidden one is dropped the same way: same response, and its
+/// nav never reaches the export.
+async function visibleHub(ctx: OrgContext, hub: string | undefined): Promise<string | undefined> {
+  if (!hub) return undefined;
+  try {
+    await getPageOrThrow(ctx.orgId, hub, ctx.userId, ctx.role);
+    return hub;
+  } catch (e) {
+    if (e instanceof PageAccessError) return undefined;
+    throw e;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const ctx = await resolveOrg();
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const slug = request.nextUrl.searchParams.get("slug");
   const format = request.nextUrl.searchParams.get("format") ?? "png";
-  const hub = request.nextUrl.searchParams.get("hub") ?? undefined;
+  const hub = await visibleHub(ctx, request.nextUrl.searchParams.get("hub") ?? undefined);
 
   if (!slug) return NextResponse.json({ error: "slug is required" }, { status: 400 });
   if (format !== "png" && format !== "pdf") {
     return NextResponse.json({ error: "format must be png or pdf" }, { status: 400 });
   }
 
+  const denied = await accessDenied(ctx, [slug]);
+  if (denied) return denied;
+
   const pageData = await readPage(ctx.orgId, slug);
-  if (!pageData) return NextResponse.json({ error: "page not found" }, { status: 404 });
+  if (!pageData) return NextResponse.json({ error: `page not found: ${slug}` }, { status: 404 });
 
   const pageTitle = (pageData.json as { title?: string }).title || slug;
 
@@ -98,11 +132,15 @@ export async function POST(request: NextRequest) {
     hub?: string;
   };
 
-  const { slugs, title, subtitle, hub } = body;
+  const { slugs, title, subtitle } = body;
+  const hub = await visibleHub(ctx, body.hub);
 
   if (!Array.isArray(slugs) || slugs.length === 0) {
     return NextResponse.json({ error: "slugs must be a non-empty array" }, { status: 400 });
   }
+
+  const denied = await accessDenied(ctx, slugs);
+  if (denied) return denied;
 
   let chromium;
   try {

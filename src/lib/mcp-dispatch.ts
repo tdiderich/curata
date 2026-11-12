@@ -29,7 +29,7 @@ import { getChromium, previewUrl, screenshotPage, renderHtmlToPng } from "@/lib/
 import { validateContent, validateContentSplit, checkUnsupportedComponents, invalidContentMessage, type ShapeWarning } from "@/lib/kazam";
 import { resolveShapeRules, toKazamShapeRules, validateShapeRule } from "@/lib/shape-rules";
 import { renderComponentSlice, guidedComponents } from "@/lib/mcp-guidance";
-import { checkFolderBoundary, mcpDefaultVisibility, listPagesWhere } from "@/lib/access";
+import { checkFolderBoundary, mcpDefaultVisibility, listPagesWhere, pageAccessFor } from "@/lib/access";
 import { resolveRules, validateContentRules, detectFolderCycle } from "@/lib/content-rules";
 import { validateApprovalRule, canApprove, getApprovers, describeApprovalRule, makeApprovalRuleResolver, resolveEffectiveTrustMode } from "@/lib/approval";
 import type { Role } from "@/lib/permissions";
@@ -211,7 +211,7 @@ export function describeToolParams(tool: string): string[] | null {
   return spec ? [...spec.known] : null;
 }
 
-const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string, string> }> = {
+export const TOOL_PARAMS: Record<string, { known: Set<string>; aliases?: Record<string, string> }> = {
   list_pages: { known: new Set(["channel"]) },
   read_page: { known: new Set(["slug", "channel"]) },
   read_component: { known: new Set(["slug", "id", "channel"]) },
@@ -295,6 +295,19 @@ async function ensureDigestsFolder(orgId: string, actorId: string): Promise<stri
 /// for a boolean flag over the string-typed dispatch args channel.
 function truthyArg(v: string | undefined): boolean {
   return v === "true" || v === "1";
+}
+
+/// For tools that carry on without a page (list_rules falls back to global
+/// rules, validate_page validates without page rules): a page the caller
+/// can't see is treated exactly like a missing one, so the answer can't
+/// reveal that a private slug exists. mcp-page-access skips these tools.
+async function visiblePageRow(orgId: string, slug: string, userId: string | undefined) {
+  const page = await db.page.findUnique({
+    where: { orgId_slug: { orgId, slug } },
+    select: { id: true, orgId: true, slug: true, visibility: true, createdBy: true, folderId: true, rules: true },
+  });
+  if (!page || !userId) return page;
+  return (await pageAccessFor(page, userId, "member")) ? page : null;
 }
 
 /// Looks up a page by slug, scoped to what this caller can actually see —
@@ -1047,7 +1060,7 @@ async function dispatchTool(
       if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
       if (!args.content) throw new Error("content (YAML) is required");
       const validateUnsupported = checkUnsupportedComponents(args.content);
-      const vpPage = await db.page.findUnique({ where: { orgId_slug: { orgId, slug: args.slug } }, select: { folderId: true, rules: true } });
+      const vpPage = await visiblePageRow(orgId, args.slug, userId);
       const vpShape = await resolveShapeRules(orgId, vpPage?.folderId ?? null, vpPage?.rules);
       const vpSplit = await validateContentSplit(orgSlug, args.slug, args.content, toKazamShapeRules(vpShape));
       const errors = [...validateUnsupported, ...vpSplit.errors];
@@ -2031,10 +2044,7 @@ async function dispatchTool(
     case "list_rules": {
       if (args.slug) {
         if (!SLUG_RE.test(args.slug)) throw new Error("invalid slug format");
-        const lrPage = await db.page.findUnique({
-          where: { orgId_slug: { orgId, slug: args.slug } },
-          select: { folderId: true, rules: true },
-        });
+        const lrPage = await visiblePageRow(orgId, args.slug, userId);
         // The tool description promises global rules "if no slug" — an
         // unknown slug isn't the same as no slug, but a caller that got the
         // slug wrong (typo, stale reference, page deleted) shouldn't be

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg, resolveCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { getPageOrThrow, PageAccessError } from "@/lib/access";
 import { saveAnnotation, updateAnnotationStatus, isAnnotationVisibility, ANNOTATION_VISIBILITIES } from "@/lib/pages";
 import { logAudit } from "@/lib/audit";
 
@@ -33,6 +34,15 @@ export async function POST(request: NextRequest) {
         { error: `visibility must be one of: ${ANNOTATION_VISIBILITIES.join(", ")}` },
         { status: 400 },
       );
+    }
+
+    try {
+      await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+    } catch (e) {
+      if (e instanceof PageAccessError) {
+        return NextResponse.json({ error: e.message }, { status: e.status });
+      }
+      throw e;
     }
 
     const ann = await saveAnnotation(
@@ -95,6 +105,15 @@ export async function PATCH(request: NextRequest) {
         { error: "status must be 'approved', 'incorporated', or 'ignored'" },
         { status: 400 }
       );
+    }
+
+    try {
+      await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+    } catch (e) {
+      if (e instanceof PageAccessError) {
+        return NextResponse.json({ error: e.message }, { status: e.status });
+      }
+      throw e;
     }
 
     const updated = await updateAnnotationStatus(

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { readPage, readPageYaml, writePageJson, writePage } from "@/lib/pages";
-import { db } from "@/lib/db";
+import { getPageOrThrow, assertPageEditable, PageAccessError } from "@/lib/access";
 
 function replaceInValue(
   obj: unknown,
@@ -61,12 +61,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const pageMeta = await db.page.findUnique({
-      where: { orgId_slug: { orgId: ctx.orgId, slug } },
-      select: { createdBy: true },
-    });
+    let pageMeta;
+    try {
+      pageMeta = await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+      assertPageEditable(pageMeta);
+    } catch (e) {
+      if (e instanceof PageAccessError) {
+        return NextResponse.json({ error: e.message }, { status: e.status });
+      }
+      throw e;
+    }
 
-    const isOwner = pageMeta?.createdBy === ctx.userId;
+    const isOwner = pageMeta.createdBy === ctx.userId;
     if (!can(ctx.role, "page:edit", isOwner)) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }

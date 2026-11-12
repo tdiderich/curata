@@ -4,7 +4,7 @@ import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { readPage, writePageJson, markTrusted } from "@/lib/pages";
 import { db } from "@/lib/db";
-import { getPageOrThrow, PageAccessError } from "@/lib/access";
+import { getPageOrThrow, assertPageEditable, PageAccessError } from "@/lib/access";
 import { resolveEffectiveTrustMode, canApprove } from "@/lib/approval";
 
 type Comp = Record<string, unknown>;
@@ -141,6 +141,7 @@ export async function PUT(request: NextRequest) {
   let pageMeta;
   try {
     pageMeta = await getPageOrThrow(ctx.orgId, body.slug, ctx.userId, ctx.role);
+    assertPageEditable(pageMeta);
   } catch (e) {
     if (e instanceof PageAccessError) {
       return NextResponse.json({ error: e.message }, { status: e.status });

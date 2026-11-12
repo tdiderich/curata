@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { resolveOrg } from "@/lib/auth";
+import { resolveOrg, type OrgContext } from "@/lib/auth";
+import { getPageOrThrow, assertPageEditable, PageAccessError } from "@/lib/access";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import type { ContentRule } from "@/lib/content-rules";
@@ -85,6 +86,21 @@ function parseScope(params: URLSearchParams): ScopeResult | null {
   return null;
 }
 
+/// Page-scope rules belong to the page: hidden pages answer like missing
+/// ones, and changing them needs edit access to the page itself.
+async function pageDenied(ctx: OrgContext, slug: string, edit: boolean): Promise<NextResponse | null> {
+  try {
+    const page = await getPageOrThrow(ctx.orgId, slug, ctx.userId, ctx.role);
+    if (edit) assertPageEditable(page);
+    return null;
+  } catch (e) {
+    if (e instanceof PageAccessError) {
+      return NextResponse.json({ error: e.status === 404 ? "page not found" : e.message }, { status: e.status });
+    }
+    throw e;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const ctx = await resolveOrg();
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -118,6 +134,8 @@ export async function GET(request: NextRequest) {
   if (!can(ctx.role, "page:edit")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  const denied = await pageDenied(ctx, scope.slug, false);
+  if (denied) return denied;
   const page = await db.page.findFirst({
     where: { slug: scope.slug, orgId: ctx.orgId },
     select: { rules: true },
@@ -170,6 +188,8 @@ export async function POST(request: NextRequest) {
   }
 
   if (!can(ctx.role, "page:edit")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const denied = await pageDenied(ctx, scope.slug, true);
+  if (denied) return denied;
   const page = await db.page.findFirst({ where: { slug: scope.slug, orgId: ctx.orgId }, select: { id: true, rules: true } });
   if (!page) return NextResponse.json({ error: "page not found" }, { status: 404 });
   const existing = parseRulesJson(page.rules);
@@ -230,6 +250,8 @@ export async function PUT(request: NextRequest) {
   }
 
   if (!can(ctx.role, "page:edit")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const denied = await pageDenied(ctx, scope.slug, true);
+  if (denied) return denied;
   const page = await db.page.findFirst({ where: { slug: scope.slug, orgId: ctx.orgId }, select: { id: true, rules: true } });
   if (!page) return NextResponse.json({ error: "page not found" }, { status: 404 });
   const existing = parseRulesJson(page.rules);
@@ -282,6 +304,8 @@ export async function DELETE(request: NextRequest) {
   }
 
   if (!can(ctx.role, "page:edit")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const denied = await pageDenied(ctx, scope.slug, true);
+  if (denied) return denied;
   const page = await db.page.findFirst({ where: { slug: scope.slug, orgId: ctx.orgId }, select: { id: true, rules: true } });
   if (!page) return NextResponse.json({ error: "page not found" }, { status: 404 });
   const existing = parseRulesJson(page.rules);

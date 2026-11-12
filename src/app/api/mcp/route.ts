@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrgFromApiKey } from "@/lib/auth";
 import { requestOrigin } from "@/lib/request-origin";
 import { db } from "@/lib/db";
+import { mcpPageDenial } from "@/lib/mcp-page-access";
 import { dispatch, toolAllowedForScopes, ALL_TOOLS, TOOL_ALIASES, resolveToolName, describeToolParams } from "@/lib/mcp-dispatch";
 
 async function resolveAuth(request: NextRequest) {
@@ -84,6 +85,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const denial = await mcpPageDenial(tool, args, ctx.orgId, ctx.userId);
+    if (denial) throw new Error(denial);
     const actorId = ("keyPrefix" in ctx && ctx.keyPrefix) ? ctx.keyPrefix : "dev";
     const result = await dispatch(tool, args || {}, ctx.orgId, ctx.orgSlug ?? "", actorId, ctx.userId);
     // A write that succeeded but tripped shape rules is not plain success:

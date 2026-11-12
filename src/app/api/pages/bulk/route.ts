@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
-import { checkFolderBoundary } from "@/lib/access";
+import { checkFolderBoundary, pageAccessFor, pageEditable } from "@/lib/access";
 
 export async function POST(request: NextRequest) {
   const ctx = await resolveOrg();
@@ -25,9 +25,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "max 100 pages per request" }, { status: 400 });
   }
 
-  const pages = await db.page.findMany({
+  const matched = await db.page.findMany({
     where: { orgId: ctx.orgId, slug: { in: body.slugs } },
   });
+
+  // Pages the caller can't see count as not matching. Every action here
+  // changes the page, so a private page held only through a viewer share is
+  // dropped too (same rule as the single-page routes).
+  const pages = [];
+  for (const p of matched) {
+    const access = await pageAccessFor(p, ctx.userId, ctx.role);
+    if (access && pageEditable(p, access)) pages.push(p);
+  }
 
   if (pages.length === 0) {
     return NextResponse.json({ error: "no matching pages" }, { status: 404 });

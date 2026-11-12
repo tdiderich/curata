@@ -4,7 +4,7 @@ import { resolveOrg } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { readPageYaml, writePage, markTrusted } from "@/lib/pages";
 import { db } from "@/lib/db";
-import { getPageOrThrow, PageAccessError } from "@/lib/access";
+import { getPageOrThrow, assertPageEditable, PageAccessError } from "@/lib/access";
 import { resolveEffectiveTrustMode, canApprove } from "@/lib/approval";
 
 export async function GET(request: NextRequest) {
@@ -75,7 +75,7 @@ export async function PUT(request: NextRequest) {
     // A missing page falls through to writePage, which creates it.
     if (page) {
       try {
-        await getPageOrThrow(ctx.orgId, body.slug, ctx.userId, ctx.role);
+        assertPageEditable(await getPageOrThrow(ctx.orgId, body.slug, ctx.userId, ctx.role));
       } catch (e) {
         if (e instanceof PageAccessError) {
           return NextResponse.json({ error: e.message }, { status: e.status });
