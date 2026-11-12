@@ -11,10 +11,11 @@ vi.mock("@/lib/db", async () => {
 import { buildServerInstructions } from "@/lib/mcp-instructions";
 
 async function tagPage(pageId: string, name: string) {
+  const { orgId } = await testDb.page.findUniqueOrThrow({ where: { id: pageId }, select: { orgId: true } });
   const concept = await testDb.concept.upsert({
-    where: { normalizedName: name },
+    where: { orgId_normalizedName: { orgId, normalizedName: name } },
     update: { usageCount: { increment: 1 } },
-    create: { normalizedName: name, displayName: name, kind: "topic" },
+    create: { orgId, normalizedName: name, displayName: name, kind: "topic" },
   });
   await testDb.pageConcept.create({
     data: { pageId, conceptId: concept.id, createdBy: "test-user" },

@@ -69,7 +69,7 @@ describe("scan: write path", () => {
     expect(await testDb.externalRef.count({ where: { pageId: page.id } })).toBe(1);
 
     // Source of a component/<slug> concept resolves to the component page even with no asserts tag.
-    const concept = await findConceptForTerm("component/pricing-table", normalizeTerm("component/pricing-table"));
+    const concept = await findConceptForTerm(org.id, "component/pricing-table", normalizeTerm("component/pricing-table"));
     const sources = await sourceUpdatedAtByConcept(org.id, [concept!.id]);
     expect(sources.get(concept!.id)).toBeInstanceOf(Date);
 

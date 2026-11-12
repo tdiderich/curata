@@ -13,18 +13,18 @@ function chartPages(orgId: string, userId: string | null): Prisma.PageWhereInput
   return listPagesWhere(orgId, userId) as Prisma.PageWhereInput;
 }
 
-/// Concepts are global rows. A term counts as known here only when a page
-/// this caller can see in this org, or an external asset of this org, sits
-/// on it; anything else answers exactly like a term nobody ever used, before
-/// any read or write. Otherwise another org's tags, or a term only on
-/// someone's private page, would show through.
+/// Concepts are org-owned, so another org's tags never match here. A term
+/// still counts as known only when a page this caller can see, or an external
+/// asset of this org, sits on it; anything else answers exactly like a term
+/// nobody ever used, before any read or write. Otherwise a term only on
+/// someone's private page would show through.
 export async function visibleConcept(orgId: string, term: string, userId: string | null) {
-  const concept = await findConceptForTerm(term, normalizeTerm(term));
+  const concept = await findConceptForTerm(orgId, term, normalizeTerm(term));
   if (!concept) return null;
   const used = await db.concept.count({
     // Archived pages count: their terms aren't secret, and promoting an
     // archived page must still find the concept it just tagged.
-    where: { id: concept.id, OR: [{ pages: { some: { page: { orgId, ...pageVisibilityWhere(userId) } } } }, { externalEdges: { some: { asset: { orgId } } } }] },
+    where: { id: concept.id, OR: [{ pages: { some: { page: { orgId, ...pageVisibilityWhere(userId) } } } }, { externalEdges: { some: {} } }] },
   });
   return used > 0 ? concept : null;
 }
@@ -453,7 +453,7 @@ export async function getPageImpact(orgId: string, slug: string, userId: string 
   const empty: PageImpact = { nodes: [], pages: 0, external: 0, text: null };
   if (!page) return empty;
   const asserted = await db.pageConcept.findMany({ where: { pageId: page.id, rel: "asserts" }, select: { conceptId: true } });
-  const named = await db.concept.findMany({ where: { normalizedName: { in: [`template/${slug}`, `component/${slug}`] } }, select: { id: true } });
+  const named = await db.concept.findMany({ where: { orgId, normalizedName: { in: [`template/${slug}`, `component/${slug}`] } }, select: { id: true } });
   const ids = [...new Set([...asserted.map((a) => a.conceptId), ...named.map((n) => n.id)])];
   if (ids.length === 0) return empty;
   const [pageEdges, extEdges, concepts] = await Promise.all([
@@ -555,7 +555,7 @@ export async function getPageMapView(orgId: string, slug: string, userId: string
   under.sort((a, b) => WORST.indexOf(a.me.color) - WORST.indexOf(b.me.color) || a.node.term.localeCompare(b.node.term));
 
   const asserts = await db.pageConcept.findFirst({ where: { pageId: page.id, rel: "asserts" }, select: { concept: { select: { displayName: true } } } });
-  const named = asserts?.concept.displayName ?? (await db.concept.findFirst({ where: { normalizedName: { in: [`template/${slug}`, `component/${slug}`] } }, select: { displayName: true } }))?.displayName;
+  const named = asserts?.concept.displayName ?? (await db.concept.findFirst({ where: { orgId, normalizedName: { in: [`template/${slug}`, `component/${slug}`] } }, select: { displayName: true } }))?.displayName;
   const asNode = named ? await getChartNode(orgId, named, userId).catch(() => null) : null;
   return { under, asNode };
 }

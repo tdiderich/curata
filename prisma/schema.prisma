@@ -32,6 +32,7 @@ model Organization {
   pages     Page[]
   members   OrgMember[]
   auditLogs AuditLog[]
+  concepts  Concept[]
   groups    Group[]
 
   @@map("organizations")
@@ -252,27 +253,29 @@ model AuditLog {
 
 model Concept {
   id             String   @id @default(cuid())
-  normalizedName String   @unique @map("normalized_name")
+  normalizedName String   @map("normalized_name")
   displayName    String   @map("display_name")
   kind           String   @default("")
   usageCount     Int      @default(1) @map("usage_count")
-  // Recommended-tag bookkeeping: when isRecommended is true, orgId names the
-  // org whose owner/admin picked this term as a suggested tag (see
-  // lib/org-tags.ts) - this replaces the old org.rules "org-tags" JSON entry.
-  // Concepts stay globally shared for page tagging regardless of this flag:
-  // orgId/isRecommended only annotate who currently recommends the term, they
-  // don't fence which org can attach it to a page. No FK to Organization on
-  // purpose - a hard relation would cascade-delete a shared concept (still
-  // used by other orgs' pages) when the recommending org is removed.
-  orgId         String?  @map("org_id")
+  // Concepts (tags) are owned by one org: the same term in two orgs is two
+  // rows, so renaming, re-kinding, merging or recommending in one org never
+  // touches another. orgId is the owning org; (orgId, normalizedName) is the
+  // identity. isRecommended is a per-row flag: this org's owner/admin picked
+  // the term as a suggested tag (see lib/org-tags.ts). Deleting an org
+  // cascades to its concepts (and their page/external edges and chart
+  // settings), which is clean now that no other org references these rows.
+  orgId         String   @map("org_id")
   isRecommended Boolean  @default(false) @map("is_recommended")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   pages PageConcept[]
   externalEdges ExternalEdge[]
   chartSettings    ChartNodeSetting[]
 
+  @@unique([orgId, normalizedName])
   @@index([orgId, isRecommended])
   @@map("concepts")
 }
@@ -372,7 +375,7 @@ model ExternalEdge {
   @@map("external_edges")
 }
 
-// Per-org chart overrides for a concept. Concepts are global, so hide/
+// Per-org chart overrides for a concept. Concepts are org-owned; hide/
 // promote live here. A node with fan-out under the threshold shows on the
 // chart only when promoted; a hidden node is kept out of the top row.
 model ChartNodeSetting {

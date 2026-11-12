@@ -152,7 +152,7 @@ export async function addScopeItem(orgId: string, term: string, input: AddScopeI
     const due = parseDue(input.dueAt);
     const check = parseCheckRecipe(input.check);
     await upsertExternalDependents(orgId, term, [{ url, label: input.label?.trim() || defaultAssetLabel(url), owner: input.owner }], createdBy);
-    const concept = await findConceptForTerm(term, normalized);
+    const concept = await findConceptForTerm(orgId, term, normalized);
     const asset = await db.externalAsset.findUnique({ where: { orgId_url: { orgId, url } }, select: { id: true } });
     if (concept && asset) {
       if (due !== undefined) await db.externalEdge.updateMany({ where: { assetId: asset.id, conceptId: concept.id }, data: { dueAt: due } });
@@ -193,7 +193,7 @@ export async function updateScopeItem(orgId: string, input: UpdateScopeInput): P
   if (due !== undefined) {
     const where: { assetId: string; conceptId?: string } = { assetId: asset.id };
     if (input.term) {
-      const concept = await findConceptForTerm(input.term, normalizeTerm(input.term));
+      const concept = await findConceptForTerm(orgId, input.term, normalizeTerm(input.term));
       if (!concept) throw new Error(`concept not found: ${input.term}`);
       where.conceptId = concept.id;
     }

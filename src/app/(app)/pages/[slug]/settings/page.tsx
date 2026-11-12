@@ -84,7 +84,7 @@ export default async function PageSettingsView({
     getPageMapView(ctx.orgId, slug, ctx.userId),
     getChart(ctx.orgId, { includeHidden: true, userId: ctx.userId }),
     db.concept.findMany({
-      where: { pages: { some: { page: { orgId: ctx.orgId, status: "active" } } } },
+      where: { orgId: ctx.orgId, pages: { some: { page: { status: "active" } } } },
       select: { displayName: true, kind: true },
       take: 200,
     }),

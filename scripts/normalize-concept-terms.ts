@@ -3,7 +3,7 @@
  * (lowercase letters, digits, hyphens - see normalizeTerm in lib/concepts.ts).
  *
  * "noise reduction" becomes "noise-reduction". When the slugged name collides
- * with an existing concept, page memberships merge into the survivor (the row
+ * with an existing concept of the same org, page memberships merge into the survivor (the row
  * that already had the slugged name) and the duplicate row is deleted. Kind is
  * kept from whichever row has one, survivor first.
  *
@@ -29,7 +29,7 @@ async function main() {
       continue;
     }
 
-    const survivor = await db.concept.findUnique({ where: { normalizedName: slug } });
+    const survivor = await db.concept.findUnique({ where: { orgId_normalizedName: { orgId: c.orgId, normalizedName: slug } } });
     if (!survivor) {
       await db.concept.update({
         where: { id: c.id },

@@ -120,7 +120,7 @@ export async function syncPageScan(orgId: string, pageId: string, doc: unknown, 
   for (const slug of embeds) {
     const term = componentConceptTerm(slug);
     const normalized = normalizeTerm(term);
-    const concept = await ensureConcept(term, normalized, await findConceptForTerm(term, normalized), "component");
+    const concept = await ensureConcept(orgId, term, normalized, await findConceptForTerm(orgId, term, normalized), "component");
     wantConceptIds.add(concept.id);
     await db.pageConcept.upsert({
       where: { pageId_conceptId_section: { pageId, conceptId: concept.id, section: "" } },

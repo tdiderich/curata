@@ -113,7 +113,7 @@ export default async function PageDetailView({
     const [concepts, orgConcepts] = await Promise.all([
       getPageConcepts(pageRow.id),
       db.concept.findMany({
-        where: { pages: { some: { page: { orgId: ctx.orgId, status: "active" } } } },
+        where: { orgId: ctx.orgId, pages: { some: { page: { status: "active" } } } },
         select: { displayName: true, kind: true },
         take: 200,
       }),
