@@ -5,8 +5,8 @@ import { makeTrustModeResolver, type TrustMode } from "./approval";
 import { findPageFor, listPagesWhere, pageAccessFor } from "./access";
 
 /// Scope for every page edge a graph read returns: the caller's org, not
-/// archived, and visible to the caller (listPagesWhere). Concept and PageLink
-/// rows are global, so any read that skips this leaks other orgs' pages.
+/// archived, and visible to the caller (listPagesWhere). Concepts are org-owned,
+/// but pages inside an org can still be private, so every graph read keeps this.
 function visiblePages(orgId: string, userId?: string | null): Prisma.PageWhereInput {
   return listPagesWhere(orgId, userId ?? null) as Prisma.PageWhereInput;
 }
@@ -122,15 +122,15 @@ function legacyNormalizeTerm(term: string): string {
 }
 
 /**
- * Finds a concept by its current slug name, falling back to the pre-slug
- * legacy form so not-yet-migrated rows still match.
+ * Finds an org's concept by its current slug name, falling back to the
+ * pre-slug legacy form so not-yet-migrated rows still match.
  */
-export async function findConceptForTerm(rawTerm: string, normalized: string) {
-  const bySlug = await db.concept.findUnique({ where: { normalizedName: normalized } });
+export async function findConceptForTerm(orgId: string, rawTerm: string, normalized: string) {
+  const bySlug = await db.concept.findUnique({ where: { orgId_normalizedName: { orgId, normalizedName: normalized } } });
   if (bySlug) return bySlug;
   const legacy = legacyNormalizeTerm(rawTerm);
   if (legacy === normalized) return null;
-  return db.concept.findUnique({ where: { normalizedName: legacy } });
+  return db.concept.findUnique({ where: { orgId_normalizedName: { orgId, normalizedName: legacy } } });
 }
 
 /**
@@ -156,8 +156,8 @@ export function projectConceptTerms(existingTerms: string[], incoming?: ConceptI
 
 export type ConceptRow = NonNullable<Awaited<ReturnType<typeof findConceptForTerm>>>;
 
-/** Find-or-create a concept row for a normalized term, racing safely. */
-export async function ensureConcept(rawTerm: string, normalized: string, existing: ConceptRow | null, kind?: string): Promise<ConceptRow> {
+/** Find-or-create an org's concept row for a normalized term, racing safely. */
+export async function ensureConcept(orgId: string, rawTerm: string, normalized: string, existing: ConceptRow | null, kind?: string): Promise<ConceptRow> {
   if (existing) {
     // Also migrates a legacy multi-word row to the slug form the first
     // time it's touched, so it stops needing this fallback afterward.
@@ -168,13 +168,13 @@ export async function ensureConcept(rawTerm: string, normalized: string, existin
   }
   try {
     return await db.concept.create({
-      data: { normalizedName: normalized, displayName: normalized, kind: kind || "", usageCount: 1 },
+      data: { orgId, normalizedName: normalized, displayName: normalized, kind: kind || "", usageCount: 1 },
     });
   } catch (err) {
     // Two concurrent writers can both miss the lookup and race to create the
     // same slug; the loser falls back to the row the winner just created.
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      return db.concept.update({ where: { normalizedName: normalized }, data: { kind: kind || undefined, updatedAt: new Date() } });
+      return db.concept.update({ where: { orgId_normalizedName: { orgId, normalizedName: normalized } }, data: { kind: kind || undefined, updatedAt: new Date() } });
     }
     throw err;
   }
@@ -193,6 +193,10 @@ export async function upsertConcepts(
   opts: { verified?: boolean } = {}
 ): Promise<void> {
   const verifiedAt = opts.verified === false ? null : new Date();
+  // The page owns the org: tags always land on the page's own org's rows.
+  const owner = await db.page.findUnique({ where: { id: pageId }, select: { orgId: true } });
+  if (!owner) throw new Error(`upsertConcepts: page ${pageId} not found`);
+  const orgId = owner.orgId;
   for (const c of concepts) {
     if (c.rel !== undefined && !isConceptRel(c.rel)) {
       throw new Error(`concepts[].rel must be one of ${CONCEPT_RELS.join("|")}, got ${JSON.stringify(c.rel)}`);
@@ -200,7 +204,7 @@ export async function upsertConcepts(
     const normalized = normalizeTerm(c.term);
     if (!normalized) continue;
 
-    const existing = await findConceptForTerm(c.term, normalized);
+    const existing = await findConceptForTerm(orgId, c.term, normalized);
 
     if (c.remove) {
       if (!existing) continue;
@@ -212,7 +216,7 @@ export async function upsertConcepts(
       continue;
     }
 
-    const concept = await ensureConcept(c.term, normalized, existing, c.kind);
+    const concept = await ensureConcept(orgId, c.term, normalized, existing, c.kind);
 
     await db.pageConcept.upsert({
       where: {
@@ -329,10 +333,9 @@ export async function getPageLinks(
 }
 
 /**
- * Concepts are global rows shared by every org, so vocabulary is scoped by
- * the pages that carry them: only terms on pages this caller can see in this
- * org, with usageCount counted over those pages. Without the scope this
- * listed every org's tags.
+ * Vocabulary is this org's concepts, scoped by the pages that carry them:
+ * only terms on pages this caller can see, with usageCount counted over those
+ * pages (private pages stay out of the count).
  */
 export async function getVocabulary(
   orgId: string,
@@ -342,7 +345,7 @@ export async function getVocabulary(
   kinds: string[];
 }> {
   const visible = { page: visiblePages(orgId, opts.userId) };
-  const where: Prisma.ConceptWhereInput = { pages: { some: visible } };
+  const where: Prisma.ConceptWhereInput = { orgId, pages: { some: visible } };
   if (opts.kind) where.kind = opts.kind;
   if (opts.query) where.normalizedName = { startsWith: normalizeTerm(opts.query) };
 
@@ -354,7 +357,7 @@ export async function getVocabulary(
   const allKinds = await db.concept.findMany({
     select: { kind: true },
     distinct: ["kind"],
-    where: { kind: { not: "" }, pages: { some: visible } },
+    where: { orgId, kind: { not: "" }, pages: { some: visible } },
   });
 
   return {
@@ -382,9 +385,9 @@ export async function getRelated(
   if (opts.term) {
     const normalized = normalizeTerm(opts.term);
     const concept = await db.concept.findUnique({
-      where: { normalizedName: normalized },
+      where: { orgId_normalizedName: { orgId, normalizedName: normalized } },
       include: {
-        // Concepts are global: only this org's pages the caller can see.
+        // Only pages the caller can see.
         pages: { where: { page: pageWhere }, include: { page: true } },
       },
     });
@@ -503,7 +506,7 @@ export async function getSemanticMap(
   };
 }> {
   const pageWhere = visiblePages(orgId, opts.userId);
-  const conceptWhere: Prisma.ConceptWhereInput = { pages: { some: { page: pageWhere } } };
+  const conceptWhere: Prisma.ConceptWhereInput = { orgId, pages: { some: { page: pageWhere } } };
   if (opts.kind) conceptWhere.kind = opts.kind;
 
   const concepts = await db.concept.findMany({
@@ -861,7 +864,7 @@ export async function upsertExternalDependents(
 ): Promise<ExternalDependentRow[]> {
   const normalized = normalizeTerm(term);
   if (!normalized) throw new Error("term is required");
-  const concept = await ensureConcept(term, normalized, await findConceptForTerm(term, normalized));
+  const concept = await ensureConcept(orgId, term, normalized, await findConceptForTerm(orgId, term, normalized));
   const out: ExternalDependentRow[] = [];
   for (const item of items) {
     if (item.rel !== undefined && !isConceptRel(item.rel)) {
@@ -925,7 +928,7 @@ export async function verifyDependent(
   let termOut: string | null = null;
   if (target.term) {
     const normalizedTerm = normalizeTerm(target.term);
-    const concept = await findConceptForTerm(target.term, normalizedTerm);
+    const concept = await findConceptForTerm(orgId, target.term, normalizedTerm);
     if (!concept) throw new Error(`concept not found: ${normalizedTerm}`);
     conceptId = concept.id;
     termOut = concept.displayName;
@@ -1070,9 +1073,9 @@ export async function getDependents(
 
   if (opts.term) {
     const normalized = normalizeTerm(opts.term);
-    const found = await findConceptForTerm(opts.term, normalized);
-    // Concepts are global. One that nothing in this org (that the caller can
-    // see) carries reads as unknown, so other orgs' tag names don't show.
+    const found = await findConceptForTerm(orgId, opts.term, normalized);
+    // A concept nothing the caller can see carries reads as unknown, so a tag
+    // that only lives on private pages doesn't show through.
     const concept = found && (await db.concept.count({
       where: { id: found.id, OR: [{ pages: { some: { page: pageScope } } }, { externalEdges: { some: { asset: { orgId } } } }] },
     })) > 0 ? found : null;
@@ -1083,6 +1086,7 @@ export async function getDependents(
       const tokens = [...new Set(normalized.split(/[\/-]/).filter((t) => t.length >= 3))];
       const near = tokens.length === 0 ? [] : await db.concept.findMany({
         where: {
+          orgId,
           OR: tokens.map((t) => ({ normalizedName: { contains: t } })),
           pages: { some: { page: pageScope } },
         },
@@ -1136,7 +1140,7 @@ export async function getDependents(
     // A template page is depended on through its template/<slug> concept,
     // which lives on the instances rather than on the template itself.
     const templateConcept = await db.concept.findUnique({
-      where: { normalizedName: templateConceptTerm(page.slug) },
+      where: { orgId_normalizedName: { orgId, normalizedName: templateConceptTerm(page.slug) } },
       select: { id: true },
     });
 

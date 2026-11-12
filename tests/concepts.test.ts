@@ -94,6 +94,7 @@ describe("concepts", () => {
       async function seedLegacyConcept(displayName: string, kind = "") {
         return testDb.concept.create({
           data: {
+            orgId,
             normalizedName: displayName.toLowerCase().trim(),
             displayName,
             kind,

@@ -53,7 +53,7 @@ describe("/api/tags/org", () => {
       const page1 = await createTestPage(orgId, { slug: "p1" });
       const page2 = await createTestPage(orgId, { slug: "p2" });
       const concept = await testDb.concept.create({
-        data: { normalizedName: "engineering", displayName: "engineering", kind: "topic", usageCount: 2 },
+        data: { orgId, normalizedName: "engineering", displayName: "engineering", kind: "topic", usageCount: 2 },
       });
       await testDb.pageConcept.create({ data: { pageId: page1.id, conceptId: concept.id, createdBy: "agent" } });
       await testDb.pageConcept.create({ data: { pageId: page2.id, conceptId: concept.id, createdBy: "agent" } });
@@ -70,10 +70,13 @@ describe("/api/tags/org", () => {
       const myPage = await createTestPage(orgId, { slug: "mine" });
       const otherPage = await createTestPage(otherOrgId, { slug: "theirs" });
       const concept = await testDb.concept.create({
-        data: { normalizedName: "shared-vendor", displayName: "shared-vendor", kind: "vendor", usageCount: 2 },
+        data: { orgId, normalizedName: "shared-vendor", displayName: "shared-vendor", kind: "vendor", usageCount: 1 },
+      });
+      const otherConcept = await testDb.concept.create({
+        data: { orgId: otherOrgId, normalizedName: "shared-vendor", displayName: "shared-vendor", kind: "vendor", usageCount: 1 },
       });
       await testDb.pageConcept.create({ data: { pageId: myPage.id, conceptId: concept.id, createdBy: "agent" } });
-      await testDb.pageConcept.create({ data: { pageId: otherPage.id, conceptId: concept.id, createdBy: "agent" } });
+      await testDb.pageConcept.create({ data: { pageId: otherPage.id, conceptId: otherConcept.id, createdBy: "agent" } });
 
       const res = await GET();
       const data = (await res.json()) as { concepts: Array<{ pageCount: number }> };
@@ -83,7 +86,7 @@ describe("/api/tags/org", () => {
     it("excludes concepts this org doesn't use at all", async () => {
       asAdmin();
       await testDb.concept.create({
-        data: { normalizedName: "unused-elsewhere", displayName: "unused-elsewhere", kind: "topic", usageCount: 0 },
+        data: { orgId, normalizedName: "unused-elsewhere", displayName: "unused-elsewhere", kind: "topic", usageCount: 0 },
       });
       const res = await GET();
       const data = (await res.json()) as { concepts: unknown[] };
@@ -102,7 +105,7 @@ describe("/api/tags/org", () => {
 
     it("rejects a duplicate term", async () => {
       asAdmin();
-      await testDb.concept.create({ data: { normalizedName: "dup", displayName: "dup", kind: "topic" } });
+      await testDb.concept.create({ data: { orgId, normalizedName: "dup", displayName: "dup", kind: "topic" } });
       const res = await POST(req("POST", "http://localhost/api/tags/org", { term: "dup" }));
       expect(res.status).toBe(409);
     });
@@ -115,7 +118,7 @@ describe("/api/tags/org", () => {
   });
 
   describe("PATCH (rename / re-kind)", () => {
-    // Concept.normalizedName is globally unique and the `concepts`/`page_concepts`
+    // Concept (orgId, normalizedName) is unique and the `concepts`/`page_concepts`
     // tables aren't in setup.ts's per-test TRUNCATE list, so give each call its
     // own term to avoid colliding with rows other tests in this file created.
     let usedConceptCounter = 0;
@@ -124,7 +127,7 @@ describe("/api/tags/org", () => {
       const term = `old-term-${usedConceptCounter}`;
       const page = await createTestPage(orgId, { slug: `used-page-${usedConceptCounter}` });
       const concept = await testDb.concept.create({
-        data: { normalizedName: term, displayName: term, kind: "topic", usageCount: 1 },
+        data: { orgId, normalizedName: term, displayName: term, kind: "topic", usageCount: 1 },
       });
       await testDb.pageConcept.create({ data: { pageId: page.id, conceptId: concept.id, createdBy: "agent" } });
       return concept;
@@ -153,7 +156,7 @@ describe("/api/tags/org", () => {
     it("409s renaming to a term that already exists", async () => {
       asAdmin();
       const concept = await makeUsedConcept();
-      await testDb.concept.create({ data: { normalizedName: "taken", displayName: "taken", kind: "topic" } });
+      await testDb.concept.create({ data: { orgId, normalizedName: "taken", displayName: "taken", kind: "topic" } });
       const res = await PATCH(req("PATCH", "http://localhost/api/tags/org", { conceptId: concept.id, term: "taken" }));
       expect(res.status).toBe(409);
     });
@@ -167,14 +170,14 @@ describe("/api/tags/org", () => {
       // the collision-check findUnique (by normalizedName) so the pre-check
       // misses it and the real unique-constraint violation is what the
       // update's catch block has to handle.
-      await testDb.concept.create({ data: { normalizedName: "raced-term", displayName: "raced-term", kind: "topic" } });
+      await testDb.concept.create({ data: { orgId, normalizedName: "raced-term", displayName: "raced-term", kind: "topic" } });
       const originalFindUnique = testDb.concept.findUnique.bind(testDb.concept);
       const spy = vi
         .spyOn(testDb.concept, "findUnique")
         // Prisma types findUnique as its own promise class; a plain async mock is fine at runtime.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .mockImplementation((async (args: any) => {
-          if (args?.where?.normalizedName === "raced-term") return null;
+          if (args?.where?.orgId_normalizedName?.normalizedName === "raced-term") return null;
           return originalFindUnique(args);
         }) as never);
 
@@ -189,7 +192,7 @@ describe("/api/tags/org", () => {
     it("404s a concept this org doesn't use", async () => {
       asAdmin();
       const concept = await testDb.concept.create({
-        data: { normalizedName: "not-mine", displayName: "not-mine", kind: "topic" },
+        data: { orgId: otherOrgId, normalizedName: "not-mine", displayName: "not-mine", kind: "topic" },
       });
       const res = await PATCH(req("PATCH", "http://localhost/api/tags/org", { conceptId: concept.id, term: "whatever" }));
       expect(res.status).toBe(404);
@@ -208,7 +211,7 @@ describe("/api/tags/org", () => {
       asAdmin();
       const page = await createTestPage(orgId, { slug: "detach-page" });
       const concept = await testDb.concept.create({
-        data: { normalizedName: "detach-me", displayName: "detach-me", kind: "topic", usageCount: 1 },
+        data: { orgId, normalizedName: "detach-me", displayName: "detach-me", kind: "topic", usageCount: 1 },
       });
       await testDb.pageConcept.create({ data: { pageId: page.id, conceptId: concept.id, createdBy: "agent" } });
 
@@ -227,24 +230,36 @@ describe("/api/tags/org", () => {
       const myPage = await createTestPage(orgId, { slug: "mine-2" });
       const otherPage = await createTestPage(otherOrgId, { slug: "theirs-2" });
       const concept = await testDb.concept.create({
-        data: { normalizedName: "cross-org", displayName: "cross-org", kind: "topic", usageCount: 2 },
+        data: { orgId, normalizedName: "cross-org", displayName: "cross-org", kind: "topic", usageCount: 1 },
+      });
+      const otherConcept = await testDb.concept.create({
+        data: { orgId: otherOrgId, normalizedName: "cross-org", displayName: "cross-org", kind: "topic", usageCount: 1 },
       });
       await testDb.pageConcept.create({ data: { pageId: myPage.id, conceptId: concept.id, createdBy: "agent" } });
-      await testDb.pageConcept.create({ data: { pageId: otherPage.id, conceptId: concept.id, createdBy: "agent" } });
+      await testDb.pageConcept.create({ data: { pageId: otherPage.id, conceptId: otherConcept.id, createdBy: "agent" } });
 
       const res = await DELETE(req("DELETE", `http://localhost/api/tags/org?conceptId=${concept.id}`));
       expect(res.status).toBe(200);
 
-      const otherLink = await testDb.pageConcept.findFirst({ where: { conceptId: concept.id, pageId: otherPage.id } });
+      const otherLink = await testDb.pageConcept.findFirst({ where: { conceptId: otherConcept.id, pageId: otherPage.id } });
       expect(otherLink).not.toBeNull();
-      const stillExists = await testDb.concept.findUnique({ where: { id: concept.id } });
+      const stillExists = await testDb.concept.findUnique({ where: { id: otherConcept.id } });
       expect(stillExists?.usageCount).toBe(1);
     });
 
-    it("404s a concept not used by this org", async () => {
+    it("404s another org's concept", async () => {
       asAdmin();
       const concept = await testDb.concept.create({
-        data: { normalizedName: "orphan", displayName: "orphan", kind: "topic" },
+        data: { orgId: otherOrgId, normalizedName: "orphan", displayName: "orphan", kind: "topic" },
+      });
+      const res = await DELETE(req("DELETE", `http://localhost/api/tags/org?conceptId=${concept.id}`));
+      expect(res.status).toBe(404);
+    });
+
+    it("404s this org's own concept when no page carries it", async () => {
+      asAdmin();
+      const concept = await testDb.concept.create({
+        data: { orgId, normalizedName: "own-orphan", displayName: "own-orphan", kind: "topic" },
       });
       const res = await DELETE(req("DELETE", `http://localhost/api/tags/org?conceptId=${concept.id}`));
       expect(res.status).toBe(404);

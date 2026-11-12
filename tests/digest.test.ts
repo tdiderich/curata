@@ -53,10 +53,11 @@ function emptyDigestData(overrides: Partial<DigestData> = {}): DigestData {
 const PAGE_YAML = "title: t\nshell: document\ncomponents: []\n";
 
 async function tagPage(pageId: string, term: string) {
+  const { orgId } = await testDb.page.findUniqueOrThrow({ where: { id: pageId }, select: { orgId: true } });
   const concept = await testDb.concept.upsert({
-    where: { normalizedName: term },
+    where: { orgId_normalizedName: { orgId, normalizedName: term } },
     update: {},
-    create: { normalizedName: term, displayName: term, kind: "topic" },
+    create: { orgId, normalizedName: term, displayName: term, kind: "topic" },
   });
   await testDb.pageConcept.create({ data: { pageId, conceptId: concept.id, createdBy: "test-user" } });
 }

@@ -12,10 +12,11 @@ import { buildKnowledgeGraph } from "@/lib/graph";
 import { DEFAULT_TAGS } from "@/lib/default-tags";
 
 async function tagPage(pageId: string, name: string, createdBy = "user-a") {
+  const { orgId } = await testDb.page.findUniqueOrThrow({ where: { id: pageId }, select: { orgId: true } });
   const concept = await testDb.concept.upsert({
-    where: { normalizedName: name },
+    where: { orgId_normalizedName: { orgId, normalizedName: name } },
     update: {},
-    create: { normalizedName: name, displayName: name, kind: "topic" },
+    create: { orgId, normalizedName: name, displayName: name, kind: "topic" },
   });
   await testDb.pageConcept.create({ data: { pageId, conceptId: concept.id, createdBy } });
   return concept;

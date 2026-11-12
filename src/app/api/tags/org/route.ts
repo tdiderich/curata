@@ -9,9 +9,11 @@ import { Prisma } from "@/generated/prisma/client";
 
 /**
  * Org-scoped concept ("Tags tab") management — distinct from /api/tags
- * (per-page add/remove, any member) and /api/org-tags (the JSON-stored
- * "recommended tags" list). Gated the same as Content Rules: owner/admin
- * only, since rename/kind edits ripple to every page that carries the tag.
+ * (per-page add/remove, any member) and /api/org-tags (the "recommended
+ * tags" list). Gated the same as Content Rules: owner/admin only, since
+ * rename/kind edits ripple to every page that carries the tag. Concepts are
+ * owned by one org, so every handler only sees and changes the caller's rows;
+ * another org's tag id answers "tag not found".
  */
 
 function requireManage(role: Role) {
@@ -25,13 +27,13 @@ export async function GET() {
   if (!requireManage(ctx.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const concepts = await db.concept.findMany({
-    where: { pages: { some: { page: { orgId: ctx.orgId, status: "active" } } } },
+    where: { orgId: ctx.orgId, pages: { some: { page: { status: "active" } } } },
     select: {
       id: true,
       displayName: true,
       kind: true,
       pages: {
-        where: { page: { orgId: ctx.orgId, status: "active" } },
+        where: { page: { status: "active" } },
         select: { id: true },
       },
     },
@@ -66,13 +68,13 @@ export async function POST(request: NextRequest) {
   if (!normalized) return NextResponse.json({ error: "term is required" }, { status: 400 });
   const kind = typeof body.kind === "string" && isCuratedKind(body.kind) ? body.kind : DEFAULT_KIND;
 
-  const existing = await db.concept.findUnique({ where: { normalizedName: normalized } });
+  const existing = await db.concept.findUnique({ where: { orgId_normalizedName: { orgId: ctx.orgId, normalizedName: normalized } } });
   if (existing) {
     return NextResponse.json({ error: "a tag with that name already exists" }, { status: 409 });
   }
 
   const concept = await db.concept.create({
-    data: { normalizedName: normalized, displayName: normalized, kind, usageCount: 0 },
+    data: { orgId: ctx.orgId, normalizedName: normalized, displayName: normalized, kind, usageCount: 0 },
   });
   logAudit({
     orgId: ctx.orgId,
@@ -103,17 +105,8 @@ export async function PATCH(request: NextRequest) {
   const { conceptId } = body;
   if (!conceptId) return NextResponse.json({ error: "conceptId is required" }, { status: 400 });
 
-  const concept = await db.concept.findUnique({ where: { id: conceptId } });
+  const concept = await db.concept.findFirst({ where: { id: conceptId, orgId: ctx.orgId } });
   if (!concept) return NextResponse.json({ error: "tag not found" }, { status: 404 });
-
-  // Concept rows aren't org-scoped in the schema (a single OSS org today, but
-  // shared across orgs on the cloud multi-tenant build) — confirm this org
-  // actually uses the tag before letting it rename/re-kind a row that
-  // happens to belong to someone else's pages.
-  const usedByOrg = await db.pageConcept.findFirst({
-    where: { conceptId, page: { orgId: ctx.orgId, status: "active" } },
-  });
-  if (!usedByOrg) return NextResponse.json({ error: "tag not used by this organization" }, { status: 404 });
 
   const data: { normalizedName?: string; displayName?: string; kind?: string } = {};
 
@@ -121,7 +114,7 @@ export async function PATCH(request: NextRequest) {
     const normalized = normalizeTerm(body.term);
     if (!normalized) return NextResponse.json({ error: "term is required" }, { status: 400 });
     if (normalized !== concept.normalizedName) {
-      const collision = await db.concept.findUnique({ where: { normalizedName: normalized } });
+      const collision = await db.concept.findUnique({ where: { orgId_normalizedName: { orgId: ctx.orgId, normalizedName: normalized } } });
       if (collision) {
         return NextResponse.json(
           { error: "a tag with that name already exists - use Merge instead" },
@@ -166,7 +159,7 @@ export async function PATCH(request: NextRequest) {
     metadata: { before: { term: concept.displayName, kind: concept.kind }, after: { term: updated.displayName, kind: updated.kind } },
   }).catch(() => {});
 
-  const pageCount = await db.pageConcept.count({ where: { conceptId, page: { orgId: ctx.orgId, status: "active" } } });
+  const pageCount = await db.pageConcept.count({ where: { conceptId, page: { status: "active" } } });
   return NextResponse.json({
     concept: { id: updated.id, term: updated.displayName, kind: updated.kind || DEFAULT_KIND, pageCount },
   });
@@ -196,18 +189,11 @@ export async function PUT(request: NextRequest) {
   }
 
   const [source, target] = await Promise.all([
-    db.concept.findUnique({ where: { id: sourceConceptId } }),
-    db.concept.findUnique({ where: { id: targetConceptId } }),
+    db.concept.findFirst({ where: { id: sourceConceptId, orgId: ctx.orgId } }),
+    db.concept.findFirst({ where: { id: targetConceptId, orgId: ctx.orgId } }),
   ]);
   if (!source) return NextResponse.json({ error: "source tag not found" }, { status: 404 });
   if (!target) return NextResponse.json({ error: "target tag not found" }, { status: 404 });
-
-  const [sourceUsedByOrg, targetUsedByOrg] = await Promise.all([
-    db.pageConcept.findFirst({ where: { conceptId: sourceConceptId, page: { orgId: ctx.orgId, status: "active" } } }),
-    db.pageConcept.findFirst({ where: { conceptId: targetConceptId, page: { orgId: ctx.orgId, status: "active" } } }),
-  ]);
-  if (!sourceUsedByOrg) return NextResponse.json({ error: "source tag not used by this organization" }, { status: 404 });
-  if (!targetUsedByOrg) return NextResponse.json({ error: "target tag not used by this organization" }, { status: 404 });
 
   const updated = await db.$transaction(async (tx) => {
     const sourcePageConcepts = await tx.pageConcept.findMany({ where: { conceptId: sourceConceptId } });
@@ -239,7 +225,7 @@ export async function PUT(request: NextRequest) {
     metadata: { source: { id: sourceConceptId, term: source.displayName }, target: { id: targetConceptId, term: updated.displayName } },
   }).catch(() => {});
 
-  const pageCount = await db.pageConcept.count({ where: { conceptId: targetConceptId, page: { orgId: ctx.orgId, status: "active" } } });
+  const pageCount = await db.pageConcept.count({ where: { conceptId: targetConceptId, page: { status: "active" } } });
   return NextResponse.json({
     concept: { id: updated.id, term: updated.displayName, kind: updated.kind || DEFAULT_KIND, pageCount },
   });
@@ -247,9 +233,9 @@ export async function PUT(request: NextRequest) {
 
 /**
  * Detaches a tag from every active page in this org and recomputes its
- * usage count. The Concept row itself is never hard-deleted here — it's a
- * globally shared table (upsertConcepts' own remove path follows the same
- * rule) and another org's pages, or a future re-tag, may still reference it.
+ * usage count. The Concept row itself is never hard-deleted here
+ * (upsertConcepts' own remove path follows the same rule), so a recommended
+ * flag or a future re-tag keeps its row.
  */
 export async function DELETE(request: NextRequest) {
   const ctx = await resolveOrg();
@@ -259,17 +245,16 @@ export async function DELETE(request: NextRequest) {
   const conceptId = request.nextUrl.searchParams.get("conceptId");
   if (!conceptId) return NextResponse.json({ error: "conceptId param required" }, { status: 400 });
 
-  const concept = await db.concept.findUnique({ where: { id: conceptId } });
+  const concept = await db.concept.findFirst({ where: { id: conceptId, orgId: ctx.orgId } });
   if (!concept) return NextResponse.json({ error: "tag not found" }, { status: 404 });
 
   const orgPageConcepts = await db.pageConcept.findMany({
-    where: { conceptId, page: { orgId: ctx.orgId } },
+    where: { conceptId },
     select: { id: true },
   });
   if (orgPageConcepts.length === 0) {
     return NextResponse.json({ error: "tag not used by this organization" }, { status: 404 });
   }
-
   await db.pageConcept.deleteMany({ where: { id: { in: orgPageConcepts.map((pc) => pc.id) } } });
   const usageCount = await db.pageConcept.count({ where: { conceptId } });
   await db.concept.update({ where: { id: conceptId }, data: { usageCount } });
