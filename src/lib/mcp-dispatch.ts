@@ -1806,6 +1806,7 @@ async function dispatchTool(
       return getRelated(orgId, {
         term: args.term || undefined,
         slug: args.slug || undefined,
+        userId,
       });
     }
 
@@ -1916,6 +1917,7 @@ async function dispatchTool(
         slug: args.slug || undefined,
         term: args.term || undefined,
         rel: args.rel ? (args.rel as ConceptRel) : undefined,
+        userId,
       });
     }
 

@@ -12,7 +12,7 @@ vi.mock("@/lib/auth", async (importOriginal) => ({
   AUTH_MODE: "oauth",
 }));
 
-import { getSemanticMap, getVocabulary, upsertConcepts, upsertLinks } from "@/lib/concepts";
+import { getDependents, getRelated, getSemanticMap, getVocabulary, upsertConcepts, upsertLinks } from "@/lib/concepts";
 import { dispatch } from "@/lib/mcp-dispatch";
 
 // Concepts and page links are global tables shared by every org. The graph
@@ -27,10 +27,10 @@ describe("concept graph scoping", () => {
     orgB = (await createTestOrg({ name: "Org B", slug: "scope-org-b" })).id;
 
     const aPage = await createTestPage(orgA, { slug: "a-page", title: "A Page", createdBy: "alice", visibility: "org" });
-    const aTarget = await createTestPage(orgA, { slug: "a-target", title: "A Target", createdBy: "alice", visibility: "org" });
+    await createTestPage(orgA, { slug: "a-target", title: "A Target", createdBy: "alice", visibility: "org" });
     const aPrivate = await createTestPage(orgA, { slug: "a-private", title: "A Private", createdBy: "bob", visibility: "private" });
     const bPage = await createTestPage(orgB, { slug: "b-secret", title: "B Secret Plan", createdBy: "mallory", visibility: "org" });
-    const bTarget = await createTestPage(orgB, { slug: "b-target", title: "B Target", createdBy: "mallory", visibility: "org" });
+    await createTestPage(orgB, { slug: "b-target", title: "B Target", createdBy: "mallory", visibility: "org" });
 
     // "shared-term" is used in both orgs; each org also has its own term.
     await upsertConcepts(aPage.id, [{ term: "shared-term" }, { term: "a-only" }], "alice");
@@ -39,7 +39,6 @@ describe("concept graph scoping", () => {
     await upsertLinks(orgA, aPage.id, [{ target: "a-target", rel: "relates-to" }], "alice");
     await upsertLinks(orgA, aPrivate.id, [{ target: "a-target", rel: "relates-to" }], "bob");
     await upsertLinks(orgB, bPage.id, [{ target: "b-target", rel: "relates-to" }], "mallory");
-    void aTarget; void bTarget;
   });
 
   it("getSemanticMap returns only the caller's org and visible pages", async () => {
@@ -75,9 +74,40 @@ describe("concept graph scoping", () => {
   });
 
   it("MCP get_semantic_map and get_vocabulary are scoped the same way", async () => {
-    const map = (await dispatch("get_semantic_map", {}, orgA, "scope-org-a", "alice", "alice")) as Awaited<ReturnType<typeof getSemanticMap>>;
-    expect(JSON.stringify(map)).not.toMatch(/b-secret|B Secret Plan|a-private|b-only/);
-    const vocab = (await dispatch("get_vocabulary", {}, orgA, "scope-org-a", "alice", "alice")) as Awaited<ReturnType<typeof getVocabulary>>;
-    expect(JSON.stringify(vocab)).not.toMatch(/b-only|bob-private-term/);
+    const map = JSON.stringify(await dispatch("get_semantic_map", {}, orgA, "scope-org-a", "alice", "alice"));
+    expect(map).toContain("a-page");
+    expect(map).not.toMatch(/b-secret|B Secret Plan|a-private|b-only/);
+    const vocab = JSON.stringify(await dispatch("get_vocabulary", {}, orgA, "scope-org-a", "alice", "alice"));
+    expect(vocab).toContain("a-only");
+    expect(vocab).not.toMatch(/b-only|bob-private-term/);
+  });
+
+  it("getRelated by term shows only visible pages in the caller's org", async () => {
+    const r = await getRelated(orgA, { term: "shared-term", userId: "alice" });
+    expect(r.pages.map((p) => p.slug)).toEqual(["a-page"]);
+    expect(r.concepts[0].usageCount).toBe(1);
+    // Another org's tag, or one only on someone else's private page, is unknown here.
+    expect(await getRelated(orgA, { term: "b-only", userId: "alice" })).toEqual({ concepts: [], pages: [], links: [] });
+    expect(await getRelated(orgA, { term: "bob-private-term", userId: "alice" })).toEqual({ concepts: [], pages: [], links: [] });
+  });
+
+  it("getRelated by slug treats a hidden page as missing and drops hidden neighbours", async () => {
+    expect(await getRelated(orgA, { slug: "a-private", userId: "alice" })).toEqual({ concepts: [], pages: [], links: [] });
+    const r = await getRelated(orgA, { slug: "a-target", userId: "alice" });
+    expect(r.links).toEqual([{ from: "a-page", to: "a-target", rel: "relates-to" }]);
+    const viaPage = await getRelated(orgA, { slug: "a-page", userId: "alice" });
+    expect(viaPage.pages.map((p) => p.slug)).not.toContain("a-private");
+    expect(viaPage.concepts.find((c) => c.term === "shared-term")?.usageCount).toBe(1);
+  });
+
+  it("getDependents hides other orgs' terms and private pages", async () => {
+    await expect(getDependents(orgA, { term: "b-only", userId: "alice" })).rejects.toThrow(/concept not found/);
+    await expect(getDependents(orgA, { term: "bob-private-term", userId: "alice" })).rejects.toThrow(/concept not found/);
+    await expect(getDependents(orgA, { slug: "a-private", userId: "alice" })).rejects.toThrow(/page not found: a-private/);
+    const r = await getDependents(orgA, { term: "shared-term", userId: "alice" });
+    expect(r.concept?.usageCount).toBe(1);
+    expect(JSON.stringify(r)).not.toMatch(/a-private|b-secret/);
+    // The creator still sees their own page.
+    await expect(getDependents(orgA, { slug: "a-private", userId: "bob" })).resolves.toBeTruthy();
   });
 });
