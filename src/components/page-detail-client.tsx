@@ -81,6 +81,7 @@ export default function PageDetailClient({
   tagsRow,
   trustBanner,
   trustChip,
+  unreviewed = false,
   autoTrust,
   trustMode: trustModeProp,
   hasTrustRuleAtScope,
@@ -110,6 +111,8 @@ export default function PageDetailClient({
   trustBanner?: Omit<TrustBannerProps, "slug">;
   /** Quiet header chip for trusted or auto-published pages (no banner shows then). */
   trustChip?: TrustChipData;
+  /** Served content has no human approval (auto-published or never trusted): presentation shows a quiet marker. */
+  unreviewed?: boolean;
   autoTrust?: boolean;
   trustMode?: "auto" | "locked";
   hasTrustRuleAtScope?: boolean;
@@ -161,6 +164,18 @@ export default function PageDetailClient({
     | { breaks?: number[]; labels?: string[] }
     | undefined;
   const presentationSlides = useMemo(() => {
+    // Deck pages present their own slides. The slide's title block becomes a
+    // header component, since the overlay renders each slide as a standard page.
+    const deckSlides = isDeck ? (pageJson?.slides as Array<Record<string, unknown>> | undefined) : undefined;
+    if (deckSlides?.length) {
+      return deckSlides.map((sl) => {
+        const comps = (sl.components as Array<Record<string, unknown>> | undefined) ?? [];
+        const head = typeof sl.title === "string" && sl.title
+          ? [{ type: "header", title: sl.title, ...(sl.subtitle ? { subtitle: sl.subtitle } : {}), ...(sl.eyebrow ? { eyebrow: sl.eyebrow } : {}) }]
+          : [];
+        return { components: [...head, ...comps], label: String(sl.label ?? "") };
+      });
+    }
     const comps = pageJson?.components as Array<Record<string, unknown>> | undefined;
     if (!comps?.length) return null;
     // Explicit presentation.breaks/labels is the manual override.
@@ -189,7 +204,7 @@ export default function PageDetailClient({
       cur.components.push(c);
     }
     return slides.length > 0 ? slides : null;
-  }, [presentationConfig, pageJson?.components]);
+  }, [presentationConfig, pageJson?.components, pageJson?.slides, isDeck]);
   const [slideIndex, setSlideIndex] = useState(() => {
     if (typeof window === "undefined" || !isDeck) return 0;
     const p = new URLSearchParams(window.location.search);
@@ -855,21 +870,6 @@ export default function PageDetailClient({
               )}
             </div>
             <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} hideTrigger />
-            {shell === "deck" && (
-              <button
-                className="btn btn--ghost"
-                onClick={() => {
-                  const root = document.querySelector(".deck-root") as HTMLElement | null;
-                  if (root?.requestFullscreen) root.requestFullscreen();
-                  else {
-                    const wk = root as HTMLElement & { webkitRequestFullscreen?: () => void };
-                    if (wk.webkitRequestFullscreen) wk.webkitRequestFullscreen();
-                  }
-                }}
-              >
-                Present
-              </button>
-            )}
           </div>
         )}
         <PageContent
@@ -1078,6 +1078,7 @@ export default function PageDetailClient({
           slides={presentationSlides}
           pageTitle={pageTitle ?? slug}
           pageJson={pageJson!}
+          unreviewed={unreviewed}
           onClose={() => setPresenting(false)}
         />,
         document.body,
@@ -1093,11 +1094,14 @@ function PresentationOverlay({
   slides,
   pageTitle,
   pageJson,
+  unreviewed = false,
   onClose,
 }: {
   slides: Array<{ components: Array<Record<string, unknown>>; label: string }>;
   pageTitle: string;
   pageJson: PageData;
+  /** No human approved this content: a quiet "Not reviewed" marker sits in the footer. */
+  unreviewed?: boolean;
   onClose: () => void;
 }) {
   const [current, setCurrent] = useState(0);
@@ -1166,7 +1170,6 @@ function PresentationOverlay({
     <div className="pres-overlay" role="dialog" aria-modal="true" aria-label={`Presenting ${pageTitle}`}>
       <div className="pres-viewport">
         <div className="pres-header">
-          <span className="pres-title">{pageTitle}</span>
           {slide.label && <span className="pres-slide-label">{slide.label}</span>}
           <span className="pres-counter" aria-live="polite">{current + 1} / {total}</span>
           <button className="pres-close" onClick={onClose} aria-label="Exit presentation" title="Exit presentation (Esc)">&times;</button>
@@ -1201,6 +1204,8 @@ function PresentationOverlay({
           </div>
         </div>
         <div className="pres-nav">
+          <span className="pres-footer-name">{pageTitle}</span>
+          <div className="pres-nav-controls">
           <button className="pres-nav-btn" disabled={current === 0} onClick={() => go(-1)} aria-label="Previous slide" title="Previous slide">&larr;</button>
           <div className="pres-dots" role="group" aria-label="Slides">
             {slides.map((_, i) => (
@@ -1214,6 +1219,15 @@ function PresentationOverlay({
             ))}
           </div>
           <button className="pres-nav-btn" disabled={current === total - 1} onClick={() => go(1)} aria-label="Next slide" title="Next slide">&rarr;</button>
+          </div>
+          <span className="pres-footer-status">
+            {unreviewed && (
+              <span className="pres-unreviewed" title="Auto-published or not yet approved by a human">
+                <span className="pres-unreviewed-dot" aria-hidden="true" />
+                Not reviewed
+              </span>
+            )}
+          </span>
         </div>
       </div>
     </div>

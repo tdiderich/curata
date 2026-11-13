@@ -271,6 +271,7 @@ export default async function PageDetailView({
           trustMode,
         }}
         trustChip={trustChip}
+        unreviewed={!!pageRow && !pageRow.seeded && (trustMode === "auto" || !pageData.trusted || previewingLatest)}
         autoTrust={trustMode === "locked" && canApproveEffective}
         trustMode={trustMode}
         hasTrustRuleAtScope={hasTrustRuleAtScope}
