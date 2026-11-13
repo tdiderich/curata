@@ -86,12 +86,36 @@ function useIsNarrow(query = "(max-width: 640px)") {
   return narrow;
 }
 
+/**
+ * Phones: the FAB slides out while the reader scrolls down (it sat over
+ * headings and card text) and comes back on any scroll up or near the end.
+ */
+function useHideOnScrollDown(active: boolean) {
+  const [away, setAway] = useState(false);
+  useEffect(() => {
+    if (!active) return;
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const nearEnd = window.innerHeight + y >= document.documentElement.scrollHeight - 24;
+      if (nearEnd || y < 80) setAway(false);
+      else if (y > last + 6) setAway(true);
+      else if (y < last - 6) setAway(false);
+      last = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [active]);
+  return active && away;
+}
+
 export function PageActionDock({ actions, hidden }: { actions: PageAction[]; hidden?: boolean }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const narrow = useIsNarrow();
   const [expanded, setExpanded] = useState(true);
+  const scrolledAway = useHideOnScrollDown(narrow && !sheetOpen);
 
   useEffect(() => registerDock(), []);
 
@@ -138,7 +162,7 @@ export function PageActionDock({ actions, hidden }: { actions: PageAction[]; hid
     const runAndClose = (a: PageAction) => { setSheetOpen(false); a.run(); };
     return (
       <>
-        <div className="page-dock-mobile">
+        <div className={`page-dock-mobile${scrolledAway ? " page-dock-mobile--away" : ""}`}>
           {primary && !primary.children && (
             <button type="button" className="dock-fab-primary" onClick={() => runAndClose(primary)}>
               {primary.icon && <span className="dock-btn-icon"><Icon name={primary.icon} /></span>}

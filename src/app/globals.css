@@ -8835,6 +8835,7 @@ body:has(.nav-reveal) .page-toolbar {
   color: var(--dark-muted);
   padding: 8px 0;
 }
+.ab-search-placeholder--short { display: none; }
 .ab-search-kbd {
   font-family: var(--mono);
   font-size: 10px;
@@ -9385,11 +9386,18 @@ body:has(.nav-reveal) .page-toolbar {
 .ctx-menu-item--danger { color: rgb(217, 89, 38); }
 .ctx-menu-sep { height: 1px; background: rgba(var(--text-rgb), 0.08); margin: 3px 6px; }
 
+/* ⌘K means nothing on a touch screen or a phone-width window. */
+@media (max-width: 640px), (hover: none) and (pointer: coarse) {
+  .ab-search-kbd, .abh-search-kbd { display: none; }
+}
+
 /* ── Responsive: action bar mobile ── */
 @media (max-width: 640px) {
   .ab-topbar { padding: 8px 12px; gap: 8px; }
   .ab-logo-text { display: none; }
+  /* Phones keep a visible prompt: icon plus "Search", not a lone ⌘K chip. */
   .ab-search-placeholder { display: none; }
+  .ab-search-placeholder--short { display: block; }
   .ab-search-area { max-width: none; }
   .abh-root { padding: 8vh 16px 40px; }
   .abh-brand-name { font-size: 18px; }
@@ -10213,6 +10221,20 @@ body:has(.page-dock--help-only) .dash-workspace { padding-bottom: 88px; }
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
+  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.2s;
+}
+.page-dock-mobile--away {
+  transform: translateY(calc(100% + 24px));
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-dock-mobile { transition: opacity 0.2s; }
+  .page-dock-mobile--away { transform: none; }
+}
+/* Room to scroll the last lines of a page out from under the FAB. */
+@media (max-width: 640px) {
+  .page-detail-layout:has(.page-dock-mobile) { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 }
 .dock-fab {
   width: 48px;

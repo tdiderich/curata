@@ -191,6 +191,7 @@ export function ActionBar({ orgName, logoUrl, pages, authControls }: ActionBarPr
           <div className="ab-search-trigger" onClick={() => setOverlayOpen(true)}>
             <SearchIcon />
             <span className="ab-search-placeholder">{SEARCH_PLACEHOLDER}</span>
+            <span className="ab-search-placeholder ab-search-placeholder--short">Search</span>
             <kbd className="ab-search-kbd">{"⌘"}K</kbd>
           </div>
         </div>
