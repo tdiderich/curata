@@ -6648,6 +6648,10 @@ body .c-section.align-right > * { max-width: none !important; }
 }
 .trust-chip--trusted { color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
 .trust-chip-detail { color: var(--light-muted); }
+/* Caution, not alarm: auto-published content is allowed, just not reviewed. */
+/* Text mixes toward --snow so light theme's olive still clears 4.5:1. */
+.trust-chip--auto { color: color-mix(in srgb, var(--yellow) 70%, var(--snow)); border-color: color-mix(in srgb, var(--yellow) 45%, transparent); background: color-mix(in srgb, var(--yellow) 7%, transparent); }
+.trust-chip--auto .trust-chip-detail { color: inherit; }
 @media print {
   .trust-chip { display: none !important; }
 }

@@ -122,13 +122,20 @@ export type TrustChipData =
 const CHIP_DATE = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 
 /// Quiet header chip for the states TrustBanner stays silent on: a fully
-/// trusted page (who approved it, and when) or an auto-published one. Lives
+/// trusted page (who approved it, and when) or an auto-published one, which
+/// carries a caution tone and says "not reviewed" in visible text. Lives
 /// in the page hero, so presentation mode and exports never render it.
 export function TrustChip({ chip }: { chip: TrustChipData }) {
   if (chip.kind === "auto") {
     return (
-      <span className="trust-chip trust-chip--auto" title="Pages in this folder publish without a human approval step.">
-        Auto-published
+      <span className="trust-chip trust-chip--auto">
+        <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 9v4" />
+          <path d="M12 17h.01" />
+          <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+        </svg>
+        <span>Auto-published</span>
+        <span className="trust-chip-detail">· not reviewed</span>
       </span>
     );
   }
