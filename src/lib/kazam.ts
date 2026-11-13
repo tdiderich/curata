@@ -5,6 +5,7 @@ import os from "os";
 import fs from "fs/promises";
 import { existsSync } from "fs";
 import yaml from "js-yaml";
+import { findTruncatingComments } from "./yaml-comment-guard";
 
 const exec = promisify(execFile);
 
@@ -119,7 +120,9 @@ export async function validateContentSplit(
     const all = await validateFile(tmpPath);
     return {
       errors: all.filter((e) => !isValidationWarning(e)),
-      warnings: toShapeWarnings(all),
+      // Unquoted " #" silently drops text; kazam can't see it (comments are
+      // gone by the time it parses), so curata adds the warning itself.
+      warnings: [...toShapeWarnings(all), ...findTruncatingComments(content)],
     };
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
