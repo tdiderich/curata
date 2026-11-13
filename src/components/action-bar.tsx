@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { basePath } from "@/lib/api-fetch";
 import { getPageActions, type PageAction } from "@/lib/page-actions";
-import type { ActionBarPage } from "@/components/action-bar-types";
+import { SEARCH_PLACEHOLDER, type ActionBarPage } from "@/components/action-bar-types";
 
 interface SearchResult {
   slug: string;
@@ -190,7 +190,7 @@ export function ActionBar({ orgName, logoUrl, pages, authControls }: ActionBarPr
         <div className="ab-search-area">
           <div className="ab-search-trigger" onClick={() => setOverlayOpen(true)}>
             <SearchIcon />
-            <span className="ab-search-placeholder">Search or take action...</span>
+            <span className="ab-search-placeholder">{SEARCH_PLACEHOLDER}</span>
             <kbd className="ab-search-kbd">{"⌘"}K</kbd>
           </div>
         </div>
@@ -206,7 +206,7 @@ export function ActionBar({ orgName, logoUrl, pages, authControls }: ActionBarPr
                 ref={inputRef}
                 type="search"
                 className="ab-overlay-input"
-                placeholder="Search pages and actions..."
+                placeholder={SEARCH_PLACEHOLDER}
                 autoComplete="off"
                 value={query}
                 onChange={onInput}

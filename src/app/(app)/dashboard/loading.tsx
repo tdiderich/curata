@@ -1,35 +1,30 @@
+/// Skeleton for Home. Mirrors the loaded layout (centered brand, search,
+/// "Needs you" strip, folder tree) so nothing jumps when the page arrives.
 export default function DashboardLoading() {
   return (
-    <div className="dash-root">
-      <div className="dash-workspace-header dash-workspace-header--top">
-        <span className="skel skel-text" style={{ width: 60 }} />
-        <span className="skel skel-text" style={{ width: 40 }} />
-        <div className="dash-header-actions">
-          <span className="skel skel-input" />
-          <span className="skel skel-btn" />
-        </div>
+    <div className="abh-root" aria-busy="true" aria-label="Loading">
+      <div className="abh-brand">
+        <span className="skel" style={{ width: 36, height: 36, borderRadius: 8 }} />
+        <span className="skel skel-text" style={{ width: 120, height: 22 }} />
       </div>
-      <div className="dash-workspace">
-        <table className="dash-table">
-          <thead>
-            <tr>
-              <th className="dash-th dash-th-title"><span className="skel skel-text" style={{ width: 40 }} /></th>
-              <th className="dash-th"><span className="skel skel-text" style={{ width: 50 }} /></th>
-              <th className="dash-th"><span className="skel skel-text" style={{ width: 60 }} /></th>
-              <th className="dash-th"><span className="skel skel-text" style={{ width: 50 }} /></th>
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <tr key={i} className="dash-row">
-                <td className="dash-td dash-td-title"><span className="skel skel-text" style={{ width: `${60 + (i % 3) * 20}%` }} /></td>
-                <td className="dash-td"><span className="skel skel-text" style={{ width: 70 }} /></td>
-                <td className="dash-td"><span className="skel skel-text" style={{ width: 60 }} /></td>
-                <td className="dash-td"><span className="skel skel-text" style={{ width: 50 }} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="abh-search">
+        <span className="skel skel-text" style={{ width: "45%", margin: "15px 0" }} />
+      </div>
+      <div className="abh-needs">
+        <span className="skel skel-text" style={{ width: 70 }} />
+        <span className="skel skel-text" style={{ width: 90, height: 22, borderRadius: 100 }} />
+        <span className="skel skel-text" style={{ width: 70, height: 22, borderRadius: 100 }} />
+      </div>
+      <div className="abh-dir-head">
+        <span className="skel skel-text" style={{ width: 60 }} />
+      </div>
+      <div className="abh-directory">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="abh-folder-label" style={{ cursor: "default" }}>
+            <span className="skel skel-text" style={{ width: 14 }} />
+            <span className="skel skel-text" style={{ width: `${28 + (i % 3) * 12}%` }} />
+          </div>
+        ))}
       </div>
     </div>
   );

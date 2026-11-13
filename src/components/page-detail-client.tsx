@@ -685,7 +685,7 @@ export default function PageDetailClient({
           <span>
             Archived {archived.since}
             {archived.supersededBy && (
-              <> — superseded by <Link href={`/pages/${archived.supersededBy}`} className="archived-banner-link">{archived.supersededBy}</Link></>
+              <>, superseded by <Link href={`/pages/${archived.supersededBy}`} className="archived-banner-link">{archived.supersededBy}</Link></>
             )}
             . Hidden from lists, search, and agents.
           </span>

@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { ActionBarFolder, ActionBarPage, NeedsYouCounts } from "@/components/action-bar-types";
+import { SEARCH_PLACEHOLDER, type ActionBarFolder, type ActionBarPage, type NeedsYouCounts } from "@/components/action-bar-types";
 import { PageActionDock } from "@/components/page-action-dock";
 import type { PageAction } from "@/lib/page-actions";
 import { ContextMenu, type ContextMenuItem } from "@/components/context-menu";
@@ -36,8 +36,6 @@ interface ActionBarHomeProps {
   quickRefs?: string[];
   needsYou?: NeedsYouCounts;
 }
-
-const SEARCH_PLACEHOLDER = "What are you looking for?";
 
 const STOCK_ACTIONS = [
   { id: "create-folder", title: "Create Folder", summary: "Organize pages into a named folder", route: null },

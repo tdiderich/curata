@@ -25,3 +25,6 @@ export interface NeedsYouCounts {
   /** Content-map items whose source moved since they were last checked. */
   stale: number | null;
 }
+
+/** One phrasing for every search box: the top bar, its overlay and Home. */
+export const SEARCH_PLACEHOLDER = "Search pages and actions…";
