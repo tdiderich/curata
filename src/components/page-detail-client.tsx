@@ -1086,6 +1086,9 @@ export default function PageDetailClient({
   );
 }
 
+/** Largest deck-wide scale: sparse decks grow a little, never to poster size. */
+const PRES_MAX_SCALE = 1.5;
+
 function PresentationOverlay({
   slides,
   pageTitle,
@@ -1101,7 +1104,7 @@ function PresentationOverlay({
   const total = slides.length;
 
   const bodyRef = useRef<HTMLDivElement>(null);
-  const slideRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
   const go = useCallback(
@@ -1109,27 +1112,35 @@ function PresentationOverlay({
     [total],
   );
 
+  // One scale for the whole deck: fit every slide, take the smallest fit, cap
+  // it. Scaling each slide on its own made type jump size between slides and
+  // blew sparse slides up to 3x. Every slide renders once, unscaled, in a
+  // hidden measuring layer so the deck-wide fit is known before slide 1 shows.
   useEffect(() => {
     const body = bodyRef.current;
-    const slideEl = slideRef.current;
-    if (!body || !slideEl) return;
+    const layer = measureRef.current;
+    if (!body || !layer) return;
 
     const fit = () => {
-      const availW = body.clientWidth;
-      const availH = body.clientHeight;
-      const contentW = slideEl.scrollWidth;
-      const contentH = slideEl.scrollHeight;
-      if (!contentW || !contentH) return;
-      const next = Math.min(3, (availW / contentW) * 0.96, (availH / contentH) * 0.96);
+      const cs = getComputedStyle(body);
+      const availW = body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const availH = body.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      let next = PRES_MAX_SCALE;
+      for (const el of Array.from(layer.children) as HTMLElement[]) {
+        const w = el.scrollWidth;
+        const h = el.scrollHeight;
+        if (!w || !h) continue;
+        next = Math.min(next, (availW / w) * 0.96, (availH / h) * 0.96);
+      }
       setScale(Number.isFinite(next) && next > 0 ? next : 1);
     };
 
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(body);
-    ro.observe(slideEl);
+    for (const el of Array.from(layer.children)) ro.observe(el);
     return () => ro.disconnect();
-  }, [current]);
+  }, [slides]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1150,16 +1161,33 @@ function PresentationOverlay({
   const slide = slides[current];
 
   return (
-    <div className="pres-overlay" onClick={onClose}>
-      <div className="pres-viewport" onClick={(e) => e.stopPropagation()}>
+    // No backdrop click-to-exit: a stray click while presenting shouldn't end
+    // the talk. Esc or the close button exit.
+    <div className="pres-overlay" role="dialog" aria-modal="true" aria-label={`Presenting ${pageTitle}`}>
+      <div className="pres-viewport">
         <div className="pres-header">
           <span className="pres-title">{pageTitle}</span>
           {slide.label && <span className="pres-slide-label">{slide.label}</span>}
-          <span className="pres-counter">{current + 1} / {total}</span>
-          <button className="pres-close" onClick={onClose} aria-label="Exit presentation">&times;</button>
+          <span className="pres-counter" aria-live="polite">{current + 1} / {total}</span>
+          <button className="pres-close" onClick={onClose} aria-label="Exit presentation" title="Exit presentation (Esc)">&times;</button>
         </div>
         <div className="pres-body" ref={bodyRef}>
-          <div className="pres-slide" ref={slideRef} style={{ transform: `scale(${scale})` }}>
+          <div className="pres-measure" ref={measureRef} aria-hidden="true" inert>
+            {slides.map((s, i) => (
+              <div key={i} className="pres-measure-slide">
+                <PageRenderer
+                  page={{
+                    ...pageJson,
+                    shell: "standard",
+                    components: s.components as PageData["components"],
+                    slides: undefined,
+                    hub: undefined,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="pres-slide" style={{ transform: `scale(${scale})` }}>
             <PageRenderer
               motion
               page={{
@@ -1173,18 +1201,19 @@ function PresentationOverlay({
           </div>
         </div>
         <div className="pres-nav">
-          <button className="pres-nav-btn" disabled={current === 0} onClick={() => go(-1)} aria-label="Previous slide">&larr;</button>
-          <div className="pres-dots">
+          <button className="pres-nav-btn" disabled={current === 0} onClick={() => go(-1)} aria-label="Previous slide" title="Previous slide">&larr;</button>
+          <div className="pres-dots" role="group" aria-label="Slides">
             {slides.map((_, i) => (
               <button
                 key={i}
                 className={`pres-dot${i === current ? " pres-dot--active" : ""}`}
                 onClick={() => setCurrent(i)}
-                aria-label={`Slide ${i + 1}`}
+                aria-label={`Go to slide ${i + 1} of ${total}`}
+                aria-current={i === current ? "step" : undefined}
               />
             ))}
           </div>
-          <button className="pres-nav-btn" disabled={current === total - 1} onClick={() => go(1)} aria-label="Next slide">&rarr;</button>
+          <button className="pres-nav-btn" disabled={current === total - 1} onClick={() => go(1)} aria-label="Next slide" title="Next slide">&rarr;</button>
         </div>
       </div>
     </div>

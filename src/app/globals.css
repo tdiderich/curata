@@ -9434,9 +9434,25 @@ body:has(.nav-reveal) .page-toolbar {
   justify-content: center;
 }
 
+.pres-body { position: relative; }
 .pres-slide {
   transform-origin: center center;
   transition: transform 0.15s ease-out;
+}
+/* Every slide, unscaled and invisible, so one deck-wide scale can be fit.
+   Absolute children shrink-to-fit like the centered .pres-slide does. */
+.pres-measure {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+}
+.pres-measure-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: 100%;
 }
 
 .pres-nav {
