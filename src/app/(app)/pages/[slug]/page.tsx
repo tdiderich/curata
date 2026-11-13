@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect, notFound } from "next/navigation";
 import { resolveOrg, AUTH_MODE } from "@/lib/auth";
-import { getAnnotations, getPageSections, readPage, bumpViewCount, shouldShowTrustBanner } from "@/lib/pages";
+import { getAnnotations, getPageSections, readPage, bumpViewCount, shouldShowTrustBanner, getTrustStamp } from "@/lib/pages";
 import type { Channel } from "@/lib/pages";
 import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
@@ -95,6 +95,17 @@ export default async function PageDetailView({
   const hasTrustRuleAtScope = pageRow ? parseTrustRule(pageRow.rules) !== null : false;
 
   const pageTitle = (pageData.json.title as string) || slug;
+
+  // Quiet header chip for the states the banner stays silent on: fully
+  // trusted (who approved it, and when) or auto-published.
+  let trustChip: { kind: "trusted"; at: string | null; by: string | null } | { kind: "auto" } | undefined;
+  if (pageRow && !pageRow.seeded) {
+    if (trustMode === "auto") trustChip = { kind: "auto" };
+    else if (pageData.trusted && !pageData.trustedBehind && !previewingLatest) {
+      const stamp = await getTrustStamp(ctx.orgId, slug);
+      trustChip = { kind: "trusted", at: stamp?.at ?? null, by: stamp?.by ?? null };
+    }
+  }
 
   const pageTags: Array<{ term: string; kind: string }> = [];
   let tagOptions: Array<{ term: string; kind: string }> = [];
@@ -259,6 +270,7 @@ export default async function PageDetailView({
           approversNote,
           trustMode,
         }}
+        trustChip={trustChip}
         autoTrust={trustMode === "locked" && canApproveEffective}
         trustMode={trustMode}
         hasTrustRuleAtScope={hasTrustRuleAtScope}

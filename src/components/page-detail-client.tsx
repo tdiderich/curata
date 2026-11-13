@@ -13,7 +13,7 @@ import { VersionHistoryPanel } from "./version-history";
 import AgentConnectModal from "./agent-connect-modal";
 import SourceEditor, { type SourceEditorControls } from "./source-editor";
 import { toast } from "./toast";
-import { TrustBanner, type TrustBannerProps } from "./trust-banner";
+import { TrustBanner, TrustChip, type TrustBannerProps, type TrustChipData } from "./trust-banner";
 import { basePath } from "@/lib/api-fetch";
 import { copyPagesForAgent } from "@/lib/copy-for-agent";
 import { useHighlights } from "@/hooks/use-highlights";
@@ -80,6 +80,7 @@ export default function PageDetailClient({
   approvalEffectiveNote = null,
   tagsRow,
   trustBanner,
+  trustChip,
   autoTrust,
   trustMode: trustModeProp,
   hasTrustRuleAtScope,
@@ -107,6 +108,8 @@ export default function PageDetailClient({
   approvalEffectiveNote?: string | null;
   tagsRow?: React.ReactNode;
   trustBanner?: Omit<TrustBannerProps, "slug">;
+  /** Quiet header chip for trusted or auto-published pages (no banner shows then). */
+  trustChip?: TrustChipData;
   autoTrust?: boolean;
   trustMode?: "auto" | "locked";
   hasTrustRuleAtScope?: boolean;
@@ -844,7 +847,12 @@ export default function PageDetailClient({
                   Add a subtitle
                 </p>
               )}
-              {shell !== "hub" && <div className="page-hero-tags">{tagsRow}</div>}
+              {(shell !== "hub" || (trustChip && !editMode)) && (
+                <div className="page-hero-tags">
+                  {trustChip && !editMode && <TrustChip chip={trustChip} />}
+                  {shell !== "hub" && tagsRow}
+                </div>
+              )}
             </div>
             <VisibilityPicker slug={slug} orgSlug={orgSlug} visibility={visibility} authMode={authMode} hideTrigger />
             {shell === "deck" && (

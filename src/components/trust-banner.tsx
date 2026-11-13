@@ -71,7 +71,7 @@ export function TrustBanner({ slug, trusted, trustedBehind, previewingLatest, ca
     return (
       <div className="trust-banner trust-banner--none" role="status">
         <span className="trust-banner-dot" aria-hidden="true" />
-        <span>Not yet trusted — no version of this page has been approved.</span>
+        <span>Not yet trusted. No version of this page has been approved.</span>
       </div>
     );
   }
@@ -80,7 +80,7 @@ export function TrustBanner({ slug, trusted, trustedBehind, previewingLatest, ca
     return (
       <div className="trust-banner trust-banner--preview" role="status">
         <span>
-          Previewing the newest version — it hasn&apos;t been approved yet.
+          Previewing the newest version. It hasn&apos;t been approved yet.
         </span>
         <span className="trust-banner-actions">
           <a href={hrefWithLatest(false)} className="trust-banner-link">Back to approved version</a>
@@ -112,5 +112,35 @@ export function TrustBanner({ slug, trusted, trustedBehind, previewingLatest, ca
         )}
       </span>
     </div>
+  );
+}
+
+export type TrustChipData =
+  | { kind: "trusted"; at: string | null; by: string | null }
+  | { kind: "auto" };
+
+const CHIP_DATE = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+
+/// Quiet header chip for the states TrustBanner stays silent on: a fully
+/// trusted page (who approved it, and when) or an auto-published one. Lives
+/// in the page hero, so presentation mode and exports never render it.
+export function TrustChip({ chip }: { chip: TrustChipData }) {
+  if (chip.kind === "auto") {
+    return (
+      <span className="trust-chip trust-chip--auto" title="Pages in this folder publish without a human approval step.">
+        Auto-published
+      </span>
+    );
+  }
+  const date = chip.at ? CHIP_DATE.format(new Date(chip.at)) : null;
+  const detail = [date && `approved ${date}`, chip.by && `by ${chip.by}`].filter(Boolean).join(" ");
+  return (
+    <span className="trust-chip trust-chip--trusted" title="A human approved this version. Agents read it on the trusted channel.">
+      <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+      <span>Trusted</span>
+      {detail && <span className="trust-chip-detail">· {detail}</span>}
+    </span>
   );
 }

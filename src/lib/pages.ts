@@ -66,6 +66,39 @@ export function shouldShowTrustBanner(seeded: boolean | null | undefined, trustM
   return true;
 }
 
+/// Who approved a page's trusted version, and when: the newest page.trust
+/// audit entry for the slug. Null when no entry exists (trust set before the
+/// audit log, or the page was renamed since).
+export async function getTrustStamp(
+  orgId: string,
+  slug: string
+): Promise<{ at: string; by: string | null } | null> {
+  const entry = await db.auditLog.findFirst({
+    where: { orgId, action: "page.trust", resourceType: "page", resourceId: slug },
+    orderBy: { createdAt: "desc" },
+    select: { actorId: true, createdAt: true },
+  });
+  if (!entry) return null;
+  let by: string | null = null;
+  if (entry.actorId === "agent") by = "an agent";
+  else if (entry.actorId && entry.actorId !== "default") {
+    const member = await db.orgMember.findUnique({
+      where: { orgId_userId: { orgId, userId: entry.actorId } },
+      select: { email: true },
+    });
+    by = trustActorLabel(member?.email ?? entry.actorId);
+  }
+  return { at: entry.createdAt.toISOString(), by };
+}
+
+/// Short display name for an approver: the local part of an email, or the
+/// raw id when it isn't one (opaque provider ids are cut to stay chip-sized).
+export function trustActorLabel(identity: string): string {
+  const at = identity.indexOf("@");
+  if (at > 0) return identity.slice(0, at);
+  return identity.length > 24 ? `${identity.slice(0, 24)}…` : identity;
+}
+
 export interface PageMeta {
   slug: string;
   title: string;
