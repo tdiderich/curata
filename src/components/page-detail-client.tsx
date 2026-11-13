@@ -160,6 +160,16 @@ export default function PageDetailClient({
 
   const isDeck = shell === "deck";
 
+  // A page that opens with a header component carrying its own title would
+  // show that title twice (hero, then header). Let the authored header win.
+  const heroTitleDuplicated = useMemo(() => {
+    if (editMode) return false;
+    const first = (pageJson?.components as Array<Record<string, unknown>> | undefined)?.[0];
+    if (!first || first.type !== "header" || typeof first.title !== "string") return false;
+    const norm = (t: string) => t.trim().toLowerCase().replace(/\s+/g, " ");
+    return !!pageTitle && norm(first.title) === norm(pageTitle);
+  }, [editMode, pageJson?.components, pageTitle]);
+
   const presentationConfig = (pageJson as Record<string, unknown> | undefined)?.presentation as
     | { breaks?: number[]; labels?: string[] }
     | undefined;
@@ -842,9 +852,9 @@ export default function PageDetailClient({
       <div className="page-content-wrap" ref={contentWrapRef}>
        <div ref={editRootRef} className="page-edit-root">
         {viewTab === "preview" && (
-          <div className="page-hero" data-kz-path="">
+          <div className={`page-hero${isDeck ? " page-hero--deck" : ""}`} data-kz-path="">
             <div className="page-hero-identity">
-              {shell !== "hub" && (editMode ? localMeta.title : pageTitle) && (
+              {shell !== "hub" && !heroTitleDuplicated && (editMode ? localMeta.title : pageTitle) && (
                 <h1 className="page-hero-title" data-kz-field="title">{editMode ? localMeta.title : pageTitle}</h1>
               )}
               {shell !== "hub" && (editMode ? localMeta.subtitle : pageJson?.subtitle) && (

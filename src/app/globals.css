@@ -189,6 +189,15 @@ body .c-section.align-right > * { max-width: none !important; }
 .page-hero + .page-detail-content {
   padding-top: 24px;
 }
+/* Deck pages: line the hero up with the deck's own 1100px, 56px-padded
+   slide column instead of the 48px page gutter. */
+.page-hero--deck {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-left: 56px;
+  padding-right: 56px;
+  box-sizing: border-box;
+}
 .page-hero-identity {
   display: flex;
   flex-direction: column;
