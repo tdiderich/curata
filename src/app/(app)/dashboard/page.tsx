@@ -7,7 +7,10 @@ import { getVocabulary } from "@/lib/concepts";
 import { basePath } from "@/lib/api-fetch";
 import { ActionBarHome } from "@/components/action-bar-home";
 import { WelcomeAutoOpen } from "@/components/help-center";
-import type { ActionBarFolder, ActionBarPage } from "@/components/action-bar-types";
+import type { ActionBarFolder, ActionBarPage, NeedsYouCounts } from "@/components/action-bar-types";
+import { getReviewQueueCount } from "@/lib/pages";
+import { getNeedsLook } from "@/lib/chart";
+import { pageVisibilityWhere } from "@/lib/access";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
@@ -89,6 +92,8 @@ export default async function DashboardPage() {
     return entry.refs.filter((s): s is string => typeof s === "string" && visibleSlugs.has(s));
   })();
 
+  const needsYou = await getNeedsYouCounts(ctx.orgId, ctx.userId);
+
   const orgName = org?.name || "curata";
   const logoUrl = org?.logoMime
     ? `${basePath}/api/org-logo?v=${org.updatedAt.getTime()}`
@@ -104,7 +109,31 @@ export default async function DashboardPage() {
       orgName={orgName}
       logoUrl={logoUrl}
       quickRefs={quickRefs}
+      needsYou={needsYou}
     />
     </>
   );
+}
+
+/// The review loop on Home: pages waiting for approval, open cleanup flags,
+/// and content-map pages whose source moved. Same reads the /review,
+/// /cleanup and /map?view=list screens use. A failure in one count hides
+/// that item instead of breaking Home.
+async function getNeedsYouCounts(orgId: string, userId: string): Promise<NeedsYouCounts> {
+  const now = new Date();
+  const [review, flagged, stale] = await Promise.all([
+    getReviewQueueCount(orgId, userId).catch(() => null),
+    db.pageFlag
+      .count({
+        where: {
+          page: { orgId, ...pageVisibilityWhere(userId) },
+          OR: [{ status: "pending" }, { status: "snoozed", snoozeUntil: { lte: now } }],
+        },
+      })
+      .catch(() => null),
+    getNeedsLook(orgId, userId)
+      .then((nodes) => new Set(nodes.flatMap((n) => n.children.map((c) => c.edgeId))).size)
+      .catch(() => null),
+  ]);
+  return { review, flagged, stale };
 }

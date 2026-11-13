@@ -9027,6 +9027,50 @@ body:has(.nav-reveal) .page-toolbar {
 .abh-concept-kind { color: var(--light-muted); font-size: 11px; }
 
 /* Directory head */
+/* Home's "Needs you" strip: the review loop, one link per queue. */
+.abh-needs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin-top: 20px;
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--text-rgb), 0.11);
+  border-radius: 10px;
+  font-size: 13px;
+}
+.abh-needs-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--light-muted);
+  margin-right: 4px;
+}
+.abh-needs-item {
+  color: var(--snow);
+  text-decoration: none;
+  padding: 2px 10px;
+  border-radius: 100px;
+  background: rgba(var(--accent-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  font-variant-numeric: tabular-nums;
+  transition: background 0.12s;
+}
+.abh-needs-item:hover { background: rgba(var(--accent-rgb), 0.22); }
+.abh-needs-item:focus-visible { outline: 2px solid rgba(var(--accent-rgb), 0.8); outline-offset: 2px; }
+.abh-needs-clear { color: var(--light-muted); }
+/* Divider above the system and personal folders at the end of the tree. */
+.abh-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--light-muted);
+  padding: 18px 8px 4px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(var(--text-rgb), 0.08);
+}
 .abh-dir-head {
   display: flex;
   align-items: center;

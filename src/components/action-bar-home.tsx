@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { ActionBarFolder, ActionBarPage } from "@/components/action-bar-types";
+import type { ActionBarFolder, ActionBarPage, NeedsYouCounts } from "@/components/action-bar-types";
 import { PageActionDock } from "@/components/page-action-dock";
 import type { PageAction } from "@/lib/page-actions";
 import { ContextMenu, type ContextMenuItem } from "@/components/context-menu";
@@ -34,6 +34,7 @@ interface ActionBarHomeProps {
   orgName: string;
   logoUrl: string | null;
   quickRefs?: string[];
+  needsYou?: NeedsYouCounts;
 }
 
 const SEARCH_PLACEHOLDER = "What are you looking for?";
@@ -47,6 +48,14 @@ const STOCK_ACTIONS = [
 ];
 
 const FOLDER_ORDER = ["Pinned", "Quick Actions", "Skills", "Templates"];
+
+/// Folders the system or a single person owns, not the team's knowledge.
+/// They sort below the team's own folders under a quiet divider.
+const DEMOTED_FOLDER_NAMES = new Set(["Curata Managed Pages", "Personal"]);
+function isDemotedFolder(name: string, folder: ActionBarFolder | undefined): boolean {
+  if (name === "Pinned" || name === "Quick Actions") return false;
+  return DEMOTED_FOLDER_NAMES.has(name) || !!folder?.locked;
+}
 
 function SearchIcon() {
   return (
@@ -110,7 +119,7 @@ function PinIcon() {
   );
 }
 
-export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, quickRefs = [] }: ActionBarHomeProps) {
+export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, quickRefs = [], needsYou }: ActionBarHomeProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [semantic, setSemantic] = useState<SemanticResult | null>(null);
@@ -313,6 +322,13 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
     }
     for (const f of rootFolders) {
       if (!seen.has(f.name)) { ordered.push(f.name); seen.add(f.name); }
+    }
+    // System and personal folders go last, after the team's own folders.
+    const rootByName = new Map(rootFolders.map((f) => [f.name, f]));
+    const demoted = ordered.filter((name) => isDemotedFolder(name, rootByName.get(name)));
+    if (demoted.length > 0) {
+      const demotedSet = new Set(demoted);
+      ordered.splice(0, ordered.length, ...ordered.filter((n) => !demotedSet.has(n)), ...demoted);
     }
     if (!visibleFolderIds) return ordered;
     // Searching: drop Quick Actions and any root folder with nothing to show.
@@ -756,6 +772,119 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
     }
   }
 
+  function renderFolder(name: string): React.ReactNode {
+    if (name === "Pinned") {
+      const isOpen = effectiveExpanded.has("Pinned");
+      return (
+        <div key="Pinned" className="abh-folder-group">
+          <div className="abh-folder-label" onClick={() => toggleFolder("Pinned")}>
+            <span className={`abh-chevron${isOpen ? "" : " abh-chevron--collapsed"}`}>&#9662;</span>
+            <PinIcon />
+            <span className="abh-folder-name">Pinned</span>
+            <div className="abh-folder-actions">
+              <button type="button" className="abh-action-btn" onClick={(e) => { e.stopPropagation(); copyFolder("Pinned"); }} title="Copy for agent">
+                <CopyIcon />
+              </button>
+            </div>
+          </div>
+          {isOpen && (
+            <div className="abh-folder-pages">
+              {pinnedPages.map((p) => (
+                <PageRow key={p.slug} page={p} onCopy={copyPage} onCtxMenu={showCtxMenu} inLockedFolder={false} />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const group = folderGroups.get(name);
+    const isQA = name === "Quick Actions";
+    const folderEntry = folders.find((f) => f.name === name);
+    if (!group && !isQA && !folderEntry) return null;
+    const isOpen = effectiveExpanded.has(name);
+    const isLocked = group?.folder.locked ?? folderEntry?.locked ?? false;
+    const groupPages = group?.pages ?? [];
+
+    return (
+      <div key={name} className="abh-folder-group">
+        <div className="abh-folder-label" onClick={() => toggleFolder(name)}>
+          <span className={`abh-chevron${isOpen ? "" : " abh-chevron--collapsed"}`}>&#9662;</span>
+          {isQA ? <ZapIcon /> : <FolderIcon />}
+          <span className="abh-folder-name">{name}</span>
+          <div className="abh-folder-actions">
+            <button type="button" className="abh-action-btn" onClick={(e) => {
+              e.stopPropagation();
+              if (isQA) {
+                const stock = STOCK_ACTIONS.map((a) => `- ${a.title}: ${a.summary}`);
+                const refs = [`- ${RECENT_ACTION.title}: ${RECENT_ACTION.summary}`, ...refPages.map((p) => `- ${p.title} (skill page: ${p.slug})`)];
+                navigator.clipboard.writeText(`Quick Actions:\n${[...stock, ...refs].join("\n")}`).catch(() => {});
+                toast.success("Copied quick actions for agent");
+              } else {
+                copyFolder(name);
+              }
+            }} title="Copy for agent">
+              <CopyIcon />
+            </button>
+            <button type="button" className="abh-action-btn" onClick={(e) => showCtxMenu(e, "folder", name)} title="More actions">
+              <DotsIcon />
+            </button>
+          </div>
+        </div>
+        {isOpen && (
+          <div className="abh-folder-pages">
+            {isQA && (
+              <>
+                {STOCK_ACTIONS.map((a) => (
+                  <div key={a.id} className="abh-page-row abh-qa-row" onClick={() => handleStockAction(a)}>
+                    <ZapIcon />
+                    <span className="abh-page-title">{a.title}</span>
+                    <span className="abh-qa-summary">{a.summary}</span>
+                  </div>
+                ))}
+                <div className="abh-page-row abh-qa-row" onClick={copyRecent}>
+                  <ZapIcon />
+                  <span className="abh-page-title">{RECENT_ACTION.title}</span>
+                  <span className="abh-qa-summary">{RECENT_ACTION.summary}</span>
+                </div>
+                {refPages.map((p) => (
+                  <PageRow
+                    key={p.slug}
+                    page={p}
+                    onCopy={copyPage}
+                    onCtxMenu={showCtxMenu}
+                    inLockedFolder={false}
+                    isAction
+                  />
+                ))}
+              </>
+            )}
+            {folderEntry && renderSubfolders(folderEntry.id)}
+            {groupPages.map((p) => (
+              <PageRow
+                key={p.slug}
+                page={p}
+                onCopy={copyPage}
+                onCtxMenu={showCtxMenu}
+                inLockedFolder={!!isLocked}
+                isAction={isQA}
+              />
+            ))}
+            {isQA && (
+              <div className="abh-add-action-row" onClick={() => setSkillPickerOpen(true)}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add action
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="abh-root">
       <PageActionDock actions={homeActions} hidden={folderModal || reportOpen || skillPickerOpen || newPageOpen} />
@@ -804,6 +933,8 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
         </div>
       )}
 
+      {needsYou && !isSearching && <NeedsYouStrip counts={needsYou} />}
+
       <div className="abh-dir-head">
         <span className="abh-dir-count">
           {contentCount} page{contentCount === 1 ? "" : "s"}
@@ -822,116 +953,15 @@ export function ActionBarHome({ vocabulary, folders, pages, orgName, logoUrl, qu
       </div>
 
       <div className="abh-directory">
-        {orderedFolderNames.map((name) => {
-          if (name === "Pinned") {
-            const isOpen = effectiveExpanded.has("Pinned");
-            return (
-              <div key="Pinned" className="abh-folder-group">
-                <div className="abh-folder-label" onClick={() => toggleFolder("Pinned")}>
-                  <span className={`abh-chevron${isOpen ? "" : " abh-chevron--collapsed"}`}>&#9662;</span>
-                  <PinIcon />
-                  <span className="abh-folder-name">Pinned</span>
-                  <div className="abh-folder-actions">
-                    <button type="button" className="abh-action-btn" onClick={(e) => { e.stopPropagation(); copyFolder("Pinned"); }} title="Copy for agent">
-                      <CopyIcon />
-                    </button>
-                  </div>
-                </div>
-                {isOpen && (
-                  <div className="abh-folder-pages">
-                    {pinnedPages.map((p) => (
-                      <PageRow key={p.slug} page={p} onCopy={copyPage} onCtxMenu={showCtxMenu} inLockedFolder={false} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          }
-
-          const group = folderGroups.get(name);
-          const isQA = name === "Quick Actions";
-          const folderEntry = folders.find((f) => f.name === name);
-          if (!group && !isQA && !folderEntry) return null;
-          const isOpen = effectiveExpanded.has(name);
-          const isLocked = group?.folder.locked ?? folderEntry?.locked ?? false;
-          const groupPages = group?.pages ?? [];
-
+        {orderedFolderNames.map((name, idx) => {
+          const rootOf = (n: string) => folders.find((f) => f.name === n && !f.parentId);
+          const firstDemoted = isDemotedFolder(name, rootOf(name))
+            && (idx === 0 || !isDemotedFolder(orderedFolderNames[idx - 1], rootOf(orderedFolderNames[idx - 1])));
           return (
-            <div key={name} className="abh-folder-group">
-              <div className="abh-folder-label" onClick={() => toggleFolder(name)}>
-                <span className={`abh-chevron${isOpen ? "" : " abh-chevron--collapsed"}`}>&#9662;</span>
-                {isQA ? <ZapIcon /> : <FolderIcon />}
-                <span className="abh-folder-name">{name}</span>
-                <div className="abh-folder-actions">
-                  <button type="button" className="abh-action-btn" onClick={(e) => {
-                    e.stopPropagation();
-                    if (isQA) {
-                      const stock = STOCK_ACTIONS.map((a) => `- ${a.title}: ${a.summary}`);
-                      const refs = [`- ${RECENT_ACTION.title}: ${RECENT_ACTION.summary}`, ...refPages.map((p) => `- ${p.title} (skill page: ${p.slug})`)];
-                      navigator.clipboard.writeText(`Quick Actions:\n${[...stock, ...refs].join("\n")}`).catch(() => {});
-                      toast.success("Copied quick actions for agent");
-                    } else {
-                      copyFolder(name);
-                    }
-                  }} title="Copy for agent">
-                    <CopyIcon />
-                  </button>
-                  <button type="button" className="abh-action-btn" onClick={(e) => showCtxMenu(e, "folder", name)} title="More actions">
-                    <DotsIcon />
-                  </button>
-                </div>
-              </div>
-              {isOpen && (
-                <div className="abh-folder-pages">
-                  {isQA && (
-                    <>
-                      {STOCK_ACTIONS.map((a) => (
-                        <div key={a.id} className="abh-page-row abh-qa-row" onClick={() => handleStockAction(a)}>
-                          <ZapIcon />
-                          <span className="abh-page-title">{a.title}</span>
-                          <span className="abh-qa-summary">{a.summary}</span>
-                        </div>
-                      ))}
-                      <div className="abh-page-row abh-qa-row" onClick={copyRecent}>
-                        <ZapIcon />
-                        <span className="abh-page-title">{RECENT_ACTION.title}</span>
-                        <span className="abh-qa-summary">{RECENT_ACTION.summary}</span>
-                      </div>
-                      {refPages.map((p) => (
-                        <PageRow
-                          key={p.slug}
-                          page={p}
-                          onCopy={copyPage}
-                          onCtxMenu={showCtxMenu}
-                          inLockedFolder={false}
-                          isAction
-                        />
-                      ))}
-                    </>
-                  )}
-                  {folderEntry && renderSubfolders(folderEntry.id)}
-                  {groupPages.map((p) => (
-                    <PageRow
-                      key={p.slug}
-                      page={p}
-                      onCopy={copyPage}
-                      onCtxMenu={showCtxMenu}
-                      inLockedFolder={!!isLocked}
-                      isAction={isQA}
-                    />
-                  ))}
-                  {isQA && (
-                    <div className="abh-add-action-row" onClick={() => setSkillPickerOpen(true)}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                      </svg>
-                      Add action
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <Fragment key={name}>
+              {firstDemoted && <div className="abh-group-label">Managed and personal</div>}
+              {renderFolder(name)}
+            </Fragment>
           );
         })}
 
@@ -1224,5 +1254,30 @@ function PageRow({
         )}
       </div>
     </Link>
+  );
+}
+
+/// The review loop on Home: what's waiting on a human, one link per queue.
+function NeedsYouStrip({ counts }: { counts: NeedsYouCounts }) {
+  const items = [
+    { n: counts.review, href: "/review", label: (n: number) => `${n} to review` },
+    { n: counts.flagged, href: "/cleanup", label: (n: number) => `${n} flagged` },
+    { n: counts.stale, href: "/map?view=list", label: (n: number) => `${n} to recheck` },
+  ].filter((i): i is { n: number; href: string; label: (n: number) => string } => typeof i.n === "number" && i.n > 0);
+  const unknown = counts.review === null && counts.flagged === null && counts.stale === null;
+  if (unknown) return null;
+  return (
+    <nav className="abh-needs" aria-label="Needs you">
+      <span className="abh-needs-label">Needs you</span>
+      {items.length === 0 ? (
+        <span className="abh-needs-clear">Nothing waiting. The review queue is clear.</span>
+      ) : (
+        items.map((i) => (
+          <Link key={i.href} href={i.href} className="abh-needs-item">
+            {i.label(i.n)}
+          </Link>
+        ))
+      )}
+    </nav>
   );
 }
