@@ -9577,6 +9577,20 @@ body:has(.nav-reveal) .page-toolbar {
   transform: translateY(-50%) translateX(0);
 }
 
+/* The expanded dock is ~150px wide at right: 20px. On a page view, reserve
+   that gutter so the dock never sits over content (1200px container at
+   1440 used to run under it). Collapsed, the 44px icon stack fits in the
+   container's own side padding. */
+@media (min-width: 641px) {
+  .page-detail-layout:has(.page-dock--expanded) .page-content-wrap {
+    padding-right: 184px;
+    box-sizing: border-box;
+  }
+}
+/* A page with its own dock already carries Help: never stack the standalone
+   Help button on top of it (it landed over "Hide labels"). */
+body:has(.page-dock:not(.page-dock--help-only)) .page-dock--help-only { display: none; }
+
 @media print {
   .page-dock { display: none !important; }
 }
@@ -9593,7 +9607,9 @@ body:has(.nav-reveal) .page-toolbar {
   white-space: nowrap;
   line-height: 1;
 }
-.dock-btn--toggle { color: var(--muted); }
+/* --light-muted, not --muted: the toggle sits on a translucent blurred layer,
+   and --muted measured 3.7:1 there. */
+.dock-btn--toggle { color: var(--light-muted); }
 .page-dock--expanded .dock-btn--toggle .dock-btn-label { font-size: 11.5px; font-weight: 400; }
 .dock-btn--help { color: var(--snow); }
 
@@ -9603,12 +9619,13 @@ body:has(.nav-reveal) .page-toolbar {
   border-color: rgba(var(--accent-rgb), 0.6);
   animation: helpNudge 1.6s ease-in-out infinite;
 }
+/* Inset pulse: an outward ring spilled 7px over the "Hide labels" row below. */
 @keyframes helpNudge {
   0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.55); }
   50% { box-shadow: 0 0 0 7px rgba(var(--accent-rgb), 0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dock-btn--nudge { animation: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.6); }
+  .dock-btn--nudge { animation: none; box-shadow: inset 0 0 0 2px rgba(var(--accent-rgb), 0.6); }
 }
 
 /* Help video player */
